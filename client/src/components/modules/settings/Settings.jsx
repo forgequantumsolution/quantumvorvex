@@ -3,6 +3,7 @@ import Tabs from '../../ui/Tabs'
 import Modal from '../../ui/Modal'
 import { useStore } from '../../../store/useStore'
 import { useToast } from '../../../hooks/useToast'
+import api from '../../../api/client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ROLE_LABELS, ROLE_COLORS, canAccessSettingsTab } from '../../../utils/permissions'
 
@@ -1393,17 +1394,14 @@ function UsersAccessTab({ addToast }) {
   const [saving, setSaving]   = useState(false)
   const [showPass, setShowPass] = useState(false)
 
-  const authHeaders = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
-
   const fetchUsers = async () => {
     setLoading(true)
     try {
-      const res = await fetch('/api/v1/users', { headers: authHeaders, credentials: 'include' })
-      const data = await res.json()
-      if (res.ok) setUsers(Array.isArray(data) ? data : [])
-      else addToast(data.error || 'Failed to load users', 'error')
-    } catch { addToast('Network error', 'error') }
-    finally { setLoading(false) }
+      const { data } = await api.get('/users')
+      setUsers(Array.isArray(data.users ?? data) ? (data.users ?? data) : [])
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Failed to load users', 'error')
+    } finally { setLoading(false) }
   }
 
   useEffect(() => { fetchUsers() }, [])
@@ -1433,29 +1431,26 @@ function UsersAccessTab({ addToast }) {
     try {
       const body = { ...form }
       if (!body.password) delete body.password
-      const url    = modal === 'create' ? '/api/v1/users' : `/api/v1/users/${target.id}`
-      const method = modal === 'create' ? 'POST' : 'PUT'
-      const res    = await fetch(url, { method, headers: authHeaders, credentials: 'include', body: JSON.stringify(body) })
-      const data   = await res.json()
-      if (!res.ok) { addToast(data.error || 'Failed to save', 'error'); return }
+      if (modal === 'create') await api.post('/users', body)
+      else await api.put(`/users/${target.id}`, body)
       addToast(modal === 'create' ? 'User created' : 'User updated')
       setModal(null)
       fetchUsers()
-    } catch { addToast('Network error', 'error') }
-    finally { setSaving(false) }
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Failed to save', 'error')
+    } finally { setSaving(false) }
   }
 
   const handleDelete = async () => {
     setSaving(true)
     try {
-      const res  = await fetch(`/api/v1/users/${target.id}`, { method: 'DELETE', headers: authHeaders, credentials: 'include' })
-      const data = await res.json()
-      if (!res.ok) { addToast(data.error || 'Failed to delete', 'error'); return }
+      await api.delete(`/users/${target.id}`)
       addToast('User deleted')
       setModal(null)
       fetchUsers()
-    } catch { addToast('Network error', 'error') }
-    finally { setSaving(false) }
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Failed to delete', 'error')
+    } finally { setSaving(false) }
   }
 
   const inputStyle = {

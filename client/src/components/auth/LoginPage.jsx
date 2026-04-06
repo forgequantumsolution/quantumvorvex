@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../../store/useStore'
+import { authApi } from '../../api/client'
 
 const GOLD  = '#c9a84c'
 const CREAM = '#faf8f3'
@@ -30,28 +31,18 @@ export default function LoginPage({ onBack }) {
     if (!email || !password) { setError('Email and password are required.'); return }
     setLoading(true)
     try {
-      const res = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      })
-      let data = {}
-      try { data = await res.json() } catch { /* non-JSON */ }
-      if (!res.ok) {
-        setError(
-          data.error || data.message ||
-          (res.status === 500 ? 'Server error — database may not be configured yet.' :
-           res.status === 429 ? 'Too many attempts. Please wait 15 minutes.' :
-           `Login failed (${res.status}).`)
-        )
-      } else {
-        login(data.token, data.user)
-      }
+      const { data } = await authApi.login({ email, password })
+      login(data.token, data.user)
     } catch (err) {
-      setError(err?.message?.includes('fetch')
-        ? 'Cannot reach server. Make sure the backend is running.'
-        : 'Network error. Please try again.')
+      const data = err.response?.data
+      const status = err.response?.status
+      setError(
+        data?.error || data?.message ||
+        (status === 500 ? 'Server error — database may not be configured yet.' :
+         status === 429 ? 'Too many attempts. Please wait 15 minutes.' :
+         status === 401 ? 'Invalid email or password.' :
+         'Cannot reach server. Make sure the backend is running.')
+      )
     } finally {
       setLoading(false)
     }

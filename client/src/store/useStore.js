@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { authApi } from '../api/client'
 
 export const useStore = create(
   persist(
@@ -39,13 +40,7 @@ export const useStore = create(
       },
 
       logout: async () => {
-        try {
-          await fetch('/api/v1/auth/logout', {
-            method: 'POST',
-            credentials: 'include',
-            headers: { Authorization: `Bearer ${get().token}` },
-          })
-        } catch { /* ignore network errors on logout */ }
+        try { await authApi.logout() } catch { /* ignore errors on logout */ }
         localStorage.removeItem('qv_token')
         set({ token: null, currentUser: null, activePanel: 'dashboard' })
       },
