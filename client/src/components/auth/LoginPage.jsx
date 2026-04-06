@@ -38,11 +38,24 @@ export default function LoginPage({ onBack }) {
         credentials: 'include',
         body: JSON.stringify({ email, password }),
       })
-      const data = await res.json()
-      if (!res.ok) setError(data.error || data.message || 'Login failed.')
-      else login(data.token, data.user)
-    } catch {
-      setError('Server unreachable. Please try again.')
+      let data = {}
+      try { data = await res.json() } catch { /* non-JSON response */ }
+      if (!res.ok) {
+        setError(
+          data.error || data.message ||
+          (res.status === 500 ? 'Server error — database may not be configured yet.' :
+           res.status === 429 ? 'Too many attempts. Please wait 15 minutes.' :
+           `Login failed (${res.status}).`)
+        )
+      } else {
+        login(data.token, data.user)
+      }
+    } catch (err) {
+      setError(
+        err?.message?.includes('fetch')
+          ? 'Cannot reach server. Make sure the backend is running.'
+          : 'Network error. Please try again.'
+      )
     } finally {
       setLoading(false)
     }
