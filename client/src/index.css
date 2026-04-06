@@ -472,7 +472,32 @@
 
 /* Print */
 @media print {
-  #sidebar, #topbar, .no-print, .btn { display: none !important; }
-  body, #root { overflow: visible !important; height: auto !important; }
+  /* Hide non-content UI */
+  #sidebar, #topbar, .no-print,
+  .btn, .btn-outline, .btn-primary, .btn-danger, .btn-success,
+  [aria-label="Menu"], [aria-label="Notifications"] { display: none !important; }
+
+  /* Full-page layout */
+  body, #root { overflow: visible !important; height: auto !important; background: #fff !important; color: #000 !important; }
+  #main { width: 100% !important; display: block !important; }
   #content { overflow: visible !important; padding: 0 !important; }
+
+  /* Invoice / report content */
+  .card { box-shadow: none !important; border: 1px solid #ccc !important; break-inside: avoid; }
+  table { width: 100% !important; border-collapse: collapse !important; }
+  th, td { border: 1px solid #ddd !important; padding: 6px 10px !important; font-size: 11pt !important; }
+  thead { background: #f5f5f5 !important; }
+
+  /* Page breaks */
+  .print-break-before { page-break-before: always; }
+  .print-break-after  { page-break-after: always; }
+  .print-no-break     { break-inside: avoid; }
+
+  /* Colors: flatten to print-safe */
+  [style*="color: var(--gold)"], .gold-text { color: #7a5c00 !important; }
+  [style*="background: var(--gold"] { background: #f5e6b0 !important; }
+
+  /* Invoice specific */
+  .invoice-header { text-align: center; margin-bottom: 24px; }
+  .invoice-total  { font-weight: 700; font-size: 14pt; }
 }

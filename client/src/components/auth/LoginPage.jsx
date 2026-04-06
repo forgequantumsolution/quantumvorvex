@@ -17,13 +17,16 @@ const PILLS = ['Check-In', 'Billing', 'Housekeeping', 'Reports', 'AI Insights']
 export default function LoginPage({ onBack }) {
   const login = useStore((s) => s.login)
 
-  const [email,      setEmail]      = useState('')
-  const [password,   setPassword]   = useState('')
-  const [error,      setError]      = useState('')
-  const [loading,    setLoading]    = useState(false)
-  const [showPass,   setShowPass]   = useState(false)
-  const [focusEmail, setFocusEmail] = useState(false)
-  const [focusPass,  setFocusPass]  = useState(false)
+  const [mode,        setMode]        = useState('login')   // 'login' | 'forgot' | 'forgot_sent'
+  const [email,       setEmail]       = useState('')
+  const [password,    setPassword]    = useState('')
+  const [resetEmail,  setResetEmail]  = useState('')
+  const [error,       setError]       = useState('')
+  const [loading,     setLoading]     = useState(false)
+  const [showPass,    setShowPass]    = useState(false)
+  const [focusEmail,  setFocusEmail]  = useState(false)
+  const [focusPass,   setFocusPass]   = useState(false)
+  const [focusReset,  setFocusReset]  = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -46,6 +49,101 @@ export default function LoginPage({ onBack }) {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleForgotSubmit = (e) => {
+    e.preventDefault()
+    if (!resetEmail) return
+    setLoading(true)
+    setTimeout(() => {
+      setLoading(false)
+      setMode('forgot_sent')
+    }, 1200)
+  }
+
+  // ── Forgot Password view ──────────────────────────────────────────────────
+  if (mode === 'forgot' || mode === 'forgot_sent') {
+    return (
+      <div style={{
+        width: '100%', height: '100dvh', overflowY: 'auto', overflowX: 'hidden',
+        fontFamily: "'Inter', sans-serif", background: CREAM, color: INK,
+      }}>
+        <nav style={{
+          position: 'sticky', top: 0, zIndex: 50,
+          background: 'rgba(250,248,243,0.94)', backdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(0,0,0,0.07)',
+          padding: '0 clamp(16px,5vw,40px)', height: 56,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 17, fontWeight: 700, fontStyle: 'italic', color: INK }}>
+            Quantum <span style={{ color: GOLD }}>Vorvex</span>
+          </div>
+          <button onClick={() => setMode('login')} style={{
+            background: 'none', border: '1px solid rgba(0,0,0,0.12)', borderRadius: 6,
+            padding: '6px 14px', fontSize: 12, fontWeight: 600, color: '#5a5550', cursor: 'pointer',
+          }}>← Back to Login</button>
+        </nav>
+
+        <div style={{ maxWidth: 440, margin: '80px auto', padding: '0 clamp(16px,5vw,24px)' }}>
+          <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.09)', borderRadius: 16, padding: 'clamp(28px,4vw,44px)', boxShadow: '0 8px 40px rgba(0,0,0,0.07)' }}>
+            {mode === 'forgot_sent' ? (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 48, marginBottom: 16 }}>📬</div>
+                <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 900, color: INK, margin: '0 0 10px' }}>Check your email</h2>
+                <p style={{ fontSize: 14, color: '#6b6055', lineHeight: 1.8, margin: '0 0 24px' }}>
+                  We've sent a password reset link to <strong>{resetEmail}</strong>. Check your inbox and follow the instructions.
+                </p>
+                <button onClick={() => setMode('login')} style={{
+                  width: '100%', padding: '13px', background: INK, color: '#fff',
+                  border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                  letterSpacing: '0.12em', cursor: 'pointer',
+                }}>BACK TO SIGN IN</button>
+              </div>
+            ) : (
+              <>
+                <div style={{ marginBottom: 24 }}>
+                  <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 26, fontWeight: 900, color: INK, margin: '0 0 8px' }}>Forgot password?</h2>
+                  <p style={{ fontSize: 13, color: '#888', margin: 0 }}>Enter your email and we'll send you a reset link.</p>
+                </div>
+                <form onSubmit={handleForgotSubmit}>
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', color: '#888', textTransform: 'uppercase', marginBottom: 7 }}>Email Address</label>
+                    <div style={{ position: 'relative' }}>
+                      <span style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', fontSize: 14, pointerEvents: 'none', color: focusReset ? GOLD : '#aaa', transition: 'color 0.15s' }}>✉</span>
+                      <input
+                        type="email" value={resetEmail}
+                        onChange={e => setResetEmail(e.target.value)}
+                        placeholder="you@hotel.com"
+                        onFocus={() => setFocusReset(true)}
+                        onBlur={() => setFocusReset(false)}
+                        style={{
+                          width: '100%', boxSizing: 'border-box',
+                          padding: '11px 12px 11px 38px',
+                          background: focusReset ? '#fff' : '#f9f8f5',
+                          border: `1px solid ${focusReset ? GOLD : 'rgba(0,0,0,0.12)'}`,
+                          borderRadius: 8, fontSize: 14, color: INK, outline: 'none',
+                          transition: 'all 0.15s',
+                          boxShadow: focusReset ? `0 0 0 3px rgba(201,168,76,0.12)` : 'none',
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <button type="submit" disabled={loading || !resetEmail} style={{
+                    width: '100%', padding: '13px',
+                    background: loading || !resetEmail ? '#888' : INK,
+                    color: '#fff', border: 'none', borderRadius: 8,
+                    fontSize: 12, fontWeight: 700, letterSpacing: '0.12em',
+                    cursor: loading || !resetEmail ? 'not-allowed' : 'pointer',
+                  }}>
+                    {loading ? 'SENDING…' : 'SEND RESET LINK →'}
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -261,6 +359,16 @@ export default function LoginPage({ onBack }) {
                   onMouseLeave={e => e.currentTarget.style.color = '#aaa'}
                 >{showPass ? '🙈' : '👁'}</button>
               </div>
+            </div>
+
+            {/* Forgot password link */}
+            <div style={{ textAlign: 'right', marginBottom: 4, marginTop: -14 }}>
+              <span
+                onClick={() => setMode('forgot')}
+                style={{ fontSize: 11.5, color: GOLD, cursor: 'pointer', fontWeight: 600, letterSpacing: '0.02em' }}
+              >
+                Forgot password?
+              </span>
             </div>
 
             {/* Error */}

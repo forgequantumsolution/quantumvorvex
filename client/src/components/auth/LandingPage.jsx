@@ -197,8 +197,20 @@ const FOOTER_LINKS = {
 }
 
 export default function LandingPage({ onLogin }) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [openFaq,  setOpenFaq]  = useState(null)
+  const [menuOpen,      setMenuOpen]      = useState(false)
+  const [openFaq,       setOpenFaq]       = useState(null)
+  const [contactForm,   setContactForm]   = useState({ name: '', email: '', property: '', message: '' })
+  const [contactSent,   setContactSent]   = useState(false)
+  const [contactLoading,setContactLoading]= useState(false)
+  const [contactFocus,  setContactFocus]  = useState({})
+
+  const setContact = (k, v) => setContactForm(f => ({ ...f, [k]: v }))
+  const handleContactSubmit = (e) => {
+    e.preventDefault()
+    if (!contactForm.name || !contactForm.email) return
+    setContactLoading(true)
+    setTimeout(() => { setContactLoading(false); setContactSent(true) }, 1200)
+  }
 
   return (
     <div style={{
@@ -951,6 +963,115 @@ export default function LandingPage({ onLogin }) {
         </div>
       </section>
 
+      {/* ── Contact Us ───────────────────────────────────────────────────── */}
+      <section style={{
+        maxWidth: 1200, margin: '0 auto',
+        padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
+      }}>
+        <div className="lp-contact-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'clamp(32px,5vw,72px)', alignItems: 'start' }}>
+          {/* Left copy */}
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: GOLD, marginBottom: 14 }}>CONTACT US</div>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(26px,3.5vw,42px)', fontWeight: 900, color: INK, margin: '0 0 16px', lineHeight: 1.1 }}>
+              Let's get your hotel<br />set up today.
+            </h2>
+            <p style={{ fontSize: 14, color: '#6b6055', lineHeight: 1.8, margin: '0 0 28px' }}>
+              Have questions about pricing, onboarding, or a custom integration? Our team responds within one business day.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {[
+                { icon: '📧', label: 'Email', value: 'contact@quantumvorvex.com' },
+                { icon: '📱', label: 'Phone', value: '+91 98765 00000' },
+                { icon: '📍', label: 'Office', value: 'MG Road, Bengaluru 560001' },
+              ].map(item => (
+                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 9, background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{item.icon}</div>
+                  <div>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, color: '#888', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 1 }}>{item.label}</div>
+                    <div style={{ fontSize: 13.5, color: INK, fontWeight: 500 }}>{item.value}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right form */}
+          <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.09)', borderRadius: 16, padding: 'clamp(24px,3vw,36px)', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}>
+            {contactSent ? (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ fontSize: 48, marginBottom: 14 }}>✅</div>
+                <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 900, color: INK, margin: '0 0 10px' }}>Message received!</h3>
+                <p style={{ fontSize: 14, color: '#6b6055', lineHeight: 1.8 }}>We'll get back to you at <strong>{contactForm.email}</strong> within one business day.</p>
+                <button onClick={() => setContactSent(false)} style={{ marginTop: 20, padding: '10px 24px', borderRadius: 7, border: '1px solid rgba(0,0,0,0.15)', background: 'transparent', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: INK }}>Send another message</button>
+              </div>
+            ) : (
+              <form onSubmit={handleContactSubmit}>
+                <div style={{ marginBottom: 16 }}>
+                  <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 900, color: INK, margin: '0 0 4px' }}>Get in touch</h3>
+                  <p style={{ fontSize: 12.5, color: '#888', margin: 0 }}>We'll respond within one business day.</p>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                  {[
+                    { key: 'name',     label: 'Your Name',        placeholder: 'Ramesh Gupta',         type: 'text'  },
+                    { key: 'email',    label: 'Email Address',     placeholder: 'you@hotel.com',         type: 'email' },
+                    { key: 'property', label: 'Property Name',     placeholder: 'Hotel / Resort name',   type: 'text'  },
+                    { key: 'phone',    label: 'Phone (optional)',   placeholder: '+91 98765 00000',       type: 'tel'   },
+                  ].map(field => (
+                    <div key={field.key}>
+                      <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#888', textTransform: 'uppercase', marginBottom: 6 }}>{field.label}</label>
+                      <input
+                        type={field.type}
+                        value={contactForm[field.key] || ''}
+                        onChange={e => setContact(field.key, e.target.value)}
+                        placeholder={field.placeholder}
+                        onFocus={() => setContactFocus(f => ({ ...f, [field.key]: true }))}
+                        onBlur={() => setContactFocus(f => ({ ...f, [field.key]: false }))}
+                        style={{
+                          width: '100%', boxSizing: 'border-box',
+                          padding: '9px 12px',
+                          background: contactFocus[field.key] ? '#fff' : '#f9f8f5',
+                          border: `1px solid ${contactFocus[field.key] ? GOLD : 'rgba(0,0,0,0.12)'}`,
+                          borderRadius: 7, fontSize: 13, color: INK, outline: 'none',
+                          transition: 'all 0.15s',
+                          boxShadow: contactFocus[field.key] ? '0 0 0 3px rgba(201,168,76,0.12)' : 'none',
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#888', textTransform: 'uppercase', marginBottom: 6 }}>Message</label>
+                  <textarea
+                    value={contactForm.message}
+                    onChange={e => setContact('message', e.target.value)}
+                    placeholder="Tell us about your property and what you're looking for..."
+                    rows={4}
+                    style={{
+                      width: '100%', boxSizing: 'border-box', padding: '9px 12px', resize: 'vertical',
+                      background: '#f9f8f5', border: '1px solid rgba(0,0,0,0.12)',
+                      borderRadius: 7, fontSize: 13, color: INK, outline: 'none',
+                      fontFamily: "'Inter', sans-serif", transition: 'all 0.15s',
+                    }}
+                    onFocus={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = GOLD; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.12)' }}
+                    onBlur={e => { e.currentTarget.style.background = '#f9f8f5'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)'; e.currentTarget.style.boxShadow = 'none' }}
+                  />
+                </div>
+                <button type="submit" disabled={contactLoading || !contactForm.name || !contactForm.email} style={{
+                  width: '100%', padding: '12px',
+                  background: contactLoading || !contactForm.name || !contactForm.email ? '#888' : INK,
+                  color: '#fff', border: 'none', borderRadius: 8,
+                  fontSize: 12, fontWeight: 700, letterSpacing: '0.1em',
+                  cursor: contactLoading || !contactForm.name || !contactForm.email ? 'not-allowed' : 'pointer',
+                  transition: 'background 0.15s',
+                }}>
+                  {contactLoading ? 'SENDING…' : 'SEND MESSAGE →'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </section>
+
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
       <section style={{
         background: INK,
@@ -1137,6 +1258,11 @@ export default function LandingPage({ onLogin }) {
         }
         @media (max-width: 480px) {
           .lp-footer-grid { grid-template-columns: 1fr !important; }
+        }
+        /* Contact: 2 cols → 1 */
+        .lp-contact-grid { grid-template-columns: 1fr 1fr !important; }
+        @media (max-width: 800px) {
+          .lp-contact-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
     </div>

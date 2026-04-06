@@ -32,6 +32,8 @@ const Maintenance  = lazy(() => import('./components/modules/maintenance/Mainten
 const Housekeeping = lazy(() => import('./components/modules/housekeeping/Housekeeping'))
 const Staff        = lazy(() => import('./components/modules/staff/Staff'))
 const Channels     = lazy(() => import('./components/modules/channels/Channels'))
+const Calendar     = lazy(() => import('./components/modules/calendar/Calendar'))
+const NightAudit   = lazy(() => import('./components/modules/nightaudit/NightAudit'))
 
 function PanelSkeleton() {
   return (
@@ -95,10 +97,12 @@ const PANEL_MAP = {
   food:        Food,
   billing:     Billing,
   settings:    Settings,
-  maintenance: Maintenance,
+  maintenance:  Maintenance,
   housekeeping: Housekeeping,
-  staff:       Staff,
-  channels:    Channels,
+  staff:        Staff,
+  channels:     Channels,
+  calendar:     Calendar,
+  nightaudit:   NightAudit,
 }
 
 export default function App() {

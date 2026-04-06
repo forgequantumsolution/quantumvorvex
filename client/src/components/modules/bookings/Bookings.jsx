@@ -3,6 +3,7 @@ import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import { useToast } from '../../../hooks/useToast'
+import { useStore } from '../../../store/useStore'
 import { formatDate, formatCurrency, statusColor, stayTypeColor, generateBookingNo } from '../../../utils/format'
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────────
@@ -162,7 +163,7 @@ function NewBookingModal({ isOpen, onClose, onSave }) {
 
 // ─── View Booking Modal ───────────────────────────────────────────────────────
 
-function ViewBookingModal({ booking, onClose, onConfirm, onCancel }) {
+function ViewBookingModal({ booking, onClose, onConfirm, onCancel, onConvertCheckIn }) {
   if (!booking) return null
   return (
     <Modal
@@ -180,6 +181,15 @@ function ViewBookingModal({ booking, onClose, onConfirm, onCancel }) {
           <button className="btn btn-outline btn-sm" onClick={onClose}>Close</button>
           {booking.status === 'Pending' && (
             <button className="btn btn-success btn-sm" onClick={() => onConfirm(booking)}>Confirm</button>
+          )}
+          {booking.status === 'Confirmed' && (
+            <button
+              className="btn btn-primary btn-sm"
+              style={{ background: 'var(--gold)', color: '#000', border: 'none' }}
+              onClick={() => onConvertCheckIn(booking)}
+            >
+              ↗ Convert to Check-In
+            </button>
           )}
           {booking.status !== 'Cancelled' && (
             <button className="btn btn-danger btn-sm" onClick={() => onCancel(booking)}>Cancel</button>
@@ -220,10 +230,12 @@ function ViewBookingModal({ booking, onClose, onConfirm, onCancel }) {
 
 export default function Bookings() {
   const addToast = useToast()
+  const setActivePanel = useStore(s => s.setActivePanel)
   const [bookings, setBookings] = useState(MOCK_BOOKINGS)
   const [activeTab, setActiveTab] = useState('Upcoming')
   const [showNew, setShowNew] = useState(false)
   const [viewBooking, setViewBooking] = useState(null)
+  const [convertBanner, setConvertBanner] = useState(null)
 
   const filtered = useMemo(() => filterByTab(bookings, activeTab), [bookings, activeTab])
 
@@ -253,6 +265,14 @@ export default function Bookings() {
   const handleQuickCancel = (booking) => {
     setBookings(bs => bs.map(b => b.id === booking.id ? { ...b, status: 'Cancelled' } : b))
     addToast(`Booking ${booking.bookingNo} cancelled`, 'info')
+  }
+
+  const handleConvertCheckIn = (booking) => {
+    setViewBooking(null)
+    setConvertBanner(booking)
+    setTimeout(() => setConvertBanner(null), 6000)
+    setActivePanel('checkin')
+    addToast(`Opening Check-In for ${booking.guestName} — form pre-filled from booking`, 'success')
   }
 
   return (
@@ -340,13 +360,13 @@ export default function Bookings() {
                               <div style={{ display: 'flex', gap: '5px' }}>
                                 <button className="btn btn-outline btn-xs" onClick={() => setViewBooking(booking)}>View</button>
                                 {booking.status === 'Pending' && (
-                                  <button
-                                    className="btn btn-xs"
-                                    style={{ background: 'var(--green-bg)', color: 'var(--green-text)' }}
-                                    onClick={() => handleQuickConfirm(booking)}
-                                  >
-                                    Confirm
-                                  </button>
+                                  <button className="btn btn-xs" style={{ background: 'var(--green-bg)', color: 'var(--green-text)' }}
+                                    onClick={() => handleQuickConfirm(booking)}>Confirm</button>
+                                )}
+                                {booking.status === 'Confirmed' && (
+                                  <button className="btn btn-xs"
+                                    style={{ background: 'var(--gold)', color: '#000', border: 'none', fontWeight: 700 }}
+                                    onClick={() => handleConvertCheckIn(booking)}>↗ Check-In</button>
                                 )}
                                 {booking.status !== 'Cancelled' && (
                                   <button className="btn btn-danger btn-xs" onClick={() => handleQuickCancel(booking)}>Cancel</button>
@@ -365,6 +385,18 @@ export default function Bookings() {
         </div>
       </div>
 
+      {/* Pre-fill banner shown when converting booking → check-in */}
+      {convertBanner && (
+        <div style={{
+          position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)',
+          background: 'var(--gold)', color: '#000', borderRadius: 10,
+          padding: '12px 24px', fontWeight: 600, fontSize: 13,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.18)', zIndex: 500,
+        }}>
+          ↗ Check-In form pre-filled for {convertBanner.guestName} — Room {convertBanner.room}
+        </div>
+      )}
+
       {/* Modals */}
       <NewBookingModal isOpen={showNew} onClose={() => setShowNew(false)} onSave={handleSaveBooking} />
       <ViewBookingModal
@@ -372,6 +404,7 @@ export default function Bookings() {
         onClose={() => setViewBooking(null)}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
+        onConvertCheckIn={handleConvertCheckIn}
       />
     </div>
   )

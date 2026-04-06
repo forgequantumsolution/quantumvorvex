@@ -62,6 +62,25 @@ const mockNotifs = [
   { id: 4, type: 'danger',  icon: '!', msg: 'ID verification pending for Room 110',          time: 'Yesterday' },
 ]
 
+const todayTimeline = [
+  { time: '07:30', event: 'Housekeeping shift started',        type: 'hk',      icon: '🧹', done: true  },
+  { time: '09:15', event: 'Anjali Singh checked in — Room 103', type: 'checkin', icon: '↗',  done: true  },
+  { time: '11:00', event: 'INV-002 — Priya Patel paid ₹9,016', type: 'billing', icon: '◑',  done: true  },
+  { time: '12:00', event: 'Sneha Rao checkout due — Room 118',  type: 'urgent',  icon: '⚠',  done: false },
+  { time: '14:00', event: 'Farhan Ahmed arriving — Room 201',   type: 'checkin', icon: '↗',  done: false },
+  { time: '16:00', event: 'Maintenance: Room 105 AC check',    type: 'maint',   icon: '🔧', done: false },
+  { time: '20:00', event: 'Night Audit due',                   type: 'audit',   icon: '🌙', done: false },
+]
+
+const TIMELINE_COLORS = {
+  checkin: { bg: '#dbeafe', text: '#1d4ed8' },
+  billing: { bg: 'rgba(201,168,76,0.12)', text: '#92400e' },
+  urgent:  { bg: '#fee2e2', text: '#b91c1c' },
+  hk:      { bg: '#f0fdf4', text: '#15803d' },
+  maint:   { bg: '#fef9c3', text: '#854d0e' },
+  audit:   { bg: '#f3f4f6', text: '#374151' },
+}
+
 const mockRoomTypes = [
   { label: 'Standard',  occupied: 8,  total: 12 },
   { label: 'Deluxe',    occupied: 3,  total: 8  },
@@ -610,6 +629,57 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      {/* ── Today's Timeline ── */}
+      <div className="card" style={{ marginTop: 20 }}>
+        <div className="card-header">
+          <span className="card-title">Today's Timeline</span>
+          <span style={{ fontSize: 11.5, color: 'var(--text3)' }}>
+            {todayTimeline.filter(t => t.done).length}/{todayTimeline.length} events done
+          </span>
+        </div>
+        <div style={{ padding: '8px 16px 16px', position: 'relative' }}>
+          {/* Vertical line */}
+          <div style={{ position: 'absolute', left: 40, top: 8, bottom: 8, width: 1, background: 'var(--border)' }} />
+          {todayTimeline.map((item, i) => {
+            const colors = TIMELINE_COLORS[item.type] || TIMELINE_COLORS.audit
+            return (
+              <div key={i} style={{ display: 'flex', gap: 14, marginBottom: 12, alignItems: 'flex-start', position: 'relative' }}>
+                {/* Time */}
+                <div style={{ width: 34, flexShrink: 0, textAlign: 'right', fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', fontFamily: "'JetBrains Mono', monospace", paddingTop: 6 }}>
+                  {item.time}
+                </div>
+                {/* Dot */}
+                <div style={{
+                  width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
+                  background: item.done ? colors.bg : 'var(--surface)',
+                  border: `2px solid ${item.done ? colors.text : 'var(--border)'}`,
+                  marginTop: 5, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }} />
+                {/* Event */}
+                <div style={{
+                  flex: 1, padding: '6px 10px', borderRadius: 7,
+                  background: item.done ? 'var(--surface2)' : colors.bg,
+                  border: `1px solid ${item.done ? 'var(--border)' : colors.text + '33'}`,
+                  opacity: item.done ? 0.65 : 1,
+                  transition: 'all 0.15s',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ fontSize: 13 }}>{item.icon}</span>
+                    <span style={{
+                      fontSize: 12.5, fontWeight: item.done ? 400 : 600,
+                      color: item.done ? 'var(--text3)' : colors.text,
+                      textDecoration: item.done ? 'line-through' : 'none',
+                    }}>{item.event}</span>
+                    {item.done && <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--green-text)', fontWeight: 600 }}>✓</span>}
+                    {!item.done && item.type === 'urgent' && <span style={{ marginLeft: 'auto', fontSize: 10, background: 'var(--red-bg)', color: 'var(--red-text)', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>URGENT</span>}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 

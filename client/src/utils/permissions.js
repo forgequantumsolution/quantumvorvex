@@ -25,22 +25,22 @@ export const ROLE_COLORS = {
 // Panels each role can access
 export const ROLE_PANELS = {
   owner: [
-    'dashboard', 'rooms', 'floorplan', 'checkin', 'guests', 'bookings',
+    'dashboard', 'rooms', 'floorplan', 'calendar', 'checkin', 'guests', 'bookings',
     'documents', 'food', 'billing', 'reports', 'settings',
-    'maintenance', 'housekeeping', 'staff', 'channels',
+    'maintenance', 'housekeeping', 'staff', 'channels', 'nightaudit',
   ],
   manager: [
-    'dashboard', 'rooms', 'floorplan', 'checkin', 'guests', 'bookings',
+    'dashboard', 'rooms', 'floorplan', 'calendar', 'checkin', 'guests', 'bookings',
     'documents', 'food', 'billing', 'reports', 'settings',
-    'maintenance', 'housekeeping', 'channels',
+    'maintenance', 'housekeeping', 'channels', 'nightaudit',
   ],
   staff: [
-    'dashboard', 'rooms', 'checkin', 'guests', 'housekeeping', 'maintenance',
+    'dashboard', 'rooms', 'calendar', 'checkin', 'guests', 'housekeeping', 'maintenance',
   ],
   admin: [
-    'dashboard', 'rooms', 'floorplan', 'checkin', 'guests', 'bookings',
+    'dashboard', 'rooms', 'floorplan', 'calendar', 'checkin', 'guests', 'bookings',
     'documents', 'food', 'billing', 'reports', 'settings',
-    'maintenance', 'housekeeping', 'staff', 'channels',
+    'maintenance', 'housekeeping', 'staff', 'channels', 'nightaudit',
   ],
 }
 

@@ -252,29 +252,56 @@ function InvoiceModal({ invoice, onClose }) {
 
 // ─── Collect Payment Confirmation ─────────────────────────────────────────────
 function CollectModal({ invoice, onClose, onConfirm }) {
+  const [method, setMethod] = useState('Cash')
+  const [ref, setRef]       = useState('')
   if (!invoice) return null
   return (
     <Modal
       isOpen={!!invoice}
       onClose={onClose}
-      title="Collect Payment"
+      title="Record Payment"
+      maxWidth="420px"
       footer={
         <>
           <button className="btn btn-outline" onClick={onClose}>Cancel</button>
-          <button className="btn btn-success" onClick={onConfirm}>Confirm Collection</button>
+          <button className="btn btn-success" onClick={() => onConfirm(method)}>Confirm Payment</button>
         </>
       }
     >
-      <p style={{ margin: 0, fontSize: 14, color: 'var(--text)', lineHeight: 1.6 }}>
-        Mark payment of{' '}
-        <strong style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--gold)' }}>
-          {formatCurrency(invoice.total)}
-        </strong>{' '}
-        from <strong>{invoice.guest}</strong> (Room <strong>{invoice.room}</strong>) as collected?
-      </p>
-      <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--text3)' }}>
-        Invoice: {invoice.invoiceNo} · Period: {invoice.period}
-      </p>
+      {/* Amount highlight */}
+      <div style={{ background: 'var(--gold-bg)', borderRadius: 8, padding: '12px 14px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>Amount Due</div>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 700, color: 'var(--gold)' }}>{formatCurrency(invoice.total)}</div>
+        </div>
+        <div style={{ textAlign: 'right', fontSize: 12, color: 'var(--text3)' }}>
+          <div>{invoice.guest}</div>
+          <div>Room {invoice.room}</div>
+          <div>{invoice.invoiceNo}</div>
+        </div>
+      </div>
+
+      {/* Payment method */}
+      <div style={{ marginBottom: 12 }}>
+        <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Payment Method</label>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          {['Cash', 'UPI', 'Card', 'Bank Transfer'].map(m => (
+            <button key={m} onClick={() => setMethod(m)} style={{
+              padding: '8px 6px', borderRadius: 7, fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s',
+              background: method === m ? 'var(--gold-bg)' : 'var(--surface2)',
+              border: method === m ? '1.5px solid var(--gold)' : '1px solid var(--border)',
+              color: method === m ? 'var(--gold)' : 'var(--text2)',
+            }}>{m}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Reference */}
+      <div>
+        <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Reference / Transaction ID (optional)</label>
+        <input className="form-input" placeholder="UPI ref, cheque no., etc." value={ref} onChange={e => setRef(e.target.value)} />
+      </div>
     </Modal>
   )
 }
@@ -913,14 +940,14 @@ export default function Billing() {
   }, [invoices, search, statusFilter])
 
   // ── Handlers ───────────────────────────────────────────────────────────────
-  const handleCollect = () => {
+  const handleCollect = (method) => {
     if (!collectModal) return
     setInvoices(prev => prev.map(inv =>
       inv.id === collectModal.id
-        ? { ...inv, status: 'Paid', paidAt: new Date().toISOString().slice(0, 10) }
+        ? { ...inv, status: 'Paid', paidAt: new Date().toISOString().slice(0, 10), paymentMethod: method || 'Cash' }
         : inv
     ))
-    addToast(`${formatCurrency(collectModal.total)} collected for ${collectModal.guest}`, 'success')
+    addToast(`${formatCurrency(collectModal.total)} collected via ${method || 'Cash'} for ${collectModal.guest}`, 'success')
     setCollectModal(null)
   }
 
@@ -934,6 +961,21 @@ export default function Billing() {
     setInvoices(prev => [...prev, invoice])
     addToast(`Invoice ${invoice.invoiceNo} generated`, 'success')
     setShowGenerate(false)
+  }
+
+  const handleExportCSV = () => {
+    const headers = ['Invoice No', 'Guest', 'Room', 'Period', 'Rent', 'Food', 'Amenities', 'GST', 'Total', 'Status', 'Created', 'Paid On']
+    const rows = filtered.map(inv => [
+      inv.invoiceNo, inv.guest, inv.room, inv.period,
+      inv.rent, inv.food, inv.amenities, inv.gstAmount, inv.total,
+      inv.status, inv.createdAt, inv.paidAt || '',
+    ])
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = 'invoices.csv'; a.click()
+    URL.revokeObjectURL(url)
+    addToast('Invoice CSV exported', 'success')
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -965,9 +1007,10 @@ export default function Billing() {
           </p>
         </div>
         {activeTab === 'invoices' && (
-          <button className="btn btn-primary" onClick={() => setShowGenerate(true)}>
-            + Generate Invoice
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-outline btn-sm" onClick={handleExportCSV}>↓ Export CSV</button>
+            <button className="btn btn-primary" onClick={() => setShowGenerate(true)}>+ Generate Invoice</button>
+          </div>
         )}
       </div>
 

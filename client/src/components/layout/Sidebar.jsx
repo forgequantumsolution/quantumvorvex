@@ -9,9 +9,11 @@ const NAV_SECTIONS = [
       { id: 'dashboard',    label: 'Dashboard',    icon: '▦',  shortcut: 'D' },
       { id: 'rooms',        label: 'Rooms',         icon: '⊟',  shortcut: 'R' },
       { id: 'floorplan',   label: 'Floor Plan',    icon: '◫',  shortcut: 'F' },
+      { id: 'calendar',    label: 'Room Calendar', icon: '📅' },
       { id: 'maintenance', label: 'Maintenance',   icon: '🔧', shortcut: 'M', badge: '3' },
       { id: 'housekeeping',label: 'Housekeeping',  icon: '🧹', shortcut: 'H', badge: '5' },
       { id: 'reports',     label: 'Reports',       icon: '◈',  shortcut: 'T' },
+      { id: 'nightaudit',  label: 'Night Audit',   icon: '🌙' },
     ],
   },
   {
