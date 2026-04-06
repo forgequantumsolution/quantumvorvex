@@ -31,10 +31,7 @@ const dbUrl = process.env.DATABASE_URL || ''
 const isPostgres = dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')
 
 if (!dbUrl) {
-  console.error('\n❌ ERROR: DATABASE_URL environment variable is not set.')
-  console.error('   Add it in Vercel Dashboard → Settings → Environment Variables')
-  console.error('   Get a free PostgreSQL URL at: https://neon.tech')
-  process.exit(1)
+  warn('DATABASE_URL is not set — skipping DB steps. Add it in Vercel env vars and redeploy.')
 }
 
 // ── Step 2: Patch Prisma schema if PostgreSQL ─────────────────────────────────
@@ -67,8 +64,12 @@ if (schemaChanged) {
 }
 
 // ── Step 4: Generate Prisma client ────────────────────────────────────────────
-run('npx prisma generate', resolve(ROOT, 'server'))
-log('Prisma client generated')
+if (dbUrl) {
+  run('npx prisma generate', resolve(ROOT, 'server'))
+  log('Prisma client generated')
+} else {
+  warn('Skipping prisma generate — no DATABASE_URL')
+}
 
 // ── Step 5: Push schema to database (create tables) ──────────────────────────
 if (isPostgres) {
@@ -78,7 +79,7 @@ if (isPostgres) {
   } catch {
     warn('prisma db push failed — tables may already exist, continuing...')
   }
-} else {
+} else if (dbUrl) {
   warn('Skipping db push for non-PostgreSQL database')
 }
 

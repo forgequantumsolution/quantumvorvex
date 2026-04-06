@@ -70,3 +70,5 @@ nginx/certs/
 
 # ── Docker ─────────────────────────────────────────────────────
 docker-compose.override.yml
+
+.vercel

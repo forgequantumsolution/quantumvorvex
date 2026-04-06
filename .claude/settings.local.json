@@ -19,7 +19,15 @@
       "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\(0,'utf8'\\);console.log\\(JSON.parse\\(d\\).message\\)\")",
       "Bash(grep -E \"\\\\.js$\")",
       "Bash(xargs wc:*)",
-      "Bash(node -e \"import\\('./src/app.js'\\).then\\(m => { console.log\\('app.js OK — default export:', typeof m.default\\) }\\).catch\\(e => console.error\\('ERROR:', e.message\\)\\)\")"
+      "Bash(node -e \"import\\('./src/app.js'\\).then\\(m => { console.log\\('app.js OK — default export:', typeof m.default\\) }\\).catch\\(e => console.error\\('ERROR:', e.message\\)\\)\")",
+      "Bash(vercel --version)",
+      "Bash(vercel login:*)",
+      "Bash(vercel deploy:*)",
+      "Bash(vercel link:*)",
+      "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('hex'\\)\\)\")",
+      "Bash(vercel env:*)",
+      "Bash(printf \"mock\")",
+      "Bash(vercel storage:*)"
     ],
     "additionalDirectories": [
       "d:\\Forge Quantum Solutions\\Quantum Vorvex\\server\\src"
