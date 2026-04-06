@@ -116,7 +116,7 @@ jobs:
 
       # ── Server — install & lint ───────────────────────────────────────────
       - name: Setup Node.js ${{ env.NODE_VERSION }} (server)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -139,7 +139,7 @@ jobs:
 
       # ── Client — install & lint ───────────────────────────────────────────
       - name: Setup Node.js ${{ env.NODE_VERSION }} (client)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -210,7 +210,7 @@ jobs:
 
       # ── Server tests ──────────────────────────────────────────────────────
       - name: Setup Node.js ${{ env.NODE_VERSION }} (server)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -235,7 +235,7 @@ jobs:
 
       # ── Client build ──────────────────────────────────────────────────────
       - name: Setup Node.js ${{ env.NODE_VERSION }} (client)
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -285,7 +285,7 @@ jobs:
 
       # ── npm audit — server ────────────────────────────────────────────────
       - name: Setup Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
@@ -316,7 +316,7 @@ jobs:
 
       # ── npm audit — client ────────────────────────────────────────────────
       - name: Setup Node.js for client audit
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
