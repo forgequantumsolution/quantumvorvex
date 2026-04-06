@@ -1,0 +1,394 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── CORE ────────────────────────────────────────────────────────────────────
+
+model Hotel {
+  id                 String   @id @default(cuid())
+  name               String   @default("Quantum Vorvex")
+  ownerName          String   @default("Admin")
+  phone              String?
+  email              String?
+  gstin              String?
+  licenseNo          String?
+  address            String?
+  logoUrl            String?
+  gstRate            Float    @default(12)
+  gstType            String   @default("CGST+SGST")
+  gstApplyOn         String   @default("All")
+  lateFeeRate        Float    @default(5)
+  gracePeriod        Int      @default(3)
+  setupComplete      Boolean  @default(false)
+  termsAndConditions String?
+  wifiPassword       String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Property {
+  id        String   @id @default(cuid())
+  name      String
+  address   String?
+  phone     String?
+  gstin     String?
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  rooms     Room[]
+  staff     StaffProperty[]
+}
+
+model RoomType {
+  id              String @id @default(cuid())
+  name            String @unique
+  dailyRate       Float  @default(500)
+  monthlyRate     Float  @default(10000)
+  peakDailyRate   Float  @default(700)
+  peakMonthlyRate Float  @default(14000)
+  maxOccupancy    Int    @default(2)
+  rooms           Room[]
+}
+
+model Room {
+  id                 String              @id @default(cuid())
+  number             String              @unique
+  typeId             String
+  type               RoomType            @relation(fields: [typeId], references: [id])
+  floor              Int                 @default(1)
+  status             String              @default("available")
+  dailyRate          Float               @default(500)
+  monthlyRate        Float               @default(10000)
+  propertyId         String?
+  property           Property?           @relation(fields: [propertyId], references: [id])
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  guests             Guest[]
+  bookings           Booking[]
+  maintenanceRequests MaintenanceRequest[]
+  housekeepingStatus HousekeepingStatus?
+}
+
+model Guest {
+  id              String     @id @default(cuid())
+  docId           String     @unique
+  name            String
+  phone           String
+  email           String?
+  gender          String?
+  dob             DateTime?
+  nationality     String?
+  idType          String
+  idNumber        String
+  tags            String     @default("[]")
+  notes           String?
+  address         String?
+  emergencyName   String?
+  emergencyPhone  String?
+  stayType        String     @default("daily")
+  roomId          String
+  room            Room       @relation(fields: [roomId], references: [id])
+  checkInDate     DateTime
+  checkOutDate    DateTime?
+  months          Int?
+  roomRate        Float
+  deposit         Float?
+  occupants       Int        @default(1)
+  specialRequests String?
+  status          String     @default("Active")
+  foodPlan        String?
+  stayCount       Int        @default(1)
+  amenities       String     @default("[]")
+  facilities      String     @default("[]")
+  source          String     @default("walk_in")
+  whatsappOptIn   Boolean    @default(true)
+  selfCheckedIn   Boolean    @default(false)
+  signature       String?
+  propertyId      String?
+  documents       Document[]
+  invoices        Invoice[]
+  payments        Payment[]
+  reminders       Reminder[]
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Document {
+  id         String   @id @default(cuid())
+  guestId    String
+  guest      Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  docType    String
+  url        String
+  verified   Boolean  @default(false)
+  uploadedAt DateTime @default(now())
+}
+
+model Invoice {
+  id          String    @id @default(cuid())
+  invoiceNo   String    @unique
+  guestId     String
+  guest       Guest     @relation(fields: [guestId], references: [id])
+  period      String
+  rent        Float
+  food        Float     @default(0)
+  amenities   Float     @default(0)
+  gstRate     Float
+  gstAmount   Float
+  total       Float
+  amountPaid  Float     @default(0)
+  hsnCode     String?
+  gstSlab     Float?
+  status      String    @default("Pending")
+  createdAt   DateTime  @default(now())
+  paidAt      DateTime?
+  payments    Payment[]
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  guestId   String
+  guest     Guest    @relation(fields: [guestId], references: [id])
+  invoiceId String?
+  invoice   Invoice? @relation(fields: [invoiceId], references: [id])
+  amount    Float
+  method    String   @default("cash")
+  reference String?
+  type      String   @default("collection")
+  createdAt DateTime @default(now())
+}
+
+model Booking {
+  id                  String    @id @default(cuid())
+  bookingNo           String    @unique
+  guestName           String
+  roomId              String
+  room                Room      @relation(fields: [roomId], references: [id])
+  stayType            String    @default("daily")
+  fromDate            DateTime
+  toDate              DateTime?
+  months              Int?
+  amount              Float
+  advance             Float     @default(0)
+  notes               String?
+  source              String    @default("walk_in")
+  selfCheckinToken    String?
+  selfCheckinComplete Boolean   @default(false)
+  status              String    @default("Pending")
+  propertyId          String?
+  createdAt           DateTime  @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String   @default("info")
+  message   String
+  dismissed Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("staff")
+  status    String   @default("active")
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FoodPlan {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  oneTimeRate Float   @default(0)
+  weeklyRate  Float   @default(0)
+  monthlyRate Float   @default(0)
+  active      Boolean @default(true)
+}
+
+model Amenity {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  dailyRate   Float   @default(0)
+  monthlyRate Float   @default(0)
+  chargeable  Boolean @default(true)
+}
+
+// ─── ADDON 1: SMART PRICING ───────────────────────────────────────────────────
+
+model PricingRule {
+  id          String  @id @default(cuid())
+  name        String
+  triggerType String
+  threshold   Float
+  adjustment  Float
+  active      Boolean @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model CompetitorRate {
+  id           String   @id @default(cuid())
+  name         String
+  roomType     String
+  theirRate    Float
+  recordedDate DateTime @default(now())
+}
+
+// ─── ADDON 2: WHATSAPP / MESSAGING ───────────────────────────────────────────
+
+model Reminder {
+  id         String    @id @default(cuid())
+  guestId    String
+  guest      Guest     @relation(fields: [guestId], references: [id])
+  channel    String
+  message    String
+  status     String    @default("pending")
+  sentAt     DateTime?
+  providerId String?
+  createdAt  DateTime  @default(now())
+}
+
+model MessageTemplate {
+  id      String  @id @default(cuid())
+  trigger String  @unique
+  content String
+  active  Boolean @default(true)
+}
+
+// ─── ADDON 3: MAINTENANCE ─────────────────────────────────────────────────────
+
+model MaintenanceRequest {
+  id          String            @id @default(cuid())
+  roomId      String
+  room        Room              @relation(fields: [roomId], references: [id])
+  issueType   String
+  description String
+  priority    String            @default("Medium")
+  reportedBy  String
+  assignedTo  String?
+  status      String            @default("Open")
+  photoUrl    String?
+  notes       MaintenanceNote[]
+  createdAt   DateTime          @default(now())
+  resolvedAt  DateTime?
+}
+
+model MaintenanceNote {
+  id        String             @id @default(cuid())
+  requestId String
+  request   MaintenanceRequest @relation(fields: [requestId], references: [id])
+  author    String
+  content   String
+  createdAt DateTime           @default(now())
+}
+
+model MaintenanceSchedule {
+  id         String    @id @default(cuid())
+  roomType   String
+  task       String
+  frequency  String
+  assignedTo String?
+  lastDone   DateTime?
+  nextDue    DateTime
+}
+
+// ─── ADDON 4: STAFF ───────────────────────────────────────────────────────────
+
+model Staff {
+  id           String         @id @default(cuid())
+  name         String
+  phone        String
+  email        String         @unique
+  passwordHash String
+  role         String         @default("front_desk")
+  status       String         @default("active")
+  lastLogin    DateTime?
+  createdAt    DateTime       @default(now())
+  sessions     StaffSession[]
+  activityLogs ActivityLog[]
+  properties   StaffProperty[]
+}
+
+model StaffSession {
+  id        String   @id @default(cuid())
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id])
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id])
+  action    String
+  module    String
+  recordId  String?
+  detail    String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+}
+
+model Permission {
+  id     String @id @default(cuid())
+  role   String
+  module String
+  level  String @default("none")
+  @@unique([role, module])
+}
+
+model StaffProperty {
+  staffId    String
+  propertyId String
+  staff      Staff    @relation(fields: [staffId], references: [id])
+  property   Property @relation(fields: [propertyId], references: [id])
+  @@id([staffId, propertyId])
+}
+
+// ─── ADDON 9: HOUSEKEEPING ────────────────────────────────────────────────────
+
+model HousekeepingStatus {
+  id          String    @id @default(cuid())
+  roomId      String    @unique
+  room        Room      @relation(fields: [roomId], references: [id])
+  status      String    @default("clean_available")
+  assignedTo  String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+}
+
+model LinenRecord {
+  id          String   @id @default(cuid())
+  roomId      String
+  lastChanged DateTime
+  nextDue     DateTime
+  changedBy   String
+}
+
+model RoomInspection {
+  id        String   @id @default(cuid())
+  roomId    String
+  staffId   String
+  checklist String   @default("[]")
+  createdAt DateTime @default(now())
+}
+
+// ─── ADDON 15: GUEST PORTAL ───────────────────────────────────────────────────
+
+model GuestPortalToken {
+  id        String   @id @default(cuid())
+  bookingId String?
+  token     String   @unique
+  type      String   @default("booking")
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

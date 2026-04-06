@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm init:*)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(node --input-type=module)",
+      "Bash(node -e \"const r = require\\('d:/Forge Quantum Solutions/Quantum Vorvex/client/node_modules/recharts'\\); const needed = ['BarChart','Bar','XAxis','YAxis','Tooltip','ResponsiveContainer','LineChart','Line']; needed.forEach\\(n => console.log\\(n, n in r ? 'OK' : 'MISSING'\\)\\)\")",
+      "Bash(node --input-type=module --eval ':*)",
+      "Bash(node --input-type=module --check)",
+      "Bash(node -e ':*)",
+      "Bash(psql --version)",
+      "Bash(pg_isready)",
+      "Bash(node src/server.js)",
+      "Bash(node src/utils/seed.js)",
+      "Bash(node --experimental-vm-modules src/utils/seed.js)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\(0,'utf8'\\);const p=JSON.parse\\(d\\);console.log\\('Role:',p.user?.role,'Name:',p.user?.name\\)\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\(0,'utf8'\\);const u=JSON.parse\\(d\\);u.forEach\\(x=>console.log\\(x.role.padEnd\\(10\\),x.email\\)\\)\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\(0,'utf8'\\);const u=JSON.parse\\(d\\);u.forEach\\(x=>console.log\\(x.role.padEnd\\(10\\),x.name.padEnd\\(20\\),x.email\\)\\)\")",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\(0,'utf8'\\);console.log\\(JSON.parse\\(d\\).message\\)\")"
+    ],
+    "additionalDirectories": [
+      "d:\\Forge Quantum Solutions\\Quantum Vorvex\\server\\src"
+    ]
+  }
+}

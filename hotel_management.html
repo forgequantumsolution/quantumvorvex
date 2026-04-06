@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Quantum Vorvex — Hotel Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sb-bg:#141414;--sb-border:rgba(255,255,255,.07);--sb-text:#888;--sb-text-active:#fff;--sb-active-bg:rgba(212,175,85,.13);
+  --main-bg:#f4f4f2;--surface:#fff;--surface2:#f8f8f6;--border:#e6e6e3;--border2:#d0d0cb;
+  --text:#1a1a1a;--text2:#52524d;--text3:#98988f;
+  --gold:#c9a84c;--gold2:#d4af5a;--gold-bg:rgba(201,168,76,.1);--gold-border:rgba(201,168,76,.35);
+  --green:#16a34a;--green-bg:#dcfce7;--green-text:#15803d;
+  --red:#dc2626;--red-bg:#fee2e2;--red-text:#b91c1c;
+  --amber:#d97706;--amber-bg:#fef3c7;--amber-text:#b45309;
+  --blue:#2563eb;--blue-bg:#dbeafe;--blue-text:#1d4ed8;
+  --purple:#7c3aed;--purple-bg:#ede9fe;--purple-text:#6d28d9;
+  --grey-bg:#f0f0ed;--grey-text:#6b7280;
+  --radius:10px;--radius-sm:6px;--radius-xs:4px;
+  --shadow:0 1px 3px rgba(0,0,0,.07),0 4px 14px rgba(0,0,0,.05);
+  --shadow-md:0 4px 24px rgba(0,0,0,.13);
+}
+.dark{
+  --main-bg:#0f0f0d;--surface:#1a1a18;--surface2:#222220;--border:#2e2e2c;--border2:#3a3a38;
+  --text:#f0ead8;--text2:#a89f88;--text3:#6b6455;
+  --grey-bg:#2a2a28;--grey-text:#888;
+  --shadow:0 1px 3px rgba(0,0,0,.3),0 4px 14px rgba(0,0,0,.25);
+  --shadow-md:0 4px 24px rgba(0,0,0,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:var(--main-bg);color:var(--text);min-height:100vh;display:flex;overflow:hidden;font-size:14px;transition:background .25s,color .25s;}
+
+/* SIDEBAR */
+#sidebar{width:252px;min-width:252px;background:var(--sb-bg);display:flex;flex-direction:column;height:100vh;overflow-y:auto;transition:transform .28s cubic-bezier(.4,0,.2,1);z-index:100;scrollbar-width:none;}
+#sidebar::-webkit-scrollbar{display:none;}
+.sb-logo{padding:18px 18px 14px;border-bottom:1px solid var(--sb-border);display:flex;align-items:center;gap:11px;}
+.sb-mark{width:36px;height:36px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;overflow:hidden;}
+.sb-mark img{width:100%;height:100%;object-fit:cover;border-radius:8px;}
+.sb-hotel{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.02em;}
+.sb-hotel span{color:var(--gold);}
+.sb-sub{font-size:9.5px;color:rgba(255,255,255,.25);letter-spacing:.09em;text-transform:uppercase;margin-top:2px;}
+.sb-sec{padding:14px 0 2px;}
+.sb-sec-lbl{padding:0 16px 5px;font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.18);}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;font-size:13px;font-weight:400;color:var(--sb-text);transition:all .14s;border-left:2px solid transparent;user-select:none;}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--sb-text-active);}
+.nav-item.active{background:var(--sb-active-bg);color:var(--sb-text-active);border-left-color:var(--gold);}
+.nav-item .ni{font-size:14px;width:18px;text-align:center;flex-shrink:0;opacity:.7;}
+.nav-item.active .ni{opacity:1;}
+.nav-badge{margin-left:auto;background:var(--gold);color:#000;font-size:9.5px;font-weight:700;padding:1px 7px;border-radius:20px;font-family:'JetBrains Mono',monospace;}
+.sb-user{margin-top:auto;padding:12px 16px;border-top:1px solid var(--sb-border);display:flex;align-items:center;gap:10px;}
+.sb-av{width:30px;height:30px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#000;flex-shrink:0;}
+.sb-uname{font-size:12.5px;font-weight:500;color:#fff;}
+.sb-urole{font-size:10.5px;color:var(--sb-text);}
+
+/* MAIN */
+#main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;min-width:0;}
+
+/* TOPBAR */
+#topbar{height:54px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:10px;flex-shrink:0;}
+#menu-toggle{display:none;background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:4px;line-height:1;}
+.tb-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;color:var(--text);flex:1;letter-spacing:-.025em;}
+.tb-pills{display:flex;gap:6px;align-items:center;}
+.tb-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:500;cursor:pointer;white-space:nowrap;}
+.tb-pill.danger{background:var(--red-bg);color:var(--red-text);}
+.tb-pill.warn{background:var(--amber-bg);color:var(--amber-text);}
+.tb-pill.ok{background:var(--green-bg);color:var(--green-text);}
+.tb-pill .dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+.tb-clock{font-size:12px;color:var(--text3);font-family:'JetBrains Mono',monospace;white-space:nowrap;display:flex;flex-direction:column;align-items:flex-end;line-height:1.3;}
+.tb-clock .tc-time{font-size:13px;font-weight:500;color:var(--text2);}
+.tb-clock .tc-date{font-size:10px;}
+
+/* Global Search */
+.gsearch{position:relative;}
+.gsearch input{width:200px;padding:6px 12px 6px 32px;border-radius:20px;border:1px solid var(--border2);background:var(--surface2);font-size:12.5px;color:var(--text);outline:none;font-family:'Inter',sans-serif;transition:all .15s;}
+.gsearch input:focus{width:260px;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-bg);}
+.gsearch .si{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none;}
+.gsearch input::placeholder{color:var(--text3);}
+#gsearch-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-md);z-index:500;display:none;max-height:280px;overflow-y:auto;}
+#gsearch-results.show{display:block;}
+.gsr-item{padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:background .1s;}
+.gsr-item:hover{background:var(--surface2);}
+.gsr-tag{font-size:10px;padding:2px 7px;border-radius:10px;background:var(--gold-bg);color:var(--gold);font-weight:600;flex-shrink:0;}
+.gsr-name{font-size:13px;font-weight:500;color:var(--text);}
+.gsr-meta{font-size:11.5px;color:var(--text3);}
+
+/* Dark toggle */
+.dark-toggle{background:none;border:1px solid var(--border2);color:var(--text3);padding:5px 9px;border-radius:var(--radius-sm);cursor:pointer;font-size:14px;transition:all .14s;}
+.dark-toggle:hover{border-color:var(--gold);color:var(--gold);}
+
+/* CONTENT */
+#content{flex:1;overflow-y:auto;padding:24px;background:var(--main-bg);}
+
+/* PAGE HEADER */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:14px;flex-wrap:wrap;}
+.ph-title{font-family:'Syne',sans-serif;font-size:21px;font-weight:800;color:var(--text);letter-spacing:-.035em;line-height:1.2;}
+.ph-sub{font-size:12.5px;color:var(--text3);margin-top:3px;}
+.ph-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;}
+
+/* BUTTONS */
+.btn{padding:8px 15px;border-radius:var(--radius-sm);font-size:13px;font-family:'Inter',sans-serif;font-weight:500;cursor:pointer;border:none;transition:all .14s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;letter-spacing:-.01em;}
+.btn-primary{background:var(--gold);color:#000;}
+.btn-primary:hover{background:var(--gold2);}
+.btn-outline{background:var(--surface);color:var(--text2);border:1px solid var(--border2);}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+.btn-danger{background:var(--red-bg);color:var(--red-text);border:1px solid transparent;}
+.btn-danger:hover{background:var(--red);color:#fff;}
+.btn-success{background:var(--green-bg);color:var(--green-text);border:1px solid transparent;}
+.btn-success:hover{background:var(--green);color:#fff;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-xs{padding:3px 8px;font-size:11.5px;border-radius:var(--radius-xs);}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:13px;margin-bottom:22px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;position:relative;overflow:hidden;cursor:default;}
+.stat-card::after{content:'';position:absolute;bottom:0;left:0;right:0;height:3px;}
+.stat-card.cg::after{background:var(--gold);}
+.stat-card.cgr::after{background:var(--green);}
+.stat-card.cr::after{background:var(--red);}
+.stat-card.ca::after{background:var(--amber);}
+.stat-card.cb::after{background:var(--blue);}
+.stat-card.cp2::after{background:var(--purple);}
+.stat-lbl{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:8px;}
+.stat-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--text);letter-spacing:-.05em;line-height:1;}
+.stat-sub{font-size:11.5px;color:var(--text3);margin-top:5px;}
+.stat-trend{font-size:11px;margin-top:4px;}
+.stat-trend.up{color:var(--green);}
+.stat-trend.dn{color:var(--red);}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+.ch{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.ct{font-family:'Syne',sans-serif;font-size:13.5px;font-weight:700;color:var(--text);letter-spacing:-.02em;}
+.cp{padding:18px;}
+
+/* TABLES */
+.tw{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead tr{background:var(--surface2);}
+th{padding:10px 16px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:var(--surface2);}
+.tb{font-weight:500;color:var(--text);}
+.tm{font-family:'JetBrains Mono',monospace;font-size:12px;}
+.td2{font-size:11.5px;color:var(--text3);margin-top:2px;}
+
+/* BADGES */
+.badge{padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:500;display:inline-flex;align-items:center;gap:4px;white-space:nowrap;}
+.bg{background:var(--green-bg);color:var(--green-text);}
+.br{background:var(--red-bg);color:var(--red-text);}
+.ba{background:var(--amber-bg);color:var(--amber-text);}
+.bb{background:var(--blue-bg);color:var(--blue-text);}
+.bgold{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold-border);}
+.bgrey{background:var(--grey-bg);color:var(--grey-text);}
+.bpurple{background:var(--purple-bg);color:var(--purple-text);}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:18px;overflow-x:auto;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab-btn{padding:10px 17px;font-size:13px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .14s;background:none;border-top:none;border-left:none;border-right:none;font-family:'Inter',sans-serif;}
+.tab-btn:hover{color:var(--text);}
+.tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);font-weight:600;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* FORMS */
+.fg{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.ff{grid-column:1/-1;}
+.fgrp{display:flex;flex-direction:column;gap:5px;}
+.flbl{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.03em;text-transform:uppercase;}
+.fi,.fsel,.fta{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:var(--radius-sm);font-family:'Inter',sans-serif;font-size:13px;transition:border-color .14s;outline:none;width:100%;}
+.fi:focus,.fsel:focus,.fta:focus{border-color:var(--gold);background:var(--surface);box-shadow:0 0 0 3px var(--gold-bg);}
+.fsel option{background:var(--surface);}
+.fta{resize:vertical;min-height:76px;}
+.fi::placeholder{color:var(--text3);}
+
+/* SEARCH */
+.srch{position:relative;}
+.srch input{padding-left:34px;}
+.si{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none;}
+
+/* ROOMS */
+.rc{display:flex;gap:9px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.rg{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:10px;}
+.room-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;cursor:pointer;transition:all .14s;display:flex;flex-direction:column;gap:5px;user-select:none;}
+.room-card:hover{border-color:var(--gold);box-shadow:var(--shadow);transform:translateY(-1px);}
+.room-card.occupied{border-left:3px solid var(--red);}
+.room-card.available{border-left:3px solid var(--green);}
+.room-card.maintenance{border-left:3px solid var(--amber);}
+.room-card.reserved{border-left:3px solid var(--blue);}
+.rnum{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.05em;}
+.rtype{font-size:11px;color:var(--text3);}
+.room-drag-hint{font-size:10px;color:var(--text3);margin-top:2px;opacity:0;}
+.room-card:hover .room-drag-hint{opacity:1;}
+
+/* FLOOR PLAN */
+.floor-section{margin-bottom:20px;}
+.floor-lbl{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
+.floor-row{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;}
+.fp-room{border-radius:8px;padding:10px 8px;text-align:center;cursor:pointer;transition:all .15s;border:1px solid transparent;position:relative;}
+.fp-room.available{background:var(--green-bg);color:var(--green-text);}
+.fp-room.occupied{background:var(--red-bg);color:var(--red-text);}
+.fp-room.maintenance{background:var(--amber-bg);color:var(--amber-text);}
+.fp-room.reserved{background:var(--blue-bg);color:var(--blue-text);}
+.fp-room:hover{transform:scale(1.06);box-shadow:var(--shadow);}
+.fp-num{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;}
+.fp-type{font-size:9px;opacity:.7;text-transform:uppercase;letter-spacing:.04em;}
+
+/* CHART */
+.chart-wrap{padding:4px 0 0;}
+canvas{display:block;max-width:100%;}
+
+/* FOOD */
+.food-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:13px;}
+.food-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:17px;display:flex;flex-direction:column;gap:11px;}
+.food-name{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);}
+.food-desc{font-size:12px;color:var(--text3);}
+.fpr{display:flex;justify-content:space-between;align-items:center;}
+.fpl{font-size:11.5px;color:var(--text3);}
+.fpv{font-family:'JetBrains Mono',monospace;font-size:12.5px;font-weight:500;color:var(--text);}
+.food-opts{display:flex;gap:5px;flex-wrap:wrap;}
+.food-opt{padding:4px 10px;border-radius:var(--radius-xs);font-size:11.5px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .12s;}
+.food-opt.sel{background:var(--gold-bg);border-color:var(--gold);color:var(--gold);font-weight:600;}
+
+/* AMENITY TAGS */
+.at{display:flex;flex-wrap:wrap;gap:7px;}
+.atag{padding:5px 13px;border-radius:20px;font-size:12.5px;font-weight:500;background:var(--surface2);border:1px solid var(--border);color:var(--text2);cursor:pointer;transition:all .13s;display:flex;align-items:center;gap:6px;}
+.atag:hover{border-color:var(--gold);}
+.atag.sel{background:var(--gold-bg);border-color:var(--gold);color:var(--gold);}
+
+/* UPLOAD */
+.upa{border:2px dashed var(--border2);border-radius:var(--radius);padding:22px;text-align:center;cursor:pointer;transition:all .14s;background:var(--surface2);}
+.upa:hover{border-color:var(--gold);background:var(--gold-bg);}
+.upa-icon{font-size:26px;margin-bottom:7px;}
+.upa p{font-size:13px;color:var(--text3);}
+.upa small{font-size:11px;color:var(--text3);margin-top:3px;display:block;}
+
+/* DOCS */
+.doc-list{display:flex;flex-direction:column;gap:7px;}
+.doc-item{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;display:flex;align-items:center;gap:11px;}
+.doc-icon{font-size:19px;flex-shrink:0;}
+.doc-info{flex:1;min-width:0;}
+.doc-name{font-size:13px;font-weight:500;color:var(--text);}
+.doc-meta{font-size:11.5px;color:var(--text3);margin-top:1px;}
+
+/* NOTIFS */
+.nl{display:flex;flex-direction:column;gap:7px;}
+.notif{border-left:3px solid transparent;border-radius:var(--radius-sm);padding:9px 13px;display:flex;align-items:flex-start;gap:9px;background:var(--surface2);border:1px solid var(--border);border-left-width:3px;}
+.notif.info{border-left-color:var(--blue);}
+.notif.warn{border-left-color:var(--amber);}
+.notif.success{border-left-color:var(--green);}
+.notif.danger{border-left-color:var(--red);}
+.ni2{font-size:14px;margin-top:1px;flex-shrink:0;}
+.nm{font-size:12.5px;color:var(--text2);line-height:1.4;}
+.nt{font-size:11px;color:var(--text3);margin-top:2px;}
+
+/* SETTINGS */
+.sb-block{margin-bottom:28px;}
+.sb-bt{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:13px;padding-bottom:9px;border-bottom:1px solid var(--border);letter-spacing:-.02em;}
+
+/* MODAL */
+.moverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:1000;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px);}
+.moverlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);width:100%;max-width:620px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md);}
+.mh{padding:17px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--surface);z-index:1;}
+.mt2{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;letter-spacing:-.03em;}
+.mclose{background:var(--surface2);border:1px solid var(--border);color:var(--text3);width:27px;height:27px;border-radius:50%;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;}
+.mclose:hover{background:var(--red-bg);color:var(--red-text);}
+.mb2{padding:20px 22px;}
+.mf{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:9px;justify-content:flex-end;}
+
+/* CHECKOUT MODAL */
+.checkout-summary{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;}
+.cs-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;}
+.cs-row:not(:last-child){border-bottom:1px solid var(--border);}
+.cs-row.total{font-weight:700;font-size:15px;color:var(--text);}
+.cs-label{color:var(--text2);}
+.cs-val{font-family:'JetBrains Mono',monospace;color:var(--text);}
+
+/* CONFIRM MODAL */
+.confirm-icon{font-size:40px;text-align:center;margin-bottom:12px;}
+.confirm-msg{text-align:center;color:var(--text2);font-size:14px;line-height:1.5;}
+.confirm-sub{text-align:center;color:var(--text3);font-size:12.5px;margin-top:6px;}
+
+/* LAYOUT */
+.d2{display:grid;grid-template-columns:1fr 1fr;gap:15px;}
+.pill-row{display:flex;flex-wrap:wrap;gap:6px;}
+.pill{padding:4px 10px;font-size:12px;border-radius:20px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);}
+hr.dv{border:none;border-top:1px solid var(--border);margin:16px 0;}
+.empty{text-align:center;padding:44px 20px;color:var(--text3);}
+.ei{font-size:38px;margin-bottom:11px;}
+.panel{display:none;}
+.panel.active{display:block;}
+
+/* KEYBOARD SHORTCUT HINT */
+.kbd{display:inline-flex;align-items:center;padding:1px 5px;border-radius:3px;background:var(--surface2);border:1px solid var(--border2);font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);}
+
+/* GUEST TAG */
+.guest-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-size:10.5px;font-weight:600;}
+.guest-tag.vip{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold-border);}
+.guest-tag.corp{background:var(--purple-bg);color:var(--purple-text);}
+.guest-tag.long{background:var(--blue-bg);color:var(--blue-text);}
+.guest-tag.repeat{background:var(--green-bg);color:var(--green-text);}
+
+/* SIDEBAR OVERLAY */
+#sb-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99;}
+
+/* TOAST */
+#toast-wrap{position:fixed;bottom:22px;right:22px;z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+.toast{background:#1a1a1a;color:#fff;padding:11px 17px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;box-shadow:var(--shadow-md);border-left:3px solid var(--gold);animation:su .18s ease;display:flex;align-items:center;gap:10px;min-width:240px;max-width:320px;}
+.toast.success{border-left-color:var(--green);}
+.toast.danger{border-left-color:var(--red);}
+.toast.info{border-left-color:var(--blue);}
+@keyframes su{from{transform:translateY(8px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fo{from{opacity:1}to{opacity:0;transform:translateY(5px)}}
+
+/* SHORTCUTS MODAL */
+.shortcuts-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.sc-row{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--surface2);border-radius:var(--radius-xs);}
+.sc-label{font-size:12.5px;color:var(--text2);}
+
+/* MOBILE */
+@media(max-width:800px){
+  #sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);}
+  #sidebar.open{transform:translateX(0);box-shadow:var(--shadow-md);}
+  #sb-ov.open{display:block;}
+  #menu-toggle{display:flex;}
+  .d2{grid-template-columns:1fr;}
+  .fg{grid-template-columns:1fr;}
+  .fg3{grid-template-columns:1fr;}
+  #content{padding:14px;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .tb-pills,.gsearch,.dark-toggle{display:none;}
+  .floor-row{grid-template-columns:repeat(4,1fr);}
+  .shortcuts-grid{grid-template-columns:1fr;}
+}
+@media(max-width:480px){
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .rg{grid-template-columns:repeat(auto-fill,minmax(115px,1fr));}
+}
+
+/* PRINT */
+@media print{
+  #sidebar,#topbar,#toast-wrap,.ph-actions,.btn,.moverlay{display:none!important;}
+  #main{height:auto;overflow:visible;}
+  #content{overflow:visible;padding:0;}
+  .panel{display:block!important;}
+  body{overflow:visible;}
+}
+
+/* MISC */
+.flex{display:flex;}.ic{align-items:center;}.g8{gap:8px;}.g10{gap:10px;}.g12{gap:12px;}.mt12{margin-top:12px;}.mt16{margin-top:16px;}.mb14{margin-bottom:14px;}.mb16{margin-bottom:16px;}.mono{font-family:'JetBrains Mono',monospace;}
+.inline-edit{background:transparent;border:none;border-bottom:1px dashed var(--border2);color:var(--text);font-family:'Inter',sans-serif;font-size:inherit;outline:none;padding:1px 4px;width:auto;}
+.inline-edit:focus{border-bottom-color:var(--gold);}
+
+/* PROGRESS BAR */
+.prog-bar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;margin-top:6px;}
+.prog-fill{height:100%;border-radius:3px;transition:width .4s ease;}
+
+/* OCCUPANCY BADGE */
+.occ-ring{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:12px;font-weight:800;flex-shrink:0;}
+
+/* REPORT SECTION */
+.report-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:18px;}
+.report-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;cursor:pointer;transition:all .14s;}
+.report-card:hover{border-color:var(--gold);transform:translateY(-1px);}
+.report-icon{font-size:28px;margin-bottom:8px;}
+.report-name{font-size:13px;font-weight:600;color:var(--text);}
+.report-desc{font-size:11.5px;color:var(--text3);margin-top:3px;}
+</style>
+</head>
+<body>
+
+<div id="sb-ov" onclick="closeSidebar()"></div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-mark" id="sidebar-logo-img">🏨</div>
+    <div style="min-width:0">
+      <div class="sb-hotel" id="sidebar-hotel-name">Quantum <span>Vorvex</span></div>
+      <div class="sb-sub">Powered by Forge Quantum Solution</div>
+    </div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-sec-lbl">Overview</div>
+    <div class="nav-item active" onclick="showPanel('dashboard',this)"><span class="ni">▦</span> Dashboard</div>
+    <div class="nav-item" onclick="showPanel('rooms',this)"><span class="ni">⊟</span> Rooms <span class="nav-badge" id="nav-badge-rooms">32</span></div>
+    <div class="nav-item" onclick="showPanel('floorplan',this)"><span class="ni">◫</span> Floor Plan</div>
+    <div class="nav-item" onclick="showPanel('reports',this)"><span class="ni">◈</span> Reports</div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-sec-lbl">Guests</div>
+    <div class="nav-item" onclick="showPanel('checkin',this)"><span class="ni">↗</span> Check-In</div>
+    <div class="nav-item" onclick="showPanel('guests',this)"><span class="ni">◎</span> All Guests</div>
+    <div class="nav-item" onclick="showPanel('bookings',this)"><span class="ni">◷</span> Bookings</div>
+    <div class="nav-item" onclick="showPanel('documents',this)"><span class="ni">◫</span> Documents</div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-sec-lbl">Services</div>
+    <div class="nav-item" onclick="showPanel('food',this)"><span class="ni">⊕</span> Food Options</div>
+    <div class="nav-item" onclick="showPanel('billing',this)"><span class="ni">◑</span> Billing</div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-sec-lbl">System</div>
+    <div class="nav-item" onclick="showPanel('settings',this)"><span class="ni">◌</span> Settings</div>
+  </div>
+  <div class="sb-user">
+    <div class="sb-av" id="sb-av">RG</div>
+    <div style="min-width:0;flex:1">
+      <div class="sb-uname" id="sb-owner-name">Ramesh Gupta</div>
+      <div class="sb-urole">Admin · Owner</div>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <button id="menu-toggle" onclick="toggleSidebar()">☰</button>
+    <div class="tb-title" id="topbar-title">Dashboard</div>
+    <div class="tb-pills">
+      <div class="tb-pill warn" id="pill-payments"><span class="dot"></span> <span id="pill-payments-txt">2 Payments Due</span></div>
+      <div class="tb-pill danger" id="pill-docs"><span class="dot"></span> <span id="pill-docs-txt">1 Doc Pending</span></div>
+      <div class="tb-pill ok"><span class="dot"></span> GST Compliant</div>
+    </div>
+    <div class="gsearch" style="position:relative">
+      <span class="si">⌕</span>
+      <input type="text" placeholder="Search anything... (Ctrl+K)" id="global-search" oninput="doGlobalSearch(this.value)" onfocus="if(this.value)showGSearch()" autocomplete="off">
+      <div id="gsearch-results"></div>
+    </div>
+    <button class="dark-toggle" onclick="toggleDark()" title="Toggle dark mode" id="dark-btn">🌙</button>
+    <div class="tb-clock"><div class="tc-time" id="clock-time">--:--:--</div><div class="tc-date" id="clock-date"></div></div>
+    <button class="btn btn-primary btn-sm" onclick="showPanel('checkin',document.querySelectorAll('.nav-item')[4])">+ Check-In</button>
+  </div>
+
+  <div id="content">
+
+    <!-- DASHBOARD -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="ph">
+        <div><div class="ph-title">Dashboard</div><div class="ph-sub" id="dash-sub">Grand Residency · Quantum Vorvex · Live overview</div></div>
+        <div class="ph-actions">
+          <button class="btn btn-outline btn-sm" onclick="openModal('shortcuts-modal')">⌨ Shortcuts</button>
+          <button class="btn btn-primary btn-sm" onclick="printPage()">🖨 Print</button>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card cg"><div class="stat-lbl">Total Rooms</div><div class="stat-val" id="stat-total">32</div><div class="stat-sub">Configured</div></div>
+        <div class="stat-card cgr"><div class="stat-lbl">Available</div><div class="stat-val" id="stat-available">18</div><div class="prog-bar"><div class="prog-fill" id="prog-avail" style="background:var(--green)"></div></div></div>
+        <div class="stat-card cr"><div class="stat-lbl">Occupied</div><div class="stat-val" id="stat-occupied">12</div><div class="prog-bar"><div class="prog-fill" id="prog-occ" style="background:var(--red)"></div></div></div>
+        <div class="stat-card ca"><div class="stat-lbl">Maintenance</div><div class="stat-val" id="stat-maint">2</div><div class="stat-sub">Out of service</div></div>
+        <div class="stat-card cb"><div class="stat-lbl">Revenue (Month)</div><div class="stat-val" id="stat-revenue">₹1.8L</div><div class="stat-trend up" id="stat-rev-trend">↑ 12% vs last month</div></div>
+        <div class="stat-card cp2"><div class="stat-lbl">Occupancy Rate</div><div class="stat-val" id="stat-occ-rate">75%</div><div class="stat-sub">This month</div></div>
+      </div>
+      <div class="d2" style="margin-bottom:15px">
+        <div class="card">
+          <div class="ch"><div class="ct">Monthly Revenue</div><div class="flex g8"><select class="fi" style="width:130px;padding:4px 8px;font-size:12px" onchange="updateChart(this.value)"><option value="6">Last 6 months</option><option value="12">Last 12 months</option></select></div></div>
+          <div class="cp chart-wrap"><canvas id="revenue-chart" height="160"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Occupancy Trend</div></div>
+          <div class="cp chart-wrap"><canvas id="occ-chart" height="160"></canvas></div>
+        </div>
+      </div>
+      <div class="d2">
+        <div class="card">
+          <div class="ch"><div class="ct">Recent Check-Ins</div><button class="btn btn-outline btn-xs" onclick="showPanel('guests',document.querySelectorAll('.nav-item')[5])">View All</button></div>
+          <div class="tw"><table>
+            <thead><tr><th>Guest</th><th>Room</th><th>Type</th><th>Tags</th><th>Status</th></tr></thead>
+            <tbody id="dash-checkins"></tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Notifications</div><button class="btn btn-outline btn-xs" onclick="clearNotifs()">Clear all</button></div>
+          <div class="cp"><div class="nl" id="notif-list">
+            <div class="notif warn"><span class="ni2">⚠</span><div><div class="nm">Room 312 payment due in 3 days</div><div class="nt">2 hrs ago</div></div></div>
+            <div class="notif info"><span class="ni2">ℹ</span><div><div class="nm">Room 207 maintenance scheduled tomorrow</div><div class="nt">4 hrs ago</div></div></div>
+            <div class="notif success"><span class="ni2">✓</span><div><div class="nm">New check-in: Room 405 — Kavita Joshi</div><div class="nt">6 hrs ago</div></div></div>
+            <div class="notif danger"><span class="ni2">!</span><div><div class="nm">ID verification pending for Room 110</div><div class="nt">Yesterday</div></div></div>
+          </div></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Upcoming Checkouts</div></div>
+          <div class="tw"><table>
+            <thead><tr><th>Guest</th><th>Room</th><th>Date</th><th></th></tr></thead>
+            <tbody>
+              <tr><td class="tb">Sneha Rao</td><td class="tm">118</td><td>Today</td><td><button class="btn btn-danger btn-xs" onclick="openCheckoutModal('Sneha Rao','118','Daily','800','280')">Checkout</button></td></tr>
+              <tr><td class="tb">Arjun Patel</td><td class="tm">312</td><td>Tomorrow</td><td><button class="btn btn-outline btn-xs" onclick="toast('Stay extended for Arjun Patel','success')">Extend</button></td></tr>
+              <tr><td class="tb">Vijay Kumar</td><td class="tm">221</td><td>Apr 8</td><td><button class="btn btn-outline btn-xs" onclick="toast('Stay extended for Vijay Kumar','success')">Extend</button></td></tr>
+            </tbody>
+          </table></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Food Revenue Breakdown</div></div>
+          <div class="cp chart-wrap"><canvas id="food-chart" height="150"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ROOMS -->
+    <div class="panel" id="panel-rooms">
+      <div class="ph">
+        <div><div class="ph-title">Rooms</div><div class="ph-sub" id="rooms-sub">32 rooms configured</div></div>
+        <div class="ph-actions">
+          <button class="btn btn-outline btn-sm" onclick="showPanel('floorplan',document.querySelectorAll('.nav-item')[2])">Floor Plan View</button>
+          <button class="btn btn-outline btn-sm" onclick="openModal('room-modal')">+ Add Room</button>
+        </div>
+      </div>
+      <div class="rc">
+        <div class="srch" style="flex:1;min-width:170px"><span class="si">⌕</span><input class="fi" style="padding-left:34px" placeholder="Search room number..." oninput="filterRooms(this.value)" id="room-search-inp"></div>
+        <select class="fsel" style="width:145px" onchange="filterRoomStatus(this.value)" id="room-status-filter"><option value="">All Status</option><option value="available">Available</option><option value="occupied">Occupied</option><option value="maintenance">Maintenance</option><option value="reserved">Reserved</option></select>
+        <select class="fsel" style="width:135px" onchange="filterRoomType(this.value)" id="room-type-filter"><option value="">All Types</option><option>Single</option><option>Double</option><option>Suite</option><option>Deluxe</option></select>
+        <div style="font-size:12px;color:var(--text3)">Drag to change status ↓</div>
+      </div>
+      <!-- Drag targets -->
+      <div class="flex g10 mb14" id="drag-targets">
+        <div class="drop-zone" data-status="available" style="flex:1;padding:8px 14px;border:2px dashed var(--green);border-radius:var(--radius-sm);text-align:center;font-size:12px;color:var(--green-text);background:var(--green-bg);transition:all .15s;">Drop here → Available</div>
+        <div class="drop-zone" data-status="occupied" style="flex:1;padding:8px 14px;border:2px dashed var(--red);border-radius:var(--radius-sm);text-align:center;font-size:12px;color:var(--red-text);background:var(--red-bg);transition:all .15s;">Drop here → Occupied</div>
+        <div class="drop-zone" data-status="maintenance" style="flex:1;padding:8px 14px;border:2px dashed var(--amber);border-radius:var(--radius-sm);text-align:center;font-size:12px;color:var(--amber-text);background:var(--amber-bg);transition:all .15s;">Drop here → Maintenance</div>
+        <div class="drop-zone" data-status="reserved" style="flex:1;padding:8px 14px;border:2px dashed var(--blue);border-radius:var(--radius-sm);text-align:center;font-size:12px;color:var(--blue-text);background:var(--blue-bg);transition:all .15s;">Drop here → Reserved</div>
+      </div>
+      <div class="rg" id="rooms-grid"></div>
+    </div>
+
+    <!-- FLOOR PLAN -->
+    <div class="panel" id="panel-floorplan">
+      <div class="ph">
+        <div><div class="ph-title">Floor Plan</div><div class="ph-sub">Visual overview of all rooms by floor</div></div>
+        <div class="ph-actions">
+          <div class="flex g8 ic" style="font-size:12px;color:var(--text3)">
+            <span style="width:10px;height:10px;background:var(--green-bg);border-radius:2px;display:inline-block"></span>Available
+            <span style="width:10px;height:10px;background:var(--red-bg);border-radius:2px;display:inline-block;margin-left:8px"></span>Occupied
+            <span style="width:10px;height:10px;background:var(--amber-bg);border-radius:2px;display:inline-block;margin-left:8px"></span>Maintenance
+            <span style="width:10px;height:10px;background:var(--blue-bg);border-radius:2px;display:inline-block;margin-left:8px"></span>Reserved
+          </div>
+        </div>
+      </div>
+      <div id="floor-plan-content"></div>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="panel" id="panel-reports">
+      <div class="ph">
+        <div><div class="ph-title">Reports &amp; Analytics</div><div class="ph-sub">Export and analyse hotel data</div></div>
+        <div class="ph-actions">
+          <button class="btn btn-primary btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+          <button class="btn btn-outline btn-sm" onclick="printPage()">🖨 Print Report</button>
+        </div>
+      </div>
+      <div class="report-grid">
+        <div class="report-card" onclick="exportCSV('guests')"><div class="report-icon">👥</div><div class="report-name">Guest List</div><div class="report-desc">All guest records with stay details</div></div>
+        <div class="report-card" onclick="exportCSV('billing')"><div class="report-icon">💰</div><div class="report-name">Billing Report</div><div class="report-desc">Invoice and payment history</div></div>
+        <div class="report-card" onclick="exportCSV('rooms')"><div class="report-icon">🏠</div><div class="report-name">Room Occupancy</div><div class="report-desc">Room status and occupancy data</div></div>
+        <div class="report-card" onclick="exportCSV('food')"><div class="report-icon">🍽</div><div class="report-name">Food Revenue</div><div class="report-desc">Meal plan revenue breakdown</div></div>
+        <div class="report-card" onclick="backupSettings()"><div class="report-icon">💾</div><div class="report-name">Backup Settings</div><div class="report-desc">Export hotel config as JSON</div></div>
+        <div class="report-card" onclick="document.getElementById('restore-input').click()"><div class="report-icon">📥</div><div class="report-name">Restore Settings</div><div class="report-desc">Import from JSON backup</div><input type="file" id="restore-input" style="display:none" accept=".json" onchange="restoreSettings(this)"></div>
+      </div>
+      <div class="d2">
+        <div class="card">
+          <div class="ch"><div class="ct">Monthly Revenue (12m)</div></div>
+          <div class="cp chart-wrap"><canvas id="report-rev-chart" height="180"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="ch"><div class="ct">Occupancy % Trend</div></div>
+          <div class="cp chart-wrap"><canvas id="report-occ-chart" height="180"></canvas></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:15px">
+        <div class="ch"><div class="ct">GST Summary</div><button class="btn btn-outline btn-xs" onclick="exportCSV('gst')">Export</button></div>
+        <div class="tw"><table>
+          <thead><tr><th>Month</th><th>Taxable Amount</th><th>GST Rate</th><th>CGST</th><th>SGST</th><th>Total Tax</th><th>Invoice Count</th></tr></thead>
+          <tbody id="gst-table"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- CHECK-IN -->
+    <div class="panel" id="panel-checkin">
+      <div class="ph"><div><div class="ph-title">New Check-In</div><div class="ph-sub">Complete all steps to onboard a guest</div></div></div>
+      <div class="card"><div class="cp">
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab(this,'ci-guest')">1. Guest Info</button>
+          <button class="tab-btn" onclick="switchTab(this,'ci-room')">2. Room &amp; Stay</button>
+          <button class="tab-btn" onclick="switchTab(this,'ci-food')">3. Food Options</button>
+          <button class="tab-btn" onclick="switchTab(this,'ci-docs')">4. Documents</button>
+          <button class="tab-btn" onclick="switchTab(this,'ci-amen')">5. Amenities</button>
+        </div>
+        <div class="tab-content active" id="ci-guest">
+          <div class="fg">
+            <div class="fgrp"><label class="flbl">Full Name *</label><input class="fi" id="ci-name" placeholder="Guest full name"></div>
+            <div class="fgrp"><label class="flbl">Phone *</label><input class="fi" id="ci-phone" placeholder="+91 XXXXX XXXXX"></div>
+            <div class="fgrp"><label class="flbl">Email</label><input class="fi" id="ci-email" type="email" placeholder="email@example.com"></div>
+            <div class="fgrp"><label class="flbl">Date of Birth</label><input class="fi" id="ci-dob" type="date"></div>
+            <div class="fgrp"><label class="flbl">Nationality</label><input class="fi" value="Indian"></div>
+            <div class="fgrp"><label class="flbl">Gender</label><select class="fsel"><option>Male</option><option>Female</option><option>Other</option></select></div>
+            <div class="fgrp"><label class="flbl">Guest Tags</label>
+              <div class="flex g8 ic" style="flex-wrap:wrap;margin-top:4px">
+                <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="tag-vip"> <span class="guest-tag vip">⭐ VIP</span></label>
+                <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="tag-corp"> <span class="guest-tag corp">🏢 Corporate</span></label>
+                <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="tag-long"> <span class="guest-tag long">📅 Long-term</span></label>
+              </div>
+            </div>
+            <div class="fgrp"><label class="flbl">Notes</label><input class="fi" placeholder="Any notes about this guest..."></div>
+            <div class="fgrp ff"><label class="flbl">Permanent Address</label><textarea class="fta" placeholder="Full address with city, state, PIN"></textarea></div>
+            <div class="fgrp"><label class="flbl">Emergency Contact Name</label><input class="fi" placeholder="Contact person name"></div>
+            <div class="fgrp"><label class="flbl">Emergency Contact Phone</label><input class="fi" placeholder="+91 XXXXX XXXXX"></div>
+          </div>
+          <div class="flex mt16" style="justify-content:flex-end"><button class="btn btn-primary" onclick="switchTabByName('ci-room')">Next: Room &amp; Stay →</button></div>
+        </div>
+        <div class="tab-content" id="ci-room">
+          <div class="fg">
+            <div class="fgrp"><label class="flbl">Stay Type *</label><select class="fsel" id="stay-type" onchange="toggleStayFields()"><option value="daily">Daily</option><option value="monthly">Monthly</option></select></div>
+            <div class="fgrp"><label class="flbl">Room Number *</label><select class="fsel" id="room-select"><option>101 — Single (Available)</option><option>203 — Double (Available)</option><option>305 — Suite (Available)</option><option>402 — Deluxe (Available)</option></select></div>
+            <div class="fgrp"><label class="flbl">Check-In Date *</label><input class="fi" type="date" id="ci-date"></div>
+            <div class="fgrp" id="checkout-grp"><label class="flbl">Check-Out Date *</label><input class="fi" type="date"></div>
+            <div class="fgrp" id="months-grp" style="display:none"><label class="flbl">Number of Months</label><input class="fi" type="number" min="1" value="1" id="ci-months"></div>
+            <div class="fgrp"><label class="flbl">Room Rate (₹)</label><input class="fi" placeholder="Per day / month" id="room-rate"></div>
+            <div class="fgrp"><label class="flbl">Security Deposit (₹)</label><input class="fi" placeholder="Deposit amount" id="ci-deposit"></div>
+            <div class="fgrp"><label class="flbl">No. of Occupants</label><input class="fi" type="number" value="1" min="1"></div>
+            <div class="fgrp ff"><label class="flbl">Special Requests</label><textarea class="fta" placeholder="Any special requirements..."></textarea></div>
+          </div>
+          <div class="flex g10 mt16" style="justify-content:flex-end">
+            <button class="btn btn-outline" onclick="switchTabByName('ci-guest')">← Back</button>
+            <button class="btn btn-primary" onclick="switchTabByName('ci-food')">Next: Food →</button>
+          </div>
+        </div>
+        <div class="tab-content" id="ci-food">
+          <p style="font-size:13px;color:var(--text3);margin-bottom:14px">Select food plan(s). Prices are live-synced from Settings.</p>
+          <div class="food-grid" id="checkin-food-grid"></div>
+          <div class="flex g10 mt16" style="justify-content:flex-end">
+            <button class="btn btn-outline" onclick="switchTabByName('ci-room')">← Back</button>
+            <button class="btn btn-primary" onclick="switchTabByName('ci-docs')">Next: Documents →</button>
+          </div>
+        </div>
+        <div class="tab-content" id="ci-docs">
+          <p style="font-size:13px;color:var(--text3);margin-bottom:14px">Upload KYC documents. Thumbnails preview after upload.</p>
+          <div class="fg mb14">
+            <div class="fgrp"><label class="flbl">ID Type *</label><select class="fsel"><option>Aadhaar Card</option><option>PAN Card</option><option>Passport</option><option>Voter ID</option><option>Driving Licence</option></select></div>
+            <div class="fgrp"><label class="flbl">ID Number *</label><input class="fi" placeholder="Enter ID number"></div>
+          </div>
+          <div class="fg">
+            <div><div class="flbl" style="margin-bottom:8px">ID Front Side *</div><div class="upa" id="upa-front" onclick="triggerUpload('id-front')"><div class="upa-icon" id="upa-front-icon">📄</div><p id="upa-front-txt">Click to upload front side</p><small>JPG, PNG, PDF · max 5MB</small><input type="file" id="id-front" style="display:none" accept="image/*,.pdf" onchange="previewDoc(this,'upa-front','upa-front-icon','upa-front-txt')"></div></div>
+            <div><div class="flbl" style="margin-bottom:8px">ID Back Side</div><div class="upa" id="upa-back" onclick="triggerUpload('id-back')"><div class="upa-icon" id="upa-back-icon">📄</div><p id="upa-back-txt">Click to upload back side</p><small>JPG, PNG, PDF · max 5MB</small><input type="file" id="id-back" style="display:none" accept="image/*,.pdf" onchange="previewDoc(this,'upa-back','upa-back-icon','upa-back-txt')"></div></div>
+            <div><div class="flbl" style="margin-bottom:8px">Guest Photo *</div><div class="upa" id="upa-photo" onclick="triggerUpload('g-photo')"><div class="upa-icon" id="upa-photo-icon">📷</div><p id="upa-photo-txt">Upload passport photo</p><small>JPG, PNG · max 2MB</small><input type="file" id="g-photo" style="display:none" accept="image/*" onchange="previewDoc(this,'upa-photo','upa-photo-icon','upa-photo-txt')"></div></div>
+            <div><div class="flbl" style="margin-bottom:8px">Additional Document</div><div class="upa" onclick="triggerUpload('extra-doc')"><div class="upa-icon">📎</div><p>Any other document</p><small>Any format · max 10MB</small><input type="file" id="extra-doc" style="display:none"></div></div>
+          </div>
+          <div class="flex g10 mt16" style="justify-content:flex-end">
+            <button class="btn btn-outline" onclick="switchTabByName('ci-food')">← Back</button>
+            <button class="btn btn-primary" onclick="switchTabByName('ci-amen')">Next: Amenities →</button>
+          </div>
+        </div>
+        <div class="tab-content" id="ci-amen">
+          <p style="font-size:13px;color:var(--text3);margin-bottom:14px">Select facilities and amenities for the guest.</p>
+          <div class="sb-block"><div class="sb-bt">Standard Facilities</div><div class="at" id="checkin-facilities"></div></div>
+          <div class="sb-block"><div class="sb-bt">Extra Amenities (Chargeable)</div><div class="at" id="checkin-amenities"></div></div>
+          <div class="fgrp mt12"><label class="flbl">Amenity Notes</label><textarea class="fta" placeholder="Notes about selected amenities..."></textarea></div>
+          <div class="flex g10 mt16" style="justify-content:flex-end">
+            <button class="btn btn-outline" onclick="switchTabByName('ci-docs')">← Back</button>
+            <button class="btn btn-success" onclick="completeCheckin()">✓ Complete Check-In</button>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- GUESTS -->
+    <div class="panel" id="panel-guests">
+      <div class="ph">
+        <div><div class="ph-title">All Guests</div><div class="ph-sub">Active and past records with full history</div></div>
+        <div class="ph-actions"><button class="btn btn-outline btn-sm" onclick="exportCSV('guests')">⬇ Export</button><button class="btn btn-primary btn-sm" onclick="showPanel('checkin',document.querySelectorAll('.nav-item')[4])">+ New Check-In</button></div>
+      </div>
+      <div class="card">
+        <div class="ch">
+          <div class="srch" style="flex:1;max-width:280px"><span class="si">⌕</span><input class="fi" style="padding-left:34px" placeholder="Search guests..." oninput="filterGuests(this.value)"></div>
+          <div class="flex g10"><select class="fsel" style="width:125px" onchange="filterGuestType(this.value)"><option value="">All Types</option><option value="Daily">Daily</option><option value="Monthly">Monthly</option></select><select class="fsel" style="width:125px" onchange="filterGuestStatus(this.value)"><option value="">All Status</option><option value="Active">Active</option><option value="Due">Due</option><option value="Checked Out">Checked Out</option></select></div>
+        </div>
+        <div class="tw"><table>
+          <thead><tr><th>DOC ID</th><th>Guest</th><th>Room</th><th>Stay</th><th>Check-In</th><th>Due / Out</th><th>Food</th><th>Stays</th><th>Tags</th><th>Status</th><th></th></tr></thead>
+          <tbody id="guests-tbody"></tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- BOOKINGS -->
+    <div class="panel" id="panel-bookings">
+      <div class="ph"><div><div class="ph-title">Bookings</div><div class="ph-sub">Manage all reservations</div></div><button class="btn btn-primary btn-sm">+ New Booking</button></div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab(this,'bk-up')">Upcoming</button>
+        <button class="tab-btn" onclick="switchTab(this,'bk-ac')">Active</button>
+        <button class="tab-btn" onclick="switchTab(this,'bk-pa')">Past</button>
+      </div>
+      <div class="tab-content active" id="bk-up">
+        <div class="card"><div class="tw"><table>
+          <thead><tr><th>Booking ID</th><th>Guest</th><th>Room</th><th>Type</th><th>From</th><th>To / Months</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="tm" style="color:var(--text3)">#BK-2025-041</td><td class="tb">Kavita Joshi</td><td class="tm">405</td><td><span class="badge bb">Monthly</span></td><td>10 Apr</td><td>3 months</td><td class="tm">₹42,000</td><td><span class="badge ba">Pending</span></td><td><button class="btn btn-success btn-xs" onclick="toast('Booking confirmed!','success')">Confirm</button></td></tr>
+            <tr><td class="tm" style="color:var(--text3)">#BK-2025-042</td><td class="tb">Suresh Nair</td><td class="tm">210</td><td><span class="badge bgold">Daily</span></td><td>12 Apr</td><td>15 Apr</td><td class="tm">₹9,000</td><td><span class="badge bg">Confirmed</span></td><td><button class="btn btn-outline btn-xs">View</button></td></tr>
+          </tbody>
+        </table></div></div>
+      </div>
+      <div class="tab-content" id="bk-ac"><div class="empty"><div class="ei">📅</div><div>Active bookings shown in Guests panel</div></div></div>
+      <div class="tab-content" id="bk-pa"><div class="empty"><div class="ei">📂</div><div>Past bookings will appear here</div></div></div>
+    </div>
+
+    <!-- DOCUMENTS -->
+    <div class="panel" id="panel-documents">
+      <div class="ph">
+        <div><div class="ph-title">Documents</div><div class="ph-sub">KYC verification status</div></div>
+        <div class="srch" style="position:relative;width:250px"><span class="si">⌕</span><input class="fi" style="padding-left:34px" placeholder="Search documents..."></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct">Document Verification</div></div>
+        <div class="tw"><table>
+          <thead><tr><th>DOC ID</th><th>Guest</th><th>Room</th><th>ID Type</th><th>ID Number</th><th>Photo</th><th>Uploaded</th><th>Verified</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="tm" style="color:var(--text3)">DOC-0001</td><td class="tb">Rohit Sharma</td><td class="tm">101</td><td>Aadhaar</td><td class="tm">XXXX-4321</td><td><div style="width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#000">RS</div></td><td><span class="badge bg">4 / 4</span></td><td><span class="badge bg">✓ Verified</span></td><td><button class="btn btn-outline btn-xs">View</button></td></tr>
+            <tr><td class="tm" style="color:var(--text3)">DOC-0002</td><td class="tb">Priya Mehta</td><td class="tm">205</td><td>Passport</td><td class="tm">P1234567</td><td><div style="width:32px;height:32px;border-radius:50%;background:var(--purple);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">PM</div></td><td><span class="badge ba">2 / 4</span></td><td><span class="badge ba">Pending</span></td><td><div class="flex g8"><button class="btn btn-outline btn-xs">View</button><button class="btn btn-primary btn-xs">Upload</button></div></td></tr>
+            <tr><td class="tm" style="color:var(--text3)">DOC-0003</td><td class="tb">Arjun Patel</td><td class="tm">312</td><td>Driving Licence</td><td class="tm">MH-12-XXXX</td><td><div style="width:32px;height:32px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff">AP</div></td><td><span class="badge br">1 / 4</span></td><td><span class="badge br">Incomplete</span></td><td><div class="flex g8"><button class="btn btn-outline btn-xs">View</button><button class="btn btn-primary btn-xs">Upload</button></div></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- FOOD -->
+    <div class="panel" id="panel-food">
+      <div class="ph"><div><div class="ph-title">Food Options</div><div class="ph-sub">Meal plans and active orders</div></div><button class="btn btn-primary btn-sm" onclick="openModal('food-modal')">+ Add Meal Plan</button></div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab(this,'food-menu')">Meal Catalog</button>
+        <button class="tab-btn" onclick="switchTab(this,'food-orders')">Active Orders</button>
+        <button class="tab-btn" onclick="switchTab(this,'food-rev')">Revenue</button>
+      </div>
+      <div class="tab-content active" id="food-menu"><div class="food-grid" id="food-catalog"></div></div>
+      <div class="tab-content" id="food-orders">
+        <div class="card"><div class="tw"><table>
+          <thead><tr><th>Room</th><th>Guest</th><th>Meal Plan</th><th>Billing</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="tm">101</td><td>Rohit Sharma</td><td>Breakfast + Dinner</td><td><span class="badge bb">Monthly</span></td><td class="tm">₹4,200/mo</td><td><span class="badge bg">Active</span></td><td><button class="btn btn-outline btn-xs" onclick="sendReminder('Rohit Sharma')">📱 Remind</button></td></tr>
+            <tr><td class="tm">312</td><td>Arjun Patel</td><td>All Meals</td><td><span class="badge bg">Weekly</span></td><td class="tm">₹2,600/wk</td><td><span class="badge bg">Active</span></td><td><button class="btn btn-outline btn-xs" onclick="sendReminder('Arjun Patel')">📱 Remind</button></td></tr>
+          </tbody>
+        </table></div></div>
+      </div>
+      <div class="tab-content" id="food-rev">
+        <div class="card"><div class="ch"><div class="ct">Food Revenue by Meal Type</div></div><div class="cp chart-wrap"><canvas id="food-rev-chart" height="200"></canvas></div></div>
+      </div>
+    </div>
+
+    <!-- BILLING -->
+    <div class="panel" id="panel-billing">
+      <div class="ph">
+        <div><div class="ph-title">Billing &amp; Payments</div><div class="ph-sub">Invoice management with GST</div></div>
+        <div class="ph-actions">
+          <button class="btn btn-outline btn-sm" onclick="exportCSV('billing')">⬇ Export</button>
+          <button class="btn btn-primary btn-sm">Generate Invoice</button>
+        </div>
+      </div>
+      <div class="stats-grid" style="margin-bottom:18px">
+        <div class="stat-card cgr"><div class="stat-lbl">Collected (Month)</div><div class="stat-val">₹1.4L</div><div class="stat-trend up">↑ 8%</div></div>
+        <div class="stat-card ca"><div class="stat-lbl">Pending</div><div class="stat-val">₹38K</div><div class="stat-sub">3 invoices</div></div>
+        <div class="stat-card cr"><div class="stat-lbl">Overdue</div><div class="stat-val">₹12K</div><div class="stat-sub">1 invoice</div></div>
+        <div class="stat-card cb"><div class="stat-lbl">GST Collected</div><div class="stat-val">₹18K</div><div class="stat-sub">This month</div></div>
+      </div>
+      <div class="card">
+        <div class="ch"><div class="ct">Payment Records</div><div class="flex g10"><select class="fsel" style="width:130px;padding:4px 8px;font-size:12px"><option>All Status</option><option>Paid</option><option>Pending</option><option>Overdue</option></select></div></div>
+        <div class="tw"><table>
+          <thead><tr><th>Invoice</th><th>Guest</th><th>Room</th><th>Period</th><th>Rent</th><th>Food</th><th>Amenities</th><th>GST (<span id="gst-rate-display">12</span>%)</th><th>Total</th><th>Status</th><th></th></tr></thead>
+          <tbody id="billing-tbody">
+            <tr><td class="tm" style="color:var(--text3)">#INV-041</td><td class="tb">Rohit Sharma</td><td class="tm">101</td><td>Apr 2025</td><td class="tm">₹14,000</td><td class="tm">₹4,200</td><td class="tm">₹500</td><td class="tm">₹2,244</td><td class="tm" style="font-weight:600;color:var(--text)">₹20,944</td><td><span class="badge bg">Paid</span></td><td><div class="flex g8"><button class="btn btn-outline btn-xs" onclick="printInvoice('Rohit Sharma','101','Apr 2025','14000','4200','500','12')">🖨 Print</button></div></td></tr>
+            <tr><td class="tm" style="color:var(--text3)">#INV-042</td><td class="tb">Arjun Patel</td><td class="tm">312</td><td>Apr 2025</td><td class="tm">₹18,000</td><td class="tm">₹2,600</td><td class="tm">₹800</td><td class="tm">₹2,568</td><td class="tm" style="font-weight:600;color:var(--text)">₹23,968</td><td><span class="badge ba">Pending</span></td><td><div class="flex g8"><button class="btn btn-primary btn-xs" onclick="toast('Payment collected from Arjun Patel','success')">Collect</button><button class="btn btn-outline btn-xs" onclick="sendReminder('Arjun Patel')">📱 Remind</button></div></td></tr>
+            <tr><td class="tm" style="color:var(--text3)">#INV-039</td><td class="tb">Sneha Rao</td><td class="tm">118</td><td>3 days</td><td class="tm">₹2,400</td><td class="tm">₹280</td><td class="tm">₹0</td><td class="tm">₹324</td><td class="tm" style="font-weight:600;color:var(--text)">₹3,004</td><td><span class="badge br">Overdue</span></td><td><div class="flex g8"><button class="btn btn-danger btn-xs" onclick="sendReminder('Sneha Rao')">📱 Remind</button><button class="btn btn-outline btn-xs" onclick="printInvoice('Sneha Rao','118','3 days','2400','280','0','12')">🖨 Print</button></div></td></tr>
+          </tbody>
+        </table></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="panel" id="panel-settings">
+      <div class="ph"><div><div class="ph-title">Settings</div><div class="ph-sub">Hotel config, pricing, tax and policies</div></div><button class="btn btn-primary btn-sm" onclick="saveSettings()">💾 Save Changes</button></div>
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab(this,'set-hotel')">Hotel Profile</button>
+        <button class="tab-btn" onclick="switchTab(this,'set-rooms')">Room Config</button>
+        <button class="tab-btn" onclick="switchTab(this,'set-fac')">Facilities</button>
+        <button class="tab-btn" onclick="switchTab(this,'set-food')">Food Plans</button>
+        <button class="tab-btn" onclick="switchTab(this,'set-tax')">Tax &amp; Pricing</button>
+        <button class="tab-btn" onclick="switchTab(this,'set-docs')">Documents</button>
+      </div>
+
+      <div class="tab-content active" id="set-hotel">
+        <div class="card"><div class="cp">
+          <div class="sb-block">
+            <div class="sb-bt">Hotel Branding</div>
+            <div class="fg">
+              <div class="fgrp"><label class="flbl">Hotel Name *</label><input class="fi" id="set-hotel-name" value="Grand Residency"></div>
+              <div class="fgrp"><label class="flbl">Owner Name *</label><input class="fi" id="set-owner-name" value="Ramesh Gupta"></div>
+              <div class="fgrp"><label class="flbl">Phone</label><input class="fi" value="+91 20 2765 4321"></div>
+              <div class="fgrp"><label class="flbl">Email</label><input class="fi" value="info@grandresidency.in"></div>
+              <div class="fgrp"><label class="flbl">GSTIN</label><input class="fi" id="set-gstin" placeholder="27AAAAA0000A1Z5"></div>
+              <div class="fgrp"><label class="flbl">License No.</label><input class="fi" placeholder="Hotel license number"></div>
+              <div class="fgrp ff"><label class="flbl">Full Address *</label><textarea class="fta">Plot 42, Pimpri-Chinchwad, Pune, Maharashtra - 411018</textarea></div>
+            </div>
+          </div>
+          <div class="sb-block">
+            <div class="sb-bt">Hotel Logo</div>
+            <div class="flex g12 ic" style="flex-wrap:wrap;align-items:flex-start">
+              <div style="width:76px;height:76px;background:var(--gold);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:34px;flex-shrink:0;overflow:hidden" id="logo-preview">🏨</div>
+              <div style="flex:1;min-width:180px"><div class="upa" onclick="triggerUpload('logo-upload')" style="padding:14px"><div class="upa-icon">🖼</div><p>Upload hotel logo</p><small>PNG, JPG, SVG · 256×256px recommended</small><input type="file" id="logo-upload" style="display:none" accept="image/*" onchange="previewLogo(this)"></div></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="tab-content" id="set-rooms">
+        <div class="card"><div class="cp">
+          <div class="sb-block">
+            <div class="sb-bt">Room Configuration</div>
+            <div class="fg" style="max-width:380px">
+              <div class="fgrp"><label class="flbl">Total Rooms</label><input class="fi" type="number" id="set-total-rooms" value="32" min="1" onchange="updateRoomStats()"></div>
+              <div class="fgrp"><label class="flbl">Number of Floors</label><input class="fi" type="number" id="set-floors" value="4" min="1"></div>
+            </div>
+          </div>
+          <div class="sb-block">
+            <div class="sb-bt">Room Types, Pricing &amp; Seasonal Rates</div>
+            <div class="tw"><table>
+              <thead><tr><th>Room Type</th><th>Daily Rate (₹)</th><th>Monthly Rate (₹)</th><th>Peak Season Daily (₹)</th><th>Peak Season Monthly (₹)</th><th>Count</th><th>Max Occ.</th><th></th></tr></thead>
+              <tbody id="room-types-tbody">
+                <tr><td><input class="fi" value="Single" style="width:100px"></td><td><input class="fi" value="800" type="number" style="width:90px"></td><td><input class="fi" value="14000" type="number" style="width:100px"></td><td><input class="fi" value="1100" type="number" style="width:100px"></td><td><input class="fi" value="18000" type="number" style="width:110px"></td><td><input class="fi" value="12" type="number" style="width:60px"></td><td><input class="fi" value="1" type="number" style="width:60px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove()">✕</button></td></tr>
+                <tr><td><input class="fi" value="Double" style="width:100px"></td><td><input class="fi" value="1200" type="number" style="width:90px"></td><td><input class="fi" value="20000" type="number" style="width:100px"></td><td><input class="fi" value="1600" type="number" style="width:100px"></td><td><input class="fi" value="26000" type="number" style="width:110px"></td><td><input class="fi" value="10" type="number" style="width:60px"></td><td><input class="fi" value="2" type="number" style="width:60px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove()">✕</button></td></tr>
+                <tr><td><input class="fi" value="Suite" style="width:100px"></td><td><input class="fi" value="2500" type="number" style="width:90px"></td><td><input class="fi" value="40000" type="number" style="width:100px"></td><td><input class="fi" value="3500" type="number" style="width:100px"></td><td><input class="fi" value="55000" type="number" style="width:110px"></td><td><input class="fi" value="6" type="number" style="width:60px"></td><td><input class="fi" value="3" type="number" style="width:60px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove()">✕</button></td></tr>
+                <tr><td><input class="fi" value="Deluxe" style="width:100px"></td><td><input class="fi" value="1800" type="number" style="width:90px"></td><td><input class="fi" value="30000" type="number" style="width:100px"></td><td><input class="fi" value="2400" type="number" style="width:100px"></td><td><input class="fi" value="38000" type="number" style="width:110px"></td><td><input class="fi" value="4" type="number" style="width:60px"></td><td><input class="fi" value="4" type="number" style="width:60px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove()">✕</button></td></tr>
+              </tbody>
+            </table></div>
+            <div class="flex g10 mt12 ic">
+              <button class="btn btn-outline btn-sm" onclick="addRoomTypeRow()">+ Add Room Type</button>
+              <label style="display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer"><input type="checkbox" id="seasonal-toggle" onchange="toast(this.checked?'Peak season pricing enabled':'Peak season pricing disabled','info')"><span>Enable seasonal pricing</span></label>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="tab-content" id="set-fac">
+        <div class="card"><div class="cp">
+          <div class="sb-block">
+            <div class="sb-bt">Standard Room Facilities</div>
+            <div class="at" id="facilities-list"></div>
+            <div class="flex g10 mt12"><input class="fi" id="new-facility" placeholder="e.g. AC, WiFi, TV..." style="max-width:270px"><button class="btn btn-outline btn-sm" onclick="addFacility()">+ Add</button></div>
+          </div>
+          <div class="sb-block">
+            <div class="sb-bt">Chargeable Amenities &amp; Pricing</div>
+            <div class="tw"><table>
+              <thead><tr><th>Amenity</th><th>Daily Rate (₹)</th><th>Monthly Rate (₹)</th><th></th></tr></thead>
+              <tbody id="amenities-tbody">
+                <tr><td>Mini Fridge</td><td><input class="fi tm" value="0" type="number" style="width:85px"></td><td><input class="fi tm" value="500" type="number" style="width:85px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove()">✕</button></td></tr>
+                <tr><td>Washing Machine</td><td><input class="fi tm" value="50" type="number" style="width:85px"></td><td><input class="fi tm" value="800" type="number" style="width:85px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove()">✕</button></td></tr>
+                <tr><td>Parking</td><td><input class="fi tm" value="100" type="number" style="width:85px"></td><td><input class="fi tm" value="1500" type="number" style="width:85px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove()">✕</button></td></tr>
+                <tr><td>Gym Access</td><td><input class="fi tm" value="0" type="number" style="width:85px"></td><td><input class="fi tm" value="600" type="number" style="width:85px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove()">✕</button></td></tr>
+              </tbody>
+            </table></div>
+            <div class="fg3 mt12" style="max-width:500px">
+              <input class="fi" id="new-amenity" placeholder="Amenity name">
+              <input class="fi" id="new-amenity-daily" type="number" placeholder="Daily (₹)">
+              <input class="fi" id="new-amenity-monthly" type="number" placeholder="Monthly (₹)">
+            </div>
+            <button class="btn btn-outline btn-sm mt12" onclick="addAmenityRow()">+ Add Amenity</button>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="tab-content" id="set-food">
+        <div class="card"><div class="cp">
+          <div class="sb-block">
+            <div class="sb-bt">Meal Plans &amp; Pricing</div>
+            <p style="font-size:12.5px;color:var(--text3);margin-bottom:13px">Changes sync live to Food Options and Check-In screens.</p>
+            <div class="tw"><table>
+              <thead><tr><th>Meal Name</th><th>One-time (₹)</th><th>Weekly (₹)</th><th>Monthly (₹)</th><th>Description</th><th></th></tr></thead>
+              <tbody id="food-plans-tbody">
+                <tr><td><input class="fi" value="Breakfast" style="width:105px"></td><td><input class="fi" value="120" type="number" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" value="700" type="number" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" value="2500" type="number" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" value="Idli/Poha + Tea" style="width:165px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove();syncFoodPlans()">✕</button></td></tr>
+                <tr><td><input class="fi" value="Lunch" style="width:105px"></td><td><input class="fi" value="180" type="number" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" value="1100" type="number" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" value="3800" type="number" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" value="Dal, Sabzi, Rice, Roti" style="width:165px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove();syncFoodPlans()">✕</button></td></tr>
+                <tr><td><input class="fi" value="Dinner" style="width:105px"></td><td><input class="fi" value="160" type="number" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" value="980" type="number" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" value="3200" type="number" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" value="Full meal + Dessert" style="width:165px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove();syncFoodPlans()">✕</button></td></tr>
+                <tr><td><input class="fi" value="All Meals" style="width:105px"></td><td><input class="fi" value="420" type="number" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" value="2600" type="number" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" value="9000" type="number" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" value="Bfst+Lunch+Dinner" style="width:165px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove();syncFoodPlans()">✕</button></td></tr>
+              </tbody>
+            </table></div>
+            <button class="btn btn-outline btn-sm mt12" onclick="addFoodPlanRow()">+ Add Meal Plan</button>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="tab-content" id="set-tax">
+        <div class="card"><div class="cp">
+          <div class="sb-block">
+            <div class="sb-bt">GST Configuration</div>
+            <div class="fg" style="max-width:500px">
+              <div class="fgrp"><label class="flbl">GST Rate (%)</label><input class="fi" type="number" id="set-gst" value="12" min="0" max="28" onchange="updateGSTDisplay()"></div>
+              <div class="fgrp"><label class="flbl">GST Type</label><select class="fsel"><option>CGST + SGST (Intrastate)</option><option>IGST (Interstate)</option></select></div>
+              <div class="fgrp"><label class="flbl">GSTIN</label><input class="fi" id="set-gstin2" placeholder="27AAAAA0000A1Z5"></div>
+              <div class="fgrp"><label class="flbl">Apply GST On</label><select class="fsel"><option>All Services</option><option>Room Rent Only</option><option>Room + Food</option></select></div>
+            </div>
+          </div>
+          <div class="sb-block">
+            <div class="sb-bt">Rent Escalation Rules</div>
+            <div class="fg" style="max-width:500px">
+              <div class="fgrp"><label class="flbl">Auto-escalation</label><select class="fsel" onchange="toast('Escalation rule updated','success')"><option>Disabled</option><option>Monthly (2%)</option><option>Quarterly (5%)</option><option>Annually (10%)</option><option>Custom</option></select></div>
+              <div class="fgrp"><label class="flbl">Escalation Notice (days)</label><input class="fi" type="number" value="30" min="7"></div>
+            </div>
+          </div>
+          <div class="sb-block">
+            <div class="sb-bt">Payment Methods</div>
+            <div class="flex g10" style="flex-wrap:wrap">
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" checked> Cash</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" checked> UPI</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox" checked> Bank Transfer</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox"> Credit Card</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer"><input type="checkbox"> Cheque</label>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="tab-content" id="set-docs">
+        <div class="card"><div class="cp">
+          <div class="sb-block">
+            <div class="sb-bt">Required Documents for Onboarding</div>
+            <div class="doc-list">
+              <div class="doc-item"><span class="doc-icon">🪪</span><div class="doc-info"><div class="doc-name">Government Photo ID</div><div class="doc-meta">Aadhaar / PAN / Passport / Voter ID / DL</div></div><span class="badge br">Required</span></div>
+              <div class="doc-item"><span class="doc-icon">📷</span><div class="doc-info"><div class="doc-name">Passport Photo</div><div class="doc-meta">Recent photograph</div></div><span class="badge br">Required</span></div>
+              <div class="doc-item"><span class="doc-icon">📄</span><div class="doc-info"><div class="doc-name">Address Proof</div><div class="doc-meta">Utility bill / Bank statement</div></div><span class="badge ba">Optional</span></div>
+              <div class="doc-item"><span class="doc-icon">📋</span><div class="doc-info"><div class="doc-name">Employment / Student ID</div><div class="doc-meta">For long-term stays</div></div><span class="badge ba">Optional</span></div>
+            </div>
+            <div class="flex g10 mt12" style="flex-wrap:wrap">
+              <input class="fi" placeholder="Document name" style="flex:1;min-width:180px">
+              <select class="fsel" style="width:125px"><option>Required</option><option>Optional</option></select>
+              <button class="btn btn-outline btn-sm">+ Add</button>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Add Room -->
+<div class="moverlay" id="room-modal">
+  <div class="modal">
+    <div class="mh"><div class="mt2">Add New Room</div><button class="mclose" onclick="closeModal('room-modal')">✕</button></div>
+    <div class="mb2">
+      <div class="fg">
+        <div class="fgrp"><label class="flbl">Room Number *</label><input class="fi" placeholder="e.g. 401"></div>
+        <div class="fgrp"><label class="flbl">Floor</label><input class="fi" type="number" placeholder="4"></div>
+        <div class="fgrp"><label class="flbl">Room Type *</label><select class="fsel"><option>Single</option><option>Double</option><option>Suite</option><option>Deluxe</option></select></div>
+        <div class="fgrp"><label class="flbl">Status</label><select class="fsel"><option value="available">Available</option><option value="maintenance">Maintenance</option></select></div>
+        <div class="fgrp"><label class="flbl">Daily Rate (₹)</label><input class="fi" type="number" placeholder="800"></div>
+        <div class="fgrp"><label class="flbl">Monthly Rate (₹)</label><input class="fi" type="number" placeholder="14000"></div>
+        <div class="fgrp ff"><label class="flbl">Notes</label><textarea class="fta" placeholder="Room notes..."></textarea></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-outline" onclick="closeModal('room-modal')">Cancel</button><button class="btn btn-primary" onclick="addRoom()">Add Room</button></div>
+  </div>
+</div>
+
+<!-- Checkout Modal -->
+<div class="moverlay" id="checkout-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="mh"><div class="mt2">Guest Checkout — <span id="co-guest-name"></span></div><button class="mclose" onclick="closeModal('checkout-modal')">✕</button></div>
+    <div class="mb2">
+      <div class="checkout-summary" id="co-summary"></div>
+      <div class="fgrp"><label class="flbl">Payment Method</label><select class="fsel"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Card</option></select></div>
+      <div class="fgrp" style="margin-top:12px"><label class="flbl">Payment Notes</label><textarea class="fta" placeholder="Any notes..." style="min-height:56px"></textarea></div>
+    </div>
+    <div class="mf"><button class="btn btn-outline" onclick="closeModal('checkout-modal')">Cancel</button><button class="btn btn-outline" onclick="printInvoiceFromCheckout()">🖨 Print Bill</button><button class="btn btn-success" onclick="confirmCheckout()">✓ Confirm Checkout</button></div>
+  </div>
+</div>
+
+<!-- Confirm Delete -->
+<div class="moverlay" id="confirm-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="mh"><div class="mt2">Confirm Action</div><button class="mclose" onclick="closeModal('confirm-modal')">✕</button></div>
+    <div class="mb2">
+      <div class="confirm-icon" id="confirm-icon">⚠️</div>
+      <div class="confirm-msg" id="confirm-msg">Are you sure?</div>
+      <div class="confirm-sub" id="confirm-sub">This action cannot be undone.</div>
+    </div>
+    <div class="mf"><button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button><button class="btn btn-danger" id="confirm-btn" onclick="confirmAction()">Confirm</button></div>
+  </div>
+</div>
+
+<!-- Food Modal -->
+<div class="moverlay" id="food-modal">
+  <div class="modal">
+    <div class="mh"><div class="mt2">Add Meal Plan</div><button class="mclose" onclick="closeModal('food-modal')">✕</button></div>
+    <div class="mb2">
+      <div class="fg">
+        <div class="fgrp"><label class="flbl">Meal Name *</label><input class="fi" placeholder="e.g. Dinner"></div>
+        <div class="fgrp"><label class="flbl">Category</label><select class="fsel"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snacks</option><option>All Meals</option></select></div>
+        <div class="fgrp"><label class="flbl">One-Time Price (₹)</label><input class="fi" type="number" placeholder="180"></div>
+        <div class="fgrp"><label class="flbl">Weekly Price (₹)</label><input class="fi" type="number" placeholder="1100"></div>
+        <div class="fgrp ff"><label class="flbl">Monthly Price (₹)</label><input class="fi" type="number" placeholder="3800"></div>
+        <div class="fgrp ff"><label class="flbl">Description</label><textarea class="fta" placeholder="Describe the meal..."></textarea></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-outline" onclick="closeModal('food-modal')">Cancel</button><button class="btn btn-primary" onclick="closeModal('food-modal');toast('Meal plan added!','success')">Add Plan</button></div>
+  </div>
+</div>
+
+<!-- Guest Detail Modal -->
+<div class="moverlay" id="guest-modal">
+  <div class="modal" style="max-width:680px">
+    <div class="mh"><div class="mt2" id="gm-title">Guest Profile</div><button class="mclose" onclick="closeModal('guest-modal')">✕</button></div>
+    <div class="mb2">
+      <div class="fg">
+        <div><div class="flbl" style="margin-bottom:4px">Room</div><div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--gold);letter-spacing:-.05em" id="gm-room">101</div></div>
+        <div><div class="flbl" style="margin-bottom:6px">Stay Type</div><span class="badge bb" id="gm-stay">Monthly</span></div>
+        <div><div class="flbl" style="margin-bottom:4px">Check-In</div><div style="font-weight:500" id="gm-checkin">01 Apr 2025</div></div>
+        <div><div class="flbl" style="margin-bottom:4px">Due Date</div><div style="font-weight:500" id="gm-due">01 May 2025</div></div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:7px;flex-wrap:wrap" id="gm-tags"></div>
+      <hr class="dv">
+      <div class="flbl" style="margin-bottom:8px">Stay History</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-size:12.5px;color:var(--text2)" id="gm-history"></div>
+      <hr class="dv">
+      <div class="flbl" style="margin-bottom:8px">Facilities Selected</div>
+      <div class="pill-row" id="gm-fac"></div>
+      <div class="flbl" style="margin-top:13px;margin-bottom:7px">Amenities</div>
+      <div class="pill-row" id="gm-amen"></div>
+      <hr class="dv">
+      <div class="flbl" style="margin-bottom:9px">Documents</div>
+      <div class="doc-list" id="gm-docs"></div>
+    </div>
+    <div class="mf"><button class="btn btn-outline" onclick="closeModal('guest-modal')">Close</button><button class="btn btn-danger" id="gm-checkout-btn" onclick="openCheckoutModal('Guest','101','Monthly','14000','4200')">Checkout</button><button class="btn btn-primary" onclick="openEditGuest()">✎ Edit Guest</button></div>
+  </div>
+</div>
+
+<!-- Print Invoice Modal -->
+<div class="moverlay" id="invoice-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="mh"><div class="mt2">Invoice / Bill</div><button class="mclose" onclick="closeModal('invoice-modal')">✕</button></div>
+    <div class="mb2" id="invoice-content"></div>
+    <div class="mf"><button class="btn btn-outline" onclick="closeModal('invoice-modal')">Close</button><button class="btn btn-primary" onclick="window.print()">🖨 Print</button></div>
+  </div>
+</div>
+
+<!-- Shortcuts Modal -->
+<div class="moverlay" id="shortcuts-modal">
+  <div class="modal" style="max-width:480px">
+    <div class="mh"><div class="mt2">⌨ Keyboard Shortcuts</div><button class="mclose" onclick="closeModal('shortcuts-modal')">✕</button></div>
+    <div class="mb2">
+      <div class="shortcuts-grid">
+        <div class="sc-row"><span class="sc-label">New Check-In</span><span class="kbd">C</span></div>
+        <div class="sc-row"><span class="sc-label">Go to Rooms</span><span class="kbd">R</span></div>
+        <div class="sc-row"><span class="sc-label">Go to Guests</span><span class="kbd">G</span></div>
+        <div class="sc-row"><span class="sc-label">Go to Billing</span><span class="kbd">B</span></div>
+        <div class="sc-row"><span class="sc-label">Go to Dashboard</span><span class="kbd">D</span></div>
+        <div class="sc-row"><span class="sc-label">Go to Settings</span><span class="kbd">S</span></div>
+        <div class="sc-row"><span class="sc-label">Go to Reports</span><span class="kbd">T</span></div>
+        <div class="sc-row"><span class="sc-label">Go to Floor Plan</span><span class="kbd">F</span></div>
+        <div class="sc-row"><span class="sc-label">Global Search</span><span class="kbd">Ctrl+K</span></div>
+        <div class="sc-row"><span class="sc-label">Toggle Dark Mode</span><span class="kbd">M</span></div>
+        <div class="sc-row"><span class="sc-label">Print / Export</span><span class="kbd">P</span></div>
+        <div class="sc-row"><span class="sc-label">Shortcuts help</span><span class="kbd">?</span></div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-primary" onclick="closeModal('shortcuts-modal')">Got it</button></div>
+  </div>
+</div>
+
+<!-- WhatsApp/SMS Remind Modal -->
+<div class="moverlay" id="remind-modal">
+  <div class="modal" style="max-width:440px">
+    <div class="mh"><div class="mt2">📱 Send Reminder</div><button class="mclose" onclick="closeModal('remind-modal')">✕</button></div>
+    <div class="mb2">
+      <div class="fgrp mb14"><label class="flbl">Recipient</label><input class="fi" id="remind-guest" readonly></div>
+      <div class="fgrp mb14"><label class="flbl">Channel</label><select class="fsel"><option>WhatsApp</option><option>SMS</option><option>Email</option></select></div>
+      <div class="fgrp"><label class="flbl">Message</label><textarea class="fta" id="remind-msg" style="min-height:100px"></textarea></div>
+    </div>
+    <div class="mf"><button class="btn btn-outline" onclick="closeModal('remind-modal')">Cancel</button><button class="btn btn-success" onclick="confirmReminder()">Send Reminder</button></div>
+  </div>
+</div>
+
+<!-- Edit Guest Modal -->
+<div class="moverlay" id="edit-guest-modal">
+  <div class="modal" style="max-width:640px">
+    <div class="mh"><div class="mt2">✎ Edit Guest — <span id="eg-title"></span></div><button class="mclose" onclick="closeModal('edit-guest-modal')">✕</button></div>
+    <div class="mb2">
+      <div class="fg">
+        <div class="fgrp"><label class="flbl">Full Name</label><input class="fi" id="eg-name"></div>
+        <div class="fgrp"><label class="flbl">Phone</label><input class="fi" id="eg-phone"></div>
+        <div class="fgrp"><label class="flbl">Room</label><input class="fi" id="eg-room"></div>
+        <div class="fgrp"><label class="flbl">Stay Type</label><select class="fsel" id="eg-type"><option value="Daily">Daily</option><option value="Monthly">Monthly</option></select></div>
+        <div class="fgrp"><label class="flbl">Check-In Date</label><input class="fi" id="eg-checkin"></div>
+        <div class="fgrp"><label class="flbl">Due / Check-Out Date</label><input class="fi" id="eg-due"></div>
+        <div class="fgrp"><label class="flbl">Food Plan</label><select class="fsel" id="eg-food"><option>None</option><option>One-time</option><option>Weekly</option><option>Monthly</option></select></div>
+        <div class="fgrp"><label class="flbl">Status</label><select class="fsel" id="eg-status"><option value="Active">Active</option><option value="Due">Due</option><option value="Checked Out">Checked Out</option></select></div>
+        <div class="fgrp ff"><label class="flbl">Guest Tags</label>
+          <div class="flex g8" style="margin-top:5px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="eg-vip"> <span class="guest-tag vip">⭐ VIP</span></label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="eg-corp"> <span class="guest-tag corp">🏢 Corporate</span></label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer"><input type="checkbox" id="eg-long"> <span class="guest-tag long">📅 Long-term</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mf"><button class="btn btn-outline" onclick="closeModal('edit-guest-modal')">Cancel</button><button class="btn btn-primary" onclick="saveEditGuest()">Save Changes</button></div>
+  </div>
+</div>
+
+<div id="toast-wrap"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const state = {
+  hotelName: 'Grand Residency', ownerName: 'Ramesh Gupta',
+  totalRooms: 32, gstRate: 12, darkMode: false,
+  facilities: ['AC','WiFi','TV','Hot Water','Study Table','Wardrobe','Power Backup','CCTV'],
+  amenities: ['Mini Fridge','Washing Machine','Parking','Gym Access','Locker','Daily Cleaning'],
+  rooms: [],
+  foodPlans: [
+    {name:'Breakfast',desc:'Idli/Poha + Tea',oneTime:120,weekly:700,monthly:2500},
+    {name:'Lunch',desc:'Dal, Sabzi, Rice, Roti',oneTime:180,weekly:1100,monthly:3800},
+    {name:'Dinner',desc:'Full meal + Dessert',oneTime:160,weekly:980,monthly:3200},
+    {name:'All Meals',desc:'Breakfast + Lunch + Dinner',oneTime:420,weekly:2600,monthly:9000},
+  ],
+  guests: [
+    {id:'GST-0001',name:'Rohit Sharma',phone:'+91 98765 43210',room:'101',type:'Monthly',checkin:'01 Apr 2025',due:'01 May 2025',food:'Monthly',stays:3,tags:['VIP'],status:'Active',facilities:['AC','WiFi','TV'],amenities:['Parking']},
+    {id:'GST-0002',name:'Priya Mehta',phone:'+91 91234 56789',room:'205',type:'Daily',checkin:'04 Apr 2025',due:'06 Apr 2025',food:'One-time',stays:1,tags:['Corporate'],status:'Active',facilities:['AC','WiFi'],amenities:[]},
+    {id:'GST-0003',name:'Arjun Patel',phone:'+91 87654 32100',room:'312',type:'Monthly',checkin:'05 Mar 2025',due:'05 Apr 2025',food:'Weekly',stays:4,tags:['Long-term','Repeat'],status:'Due',facilities:['AC','WiFi','TV','Hot Water'],amenities:['Gym Access','Washing Machine']},
+    {id:'GST-0004',name:'Sneha Rao',phone:'+91 76543 21098',room:'118',type:'Daily',checkin:'02 Apr 2025',due:'06 Apr 2025',food:'One-time',stays:1,tags:[],status:'Checkout',facilities:['AC'],amenities:[]},
+  ],
+  pendingAction: null,
+  checkoutData: null,
+};
+
+// ============================================================
+// INIT
+// ============================================================
+
+// CLOCK
+// ============================================================
+function startClock() {
+  function tick() {
+    const now = new Date();
+    document.getElementById('clock-time').textContent = now.toLocaleTimeString('en-IN');
+    document.getElementById('clock-date').textContent = now.toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short'});
+  }
+  tick();
+  setInterval(tick, 1000);
+}
+
+// ============================================================
+// DARK MODE
+// ============================================================
+function toggleDark() {
+  state.darkMode = !state.darkMode;
+  document.body.classList.toggle('dark', state.darkMode);
+  document.getElementById('dark-btn').textContent = state.darkMode ? '☀️' : '🌙';
+  toast(state.darkMode ? 'Dark mode enabled' : 'Light mode enabled', 'info');
+  setTimeout(() => drawCharts(), 300);
+}
+
+// ============================================================
+
+// ============================================================
+// ALL FUNCTIONS
+// ============================================================
+// NAV
+// ============================================================
+function showPanel(name, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  if (el) el.classList.add('active');
+  const T = {dashboard:'Dashboard',rooms:'Rooms',floorplan:'Floor Plan',reports:'Reports',checkin:'Check-In',guests:'All Guests',bookings:'Bookings',documents:'Documents',food:'Food Options',billing:'Billing & Payments',settings:'Settings'};
+  document.getElementById('topbar-title').textContent = T[name] || name;
+  closeSidebar();
+  if (name === 'rooms') renderRooms();
+  if (name === 'food') { renderFoodCatalog(); drawFoodRevChart(); }
+  if (name === 'settings') renderFacilitiesList();
+  if (name === 'checkin') { renderCheckinFoodGrid(); renderCheckinAmenities(); }
+  if (name === 'floorplan') renderFloorPlan();
+  if (name === 'reports') { drawReportCharts(); renderGSTTable(); }
+  if (name === 'guests') renderGuestsTable();
+  if (name === 'dashboard') { drawCharts(); updateProgBars(); }
+}
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sb-ov').classList.toggle('open'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sb-ov').classList.remove('open'); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+window.addEventListener('click', e => { if (e.target.classList.contains('moverlay')) e.target.classList.remove('open'); });
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(btn, cid) {
+  const root = btn.closest('.panel') || btn.closest('.card');
+  root.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+  root.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const tc = document.getElementById(cid); if (tc) tc.classList.add('active');
+  if (cid === 'food-rev') drawFoodRevChart();
+}
+function switchTabByName(id) {
+  const tc = document.getElementById(id); if (!tc) return;
+  const root = tc.closest('.panel') || tc.closest('.card');
+  root.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active')); tc.classList.add('active');
+  root.querySelectorAll('.tab-btn').forEach(b => { const oc = b.getAttribute('onclick') || ''; b.classList.toggle('active', oc.includes("'" + id + "'")); });
+}
+
+// ============================================================
+// ROOMS
+// ============================================================
+function generateRooms() {
+  const types = ['Single','Single','Single','Double','Double','Suite','Deluxe'];
+  const st = ['available','available','available','available','occupied','occupied','maintenance'];
+  state.rooms = [];
+  for (let f = 1; f <= 4; f++) for (let n = 1; n <= 8; n++)
+    state.rooms.push({number: f*100+n, floor: f, type: types[~~(Math.random()*types.length)], status: st[~~(Math.random()*st.length)]});
+}
+
+function renderRooms(filter='', sf='', tf='') {
+  updateRoomStats();
+  const filtered = state.rooms.filter(r => r.number.toString().includes(filter) && (!sf || r.status===sf) && (!tf || r.type===tf));
+  document.getElementById('rooms-grid').innerHTML = filtered.map(r => `
+    <div class="room-card ${r.status}" draggable="true" data-room="${r.number}" onclick="roomCardClick(${r.number})">
+      <div class="rnum">${r.number}</div>
+      <div class="rtype">${r.type} · Floor ${r.floor}</div>
+      <span class="badge ${r.status==='available'?'bg':r.status==='occupied'?'br':r.status==='reserved'?'bb':'ba'}" style="margin-top:4px;align-self:flex-start">
+        ${r.status.charAt(0).toUpperCase()+r.status.slice(1)}
+      </span>
+      <div class="room-drag-hint">Drag to change status</div>
+    </div>`).join('');
+  setupDragDrop();
+}
+
+function roomCardClick(num) {
+  const r = state.rooms.find(x => x.number === num);
+  toast(`Room ${num} — ${r.type} · ${r.status.charAt(0).toUpperCase()+r.status.slice(1)}`, 'info');
+}
+
+function filterRooms(v) { renderRooms(v, document.getElementById('room-status-filter')?.value||'', document.getElementById('room-type-filter')?.value||''); }
+function filterRoomStatus(v) { renderRooms(document.getElementById('room-search-inp')?.value||'', v, document.getElementById('room-type-filter')?.value||''); }
+function filterRoomType(v) { renderRooms(document.getElementById('room-search-inp')?.value||'', document.getElementById('room-status-filter')?.value||'', v); }
+
+function updateRoomStats() {
+  const a = state.rooms.filter(r=>r.status==='available').length;
+  const o = state.rooms.filter(r=>r.status==='occupied').length;
+  const m = state.rooms.filter(r=>r.status==='maintenance').length;
+  document.getElementById('stat-available').textContent = a;
+  document.getElementById('stat-occupied').textContent = o;
+  document.getElementById('stat-maint').textContent = m;
+  document.getElementById('stat-occ-rate').textContent = Math.round(o/state.rooms.length*100)+'%';
+  const rs = document.getElementById('rooms-sub'); if(rs) rs.textContent = `${state.totalRooms} rooms · ${a} available · ${o} occupied`;
+  updateProgBars();
+}
+
+function updateProgBars() {
+  const total = state.rooms.length || 32;
+  const a = state.rooms.filter(r=>r.status==='available').length || 18;
+  const o = state.rooms.filter(r=>r.status==='occupied').length || 12;
+  const pa = document.getElementById('prog-avail'); if(pa) pa.style.width = (a/total*100)+'%';
+  const po = document.getElementById('prog-occ'); if(po) po.style.width = (o/total*100)+'%';
+}
+
+function addRoom() {
+  toast('Room added successfully!', 'success');
+  closeModal('room-modal');
+  state.totalRooms++;
+  document.getElementById('stat-total').textContent = state.totalRooms;
+  document.getElementById('nav-badge-rooms').textContent = state.totalRooms;
+  const e = document.getElementById('set-total-rooms'); if(e) e.value = state.totalRooms;
+}
+
+// DRAG & DROP
+function setupDragDrop() {
+  document.querySelectorAll('.room-card[draggable]').forEach(card => {
+    card.addEventListener('dragstart', e => { e.dataTransfer.setData('roomNum', card.dataset.room); card.style.opacity = '.5'; });
+    card.addEventListener('dragend', e => { card.style.opacity = '1'; });
+  });
+  document.querySelectorAll('.drop-zone').forEach(zone => {
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.transform = 'scale(1.03)'; });
+    zone.addEventListener('dragleave', () => { zone.style.transform = ''; });
+    zone.addEventListener('drop', e => {
+      e.preventDefault(); zone.style.transform = '';
+      const num = parseInt(e.dataTransfer.getData('roomNum'));
+      const newStatus = zone.dataset.status;
+      const room = state.rooms.find(r => r.number === num);
+      if (room) { room.status = newStatus; renderRooms(); toast(`Room ${num} → ${newStatus}`, 'success'); }
+    });
+  });
+}
+
+// ============================================================
+// FLOOR PLAN
+// ============================================================
+function renderFloorPlan() {
+  const el = document.getElementById('floor-plan-content'); if(!el) return;
+  const floors = {};
+  state.rooms.forEach(r => { if(!floors[r.floor]) floors[r.floor]=[]; floors[r.floor].push(r); });
+  el.innerHTML = Object.keys(floors).sort((a,b)=>b-a).map(f => {
+    const roomsHtml = floors[f].map(r => {
+      return '<div class="fp-room ' + r.status + '" data-action="fp-room" data-num="' + r.number + '" data-type="' + r.type + '" data-status="' + r.status + '">' +
+        '<div class="fp-num">' + r.number + '</div>' +
+        '<div class="fp-type">' + r.type.slice(0,3) + '</div>' +
+        '</div>';
+    }).join('');
+    return '<div class="floor-section">' +
+      '<div class="floor-lbl">Floor ' + f + '</div>' +
+      '<div class="floor-row">' + roomsHtml + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+// ============================================================
+// GUESTS TABLE
+// ============================================================
+function renderGuestsTable(filter='', typeF='', statusF='') {
+  const tbody = document.getElementById('guests-tbody'); if(!tbody) return;
+  let list = state.guests;
+  if (filter) list = list.filter(g => g.name.toLowerCase().includes(filter.toLowerCase()) || g.room.includes(filter) || g.id.includes(filter));
+  if (typeF) list = list.filter(g => g.type === typeF);
+  if (statusF) list = list.filter(g => g.status === statusF);
+  tbody.innerHTML = list.map(g => {
+    const typeBadge = g.type==='Monthly' ? 'bb' : 'bgold';
+    const foodBadge = g.food==='Monthly' ? 'bb' : g.food==='Weekly' ? 'bg' : 'bgold';
+    const statusBadge = g.status==='Active' ? 'bg' : g.status==='Due' ? 'ba' : g.status==='Checkout' ? 'br' : 'bgrey';
+    const tagHtml = g.tags.map(t => {
+      const cls = t==='VIP' ? 'vip' : t==='Corporate' ? 'corp' : 'long';
+      const icon = t==='VIP' ? '⭐' : t==='Corporate' ? '🏢' : '📅';
+      return '<span class="guest-tag ' + cls + '">' + icon + ' ' + t + '</span>';
+    }).join(' ');
+    const repeatHtml = g.stays > 1 ? '<span class="guest-tag repeat">Repeat</span>' : '';
+    const checkoutBtn = g.status !== 'Checkout' ? '<button class="btn btn-danger btn-xs" data-action="checkout" data-id="' + g.id + '">Checkout</button>' : '';
+    const renewBtn = g.status === 'Due' ? '<button class="btn btn-success btn-xs" data-action="renew" data-id="' + g.id + '">Renew</button>' : '';
+    return '<tr>' +
+      '<td class="tm" style="color:var(--text3)">' + g.id + '</td>' +
+      '<td><div class="tb" style="cursor:pointer" data-action="view" data-id="' + g.id + '">' + g.name + '</div><div class="td2">' + g.phone + '</div></td>' +
+      '<td class="tm">' + g.room + '</td>' +
+      '<td><span class="badge ' + typeBadge + '">' + g.type + '</span></td>' +
+      '<td>' + g.checkin + '</td>' +
+      '<td>' + g.due + '</td>' +
+      '<td><span class="badge ' + foodBadge + '">' + g.food + '</span></td>' +
+      '<td><span class="tm" style="font-size:12px">' + g.stays + 'x</span> ' + repeatHtml + '</td>' +
+      '<td>' + tagHtml + '</td>' +
+      '<td><span class="badge ' + statusBadge + '">' + g.status + '</span></td>' +
+      '<td><div class="flex g8"><button class="btn btn-outline btn-xs" data-action="view" data-id="' + g.id + '">View</button>' + checkoutBtn + renewBtn + '</div></td>' +
+      '</tr>';
+  }).join('');
+}
+function filterGuests(v) { renderGuestsTable(v, document.querySelector('#panel-guests select')?.value||'', document.querySelectorAll('#panel-guests select')[1]?.value||''); }
+function filterGuestType(v) { renderGuestsTable(document.querySelector('#panel-guests .fi')?.value||'', v, document.querySelectorAll('#panel-guests select')[1]?.value||''); }
+function filterGuestStatus(v) { renderGuestsTable(document.querySelector('#panel-guests .fi')?.value||'', document.querySelector('#panel-guests select')?.value||'', v); }
+
+function renderDashCheckins() {
+  const el = document.getElementById('dash-checkins'); if(!el) return;
+  el.innerHTML = state.guests.slice(0,4).map(g => {
+    const typeBadge = g.type==='Monthly' ? 'bb' : 'bgold';
+    const statusBadge = g.status==='Active' ? 'bg' : g.status==='Due' ? 'ba' : 'br';
+    const tagHtml = g.tags.map(t => {
+      const cls = t==='VIP' ? 'vip' : t==='Corporate' ? 'corp' : 'long';
+      return '<span class="guest-tag ' + cls + '" style="font-size:9.5px">' + t + '</span>';
+    }).join(' ');
+    return '<tr>' +
+      '<td><div class="tb" data-action="view" data-id="' + g.id + '" style="cursor:pointer">' + g.name + '</div></td>' +
+      '<td class="tm">' + g.room + '</td>' +
+      '<td><span class="badge ' + typeBadge + '">' + g.type + '</span></td>' +
+      '<td>' + tagHtml + '</td>' +
+      '<td><span class="badge ' + statusBadge + '">' + g.status + '</span></td>' +
+      '</tr>';
+  }).join('');
+}
+
+// ============================================================
+// GUEST DETAIL MODAL
+// ============================================================
+function viewGuest(id) {
+  const g = state.guests.find(x => x.id === id) || state.guests[0];
+  currentGuestId = g.id;
+  document.getElementById('gm-title').textContent = `Guest Profile — ${g.name}`;
+  document.getElementById('gm-room').textContent = g.room;
+  document.getElementById('gm-stay').textContent = g.type;
+  document.getElementById('gm-checkin').textContent = g.checkin;
+  document.getElementById('gm-due').textContent = g.due;
+  document.getElementById('gm-tags').innerHTML = g.tags.map(t => `<span class="guest-tag ${t==='VIP'?'vip':t==='Corporate'?'corp':'long'}">${t==='VIP'?'⭐ VIP':t==='Corporate'?'🏢 Corporate':'📅 '+t}</span>`).join('');
+  document.getElementById('gm-fac').innerHTML = g.facilities.map(f=>`<span class="pill">${f}</span>`).join('');
+  document.getElementById('gm-amen').innerHTML = g.amenities.length ? g.amenities.map(a=>`<span class="pill">${a}</span>`).join('') : '<span style="font-size:12px;color:var(--text3)">None selected</span>';
+  document.getElementById('gm-history').innerHTML = g.stays > 1 
+    ? `${g.stays} stays at this hotel. Previous: ${g.checkin} · ${g.due}. <strong>Repeat guest since 2024.</strong>`
+    : 'First-time guest.';
+  document.getElementById('gm-docs').innerHTML = `
+    <div class="doc-item"><span class="doc-icon">🪪</span><div class="doc-info"><div class="doc-name">Government Photo ID</div><div class="doc-meta">Uploaded</div></div><span class="badge bg">Verified</span></div>
+    <div class="doc-item"><span class="doc-icon">📷</span><div class="doc-info"><div class="doc-name">Passport Photo</div><div class="doc-meta">Uploaded</div></div><span class="badge bg">Verified</span></div>`;
+  // Wire checkout button dynamically
+  const coBtn = document.getElementById('gm-checkout-btn');
+  if (coBtn) {
+    if (g.status === 'Checked Out') {
+      coBtn.style.display = 'none';
+    } else {
+      coBtn.style.display = '';
+      coBtn.onclick = () => openCheckoutModal(g.name, g.room, g.type, '14000', '4200');
+    }
+  }
+  openModal('guest-modal');
+}
+
+// ============================================================
+// CHECKOUT
+// ============================================================
+function openCheckoutModal(name, room, type, rent, food) {
+  state.checkoutData = {name, room, type, rent: parseInt(rent), food: parseInt(food)};
+  document.getElementById('co-guest-name').textContent = name;
+  const gst = state.gstRate;
+  const subtotal = parseInt(rent) + parseInt(food);
+  const tax = Math.round(subtotal * gst / 100);
+  const total = subtotal + tax;
+  document.getElementById('co-summary').innerHTML = `
+    <div class="cs-row"><span class="cs-label">Room Rent (${room})</span><span class="cs-val">₹${parseInt(rent).toLocaleString('en-IN')}</span></div>
+    <div class="cs-row"><span class="cs-label">Food Charges</span><span class="cs-val">₹${parseInt(food).toLocaleString('en-IN')}</span></div>
+    <div class="cs-row"><span class="cs-label">Amenity Charges</span><span class="cs-val">₹0</span></div>
+    <div class="cs-row"><span class="cs-label">Subtotal</span><span class="cs-val">₹${subtotal.toLocaleString('en-IN')}</span></div>
+    <div class="cs-row"><span class="cs-label">GST (${gst}%)</span><span class="cs-val">₹${tax.toLocaleString('en-IN')}</span></div>
+    <div class="cs-row total"><span class="cs-label">Total Payable</span><span class="cs-val" style="color:var(--gold);font-size:18px">₹${total.toLocaleString('en-IN')}</span></div>`;
+  closeModal('guest-modal');
+  openModal('checkout-modal');
+}
+
+function confirmCheckout() {
+  closeModal('checkout-modal');
+  if (state.checkoutData) {
+    const g = state.guests.find(x => x.name === state.checkoutData.name);
+    if (g) g.status = 'Checked Out';
+    renderGuestsTable(); renderDashCheckins();
+  }
+  toast(`✓ ${state.checkoutData?.name || 'Guest'} checked out successfully`, 'success');
+}
+
+function printInvoiceFromCheckout() {
+  if (state.checkoutData) printInvoice(state.checkoutData.name, state.checkoutData.room, 'Current Stay', state.checkoutData.rent, state.checkoutData.food, '0', state.gstRate);
+}
+
+// ============================================================
+// PRINT INVOICE
+// ============================================================
+function printInvoice(guest, room, period, rent, food, amenities, gstRate) {
+  const r=parseInt(rent),f=parseInt(food),a=parseInt(amenities||0);
+  const sub=r+f+a, tax=Math.round(sub*parseInt(gstRate)/100), total=sub+tax;
+  const invNum = '#INV-' + Date.now().toString().slice(-5);
+  document.getElementById('invoice-content').innerHTML = `
+    <div style="font-family:'Inter',sans-serif">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">
+        <div><div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text)">${state.hotelName}</div><div style="font-size:12px;color:var(--text3);margin-top:3px">Tax Invoice</div></div>
+        <div style="text-align:right"><div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--gold)">${invNum}</div><div style="font-size:11px;color:var(--text3)">${new Date().toLocaleDateString('en-IN')}</div></div>
+      </div>
+      <div style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px">
+        <strong>Bill To:</strong> ${guest} &nbsp;|&nbsp; Room ${room} &nbsp;|&nbsp; Period: ${period}
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="background:var(--surface2)"><th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)">Description</th><th style="padding:8px 12px;text-align:right;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--text3)">Amount</th></tr></thead>
+        <tbody>
+          <tr><td style="padding:10px 12px;border-bottom:1px solid var(--border)">Room Rent — ${period}</td><td style="padding:10px 12px;text-align:right;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace">₹${r.toLocaleString('en-IN')}</td></tr>
+          <tr><td style="padding:10px 12px;border-bottom:1px solid var(--border)">Food Charges</td><td style="padding:10px 12px;text-align:right;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace">₹${f.toLocaleString('en-IN')}</td></tr>
+          <tr><td style="padding:10px 12px;border-bottom:1px solid var(--border)">Amenity Charges</td><td style="padding:10px 12px;text-align:right;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace">₹${a.toLocaleString('en-IN')}</td></tr>
+          <tr><td style="padding:10px 12px;border-bottom:1px solid var(--border)">GST (${gstRate}%)</td><td style="padding:10px 12px;text-align:right;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace">₹${tax.toLocaleString('en-IN')}</td></tr>
+          <tr style="background:var(--gold-bg)"><td style="padding:12px;font-weight:700;font-size:15px">Total Payable</td><td style="padding:12px;text-align:right;font-weight:700;font-size:15px;color:var(--gold);font-family:'JetBrains Mono',monospace">₹${total.toLocaleString('en-IN')}</td></tr>
+        </tbody>
+      </table>
+      <div style="margin-top:16px;font-size:11px;color:var(--text3);text-align:center">Thank you for staying at ${state.hotelName}. GSTIN: ${document.getElementById('set-gstin')?.value||'N/A'} &nbsp;|&nbsp; Powered by <strong>Quantum Vorvex</strong> · Forge Quantum Solution</div>
+    </div>`;
+  openModal('invoice-modal');
+}
+
+function printPage() { window.print(); }
+
+// ============================================================
+// CONFIRM DIALOG
+// ============================================================
+function openConfirm(icon, msg, sub, btnTxt, action) {
+  document.getElementById('confirm-icon').textContent = icon;
+  document.getElementById('confirm-msg').textContent = msg;
+  document.getElementById('confirm-sub').textContent = sub;
+  document.getElementById('confirm-btn').textContent = btnTxt;
+  state.pendingAction = action;
+  openModal('confirm-modal');
+}
+function confirmAction() { if (state.pendingAction) state.pendingAction(); closeModal('confirm-modal'); }
+
+// ============================================================
+// REMINDER
+// ============================================================
+function sendReminder(name) {
+  document.getElementById('remind-guest').value = name;
+  const g = state.guests.find(x => x.name === name);
+  document.getElementById('remind-msg').value = `Dear ${name},\n\nThis is a friendly reminder from ${state.hotelName} regarding your pending payment for Room ${g?.room||''}.\n\nPlease clear dues at your earliest convenience.\n\nThank you,\n${state.ownerName}\n${state.hotelName}`;
+  openModal('remind-modal');
+}
+function confirmReminder() {
+  closeModal('remind-modal');
+  toast('Reminder sent via WhatsApp ✓', 'success');
+}
+
+// ============================================================
+// FOOD
+// ============================================================
+function readFoodFromSettings() {
+  state.foodPlans = [];
+  document.querySelectorAll('#food-plans-tbody tr').forEach(row => {
+    const inp = row.querySelectorAll('input');
+    if (inp.length >= 4) state.foodPlans.push({name:inp[0].value||'Meal',oneTime:parseFloat(inp[1].value)||0,weekly:parseFloat(inp[2].value)||0,monthly:parseFloat(inp[3].value)||0,desc:inp[4]?.value||''});
+  });
+}
+function syncFoodPlans() { readFoodFromSettings(); renderFoodCatalog(); renderCheckinFoodGrid(); }
+
+function renderFoodCatalog() {
+  const g = document.getElementById('food-catalog'); if(!g) return;
+  g.innerHTML = state.foodPlans.map(f => `
+    <div class="food-card">
+      <div><div class="food-name">${f.name}</div><div class="food-desc">${f.desc}</div></div>
+      <div><div class="fpr"><span class="fpl">One-time</span><span class="fpv">₹${f.oneTime}</span></div><div class="fpr"><span class="fpl">Weekly</span><span class="fpv">₹${f.weekly}</span></div><div class="fpr"><span class="fpl">Monthly</span><span class="fpv">₹${f.monthly}</span></div></div>
+      <div class="flex g8"><button class="btn btn-outline btn-xs">Edit</button><button class="btn btn-danger btn-xs" onclick="openConfirm('🗑','Delete this meal plan?','This meal plan will be removed.','Delete',()=>{toast('Plan removed','danger')})">Remove</button></div>
+    </div>`).join('');
+}
+
+function renderCheckinFoodGrid() {
+  const g = document.getElementById('checkin-food-grid'); if(!g) return;
+  g.innerHTML = state.foodPlans.map(f => `
+    <div class="food-card">
+      <div><div class="food-name">${f.name}</div><div class="food-desc">${f.desc}</div></div>
+      <div><div class="fpr"><span class="fpl">One-time</span><span class="fpv">₹${f.oneTime}</span></div><div class="fpr"><span class="fpl">Weekly</span><span class="fpv">₹${f.weekly}</span></div><div class="fpr"><span class="fpl">Monthly</span><span class="fpv">₹${f.monthly}</span></div></div>
+      <div class="food-opts"><div class="food-opt" onclick="selOpt(this)">One-time</div><div class="food-opt" onclick="selOpt(this)">Weekly</div><div class="food-opt" onclick="selOpt(this)">Monthly</div></div>
+    </div>`).join('');
+}
+function selOpt(el) { el.closest('.food-opts').querySelectorAll('.food-opt').forEach(o=>o.classList.remove('sel')); el.classList.add('sel'); }
+
+// ============================================================
+// AMENITIES
+// ============================================================
+function renderCheckinAmenities() {
+  const fac = document.getElementById('checkin-facilities');
+  const amen = document.getElementById('checkin-amenities');
+  if (fac) fac.innerHTML = state.facilities.map(f=>`<div class="atag" onclick="this.classList.toggle('sel')">${f}</div>`).join('');
+  if (amen) amen.innerHTML = state.amenities.map(a=>`<div class="atag" onclick="this.classList.toggle('sel')">${a}</div>`).join('');
+}
+function renderFacilitiesList() {
+  const list = document.getElementById('facilities-list'); if(!list) return;
+  list.innerHTML = state.facilities.map((f,i)=>`<div class="atag sel" onclick="removeFacility(${i})">${f} <span style="opacity:.5;font-size:12px">×</span></div>`).join('');
+}
+function addFacility() { const inp=document.getElementById('new-facility');const v=inp.value.trim();if(!v)return;state.facilities.push(v);renderFacilitiesList();inp.value='';toast(`Facility "${v}" added`,'success'); }
+function removeFacility(i) { openConfirm('🗑',`Remove "${state.facilities[i]}"?`,'This facility will be removed from check-in.','Remove',()=>{state.facilities.splice(i,1);renderFacilitiesList();}); }
+function addAmenityRow() {
+  const n=document.getElementById('new-amenity').value.trim();
+  const d=document.getElementById('new-amenity-daily').value||'0';
+  const m=document.getElementById('new-amenity-monthly').value||'0';
+  if(!n)return;
+  const tb=document.getElementById('amenities-tbody');
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${n}</td><td><input class="fi tm" value="${d}" type="number" style="width:85px"></td><td><input class="fi tm" value="${m}" type="number" style="width:85px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove()">✕</button></td>`;
+  tb.appendChild(tr);state.amenities.push(n);
+  document.getElementById('new-amenity').value='';document.getElementById('new-amenity-daily').value='';document.getElementById('new-amenity-monthly').value='';
+  toast(`Amenity "${n}" added`,'success');
+}
+function addRoomTypeRow() {
+  const tb=document.getElementById('room-types-tbody');const tr=document.createElement('tr');
+  tr.innerHTML=`<td><input class="fi" placeholder="Type" style="width:100px"></td><td><input class="fi" type="number" placeholder="0" style="width:90px"></td><td><input class="fi" type="number" placeholder="0" style="width:100px"></td><td><input class="fi" type="number" placeholder="0" style="width:100px"></td><td><input class="fi" type="number" placeholder="0" style="width:110px"></td><td><input class="fi" type="number" value="0" style="width:60px"></td><td><input class="fi" type="number" value="1" style="width:60px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove()">✕</button></td>`;
+  tb.appendChild(tr);
+}
+function addFoodPlanRow() {
+  const tb=document.getElementById('food-plans-tbody');const tr=document.createElement('tr');
+  tr.innerHTML=`<td><input class="fi" placeholder="Meal name" style="width:105px"></td><td><input class="fi" type="number" placeholder="0" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" type="number" placeholder="0" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" type="number" placeholder="0" style="width:85px" oninput="syncFoodPlans()"></td><td><input class="fi" placeholder="Description" style="width:165px"></td><td><button class="btn btn-danger btn-xs" onclick="this.closest('tr').remove();syncFoodPlans()">✕</button></td>`;
+  tb.appendChild(tr);
+}
+function toggleStayFields() {
+  const t=document.getElementById('stay-type')?.value;
+  const cg=document.getElementById('checkout-grp');const mg=document.getElementById('months-grp');
+  if(cg)cg.style.display=t==='daily'?'':'none';
+  if(mg)mg.style.display=t==='monthly'?'':'none';
+}
+
+// ============================================================
+// SETTINGS SAVE
+// ============================================================
+function saveSettings() {
+  const name=document.getElementById('set-hotel-name').value||'Grand Residency';
+  const owner=document.getElementById('set-owner-name').value||'Owner';
+  state.hotelName=name;state.ownerName=owner;
+  const parts=name.split(' ');const first=parts.shift();
+  document.getElementById('sidebar-hotel-name').innerHTML=first+(parts.length?` <span>${parts.join(' ')}</span>`:'');
+  document.getElementById('sb-owner-name').textContent=owner;
+  document.getElementById('sb-av').textContent=owner.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const tot=parseInt(document.getElementById('set-total-rooms').value)||32;
+  state.totalRooms=tot;
+  document.getElementById('stat-total').textContent=tot;
+  document.getElementById('nav-badge-rooms').textContent=tot;
+  const ds=document.getElementById('dash-sub');if(ds)ds.textContent=`${name} · Quantum Vorvex · Live overview`;
+  const gst=parseInt(document.getElementById('set-gst')?.value)||12;
+  state.gstRate=gst;updateGSTDisplay();
+  syncFoodPlans();
+  toast('✓ Settings saved successfully','success');
+}
+
+function updateRoomStatsFromSettings() {
+  const v=parseInt(document.getElementById('set-total-rooms')?.value)||32;
+  document.getElementById('stat-total').textContent=v;
+  document.getElementById('nav-badge-rooms').textContent=v;
+}
+function updateGSTDisplay() {
+  const r=parseInt(document.getElementById('set-gst')?.value)||12;
+  state.gstRate=r;
+  const el=document.getElementById('gst-rate-display');if(el)el.textContent=r;
+  renderGSTTable();
+}
+
+// ============================================================
+// CHECK-IN COMPLETE
+// ============================================================
+function completeCheckin() {
+  const name=document.getElementById('ci-name')?.value||'New Guest';
+  const room=document.getElementById('room-select')?.value?.split(' ')[0]||'101';
+  const type=document.getElementById('stay-type')?.value==='monthly'?'Monthly':'Daily';
+  const newGuest = {
+    id:`GST-${String(state.guests.length+1).padStart(4,'0')}`,
+    name, phone: document.getElementById('ci-phone')?.value||'+91 XXXXX XXXXX',
+    room, type, checkin: new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),
+    due: type==='Monthly'?'Next Month':'Next Week',
+    food:'None',stays:1,tags:[],status:'Active',
+    facilities:Array.from(document.querySelectorAll('#checkin-facilities .atag.sel')).map(e=>e.textContent.trim()),
+    amenities:Array.from(document.querySelectorAll('#checkin-amenities .atag.sel')).map(e=>e.textContent.trim()),
+  };
+  if(document.getElementById('tag-vip')?.checked) newGuest.tags.push('VIP');
+  if(document.getElementById('tag-corp')?.checked) newGuest.tags.push('Corporate');
+  if(document.getElementById('tag-long')?.checked) newGuest.tags.push('Long-term');
+  state.guests.unshift(newGuest);
+  searchIndex.push({type:'Guest',name,meta:`Room ${room} · Active`,action:()=>viewGuest(newGuest.id)});
+  toast(`✓ ${name} checked in to Room ${room}`,'success');
+  renderGuestsTable();renderDashCheckins();
+  showPanel('guests',document.querySelectorAll('.nav-item')[5]);
+}
+
+// ============================================================
+// INLINE GUEST EDITING
+// ============================================================
+let currentGuestId = null;
+
+function openEditGuest() {
+  const g = state.guests.find(x => x.id === currentGuestId);
+  if (!g) return;
+  closeModal('guest-modal');
+  document.getElementById('eg-title').textContent = g.name;
+  document.getElementById('eg-name').value = g.name;
+  document.getElementById('eg-phone').value = g.phone;
+  document.getElementById('eg-room').value = g.room;
+  document.getElementById('eg-type').value = g.type;
+  document.getElementById('eg-checkin').value = g.checkin;
+  document.getElementById('eg-due').value = g.due;
+  document.getElementById('eg-food').value = g.food || 'None';
+  document.getElementById('eg-status').value = g.status;
+  document.getElementById('eg-vip').checked = g.tags.includes('VIP');
+  document.getElementById('eg-corp').checked = g.tags.includes('Corporate');
+  document.getElementById('eg-long').checked = g.tags.includes('Long-term');
+  openModal('edit-guest-modal');
+}
+
+function saveEditGuest() {
+  const g = state.guests.find(x => x.id === currentGuestId);
+  if (!g) return;
+  g.name = document.getElementById('eg-name').value || g.name;
+  g.phone = document.getElementById('eg-phone').value || g.phone;
+  g.room = document.getElementById('eg-room').value || g.room;
+  g.type = document.getElementById('eg-type').value;
+  g.checkin = document.getElementById('eg-checkin').value || g.checkin;
+  g.due = document.getElementById('eg-due').value || g.due;
+  g.food = document.getElementById('eg-food').value;
+  g.status = document.getElementById('eg-status').value;
+  g.tags = [];
+  if (document.getElementById('eg-vip').checked) g.tags.push('VIP');
+  if (document.getElementById('eg-corp').checked) g.tags.push('Corporate');
+  if (document.getElementById('eg-long').checked) g.tags.push('Long-term');
+  closeModal('edit-guest-modal');
+  renderGuestsTable();
+  renderDashCheckins();
+  toast(`✓ ${g.name}'s details updated`, 'success');
+}
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+function clearNotifs() {
+  const el=document.getElementById('notif-list');
+  if(el)el.innerHTML='<div class="empty" style="padding:20px"><div class="ei">✓</div><div>All caught up!</div></div>';
+  toast('All notifications cleared','success');
+}
+
+// ============================================================
+// LOGO & DOC PREVIEW
+// ============================================================
+function previewLogo(input) {
+  if(input.files&&input.files[0]){const r=new FileReader();r.onload=e=>{document.getElementById('logo-preview').innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`;document.getElementById('sidebar-logo-img').innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`;};r.readAsDataURL(input.files[0]);}
+}
+function previewDoc(input, areaId, iconId, txtId) {
+  if(input.files&&input.files[0]){
+    const file=input.files[0];
+    if(file.type.startsWith('image/')){
+      const r=new FileReader();
+      r.onload=e=>{
+        document.getElementById(areaId).style.backgroundImage=`url(${e.target.result})`;
+        document.getElementById(areaId).style.backgroundSize='cover';
+        document.getElementById(areaId).style.backgroundPosition='center';
+        document.getElementById(iconId).style.display='none';
+        document.getElementById(txtId).textContent=file.name;
+      };r.readAsDataURL(file);
+    } else {
+      document.getElementById(iconId).textContent='📄';
+      document.getElementById(txtId).textContent=file.name;
+    }
+    toast(`${file.name} uploaded`,'success');
+  }
+}
+function triggerUpload(id){document.getElementById(id)?.click();}
+
+// ============================================================
+// BACKUP / RESTORE
+// ============================================================
+function backupSettings() {
+  const data = {hotelName:state.hotelName,ownerName:state.ownerName,totalRooms:state.totalRooms,gstRate:state.gstRate,facilities:state.facilities,amenities:state.amenities,foodPlans:state.foodPlans};
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='quantum-vorvex-backup.json';a.click();
+  toast('Settings backup downloaded','success');
+}
+function restoreSettings(input) {
+  if(!input.files||!input.files[0]) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try {
+      const d=JSON.parse(e.target.result);
+      if(d.hotelName) state.hotelName=d.hotelName;
+      if(d.ownerName) state.ownerName=d.ownerName;
+      if(d.facilities) state.facilities=d.facilities;
+      if(d.amenities) state.amenities=d.amenities;
+      if(d.foodPlans) state.foodPlans=d.foodPlans;
+      if(d.gstRate) state.gstRate=d.gstRate;
+      if(d.totalRooms) state.totalRooms=d.totalRooms;
+      document.getElementById('set-hotel-name').value=state.hotelName;
+      document.getElementById('set-owner-name').value=state.ownerName;
+      saveSettings();
+      toast('Settings restored successfully','success');
+    } catch(err){toast('Invalid backup file','danger');}
+  };r.readAsText(input.files[0]);
+}
+
+// ============================================================
+// EXPORT CSV
+// ============================================================
+function exportCSV(type='guests') {
+  let csv='', filename='';
+  if(type==='guests'||type===undefined){
+    csv='ID,Name,Phone,Room,Type,Check-In,Due,Food,Status\n'+state.guests.map(g=>`${g.id},"${g.name}",${g.phone},${g.room},${g.type},${g.checkin},${g.due},${g.food},${g.status}`).join('\n');
+    filename='guests.csv';
+  } else if(type==='billing'){
+    csv='Invoice,Guest,Room,Period,Rent,Food,GST,Total,Status\n#INV-041,Rohit Sharma,101,Apr 2025,14000,4200,2244,20944,Paid\n#INV-042,Arjun Patel,312,Apr 2025,18000,2600,2472,23072,Pending';
+    filename='billing.csv';
+  } else if(type==='rooms'){
+    csv='Room,Floor,Type,Status\n'+state.rooms.map(r=>`${r.number},${r.floor},${r.type},${r.status}`).join('\n');
+    filename='rooms.csv';
+  } else if(type==='food'){
+    csv='Meal,One-time,Weekly,Monthly,Description\n'+state.foodPlans.map(f=>`"${f.name}",${f.oneTime},${f.weekly},${f.monthly},"${f.desc}"`).join('\n');
+    filename='food.csv';
+  } else if(type==='gst'){
+    csv='Month,Taxable,GST Rate,CGST,SGST,Total Tax,Invoices\n'+['Jan','Feb','Mar','Apr'].map((m,i)=>`${m} 2025,${(150000+i*10000)},${state.gstRate}%,${(9000+i*600)},${(9000+i*600)},${(18000+i*1200)},${3+i}`).join('\n');
+    filename='gst-report.csv';
+  }
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();
+  toast(`${filename} exported`,'success');
+}
+
+// ============================================================
+// CHARTS
+// ============================================================
+const revData = [95000,140000,120000,175000,160000,190000,145000,210000,185000,220000,195000,240000];
+const occData = [62,70,68,75,72,80,65,83,77,85,79,88];
+const months12 = ['May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr'];
+const months6  = ['Nov','Dec','Jan','Feb','Mar','Apr'];
+
+function getChartColors() {
+  const dark = document.body.classList.contains('dark');
+  return {
+    grid: dark?'rgba(255,255,255,.06)':'rgba(0,0,0,.06)',
+    text: dark?'#6b6455':'#98988f',
+    gold: '#c9a84c', goldAlpha: 'rgba(201,168,76,.18)',
+    green: '#16a34a', greenAlpha: 'rgba(22,163,74,.18)',
+    blue: '#2563eb', blueAlpha: 'rgba(37,99,235,.18)',
+  };
+}
+
+function defaultYFmt(v) { return v>=100000 ? '₹'+(v/100000).toFixed(1)+'L' : '₹'+(v/1000).toFixed(0)+'K'; }
+function drawChart(canvasId, labels, data, color, alphaColor, label, yPrefix, yFmt) {
+  if (!yFmt) yFmt = defaultYFmt;
+  const canvas = document.getElementById(canvasId); if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.offsetWidth||400; const h = canvas.height||160;
+  canvas.width = w; canvas.height = h;
+  const C = getChartColors();
+  ctx.clearRect(0,0,w,h);
+  const pad = {t:16,r:16,b:32,l:yPrefix==='₹'?52:36};
+  const cw=w-pad.l-pad.r, ch=h-pad.t-pad.b;
+  const max=Math.max(...data)*1.15, min=Math.min(...data)*0.8;
+  const range=max-min;
+  const scaleY=v=>pad.t+ch-(v-min)/range*ch;
+  const scaleX=i=>pad.l+i/(data.length-1)*cw;
+
+  // Grid
+  ctx.strokeStyle=C.grid;ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const y=pad.t+ch/4*i;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cw,y);ctx.stroke();}
+  // Y labels
+  ctx.fillStyle=C.text;ctx.font='10px Inter';ctx.textAlign='right';
+  for(let i=0;i<=4;i++){const v=max-range/4*i;ctx.fillText(yFmt(v),pad.l-5,pad.t+ch/4*i+4);}
+  // X labels
+  ctx.textAlign='center';
+  labels.forEach((l,i)=>ctx.fillText(l,scaleX(i),h-6));
+
+  // Fill
+  ctx.beginPath();ctx.moveTo(scaleX(0),scaleY(data[0]));
+  data.forEach((_,i)=>i&&ctx.lineTo(scaleX(i),scaleY(data[i])));
+  ctx.lineTo(scaleX(data.length-1),pad.t+ch);ctx.lineTo(scaleX(0),pad.t+ch);ctx.closePath();
+  ctx.fillStyle=alphaColor;ctx.fill();
+
+  // Line
+  ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.lineJoin='round';
+  ctx.moveTo(scaleX(0),scaleY(data[0]));
+  data.forEach((_,i)=>i&&ctx.lineTo(scaleX(i),scaleY(data[i])));
+  ctx.stroke();
+
+  // Dots
+  data.forEach((v,i)=>{ctx.beginPath();ctx.arc(scaleX(i),scaleY(v),3.5,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();});
+}
+
+function drawCharts() {
+  const C = getChartColors();
+  drawChart('revenue-chart',months6,revData.slice(-6),C.gold,C.goldAlpha,'Revenue','₹');
+  drawChart('occ-chart',months6,occData.slice(-6),C.green,C.greenAlpha,'Occupancy','%',v=>v+'%');
+  drawPieChart();
+}
+function drawReportCharts() {
+  const C=getChartColors();
+  setTimeout(()=>{
+    drawChart('report-rev-chart',months12,revData,C.gold,C.goldAlpha,'Revenue','₹');
+    drawChart('report-occ-chart',months12,occData,C.green,C.greenAlpha,'Occupancy','%',v=>v+'%');
+  },50);
+}
+function updateChart(months) {
+  const n=parseInt(months);const C=getChartColors();
+  drawChart('revenue-chart',months12.slice(-n),revData.slice(-n),C.gold,C.goldAlpha,'Revenue','₹');
+}
+function drawPieChart() {
+  const canvas=document.getElementById('food-chart');if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const w=canvas.offsetWidth||300;const h=canvas.height||150;
+  canvas.width=w;canvas.height=h;
+  const data=[42,31,25,2];const labels=['Breakfast','Lunch','Dinner','All Meals'];
+  const colors=['#c9a84c','#16a34a','#2563eb','#7c3aed'];
+  const cx=w*0.35;const cy=h/2;const r=Math.min(cx,cy)-10;
+  let angle=-Math.PI/2;
+  const C=getChartColors();
+  data.forEach((v,i)=>{
+    const slice=v/100*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,angle,angle+slice);ctx.fillStyle=colors[i];ctx.fill();
+    ctx.strokeStyle=document.body.classList.contains('dark')?'#1a1a18':'#fff';ctx.lineWidth=2;ctx.stroke();
+    angle+=slice;
+  });
+  ctx.fillStyle=C.text;ctx.font='11px Inter';
+  labels.forEach((l,i)=>{
+    ctx.fillStyle=colors[i];ctx.fillRect(w*0.72,20+i*26,10,10);
+    ctx.fillStyle=C.text;ctx.textAlign='left';ctx.font='11.5px Inter';ctx.fillText(`${l} — ${data[i]}%`,w*0.72+16,30+i*26);
+  });
+}
+function drawFoodRevChart() {
+  const canvas=document.getElementById('food-rev-chart');if(!canvas)return;
+  const C=getChartColors();
+  setTimeout(()=>drawChart('food-rev-chart',['Breakfast','Lunch','Dinner','All Meals'],[42000,62000,55000,88000],C.gold,C.goldAlpha,'Revenue','₹'),50);
+}
+
+// ============================================================
+// GST TABLE
+// ============================================================
+function renderGSTTable() {
+  const el=document.getElementById('gst-table');if(!el)return;
+  const gst=state.gstRate;
+  const months=['Jan 2025','Feb 2025','Mar 2025','Apr 2025'];
+  const amounts=[155000,142000,168000,175000];
+  el.innerHTML=months.map((m,i)=>{
+    const sub=amounts[i];const cgst=Math.round(sub*gst/2/100);const sgst=cgst;const total=cgst+sgst;
+    return `<tr><td class="tm">${m}</td><td class="tm">₹${sub.toLocaleString('en-IN')}</td><td class="tm">${gst}%</td><td class="tm">₹${cgst.toLocaleString('en-IN')}</td><td class="tm">₹${sgst.toLocaleString('en-IN')}</td><td class="tm" style="font-weight:600;color:var(--text)">₹${total.toLocaleString('en-IN')}</td><td class="tm">${3+i}</td></tr>`;
+  }).join('');
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function toast(msg, type='default') {
+  const wrap=document.getElementById('toast-wrap');
+  const div=document.createElement('div');
+  div.className=`toast${type!=='default'?' '+type:''}`;
+  div.innerHTML=`<span>${msg}</span>`;
+  wrap.appendChild(div);
+  setTimeout(()=>{div.style.animation='fo .3s ease forwards';setTimeout(()=>div.remove(),300);},3000);
+}
+
+// ============================================================
+// MISC
+// ============================================================
+function clearNotifs() {
+  document.getElementById('notif-list').innerHTML='<div class="empty" style="padding:20px"><div class="ei">✓</div><div>All caught up!</div></div>';
+  toast('Notifications cleared','success');
+}
+
+
+// ============================================================
+// GLOBAL SEARCH INDEX
+// ============================================================
+// GLOBAL SEARCH
+// ============================================================
+const searchIndex = [
+  {type:'Panel',name:'Dashboard',meta:'Overview & stats',action:()=>showPanel('dashboard',document.querySelectorAll('.nav-item')[0])},
+  {type:'Panel',name:'Rooms',meta:'Room management',action:()=>showPanel('rooms',document.querySelectorAll('.nav-item')[1])},
+  {type:'Panel',name:'Floor Plan',meta:'Visual floor view',action:()=>showPanel('floorplan',document.querySelectorAll('.nav-item')[2])},
+  {type:'Panel',name:'Reports',meta:'Analytics & exports',action:()=>showPanel('reports',document.querySelectorAll('.nav-item')[3])},
+  {type:'Panel',name:'Check-In',meta:'New guest onboarding',action:()=>showPanel('checkin',document.querySelectorAll('.nav-item')[4])},
+  {type:'Panel',name:'All Guests',meta:'Guest records',action:()=>showPanel('guests',document.querySelectorAll('.nav-item')[5])},
+  {type:'Panel',name:'Billing',meta:'Invoices & payments',action:()=>showPanel('billing',document.querySelectorAll('.nav-item')[8])},
+  {type:'Panel',name:'Settings',meta:'Hotel configuration',action:()=>showPanel('settings',document.querySelectorAll('.nav-item')[9])},
+  {type:'Panel',name:'Food Options',meta:'Meal plans',action:()=>showPanel('food',document.querySelectorAll('.nav-item')[7])},
+  ...state.guests.map(g => ({type:'Guest',name:g.name,meta:`Room ${g.room} · ${g.status}`,action:()=>viewGuest(g.id)})),
+];
+
+function doGlobalSearch(val) {
+  const res = document.getElementById('gsearch-results');
+  if (!val.trim()) { res.classList.remove('show'); return; }
+  const matches = searchIndex.filter(i => i.name.toLowerCase().includes(val.toLowerCase()) || i.meta.toLowerCase().includes(val.toLowerCase())).slice(0,7);
+  if (!matches.length) { res.innerHTML = '<div class="gsr-item"><span class="gsr-meta">No results found</span></div>'; res.classList.add('show'); return; }
+  res.innerHTML = matches.map((m, i) => {
+    const idx = searchIndex.indexOf(m);
+    return '<div class="gsr-item" data-action="search" data-idx="' + idx + '">' +
+      '<span class="gsr-tag">' + m.type + '</span>' +
+      '<div><div class="gsr-name">' + m.name + '</div><div class="gsr-meta">' + m.meta + '</div></div>' +
+      '</div>';
+  }).join('');
+  res.classList.add('show');
+}
+function showGSearch() { const v = document.getElementById('global-search').value; if (v) doGlobalSearch(v); }
+function closeSearch() { document.getElementById('global-search').value = ''; document.getElementById('gsearch-results').classList.remove('show'); }
+document.addEventListener('click', e => { if (!e.target.closest('.gsearch')) document.getElementById('gsearch-results').classList.remove('show'); });
+
+// ============================================================
+
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+// KEYBOARD SHORTCUTS
+// ============================================================
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input,textarea,select')) return;
+  const map = {
+    'c': () => showPanel('checkin', document.querySelectorAll('.nav-item')[4]),
+    'r': () => showPanel('rooms', document.querySelectorAll('.nav-item')[1]),
+    'g': () => showPanel('guests', document.querySelectorAll('.nav-item')[5]),
+    'b': () => showPanel('billing', document.querySelectorAll('.nav-item')[8]),
+    'd': () => showPanel('dashboard', document.querySelectorAll('.nav-item')[0]),
+    's': () => showPanel('settings', document.querySelectorAll('.nav-item')[9]),
+    't': () => showPanel('reports', document.querySelectorAll('.nav-item')[3]),
+    'f': () => showPanel('floorplan', document.querySelectorAll('.nav-item')[2]),
+    'm': toggleDark,
+    'p': printPage,
+    '?': () => openModal('shortcuts-modal'),
+  };
+  if (e.ctrlKey && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('global-search').focus();
+    return;
+  }
+  if (e.key === 'Escape') { document.querySelectorAll('.moverlay.open').forEach(m => m.classList.remove('open')); return; }
+  if (!e.ctrlKey && !e.altKey && map[e.key.toLowerCase()]) map[e.key.toLowerCase()]();
+});
+
+// ============================================================
+
+// ============================================================
+// GLOBAL CLICK DELEGATION
+// ============================================================
+// GLOBAL EVENT DELEGATION
+// ============================================================
+document.addEventListener('click', function(e) {
+  const el = e.target.closest('[data-action]');
+  if (!el) return;
+  const action = el.dataset.action;
+  const id = el.dataset.id;
+  if (action === 'view') { viewGuest(id); }
+  else if (action === 'checkout') {
+    const g = state.guests.find(x => x.id === id);
+    if (g) openCheckoutModal(g.name, g.room, g.type, '14000', '4200');
+  }
+  else if (action === 'renew') {
+    const g = state.guests.find(x => x.id === id);
+    if (g) { g.status = 'Active'; renderGuestsTable(); renderDashCheckins(); toast('Stay renewed for ' + g.name, 'success'); }
+  }
+  else if (action === 'fp-room') {
+    toast('Room ' + el.dataset.num + ' — ' + el.dataset.type + ' · ' + el.dataset.status, 'info');
+  }
+  else if (action === 'search') {
+    const idx = parseInt(el.dataset.idx);
+    if (searchIndex[idx]) { searchIndex[idx].action(); closeSearch(); }
+  }
+});
+
+// ============================================================
+
+// ============================================================
+// DOM READY INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+  generateRooms();
+  renderFoodCatalog();
+  renderCheckinFoodGrid();
+  renderCheckinAmenities();
+  renderFacilitiesList();
+  renderGuestsTable();
+  renderDashCheckins();
+  renderFloorPlan();
+  drawCharts();
+  renderGSTTable();
+  startClock();
+  setupDragDrop();
+  const d = document.getElementById('ci-date');
+  if (d) d.valueAsDate = new Date();
+  toggleStayFields();
+  updateProgBars();
+});
+
+// ============================================================
+</script>
+</body>
+</html>
