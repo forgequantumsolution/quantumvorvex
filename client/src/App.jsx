@@ -1,4 +1,4 @@
-import { useEffect, useState, lazy, Suspense } from 'react'
+import { useEffect, useRef, useState, lazy, Suspense } from 'react'
 import { useStore } from './store/useStore'
 import Layout from './components/layout/Layout'
 import Toast from './components/ui/Toast'
@@ -105,15 +105,18 @@ export default function App() {
   const { activePanel, initDarkMode, currentUser, token, login } = useStore()
   const [showSetup, setShowSetup] = useState(false)
   const [page, setPage] = useState('landing') // 'landing' | 'login'
+  // Prevent mock auto-login from re-firing after the user deliberately signs out
+  const mockDidAutoLogin = useRef(false)
 
   // Init dark mode on mount
   useEffect(() => {
     initDarkMode()
   }, [initDarkMode])
 
-  // Auto-login with mock user when VITE_MOCK=true
+  // Auto-login with mock user on first load only — skip if user signed out
   useEffect(() => {
-    if (IS_MOCK && !currentUser) {
+    if (IS_MOCK && !currentUser && !mockDidAutoLogin.current) {
+      mockDidAutoLogin.current = true
       login(MOCK_TOKEN, MOCK_USER)
     }
   }, [IS_MOCK, currentUser, login])
