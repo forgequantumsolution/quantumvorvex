@@ -243,14 +243,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Mid Row: Charts + Notifications ── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: 16,
-          alignItems: 'start',
-        }}
-      >
+      <div className="dash-mid-grid">
         {/* Left: Charts */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
@@ -451,14 +444,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Bottom Row: Tables ── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: 16,
-          alignItems: 'start',
-        }}
-      >
+      <div className="dash-bottom-grid">
         {/* Recent Check-Ins */}
         <div className="card">
           <div className="card-header">

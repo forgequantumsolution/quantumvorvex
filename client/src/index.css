@@ -395,6 +395,66 @@
   .desktop-only { display: none  !important; }
 }
 
+/* ── Software UI — mobile responsive overrides ───────────────────────────
+   These target CSS-class-based elements used across all modules.
+   Breakpoint: 639px (phones), 767px (small tablets)
+   -------------------------------------------------------------------------- */
+
+/* Stat cards: 2-col on phone, full row on tablet */
+@media (max-width: 639px) {
+  .stat-card { padding: 13px 14px; }
+  .stat-card .stat-value { font-size: 22px !important; }
+
+  /* Cards */
+  .card-header { flex-wrap: wrap; gap: 8px; padding: 11px 14px; }
+  .card-body   { padding: 13px; }
+
+  /* Tables — horizontal scroll with sticky first column */
+  .card table  { font-size: 12px; }
+  .card td, .card th { padding: 8px 10px; white-space: nowrap; }
+
+  /* Buttons — slightly larger tap targets */
+  .btn-xs { padding: 5px 10px !important; font-size: 11.5px !important; }
+  .btn-sm { padding: 7px 13px !important; }
+
+  /* Modal full-screen on mobile */
+  [class*="modal"], [id*="modal"] { border-radius: 12px 12px 0 0 !important; }
+
+  /* Topbar title smaller */
+  #topbar { gap: 8px !important; }
+}
+
+/* Responsive grid utility classes used in dashboard modules */
+.dash-mid-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.dash-bottom-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 639px) {
+  .dash-mid-grid    { grid-template-columns: 1fr !important; }
+  .dash-bottom-grid { grid-template-columns: 1fr !important; }
+}
+
+/* Module page headers — stack on mobile */
+@media (max-width: 639px) {
+  .module-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+  .module-header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
 /* Print */
 @media print {
   #sidebar, #topbar, .no-print, .btn { display: none !important; }

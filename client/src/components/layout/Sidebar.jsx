@@ -143,7 +143,7 @@ export default function Sidebar() {
                 fontSize: 9.5, color: '#555', marginTop: 2,
                 letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 500,
               }}>
-                Powered by Forge Quantum
+                Powered by Forge Quantum Solutions
               </div>
             </div>
           </div>
