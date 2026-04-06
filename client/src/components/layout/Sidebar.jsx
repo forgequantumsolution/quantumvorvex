@@ -98,8 +98,8 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile overlay — CSS controls visibility via #sb-overlay */}
-      <div id="sb-overlay" onClick={closeSidebar} />
+      {/* Mobile overlay — only rendered when sidebar is open */}
+      {sidebarOpen && <div id="sb-overlay" onClick={closeSidebar} />}
 
       {/* Sidebar */}
       <div
