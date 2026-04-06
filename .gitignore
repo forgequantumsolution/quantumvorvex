@@ -25,6 +25,7 @@ server/.env.*
 client/.env
 client/.env.*
 !client/.env.example
+!client/.env.production
 .env.local
 .env.*.local
 

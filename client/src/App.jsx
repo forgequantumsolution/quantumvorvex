@@ -12,6 +12,9 @@ import GuestPortal from './components/modules/portal/GuestPortal'
 import LoginPage from './components/auth/LoginPage'
 import LandingPage from './components/auth/LandingPage'
 import { canAccess } from './utils/permissions'
+import { MOCK_USER, MOCK_TOKEN } from './api/mockData.js'
+
+const IS_MOCK = import.meta.env.VITE_MOCK === 'true'
 
 // Lazy load modules for performance
 const Dashboard    = lazy(() => import('./components/modules/dashboard/Dashboard'))
@@ -99,7 +102,7 @@ const PANEL_MAP = {
 }
 
 export default function App() {
-  const { activePanel, initDarkMode, currentUser, token } = useStore()
+  const { activePanel, initDarkMode, currentUser, token, login } = useStore()
   const [showSetup, setShowSetup] = useState(false)
   const [page, setPage] = useState('landing') // 'landing' | 'login'
 
@@ -107,6 +110,13 @@ export default function App() {
   useEffect(() => {
     initDarkMode()
   }, [initDarkMode])
+
+  // Auto-login with mock user when VITE_MOCK=true
+  useEffect(() => {
+    if (IS_MOCK && !currentUser) {
+      login(MOCK_TOKEN, MOCK_USER)
+    }
+  }, [IS_MOCK, currentUser, login])
 
   // Keyboard shortcuts
   useKeyboardShortcuts({})
