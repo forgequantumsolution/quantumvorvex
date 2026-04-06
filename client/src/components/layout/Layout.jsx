@@ -7,7 +7,7 @@ export default function Layout({ children }) {
       style={{
         display: 'flex',
         flexDirection: 'row',
-        height: '100dvh',
+        height: '100vh',
         overflow: 'hidden',
         width: '100%',
       }}
