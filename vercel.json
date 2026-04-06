@@ -1,0 +1,36 @@
+{
+  "version": 2,
+  "buildCommand": "node scripts/vercel-build.js",
+  "outputDirectory": "client/dist",
+  "installCommand": "npm install && npm install --prefix server && npm install --prefix client",
+  "functions": {
+    "api/index.js": {
+      "memory": 1024,
+      "maxDuration": 30,
+      "includeFiles": "server/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/:path*",    "destination": "/api/index" },
+    { "source": "/health/:path*", "destination": "/api/index" },
+    { "source": "/health",        "destination": "/api/index" },
+    { "source": "/(.*)",          "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}

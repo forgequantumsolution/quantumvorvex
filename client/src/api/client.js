@@ -1,7 +1,9 @@
 import axios from 'axios'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1',
+  // Production (Vercel): /api/v1 hits the serverless function on same domain
+  // Local dev: Vite proxy forwards /api → localhost:5000 (vite.config.js)
+  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
   withCredentials: true,
 })
 

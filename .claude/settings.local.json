@@ -18,7 +18,8 @@
       "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\(0,'utf8'\\);const u=JSON.parse\\(d\\);u.forEach\\(x=>console.log\\(x.role.padEnd\\(10\\),x.name.padEnd\\(20\\),x.email\\)\\)\")",
       "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\(0,'utf8'\\);console.log\\(JSON.parse\\(d\\).message\\)\")",
       "Bash(grep -E \"\\\\.js$\")",
-      "Bash(xargs wc:*)"
+      "Bash(xargs wc:*)",
+      "Bash(node -e \"import\\('./src/app.js'\\).then\\(m => { console.log\\('app.js OK — default export:', typeof m.default\\) }\\).catch\\(e => console.error\\('ERROR:', e.message\\)\\)\")"
     ],
     "additionalDirectories": [
       "d:\\Forge Quantum Solutions\\Quantum Vorvex\\server\\src"
