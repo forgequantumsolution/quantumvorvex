@@ -67,7 +67,7 @@ export default function LandingPage({ onLogin }) {
             fontSize: 'clamp(15px,2vw,18px)', fontWeight: 700, fontStyle: 'italic',
             color: INK, letterSpacing: '-0.01em', whiteSpace: 'nowrap',
           }}>
-            Forge Quantum <span style={{ color: GOLD }}>Vorvex</span>
+            Quantum <span style={{ color: GOLD }}>Vorvex</span>
           </div>
 
           {/* Desktop nav links */}

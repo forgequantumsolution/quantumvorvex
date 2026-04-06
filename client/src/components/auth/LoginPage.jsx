@@ -73,7 +73,7 @@ export default function LoginPage({ onBack }) {
           fontFamily: "'Playfair Display', Georgia, serif",
           fontSize: 17, fontWeight: 700, fontStyle: 'italic', color: INK,
         }}>
-          Forge Quantum <span style={{ color: GOLD }}>Vorvex</span>
+          Quantum <span style={{ color: GOLD }}>Vorvex</span>
         </div>
         {onBack && (
           <button onClick={onBack} style={{
