@@ -1,450 +1,458 @@
 import { useState } from 'react'
-import { useStore } from '../../store/useStore'
 
-/* ── Design tokens matching the reference screenshot ─────────────────────── */
-const GOLD    = '#9a7820'
-const GOLD_LT = '#b8962e'
-const CREAM   = '#faf8f3'
-const WHITE   = '#ffffff'
-const INK     = '#0f0f0f'
-const MUTED   = '#5a5a5a'
-const FAINT   = '#9a9a9a'
-const BORDER  = 'rgba(0,0,0,0.09)'
+const GOLD   = '#c9a84c'
+const CREAM  = '#faf8f3'
+const INK    = '#0f0e0a'
 
-const NAV_LINKS = ['PRODUCT', 'FEATURES', 'HOW IT WORKS', 'ROLES']
+const NAV_LINKS = ['Features', 'Modules', 'Pricing', 'Contact']
 
 const MODULES = [
-  { tag: 'DASHBOARD',    title: 'Analytics Dashboard',    desc: 'Live occupancy, revenue, check-ins and billing status across your property.' },
-  { tag: 'ROOMS',        title: 'Room Management',        desc: 'Real-time room status, floor-plan view and drag-drop assignment.' },
-  { tag: 'CHECK-IN',     title: 'Smart Guest Check-In',   desc: 'KYC capture, ID verification and digital registration in under 2 minutes.' },
-  { tag: 'BILLING',      title: 'GST-Ready Billing',      desc: 'Auto-generate invoices with CGST/SGST, HSN codes and one-click PDF export.' },
-  { tag: 'HOUSEKEEPING', title: 'Housekeeping & Linen',   desc: 'Daily task lists, inspection checklists and room turnaround tracking.' },
-  { tag: 'MAINTENANCE',  title: 'Maintenance Requests',   desc: 'Issue reporting, priority queues, staff assignment and resolution logs.' },
-  { tag: 'REPORTS',      title: 'Reports & Analytics',    desc: 'Revenue charts, occupancy trends, GST summaries and custom date exports.' },
-  { tag: 'CHANNELS',     title: 'Channel Manager',        desc: 'Manage OTA bookings from Booking.com, MakeMyTrip and Airbnb in one place.' },
+  { icon: '▦',  label: 'Dashboard',    desc: 'Real-time KPIs & occupancy charts' },
+  { icon: '⊟',  label: 'Rooms',        desc: 'Inventory, floor plan & status board' },
+  { icon: '↗',  label: 'Check-In',     desc: '5-step digital check-in with docs' },
+  { icon: '◎',  label: 'Guests',       desc: 'Profiles, tags, history & WhatsApp' },
+  { icon: '◷',  label: 'Bookings',     desc: 'OTA sync, advance & confirmations' },
+  { icon: '◑',  label: 'Billing',      desc: 'GST invoices, ledger & cash register' },
+  { icon: '🔧', label: 'Maintenance',  desc: 'Tickets, priority & staff assignments' },
+  { icon: '🧹', label: 'Housekeeping', desc: 'Task board, dirty/clean tracking' },
+  { icon: '⊕',  label: 'Food',         desc: 'Meal plans, orders & kitchen view' },
+  { icon: '◈',  label: 'Reports',      desc: 'Revenue, GST & occupancy exports' },
+  { icon: '👤', label: 'Staff',        desc: 'Roles, permissions & user management' },
+  { icon: '◌',  label: 'Settings',     desc: 'Hotel config, logo & system prefs' },
+]
+
+const ROLES = [
+  { role: 'Owner',   color: '#c9a84c', icon: '👑', desc: 'Full access to all modules, reports, and user management. Complete system control.' },
+  { role: 'Manager', color: '#6fa3d8', icon: '🔑', desc: 'Guests, billing, housekeeping, maintenance and reports. Operational authority.' },
+  { role: 'Staff',   color: '#5cb85c', icon: '🪪',  desc: 'Check-in, check-out, room updates and daily task management.' },
 ]
 
 const STATS = [
-  { num: '15+',   label: 'Integrated Modules'   },
-  { num: '100%',  label: 'GST Compliant'        },
-  { num: '3',     label: 'Role-based Levels'    },
-  { num: '₹ INR', label: 'Indian Billing Ready' },
+  { value: '15+',  label: 'Hotel Modules' },
+  { value: '100%', label: 'GST Compliant' },
+  { value: '3',    label: 'Role Tiers' },
+  { value: '₹ INR',label: 'Native Currency' },
 ]
 
-/* Small floating preview cards (right side of hero) */
-function StatCard({ tag, value, sub, bar, trend }) {
+export default function LandingPage({ onLogin }) {
+  const [menuOpen, setMenuOpen] = useState(false)
+
   return (
     <div style={{
-      background: WHITE,
-      border: `1px solid ${BORDER}`,
-      borderRadius: 12,
-      padding: '16px 20px',
-      minWidth: 220,
-      boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+      fontFamily: "'Inter', sans-serif",
+      background: CREAM,
+      color: INK,
+      minHeight: '100vh',
+      overflowX: 'hidden',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-        <div style={{ width: 22, height: 22, borderRadius: 5, background: '#faf3e0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}>
-          {tag === 'OCCUPANCY' ? '🏨' : tag === 'REVENUE' ? '₹' : '✅'}
-        </div>
-        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: FAINT }}>{tag}</span>
-      </div>
-      <div style={{ fontSize: 26, fontWeight: 800, color: INK, fontFamily: "'Playfair Display', Georgia, serif", lineHeight: 1 }}>{value}</div>
-      {bar && (
-        <div style={{ marginTop: 10, height: 4, background: '#f0ede6', borderRadius: 4, overflow: 'hidden' }}>
-          <div style={{ width: bar, height: '100%', background: `linear-gradient(90deg, ${GOLD} 0%, ${GOLD_LT} 100%)`, borderRadius: 4 }} />
-        </div>
-      )}
-      <div style={{ marginTop: 6, fontSize: 11.5, color: FAINT }}>{sub}</div>
-      {trend && <div style={{ marginTop: 2, fontSize: 11.5, color: '#3a8c3a', fontWeight: 600 }}>{trend}</div>}
-    </div>
-  )
-}
 
-/* Module card in the grid */
-function ModuleCard({ tag, title, desc, hovered, onHover }) {
-  return (
-    <div
-      onMouseEnter={onHover}
-      onMouseLeave={() => onHover(null)}
-      style={{
-        background: hovered ? '#fff' : WHITE,
-        border: `1px solid ${hovered ? GOLD + '55' : BORDER}`,
-        borderRadius: 10, padding: '20px 22px',
-        transition: 'all 0.18s', cursor: 'default',
-        boxShadow: hovered ? '0 8px 28px rgba(0,0,0,0.08)' : 'none',
-      }}
-    >
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: GOLD, marginBottom: 8 }}>{tag}</div>
-      <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 16, fontWeight: 700, color: INK, marginBottom: 6 }}>{title}</div>
-      <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>{desc}</div>
-    </div>
-  )
-}
-
-export default function LandingPage({ onLogin }) {
-  const [hoveredModule, setHoveredModule] = useState(null)
-  const [hoveredRole, setHoveredRole]     = useState(null)
-
-  return (
-    <div style={{ background: CREAM, color: INK, fontFamily: "'Inter', sans-serif", overflowX: 'hidden' }}>
-
-      {/* ── NAVBAR ────────────────────────────────────────────────────────── */}
+      {/* ── Navbar ───────────────────────────────────────────────────────── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(250,248,243,0.95)',
+        background: 'rgba(250,248,243,0.94)',
         backdropFilter: 'blur(12px)',
-        borderBottom: `1px solid ${BORDER}`,
-        padding: '0 6vw',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        height: 58,
+        borderBottom: '1px solid rgba(0,0,0,0.07)',
       }}>
-        {/* Logo */}
-        <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
-          Forge <em style={{ color: GOLD, fontStyle: 'italic' }}>Quantum</em> Vorvex
-        </div>
-
-        {/* Nav links */}
-        <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
-          {NAV_LINKS.map(l => (
-            <span key={l} style={{ fontSize: 11, fontWeight: 500, letterSpacing: '0.1em', color: MUTED, cursor: 'pointer', transition: 'color 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.color = INK}
-              onMouseLeave={e => e.currentTarget.style.color = MUTED}
-            >{l}</span>
-          ))}
-        </div>
-
-        {/* Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={onLogin} style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            fontSize: 12, fontWeight: 600, letterSpacing: '0.08em', color: MUTED,
-            transition: 'color 0.15s', padding: '6px 4px',
-          }}
-            onMouseEnter={e => e.currentTarget.style.color = INK}
-            onMouseLeave={e => e.currentTarget.style.color = MUTED}
-          >SIGN IN</button>
-          <button onClick={onLogin} style={{
-            background: GOLD, color: WHITE,
-            border: 'none', borderRadius: 6,
-            padding: '9px 20px', fontSize: 12, fontWeight: 700,
-            letterSpacing: '0.08em', cursor: 'pointer',
-            transition: 'background 0.15s',
-          }}
-            onMouseEnter={e => e.currentTarget.style.background = '#7d6115'}
-            onMouseLeave={e => e.currentTarget.style.background = GOLD}
-          >GET STARTED</button>
-        </div>
-      </nav>
-
-      {/* ── HERO ──────────────────────────────────────────────────────────── */}
-      <section style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr',
-        gap: 40, alignItems: 'center',
-        padding: '80px 6vw 80px',
-        minHeight: '88vh',
-      }}>
-        {/* Left */}
-        <div>
-          {/* Badge */}
+        <div style={{
+          maxWidth: 1200, margin: '0 auto',
+          padding: '0 clamp(16px,5vw,40px)',
+          height: 60,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          {/* Logo */}
           <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 12,
-            marginBottom: 32,
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: 'clamp(15px,2vw,18px)', fontWeight: 700, fontStyle: 'italic',
+            color: INK, letterSpacing: '-0.01em', whiteSpace: 'nowrap',
           }}>
-            <div style={{ width: 28, height: 1, background: GOLD }} />
-            <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.16em', color: GOLD }}>
-              HOTEL MANAGEMENT INTELLIGENCE
-            </span>
+            Forge Quantum <span style={{ color: GOLD }}>Vorvex</span>
           </div>
 
-          {/* Headline */}
-          <h1 style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 'clamp(42px, 5.5vw, 76px)',
-            fontWeight: 900,
-            lineHeight: 1.06,
-            letterSpacing: '-0.02em',
-            margin: '0 0 6px',
-            color: INK,
-          }}>
-            Seamless Operations.
-          </h1>
-          <h1 style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 'clamp(42px, 5.5vw, 76px)',
-            fontWeight: 700,
-            fontStyle: 'italic',
-            lineHeight: 1.06,
-            letterSpacing: '-0.02em',
-            margin: '0 0 32px',
-            color: GOLD,
-          }}>
-            Intelligent Management.
-          </h1>
+          {/* Desktop nav links */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 28 }} className="desktop-only">
+            {NAV_LINKS.map(l => (
+              <span key={l} style={{
+                fontSize: 12.5, fontWeight: 500, letterSpacing: '0.06em',
+                textTransform: 'uppercase', color: '#5a5550', cursor: 'pointer',
+                transition: 'color 0.15s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.color = GOLD}
+                onMouseLeave={e => e.currentTarget.style.color = '#5a5550'}
+              >{l}</span>
+            ))}
+          </div>
 
-          {/* Body */}
-          <p style={{
-            fontSize: 16, color: MUTED, lineHeight: 1.75,
-            maxWidth: 520, margin: '0 0 40px',
-          }}>
-            Quantum Vorvex is a complete hotel management platform — unifying room tracking,
-            guest check-in, GST billing, housekeeping and channel management into one
-            intelligent command centre built for India.
-          </p>
-
-          {/* CTAs */}
-          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+          {/* Desktop CTA */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }} className="desktop-only">
             <button onClick={onLogin} style={{
-              background: GOLD, color: WHITE,
-              border: 'none', borderRadius: 6,
-              padding: '14px 28px', fontSize: 12, fontWeight: 700,
-              letterSpacing: '0.1em', cursor: 'pointer',
+              padding: '8px 18px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.15)',
+              background: 'transparent', cursor: 'pointer',
+              fontSize: 12.5, fontWeight: 600, letterSpacing: '0.06em', color: INK,
+              transition: 'all 0.15s',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = GOLD; e.currentTarget.style.color = GOLD }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'; e.currentTarget.style.color = INK }}
+            >SIGN IN</button>
+            <button onClick={onLogin} style={{
+              padding: '8px 18px', borderRadius: 6, border: 'none',
+              background: INK, cursor: 'pointer',
+              fontSize: 12.5, fontWeight: 600, letterSpacing: '0.06em', color: '#fff',
               transition: 'background 0.15s',
             }}
-              onMouseEnter={e => e.currentTarget.style.background = '#7d6115'}
+              onMouseEnter={e => e.currentTarget.style.background = '#2a2a28'}
+              onMouseLeave={e => e.currentTarget.style.background = INK}
+            >GET STARTED</button>
+          </div>
+
+          {/* Mobile hamburger */}
+          <button
+            className="mobile-only"
+            onClick={() => setMenuOpen(o => !o)}
+            style={{
+              background: 'none', border: '1px solid rgba(0,0,0,0.12)',
+              borderRadius: 6, width: 36, height: 36,
+              alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', fontSize: 18, color: INK,
+            }}
+          >{menuOpen ? '✕' : '☰'}</button>
+        </div>
+
+        {/* Mobile dropdown */}
+        {menuOpen && (
+          <div style={{
+            background: CREAM, borderTop: '1px solid rgba(0,0,0,0.07)',
+            padding: '16px clamp(16px,5vw,40px) 20px',
+          }}>
+            {NAV_LINKS.map(l => (
+              <div key={l} onClick={() => setMenuOpen(false)} style={{
+                padding: '13px 0', borderBottom: '1px solid rgba(0,0,0,0.05)',
+                fontSize: 14, fontWeight: 500, color: '#3a3530', cursor: 'pointer',
+                letterSpacing: '0.04em', textTransform: 'uppercase',
+              }}>{l}</div>
+            ))}
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button onClick={() => { setMenuOpen(false); onLogin() }} style={{
+                flex: 1, padding: '11px', borderRadius: 6,
+                border: '1px solid rgba(0,0,0,0.15)', background: 'transparent',
+                cursor: 'pointer', fontSize: 13, fontWeight: 600, color: INK,
+              }}>SIGN IN</button>
+              <button onClick={() => { setMenuOpen(false); onLogin() }} style={{
+                flex: 1, padding: '11px', borderRadius: 6,
+                border: 'none', background: INK,
+                cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#fff',
+              }}>GET STARTED</button>
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <section style={{
+        maxWidth: 1200, margin: '0 auto',
+        padding: 'clamp(40px,7vh,88px) clamp(16px,5vw,40px) clamp(36px,6vh,72px)',
+      }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%,440px), 1fr))',
+          gap: 'clamp(32px,5vw,72px)',
+          alignItems: 'center',
+        }}>
+          {/* Left */}
+          <div>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 7,
+              background: 'rgba(201,168,76,0.1)',
+              border: '1px solid rgba(201,168,76,0.3)',
+              borderRadius: 100, padding: '5px 14px', marginBottom: 26,
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, display: 'block' }} />
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', color: GOLD }}>
+                HOTEL MANAGEMENT PLATFORM
+              </span>
+            </div>
+
+            <h1 style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: 'clamp(34px, 5.5vw, 72px)',
+              fontWeight: 900, color: INK,
+              margin: '0 0 2px', lineHeight: 1.04, letterSpacing: '-0.02em',
+            }}>Seamless</h1>
+            <h1 style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: 'clamp(34px, 5.5vw, 72px)',
+              fontWeight: 900, color: INK,
+              margin: '0 0 4px', lineHeight: 1.04, letterSpacing: '-0.02em',
+            }}>Operations.</h1>
+            <h2 style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: 'clamp(24px, 4vw, 52px)',
+              fontWeight: 700, fontStyle: 'italic', color: GOLD,
+              margin: '0 0 22px', lineHeight: 1.1,
+            }}>Intelligent Management.</h2>
+
+            <p style={{
+              fontSize: 'clamp(14px, 1.6vw, 16px)',
+              color: '#6b6055', lineHeight: 1.8,
+              maxWidth: 480, margin: '0 0 32px',
+            }}>
+              One unified platform for Indian hospitality. GST-compliant billing, smart
+              check-in, real-time room tracking, and intelligent analytics — built for
+              property owners who mean business.
+            </p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+              <button onClick={onLogin} style={{
+                padding: 'clamp(11px,1.5vw,13px) clamp(22px,2.5vw,30px)',
+                borderRadius: 8, border: 'none',
+                background: INK, color: '#fff',
+                fontSize: 'clamp(12px,1.3vw,13px)', fontWeight: 700,
+                letterSpacing: '0.06em', cursor: 'pointer', transition: 'background 0.15s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.background = '#2a2a28'}
+                onMouseLeave={e => e.currentTarget.style.background = INK}
+              >START FREE DEMO →</button>
+              <button style={{
+                padding: 'clamp(11px,1.5vw,13px) clamp(22px,2.5vw,30px)',
+                borderRadius: 8, border: '1.5px solid rgba(0,0,0,0.15)',
+                background: 'transparent', color: INK,
+                fontSize: 'clamp(12px,1.3vw,13px)', fontWeight: 600,
+                letterSpacing: '0.06em', cursor: 'pointer', transition: 'all 0.15s',
+              }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = GOLD; e.currentTarget.style.color = GOLD }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'; e.currentTarget.style.color = INK }}
+              >WATCH DEMO</button>
+            </div>
+          </div>
+
+          {/* Right — stat cards */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            gap: 14,
+          }}>
+            {[
+              { label: 'Occupancy', value: '87%',  icon: '◉', color: '#16a34a', bg: '#dcfce7' },
+              { label: 'Revenue',   value: '₹2.4L', icon: '◑', color: '#c9a84c', bg: 'rgba(201,168,76,0.1)' },
+              { label: 'Check-Ins', value: '6',     icon: '↗', color: '#2563eb', bg: '#dbeafe' },
+              { label: 'Pending',   value: '3',     icon: '◷', color: '#d97706', bg: '#fef3c7' },
+            ].map(card => (
+              <div key={card.label} style={{
+                background: '#fff',
+                border: '1px solid rgba(0,0,0,0.07)',
+                borderRadius: 14, padding: 'clamp(16px,2vw,22px)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
+              }}>
+                <div style={{
+                  width: 34, height: 34, borderRadius: 9,
+                  background: card.bg, color: card.color,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 16, marginBottom: 12,
+                }}>{card.icon}</div>
+                <div style={{
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: 'clamp(22px,3vw,30px)', fontWeight: 900, color: INK, lineHeight: 1,
+                }}>{card.value}</div>
+                <div style={{ fontSize: 11, color: '#888', marginTop: 5, fontWeight: 500 }}>{card.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Stats bar ────────────────────────────────────────────────────── */}
+      <section style={{
+        background: INK,
+        padding: 'clamp(28px,5vh,44px) clamp(16px,5vw,40px)',
+      }}>
+        <div style={{
+          maxWidth: 1200, margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+          gap: 'clamp(16px,3vw,40px)',
+        }}>
+          {STATS.map(s => (
+            <div key={s.label} style={{ textAlign: 'center' }}>
+              <div style={{
+                fontFamily: "'Playfair Display', serif",
+                fontSize: 'clamp(28px,4vw,44px)',
+                fontWeight: 900, color: GOLD, lineHeight: 1,
+              }}>{s.value}</div>
+              <div style={{
+                fontSize: 10.5, fontWeight: 600, letterSpacing: '0.1em',
+                textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)',
+                marginTop: 6,
+              }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Modules ──────────────────────────────────────────────────────── */}
+      <section style={{
+        maxWidth: 1200, margin: '0 auto',
+        padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
+      }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%,260px), 1fr))',
+          gap: 'clamp(24px,4vw,60px)',
+          alignItems: 'start',
+        }}>
+          {/* Heading */}
+          <div>
+            <div style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
+              textTransform: 'uppercase', color: GOLD, marginBottom: 14,
+            }}>PLATFORM MODULES</div>
+            <h2 style={{
+              fontFamily: "'Playfair Display', serif",
+              fontSize: 'clamp(26px,3.5vw,42px)',
+              fontWeight: 900, color: INK, lineHeight: 1.1,
+              margin: '0 0 16px', letterSpacing: '-0.01em',
+            }}>One platform.<br />Every module.</h2>
+            <p style={{ fontSize: 14, color: '#6b6055', lineHeight: 1.75, margin: 0, maxWidth: 320 }}>
+              From front desk to back office — Quantum Vorvex covers every workflow your hotel needs.
+            </p>
+            <button onClick={onLogin} style={{
+              marginTop: 26,
+              padding: '11px 24px', borderRadius: 7,
+              border: 'none', background: GOLD, color: '#000',
+              fontSize: 12.5, fontWeight: 700, letterSpacing: '0.06em',
+              cursor: 'pointer', transition: 'background 0.15s', display: 'inline-block',
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = '#d4b55a'}
               onMouseLeave={e => e.currentTarget.style.background = GOLD}
             >SIGN IN TO PLATFORM</button>
-            <a href="#modules" style={{
-              display: 'inline-flex', alignItems: 'center',
-              background: 'none',
-              border: `1px solid ${BORDER}`,
-              borderRadius: 6, padding: '14px 28px',
-              fontSize: 12, fontWeight: 600, letterSpacing: '0.08em',
-              color: INK, textDecoration: 'none',
-              transition: 'border-color 0.15s',
-            }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = GOLD}
-              onMouseLeave={e => e.currentTarget.style.borderColor = BORDER}
-            >EXPLORE PRODUCT</a>
           </div>
-        </div>
 
-        {/* Right — floating cards */}
-        <div style={{ position: 'relative', height: 420, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {/* Background grid texture */}
+          {/* Module grid */}
           <div style={{
-            position: 'absolute', inset: 0,
-            backgroundImage: `radial-gradient(circle, rgba(154,120,32,0.06) 1px, transparent 1px)`,
-            backgroundSize: '28px 28px',
-            borderRadius: 16,
-          }} />
-          {/* Card 1 — top right */}
-          <div style={{ position: 'absolute', top: 20, right: 0 }}>
-            <StatCard tag="OCCUPANCY" value="87%" sub="72% rooms filled this week" bar="72%" />
-          </div>
-          {/* Card 2 — middle left */}
-          <div style={{ position: 'absolute', top: '38%', left: 0, transform: 'translateY(-50%)' }}>
-            <StatCard tag="REVENUE" value="₹2.4L" sub="+4.2% vs last month" trend="↗ +4.2% vs last month" />
-          </div>
-          {/* Card 3 — bottom right */}
-          <div style={{ position: 'absolute', bottom: 10, right: 20 }}>
-            <StatCard tag="CHECK-INS" value="6" sub="3 pending today" />
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            gap: 10,
+          }}>
+            {MODULES.map(mod => (
+              <div key={mod.label} style={{
+                background: '#fff', border: '1px solid rgba(0,0,0,0.07)',
+                borderRadius: 10, padding: '15px',
+                transition: 'all 0.15s', cursor: 'default',
+              }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'rgba(201,168,76,0.5)'
+                  e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'
+                  e.currentTarget.style.transform = 'translateY(-2px)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'rgba(0,0,0,0.07)'
+                  e.currentTarget.style.boxShadow = 'none'
+                  e.currentTarget.style.transform = 'none'
+                }}
+              >
+                <span style={{ fontSize: 18, display: 'block', marginBottom: 8 }}>{mod.icon}</span>
+                <div style={{ fontSize: 12.5, fontWeight: 600, color: INK, marginBottom: 3 }}>{mod.label}</div>
+                <div style={{ fontSize: 11, color: '#888', lineHeight: 1.5 }}>{mod.desc}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ── STATS BAR ─────────────────────────────────────────────────────── */}
+      {/* ── Roles ────────────────────────────────────────────────────────── */}
       <section style={{
-        borderTop: `1px solid ${BORDER}`,
-        borderBottom: `1px solid ${BORDER}`,
-        background: 'rgba(154,120,32,0.03)',
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-        padding: '40px 6vw',
+        background: '#f0ede6',
+        padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
       }}>
-        {STATS.map(({ num, label }, i) => (
-          <div key={label} style={{
-            textAlign: 'center',
-            borderRight: i < 3 ? `1px solid ${BORDER}` : 'none',
-            padding: '0 20px',
-          }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,4vh,48px)' }}>
             <div style={{
-              fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: 'clamp(32px, 4vw, 52px)',
-              fontWeight: 900, color: GOLD,
-              lineHeight: 1,
-            }}>{num}</div>
-            <div style={{ fontSize: 12, color: FAINT, marginTop: 6, letterSpacing: '0.04em' }}>{label}</div>
+              fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
+              textTransform: 'uppercase', color: GOLD, marginBottom: 12,
+            }}>ROLE-BASED ACCESS</div>
+            <h2 style={{
+              fontFamily: "'Playfair Display', serif",
+              fontSize: 'clamp(26px,3.5vw,40px)',
+              fontWeight: 900, color: INK, margin: 0, lineHeight: 1.1,
+            }}>Right access.<br />Right people.</h2>
           </div>
-        ))}
-      </section>
-
-      {/* ── MODULES SECTION ───────────────────────────────────────────────── */}
-      <section id="modules" style={{ padding: '80px 6vw' }}>
-        <div style={{
-          background: WHITE, border: `1px solid ${BORDER}`,
-          borderRadius: 16, overflow: 'hidden',
-          display: 'grid', gridTemplateColumns: '320px 1fr',
-        }}>
-          {/* Left panel */}
           <div style={{
-            padding: '48px 36px',
-            borderRight: `1px solid ${BORDER}`,
-            display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%,220px), 1fr))',
+            gap: 16,
           }}>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', color: GOLD, marginBottom: 20 }}>
-                BY FORGE QUANTUM SOLUTIONS
-              </div>
-              <h2 style={{
-                fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: 36, fontWeight: 900, color: INK,
-                margin: '0 0 4px', lineHeight: 1.1,
-              }}>One platform.</h2>
-              <h2 style={{
-                fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: 36, fontWeight: 700,
-                fontStyle: 'italic', color: GOLD,
-                margin: '0 0 24px', lineHeight: 1.1,
-              }}>Every module.</h2>
-              <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.75, margin: 0 }}>
-                From check-in to checkout, billing to housekeeping — Quantum Vorvex gives
-                your team a single, intelligent command centre with real-time visibility
-                across your entire property.
-              </p>
-            </div>
-
-            {/* Mini stat cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 32 }}>
-              {[{ n: '15+', l: 'Integrated Modules' }, { n: '100%', l: 'GST Compliant' }].map(({ n, l }) => (
-                <div key={l} style={{ background: CREAM, border: `1px solid ${BORDER}`, borderRadius: 8, padding: '14px 16px' }}>
-                  <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 24, fontWeight: 800, color: GOLD }}>{n}</div>
-                  <div style={{ fontSize: 11, color: FAINT, marginTop: 3 }}>{l}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Right grid */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: '1fr 1fr',
-          }}>
-            {MODULES.map((m, i) => (
-              <div
-                key={m.title}
-                onMouseEnter={() => setHoveredModule(i)}
-                onMouseLeave={() => setHoveredModule(null)}
-                style={{
-                  padding: '28px 28px',
-                  borderRight: i % 2 === 0 ? `1px solid ${BORDER}` : 'none',
-                  borderBottom: i < MODULES.length - 2 ? `1px solid ${BORDER}` : 'none',
-                  background: hoveredModule === i ? '#fffef9' : 'transparent',
-                  transition: 'background 0.15s',
-                  cursor: 'default',
-                }}
-              >
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', color: GOLD, marginBottom: 10 }}>{m.tag}</div>
-                <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 17, fontWeight: 700, color: INK, marginBottom: 8 }}>{m.title}</div>
-                <div style={{ fontSize: 13, color: MUTED, lineHeight: 1.65 }}>{m.desc}</div>
+            {ROLES.map(r => (
+              <div key={r.role} style={{
+                background: '#fff',
+                border: '1px solid rgba(0,0,0,0.07)',
+                borderTop: `3px solid ${r.color}`,
+                borderRadius: 10, padding: 'clamp(20px,3vw,26px)',
+              }}>
+                <div style={{ fontSize: 24, marginBottom: 12 }}>{r.icon}</div>
+                <div style={{
+                  fontFamily: "'Syne', sans-serif",
+                  fontSize: 16, fontWeight: 700, color: INK, marginBottom: 10,
+                }}>{r.role}</div>
+                <div style={{ fontSize: 13, color: '#6b6055', lineHeight: 1.7 }}>{r.desc}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── ROLES SECTION ─────────────────────────────────────────────────── */}
-      <section id="roles" style={{
-        padding: '80px 6vw',
-        background: 'rgba(154,120,32,0.03)',
-        borderTop: `1px solid ${BORDER}`,
-        borderBottom: `1px solid ${BORDER}`,
+      {/* ── CTA ──────────────────────────────────────────────────────────── */}
+      <section style={{
+        background: INK,
+        padding: 'clamp(48px,8vh,80px) clamp(16px,5vw,40px)',
+        textAlign: 'center',
       }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-            <div style={{ width: 20, height: 1, background: GOLD }} />
-            <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: GOLD }}>ROLE-BASED ACCESS CONTROL</span>
-          </div>
-          <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 36, fontWeight: 900, margin: '0 0 8px', color: INK }}>
-            Right access.
-          </h2>
-          <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 36, fontWeight: 700, fontStyle: 'italic', margin: '0 0 48px', color: GOLD }}>
-            Right people.
-          </h2>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-            {[
-              { icon: '👑', role: 'Owner',   color: GOLD,      perms: ['All 15 modules', 'User management', 'Financial exports', 'System settings'] },
-              { icon: '🏢', role: 'Manager', color: '#4a7fc1', perms: ['Guest operations', 'Billing & food', 'Reports & analytics', 'Housekeeping'] },
-              { icon: '👤', role: 'Staff',   color: '#3a8c3a', perms: ['Guest check-in', 'Room status', 'Housekeeping tasks', 'Maintenance'] },
-            ].map(({ icon, role, color, perms }) => (
-              <div
-                key={role}
-                onMouseEnter={() => setHoveredRole(role)}
-                onMouseLeave={() => setHoveredRole(null)}
-                style={{
-                  background: WHITE,
-                  border: `1px solid ${hoveredRole === role ? color + '44' : BORDER}`,
-                  borderTop: `3px solid ${color}`,
-                  borderRadius: 10, padding: '28px 24px',
-                  transition: 'all 0.2s',
-                  boxShadow: hoveredRole === role ? '0 8px 28px rgba(0,0,0,0.08)' : 'none',
-                  transform: hoveredRole === role ? 'translateY(-3px)' : 'none',
-                }}
-              >
-                <div style={{ fontSize: 26, marginBottom: 12 }}>{icon}</div>
-                <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 20, fontWeight: 700, color: INK, marginBottom: 16 }}>{role}</div>
-                {perms.map(p => (
-                  <div key={p} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 8, fontSize: 13, color: MUTED }}>
-                    <span style={{ color, marginTop: 1, flexShrink: 0 }}>✓</span>{p}
-                  </div>
-                ))}
-              </div>
-            ))}
+        <div style={{ maxWidth: 580, margin: '0 auto' }}>
+          <h2 style={{
+            fontFamily: "'Playfair Display', serif",
+            fontSize: 'clamp(26px,4vw,46px)',
+            fontWeight: 900, color: '#fff', lineHeight: 1.1, margin: '0 0 14px',
+          }}>Ready to modernise<br />your hotel?</h2>
+          <p style={{ color: 'rgba(255,255,255,0.48)', fontSize: 15, lineHeight: 1.75, marginBottom: 32 }}>
+            No installation. No backend required for demo. Sign in and explore the full
+            system with real-looking mock data — instantly.
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+            <button onClick={onLogin} style={{
+              padding: '13px clamp(24px,4vw,36px)', borderRadius: 8, border: 'none',
+              background: GOLD, color: '#000',
+              fontSize: 13, fontWeight: 700, letterSpacing: '0.08em',
+              cursor: 'pointer', transition: 'background 0.15s',
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = '#d4b55a'}
+              onMouseLeave={e => e.currentTarget.style.background = GOLD}
+            >SIGN IN TO PLATFORM →</button>
+            <button onClick={onLogin} style={{
+              padding: '13px clamp(24px,4vw,36px)', borderRadius: 8,
+              border: '1px solid rgba(255,255,255,0.2)',
+              background: 'transparent', color: '#fff',
+              fontSize: 13, fontWeight: 600, letterSpacing: '0.08em',
+              cursor: 'pointer', transition: 'border-color 0.15s',
+            }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
+            >SIGN IN</button>
           </div>
         </div>
       </section>
 
-      {/* ── CTA ───────────────────────────────────────────────────────────── */}
-      <section style={{ padding: '100px 6vw', textAlign: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 16 }}>
-          <div style={{ width: 32, height: 1, background: GOLD }} />
-          <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.14em', color: GOLD }}>GET STARTED</span>
-          <div style={{ width: 32, height: 1, background: GOLD }} />
-        </div>
-        <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(32px, 5vw, 60px)', fontWeight: 900, margin: '0 0 8px', color: INK }}>
-          Ready to transform
-        </h2>
-        <h2 style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 'clamp(32px, 5vw, 60px)', fontWeight: 700, fontStyle: 'italic', margin: '0 0 28px', color: GOLD }}>
-          your property?
-        </h2>
-        <p style={{ fontSize: 16, color: MUTED, maxWidth: 460, margin: '0 auto 40px', lineHeight: 1.7 }}>
-          Sign in and manage your hotel from a single, powerful dashboard.
-          GST-compliant, secure and built for India.
-        </p>
-        <button onClick={onLogin} style={{
-          background: GOLD, color: WHITE,
-          border: 'none', borderRadius: 8,
-          padding: '16px 40px', fontSize: 13, fontWeight: 700,
-          letterSpacing: '0.1em', cursor: 'pointer',
-          transition: 'background 0.15s',
-          boxShadow: `0 4px 24px rgba(154,120,32,0.3)`,
-        }}
-          onMouseEnter={e => e.currentTarget.style.background = '#7d6115'}
-          onMouseLeave={e => e.currentTarget.style.background = GOLD}
-        >SIGN IN TO PLATFORM →</button>
-      </section>
-
-      {/* ── FOOTER ────────────────────────────────────────────────────────── */}
+      {/* ── Footer ───────────────────────────────────────────────────────── */}
       <footer style={{
-        borderTop: `1px solid ${BORDER}`,
-        padding: '24px 6vw',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: 12, background: WHITE,
+        background: '#060604',
+        padding: 'clamp(18px,3vh,26px) clamp(16px,5vw,40px)',
+        display: 'flex', flexWrap: 'wrap', gap: 12,
+        alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 14, fontWeight: 700 }}>
-          Forge <em style={{ color: GOLD, fontStyle: 'italic' }}>Quantum</em> Vorvex
+        <div style={{
+          fontFamily: "'Playfair Display', serif",
+          fontSize: 15, fontStyle: 'italic', color: GOLD,
+        }}>Quantum Vorvex</div>
+        <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.25)' }}>
+          © 2026 Forge Quantum Solutions · GST-ready · Made for India
         </div>
-        <div style={{ fontSize: 12, color: FAINT }}>© 2026 Forge Quantum Solutions · Built for Indian Hospitality</div>
-        <button onClick={onLogin} style={{
-          background: 'none', border: `1px solid ${BORDER}`, borderRadius: 5,
-          padding: '7px 18px', fontSize: 11, fontWeight: 600,
-          letterSpacing: '0.08em', color: MUTED, cursor: 'pointer',
-          transition: 'border-color 0.15s',
-        }}
-          onMouseEnter={e => e.currentTarget.style.borderColor = GOLD}
-          onMouseLeave={e => e.currentTarget.style.borderColor = BORDER}
-        >SIGN IN</button>
       </footer>
-
-      <style>{`* { box-sizing: border-box; } @media (max-width: 768px) { section[style*="grid-template-columns: 1fr 1fr"] { grid-template-columns: 1fr !important; } }`}</style>
     </div>
   )
 }

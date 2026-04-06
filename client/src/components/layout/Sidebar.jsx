@@ -98,19 +98,8 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile overlay */}
-      {sidebarOpen && (
-        <div
-          id="sb-ov"
-          onClick={closeSidebar}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.45)',
-            zIndex: 99,
-          }}
-        />
-      )}
+      {/* Mobile overlay — CSS controls visibility via #sb-overlay */}
+      <div id="sb-overlay" onClick={closeSidebar} />
 
       {/* Sidebar */}
       <div
@@ -118,27 +107,16 @@ export default function Sidebar() {
         style={{
           width: 252,
           minWidth: 252,
-          height: '100vh',
+          height: '100dvh',
           background: '#141414',
           display: 'flex',
           flexDirection: 'column',
           overflowY: 'auto',
           overflowX: 'hidden',
           flexShrink: 0,
-          position: 'relative',
           zIndex: 100,
-          ...(typeof window !== 'undefined' && window.innerWidth < 1024
-            ? {
-                position: 'fixed',
-                left: 0,
-                top: 0,
-                transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
-                transition: 'transform 0.22s cubic-bezier(0.4,0,0.2,1)',
-                boxShadow: sidebarOpen ? '4px 0 24px rgba(0,0,0,0.5)' : 'none',
-              }
-            : {}),
         }}
-        className="sb-root"
+        className={sidebarOpen ? 'sb-open' : ''}
       >
         {/* Logo section */}
         <div style={{ padding: '20px 18px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
@@ -273,16 +251,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Responsive CSS for mobile drawer */}
-      <style>{`
-        @media (max-width: 1023px) {
-          .sb-root {
-            position: fixed !important;
-            left: 0;
-            top: 0;
-          }
-        }
-      `}</style>
+      {/* overlay visibility is handled by index.css #sb-overlay rules */}
     </>
   )
 }

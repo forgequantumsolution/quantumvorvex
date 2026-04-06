@@ -63,7 +63,7 @@ export default function LoginPage({ onBack }) {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: '100dvh',
       position: 'relative',
       display: 'flex',
       alignItems: 'center',
@@ -102,16 +102,16 @@ export default function LoginPage({ onBack }) {
         width: '100%', maxWidth: 1280,
         margin: '0 auto',
         display: 'grid',
-        gridTemplateColumns: '1fr 460px',
+        gridTemplateColumns: 'minmax(0,1fr) min(460px,100%)',
         gap: 0,
         alignItems: 'center',
-        padding: '48px 6vw',
-        minHeight: '100vh',
+        padding: 'clamp(24px,5vh,48px) clamp(16px,6vw,80px)',
+        minHeight: '100dvh',
         boxSizing: 'border-box',
-      }}>
+      }} className="lp-grid">
 
-        {/* ── LEFT — Text overlay ───────────────────────────────────── */}
-        <div style={{ padding: '0 48px 0 0' }}>
+        {/* ── LEFT — Text overlay (hidden on mobile) ───────────────── */}
+        <div className="desktop-only" style={{ padding: '0 48px 0 0' }}>
 
           {/* Badge */}
           <div style={{
@@ -205,8 +205,9 @@ export default function LoginPage({ onBack }) {
           WebkitBackdropFilter: 'blur(24px)',
           border: '1px solid rgba(154,120,32,0.22)',
           borderRadius: 20,
-          padding: '40px 36px',
+          padding: 'clamp(24px,4vw,40px) clamp(20px,4vw,36px)',
           boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset',
+          width: '100%',
         }}>
 
           {/* Logo */}
@@ -406,11 +407,9 @@ export default function LoginPage({ onBack }) {
       <style>{`
         * { box-sizing: border-box; }
         input::placeholder { color: rgba(255,255,255,0.22) !important; }
-        @media (max-width: 860px) {
-          div[style*="grid-template-columns: 1fr 460px"] {
-            grid-template-columns: 1fr !important;
-          }
-          div[style*="padding: 0px 48px 0px 0px"] { display: none !important; }
+        /* On mobile: single column, card takes full width */
+        @media (max-width: 1023px) {
+          .lp-grid { grid-template-columns: 1fr !important; justify-items: center; }
         }
       `}</style>
     </div>

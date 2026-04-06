@@ -70,7 +70,7 @@
 
   #root {
     display: flex;
-    height: 100vh;
+    height: 100dvh;
     overflow: hidden;
     width: 100%;
   }
@@ -333,6 +333,67 @@
 /* Scrollbar for sidebar */
 #sidebar { scrollbar-width: none; }
 #sidebar::-webkit-scrollbar { display: none; }
+
+/* ── Responsive sidebar ──────────────────────────────────────────────────────
+   Desktop (≥1024px): sidebar is part of the flex row, always visible.
+   Mobile  (<1024px): sidebar is a fixed drawer that slides in/out.
+   --------------------------------------------------------------------------- */
+@media (max-width: 1023px) {
+  #sidebar {
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    height: 100dvh !important;
+    z-index: 200 !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.24s cubic-bezier(0.4,0,0.2,1),
+                box-shadow 0.24s ease !important;
+    box-shadow: none !important;
+  }
+  #sidebar.sb-open {
+    transform: translateX(0) !important;
+    box-shadow: 6px 0 32px rgba(0,0,0,0.55) !important;
+  }
+  /* Overlay behind the drawer */
+  #sb-overlay {
+    display: block !important;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 199;
+    backdrop-filter: blur(2px);
+  }
+}
+@media (min-width: 1024px) {
+  #sb-overlay { display: none !important; }
+}
+
+/* ── Content padding responsive ──────────────────────────────────────────── */
+@media (max-width: 639px) {
+  #content { padding: 14px !important; }
+  #topbar  { padding: 0 12px !important; }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  #content { padding: 18px !important; }
+}
+
+/* ── Topbar search — hide on very small screens ───────────────────────────── */
+@media (max-width: 499px) {
+  .tb-search { display: none !important; }
+  .tb-clock  { display: none !important; }
+  .tb-checkin-text { display: none !important; }
+}
+@media (min-width: 500px) and (max-width: 767px) {
+  .tb-clock { display: none !important; }
+  .tb-search { width: 150px !important; }
+}
+
+/* ── Mobile-only helper classes ──────────────────────────────────────────── */
+.mobile-only { display: none !important; }
+@media (max-width: 1023px) {
+  .mobile-only  { display: flex !important; }
+  .desktop-only { display: none  !important; }
+}
 
 /* Print */
 @media print {

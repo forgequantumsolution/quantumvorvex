@@ -74,10 +74,10 @@ export default function Topbar() {
         flexShrink: 0,
       }}
     >
-      {/* Hamburger — mobile only */}
+      {/* Hamburger — mobile only (visible <1024px via CSS) */}
       <button
         onClick={toggleSidebar}
-        className="lg:hidden"
+        className="mobile-only"
         style={{
           background: 'none',
           border: '1px solid var(--border)',
@@ -114,10 +114,10 @@ export default function Topbar() {
         {pageTitle}
       </div>
 
-      {/* Status pills — hidden on mobile */}
+      {/* Status pills — hidden on small screens */}
       <div
         className="hidden sm:flex"
-        style={{ alignItems: 'center', gap: 6, flexShrink: 0 }}
+        style={{ alignItems: 'center', gap: 6, flexShrink: 0, display: 'flex' }}
       >
         <span
           style={{
@@ -198,6 +198,7 @@ export default function Topbar() {
 
       {/* Search input */}
       <div
+        className="tb-search"
         style={{
           position: 'relative',
           flexShrink: 0,
@@ -272,12 +273,12 @@ export default function Topbar() {
 
       {/* Live clock */}
       <div
+        className="tb-clock"
         style={{
           flexShrink: 0,
           textAlign: 'right',
           minWidth: 72,
         }}
-        className="hidden md:block"
       >
         <div
           style={{
@@ -306,9 +307,9 @@ export default function Topbar() {
       <button
         onClick={() => setActivePanel('checkin')}
         className="btn btn-primary btn-sm"
-        style={{ flexShrink: 0 }}
+        style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
       >
-        + Check-In
+        +<span className="tb-checkin-text"> Check-In</span>
       </button>
     </div>
   )
