@@ -1,0 +1,109 @@
+# =============================================================================
+# Dependabot — Automated dependency update configuration
+# Quantum Vorvex Hotel Management System
+# =============================================================================
+# Monitors three ecosystems:
+#   1. npm — server/ (Node.js / Express / Prisma backend)
+#   2. npm — client/ (React / Vite frontend)
+#   3. github-actions — .github/workflows/
+# =============================================================================
+
+version: 2
+
+updates:
+  # ── Server (Node.js backend) ───────────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/server"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Asia/Kolkata"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+    reviewers:
+      - "forgequantumsolution"
+    assignees:
+      - "forgequantumsolution"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(dev-deps)"
+      include: "scope"
+    # Group all non-major server dependency updates into a single PR
+    groups:
+      server-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Prisma major bumps require manual migration review
+      - dependency-name: "@prisma/client"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "prisma"
+        update-types: ["version-update:semver-major"]
+    versioning-strategy: lockfile-only
+
+  # ── Client (React / Vite frontend) ────────────────────────────────────────
+  - package-ecosystem: "npm"
+    directory: "/client"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Asia/Kolkata"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+    reviewers:
+      - "forgequantumsolution"
+    assignees:
+      - "forgequantumsolution"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(dev-deps)"
+      include: "scope"
+    # Group all non-major client dependency updates into a single PR
+    groups:
+      client-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # React major version bumps require manual validation of breaking changes
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      # Vite major bumps require config file review
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+    versioning-strategy: lockfile-only
+
+  # ── GitHub Actions workflows ───────────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Asia/Kolkata"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "security"
+    reviewers:
+      - "forgequantumsolution"
+    assignees:
+      - "forgequantumsolution"
+    commit-message:
+      prefix: "chore(ci)"
+      include: "scope"
+    # Group all Actions updates into a single PR to reduce noise
+    groups:
+      github-actions-all:
+        update-types:
+          - "minor"
+          - "patch"

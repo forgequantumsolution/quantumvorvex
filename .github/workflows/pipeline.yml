@@ -1,0 +1,623 @@
+# =============================================================================
+# Quantum Vorvex — Full CI/CD Security Pipeline
+# 7 Stages: Pre-Flight → Code Quality → Testing → Security Scan →
+#            Build Container → Staging Smoke → Notify
+# =============================================================================
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+# Cancel any in-progress run on the same branch/PR to avoid wasted runners
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "20"
+  IMAGE_NAME: quantumvorvex
+
+# =============================================================================
+# STAGE 1 — PRE-FLIGHT
+# Validates secrets presence, scans for leaked credentials, checks for merge
+# conflict markers left in source files.
+# =============================================================================
+jobs:
+  pre-flight:
+    name: "Stage 1 — Pre-Flight"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # full history required for gitleaks
+
+      # ── 1a. Validate required secrets are present ─────────────────────────
+      - name: Validate required environment secrets
+        env:
+          CHECK_JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          CHECK_DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CHECK_NODE_ENV: ${{ secrets.NODE_ENV }}
+        run: |
+          echo "Checking required secrets are configured..."
+          MISSING=()
+
+          if [ -z "$CHECK_JWT_SECRET" ]; then
+            MISSING+=("JWT_SECRET")
+          fi
+          if [ -z "$CHECK_DATABASE_URL" ]; then
+            MISSING+=("DATABASE_URL")
+          fi
+          if [ -z "$CHECK_NODE_ENV" ]; then
+            echo "::warning::NODE_ENV secret not set — defaulting to production in pipeline"
+          fi
+
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::error::The following required secrets are missing from repository settings:"
+            for secret in "${MISSING[@]}"; do
+              echo "::error::  - $secret"
+            done
+            exit 1
+          fi
+
+          echo "All required secrets are present."
+
+      # ── 1b. Gitleaks — detect hardcoded secrets / credentials ─────────────
+      - name: Run Gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      # ── 1c. Detect unresolved merge conflict markers ──────────────────────
+      - name: Check for merge conflict markers
+        run: |
+          echo "Scanning for unresolved merge conflict markers..."
+          CONFLICT_FILES=$(grep -rn --include="*.js" --include="*.jsx" \
+            --include="*.ts" --include="*.tsx" --include="*.json" \
+            --include="*.yml" --include="*.yaml" --include="*.md" \
+            -E "^(<{7}|>{7}|={7}|\|{7})" . \
+            --exclude-dir=node_modules \
+            --exclude-dir=.git \
+            || true)
+
+          if [ -n "$CONFLICT_FILES" ]; then
+            echo "::error::Unresolved merge conflict markers found:"
+            echo "$CONFLICT_FILES"
+            exit 1
+          fi
+
+          echo "No merge conflict markers found."
+
+# =============================================================================
+# STAGE 2 — CODE QUALITY
+# Installs dependencies in client/ and server/, runs ESLint on both, and
+# reports TODO/FIXME counts as informational warnings.
+# =============================================================================
+  code-quality:
+    name: "Stage 2 — Code Quality"
+    runs-on: ubuntu-latest
+    needs: pre-flight
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Server — install & lint ───────────────────────────────────────────
+      - name: Setup Node.js ${{ env.NODE_VERSION }} (server)
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Run ESLint on server
+        working-directory: server
+        run: |
+          if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.cjs" ] || \
+             [ -f ".eslintrc.json" ] || [ -f "eslint.config.js" ] || \
+             [ -f "eslint.config.mjs" ]; then
+            npx eslint src/ --max-warnings=0 --format=compact
+          else
+            echo "::warning::No ESLint config found in server/ — skipping lint"
+          fi
+
+      # ── Client — install & lint ───────────────────────────────────────────
+      - name: Setup Node.js ${{ env.NODE_VERSION }} (client)
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install client dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Run ESLint on client
+        working-directory: client
+        run: |
+          if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.cjs" ] || \
+             [ -f ".eslintrc.json" ] || [ -f "eslint.config.js" ] || \
+             [ -f "eslint.config.mjs" ]; then
+            npx eslint src/ --max-warnings=0 --format=compact
+          else
+            echo "::warning::No ESLint config found in client/ — skipping lint"
+          fi
+
+      # ── TODO / FIXME audit ────────────────────────────────────────────────
+      - name: Audit TODO and FIXME comments
+        run: |
+          echo "Counting TODO and FIXME comments in source files..."
+
+          SERVER_COUNT=$(grep -rn --include="*.js" --include="*.jsx" \
+            --include="*.ts" --include="*.tsx" \
+            -E "(TODO|FIXME)" server/src/ | wc -l || echo "0")
+
+          CLIENT_COUNT=$(grep -rn --include="*.js" --include="*.jsx" \
+            --include="*.ts" --include="*.tsx" \
+            -E "(TODO|FIXME)" client/src/ | wc -l || echo "0")
+
+          TOTAL=$((SERVER_COUNT + CLIENT_COUNT))
+
+          echo "Server TODO/FIXME: $SERVER_COUNT"
+          echo "Client TODO/FIXME: $CLIENT_COUNT"
+          echo "Total: $TOTAL"
+
+          if [ "$TOTAL" -gt 20 ]; then
+            echo "::warning::High number of unresolved TODO/FIXME comments ($TOTAL). Consider addressing them."
+          elif [ "$TOTAL" -gt 0 ]; then
+            echo "::notice::$TOTAL TODO/FIXME comment(s) found. Track and resolve before release."
+          else
+            echo "No TODO/FIXME comments found."
+          fi
+
+          # Emit summary
+          echo "### Code Quality — TODO/FIXME Audit" >> $GITHUB_STEP_SUMMARY
+          echo "| Location | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+          echo "| server/src | $SERVER_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| client/src | $CLIENT_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Total** | **$TOTAL** |" >> $GITHUB_STEP_SUMMARY
+
+# =============================================================================
+# STAGE 3 — TESTING
+# Runs server unit tests (passes with no tests), builds the React/Vite client,
+# and archives the resulting build artifact.
+# =============================================================================
+  testing:
+    name: "Stage 3 — Testing"
+    runs-on: ubuntu-latest
+    needs: code-quality
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Server tests ──────────────────────────────────────────────────────
+      - name: Setup Node.js ${{ env.NODE_VERSION }} (server)
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: server/package-lock.json
+
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Run server tests
+        working-directory: server
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-test-secret-not-for-production' }}
+          DATABASE_URL: "file:./test.db"
+        run: |
+          if grep -q '"test"' package.json; then
+            npm test -- --passWithNoTests
+          else
+            echo "::notice::No test script found in server/package.json — skipping"
+          fi
+
+      # ── Client build ──────────────────────────────────────────────────────
+      - name: Setup Node.js ${{ env.NODE_VERSION }} (client)
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install client dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Build client (Vite)
+        working-directory: client
+        env:
+          NODE_ENV: production
+        run: npm run build
+
+      # ── Archive artifacts ─────────────────────────────────────────────────
+      - name: Archive client build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-dist-${{ github.sha }}
+          path: client/dist/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Record build summary
+        run: |
+          BUILD_SIZE=$(du -sh client/dist/ | cut -f1)
+          FILE_COUNT=$(find client/dist/ -type f | wc -l)
+          echo "### Testing & Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+          echo "| Client build size | $BUILD_SIZE |" >> $GITHUB_STEP_SUMMARY
+          echo "| Files in dist/ | $FILE_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Git SHA | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+
+# =============================================================================
+# STAGE 4 — SECURITY SCAN
+# npm audit on both workspaces, Semgrep SAST scan, and Trivy filesystem scan.
+# =============================================================================
+  security-scan:
+    name: "Stage 4 — Security Scan"
+    runs-on: ubuntu-latest
+    needs: testing
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── npm audit — server ────────────────────────────────────────────────
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: server/package-lock.json
+
+      - name: npm audit — server (high severity threshold)
+        working-directory: server
+        run: |
+          npm ci --ignore-scripts
+          echo "Running npm audit on server dependencies..."
+          npm audit --audit-level=high --json > /tmp/server-audit.json || true
+          VULNERABILITIES=$(node -e "
+            const r = require('/tmp/server-audit.json');
+            const meta = r.metadata || {};
+            const vuln = meta.vulnerabilities || {};
+            const high = (vuln.high || 0) + (vuln.critical || 0);
+            console.log(JSON.stringify({ high: vuln.high||0, critical: vuln.critical||0, total: high }));
+          ")
+          echo "Server audit results: $VULNERABILITIES"
+
+          HIGH=$(echo "$VULNERABILITIES" | node -e "process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).total))")
+          if [ "$HIGH" -gt 0 ]; then
+            echo "::error::Server has $HIGH high/critical npm vulnerabilities. Run 'npm audit fix' to remediate."
+            npm audit --audit-level=high
+            exit 1
+          fi
+          echo "Server npm audit passed — no high/critical vulnerabilities."
+
+      # ── npm audit — client ────────────────────────────────────────────────
+      - name: Setup Node.js for client audit
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: npm audit — client (high severity threshold)
+        working-directory: client
+        run: |
+          npm ci --ignore-scripts
+          echo "Running npm audit on client dependencies..."
+          npm audit --audit-level=high --json > /tmp/client-audit.json || true
+          VULNERABILITIES=$(node -e "
+            const r = require('/tmp/client-audit.json');
+            const meta = r.metadata || {};
+            const vuln = meta.vulnerabilities || {};
+            const high = (vuln.high || 0) + (vuln.critical || 0);
+            console.log(JSON.stringify({ high: vuln.high||0, critical: vuln.critical||0, total: high }));
+          ")
+          echo "Client audit results: $VULNERABILITIES"
+
+          HIGH=$(echo "$VULNERABILITIES" | node -e "process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).total))")
+          if [ "$HIGH" -gt 0 ]; then
+            echo "::error::Client has $HIGH high/critical npm vulnerabilities. Run 'npm audit fix' to remediate."
+            npm audit --audit-level=high
+            exit 1
+          fi
+          echo "Client npm audit passed — no high/critical vulnerabilities."
+
+      # ── Semgrep SAST ──────────────────────────────────────────────────────
+      - name: Run Semgrep SAST scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: auto
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+      # ── Trivy filesystem scan ─────────────────────────────────────────────
+      - name: Run Trivy filesystem vulnerability scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-fs-results.sarif"
+          severity: "CRITICAL,HIGH"
+          exit-code: "1"
+          ignore-unfixed: true
+
+      - name: Upload Trivy SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-fs-results.sarif"
+          category: "trivy-filesystem"
+
+# =============================================================================
+# STAGE 5 — BUILD CONTAINER
+# Builds the production Docker image and scans it with Trivy for OS & library
+# CVEs before it can be used downstream.
+# =============================================================================
+  build-container:
+    name: "Stage 5 — Build Container"
+    runs-on: ubuntu-latest
+    needs: security-scan
+    outputs:
+      image-tag: ${{ steps.meta.outputs.image-tag }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Download the previously built client artifact so the Docker build
+      # can copy it in without re-running Vite.
+      - name: Download client build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: client-dist-${{ github.sha }}
+          path: client/dist/
+
+      # ── Docker image metadata ─────────────────────────────────────────────
+      - name: Set image tag output
+        id: meta
+        run: |
+          TAG="${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "image-tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Image will be tagged as: $TAG"
+
+      # ── Build Docker image ────────────────────────────────────────────────
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.image-tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            GIT_SHA=${{ github.sha }}
+
+      # ── Trivy container image scan ────────────────────────────────────────
+      - name: Scan container image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "image"
+          image-ref: ${{ steps.meta.outputs.image-tag }}
+          format: "sarif"
+          output: "trivy-image-results.sarif"
+          severity: "CRITICAL,HIGH"
+          exit-code: "1"
+          ignore-unfixed: true
+
+      - name: Upload container scan SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-image-results.sarif"
+          category: "trivy-container"
+
+      # Save the image as a tar so the next stage can load it
+      - name: Export Docker image to tar
+        run: docker save ${{ steps.meta.outputs.image-tag }} -o /tmp/image.tar
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-${{ github.sha }}
+          path: /tmp/image.tar
+          retention-days: 1
+
+# =============================================================================
+# STAGE 6 — STAGING SMOKE TEST
+# Loads the built image, starts a container with minimal env vars, waits for
+# the health check, and verifies the /health endpoint returns HTTP 200.
+# =============================================================================
+  staging-smoke:
+    name: "Stage 6 — Staging Smoke Test"
+    runs-on: ubuntu-latest
+    needs: build-container
+    steps:
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-${{ github.sha }}
+          path: /tmp/
+
+      - name: Load Docker image
+        run: docker load -i /tmp/image.tar
+
+      - name: Start container for smoke test
+        run: |
+          docker run -d \
+            --name smoke_test \
+            -p 5000:5000 \
+            -e NODE_ENV=production \
+            -e PORT=5000 \
+            -e JWT_SECRET=smoke-test-secret-ci \
+            -e DATABASE_URL=file:/app/data/smoke.db \
+            --security-opt no-new-privileges:true \
+            --memory=256m \
+            --cpus=0.5 \
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+          echo "Container started — waiting for application to become ready..."
+
+      - name: Wait for health endpoint to become ready
+        run: |
+          MAX_RETRIES=18
+          RETRY_INTERVAL=5
+          RETRIES=0
+          HTTP_STATUS=0
+
+          until [ "$HTTP_STATUS" -eq 200 ] || [ "$RETRIES" -ge "$MAX_RETRIES" ]; do
+            sleep $RETRY_INTERVAL
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              http://localhost:5000/health 2>/dev/null || echo "000")
+            RETRIES=$((RETRIES + 1))
+            echo "Attempt $RETRIES/$MAX_RETRIES — /health returned HTTP $HTTP_STATUS"
+          done
+
+          if [ "$HTTP_STATUS" -ne 200 ]; then
+            echo "::error::Health check failed after $((MAX_RETRIES * RETRY_INTERVAL))s. Last HTTP status: $HTTP_STATUS"
+            echo "--- Container logs ---"
+            docker logs smoke_test
+            exit 1
+          fi
+
+          echo "Health check passed — /health returned HTTP 200."
+
+      - name: Verify /health response body
+        run: |
+          RESPONSE=$(curl -s http://localhost:5000/health)
+          echo "Health endpoint response: $RESPONSE"
+
+          # Accept any 200 OK — just confirm the endpoint replies
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/health)
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Unexpected status code $HTTP_CODE from /health"
+            exit 1
+          fi
+          echo "Smoke test passed."
+
+      - name: Collect container logs (always)
+        if: always()
+        run: |
+          echo "--- Container logs ---"
+          docker logs smoke_test 2>&1 || true
+
+      - name: Stop and remove smoke test container
+        if: always()
+        run: docker rm -f smoke_test 2>/dev/null || true
+
+# =============================================================================
+# STAGE 7 — NOTIFY
+# Posts a rich GitHub Actions Job Summary for both success and failure paths.
+# =============================================================================
+  notify:
+    name: "Stage 7 — Notify"
+    runs-on: ubuntu-latest
+    needs:
+      - pre-flight
+      - code-quality
+      - testing
+      - security-scan
+      - build-container
+      - staging-smoke
+    if: always()
+    steps:
+      - name: Write pipeline success summary
+        if: >
+          needs.pre-flight.result == 'success' &&
+          needs.code-quality.result == 'success' &&
+          needs.testing.result == 'success' &&
+          needs.security-scan.result == 'success' &&
+          needs.build-container.result == 'success' &&
+          needs.staging-smoke.result == 'success'
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'SUMMARY'
+          ## Pipeline Passed
+
+          All 7 stages completed successfully.
+
+          | Stage | Status |
+          | --- | --- |
+          | Pre-Flight | Passed |
+          | Code Quality | Passed |
+          | Testing & Build | Passed |
+          | Security Scan | Passed |
+          | Build Container | Passed |
+          | Staging Smoke | Passed |
+          | Notify | Passed |
+
+          SUMMARY
+
+          echo "### Build Details" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+          echo "| Repository | ${{ github.repository }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | ${{ github.ref_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Actor | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image tag | \`${{ env.IMAGE_NAME }}:${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Run URL | ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Write pipeline failure summary
+        if: >
+          needs.pre-flight.result == 'failure' ||
+          needs.code-quality.result == 'failure' ||
+          needs.testing.result == 'failure' ||
+          needs.security-scan.result == 'failure' ||
+          needs.build-container.result == 'failure' ||
+          needs.staging-smoke.result == 'failure'
+        run: |
+          cat >> $GITHUB_STEP_SUMMARY << 'SUMMARY'
+          ## Pipeline FAILED
+
+          One or more stages failed. Review the details below.
+
+          SUMMARY
+
+          echo "| Stage | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- |" >> $GITHUB_STEP_SUMMARY
+          echo "| Pre-Flight | ${{ needs.pre-flight.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Code Quality | ${{ needs.code-quality.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Testing & Build | ${{ needs.testing.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Security Scan | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build Container | ${{ needs.build-container.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Staging Smoke | ${{ needs.staging-smoke.result }} |" >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### How to investigate" >> $GITHUB_STEP_SUMMARY
+          echo "1. Click the failed stage badge above to open the job log." >> $GITHUB_STEP_SUMMARY
+          echo "2. Look for \`::error::\` annotations in the log output." >> $GITHUB_STEP_SUMMARY
+          echo "3. For security scan failures, check the Security tab in this repository." >> $GITHUB_STEP_SUMMARY
+          echo "4. For container scan failures, remediate the flagged CVEs in the Dockerfile base image or app deps." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** \`${{ github.sha }}\` by **${{ github.actor }}** on \`${{ github.ref_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "**Run:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+
+          exit 1

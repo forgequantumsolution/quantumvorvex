@@ -1,0 +1,173 @@
+# =============================================================================
+# Quantum Vorvex — Docker Compose (local development + staging)
+# Services: app (Node/Express) + nginx (reverse proxy / TLS termination)
+#
+# NOTE: The database engine is SQLite (embedded), so no separate database
+# service is needed. SQLite data persists via a named volume mounted into
+# the app container. If you migrate to PostgreSQL in the future, add a
+# postgres:16-alpine service, set DATABASE_URL to a postgres:// DSN, and
+# update the Prisma provider in schema.prisma accordingly.
+# =============================================================================
+
+version: "3.9"
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  # Carries traffic between nginx and the app — not exposed to the host.
+  internal:
+    driver: bridge
+    internal: true
+
+  # nginx is attached to both networks: it receives external traffic (public)
+  # and forwards it to the app (internal).
+  public:
+    driver: bridge
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  # Persists SQLite database files across container restarts.
+  sqlite_data:
+    driver: local
+
+  # Persists user-uploaded files across container restarts.
+  uploads_data:
+    driver: local
+
+# =============================================================================
+# Services
+# =============================================================================
+services:
+
+  # ---------------------------------------------------------------------------
+  # app — Quantum Vorvex Node.js / Express API + static client
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      # Pass build-time labels for image provenance
+      args:
+        BUILD_DATE: "${BUILD_DATE:-unknown}"
+        GIT_SHA: "${GIT_SHA:-unknown}"
+    image: quantumvorvex:local
+    container_name: quantumvorvex_app
+    restart: unless-stopped
+
+    # Load runtime secrets from server/.env (never committed to git)
+    env_file:
+      - server/.env
+
+    environment:
+      NODE_ENV: "${NODE_ENV:-production}"
+      PORT: "5000"
+      # Override DATABASE_URL to point at the mounted volume path
+      DATABASE_URL: "file:/app/data/production.db"
+
+    volumes:
+      # SQLite data volume — mounts at /app/data inside the container
+      - sqlite_data:/app/data
+      # Uploads volume — mounts at /app/uploads
+      - uploads_data:/app/uploads
+
+    # The app port is intentionally NOT published to the host directly.
+    # All traffic enters through nginx on ports 80/443.
+    expose:
+      - "5000"
+
+    networks:
+      - internal
+
+    # Security hardening — prevent privilege escalation inside the container
+    security_opt:
+      - no-new-privileges:true
+
+    # Read-only root filesystem where possible; add tmpfs for writable dirs
+    # that the Node process needs at runtime.
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+
+    # Resource constraints to protect the host from runaway processes
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "512m"
+        reservations:
+          cpus: "0.25"
+          memory: "128m"
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ---------------------------------------------------------------------------
+  # nginx — Reverse proxy, TLS termination, and static asset caching
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: quantumvorvex_nginx
+    restart: unless-stopped
+
+    ports:
+      # HTTP — redirects to HTTPS via nginx config
+      - "80:80"
+      # HTTPS — TLS terminated here; traffic forwarded to app over internal net
+      - "443:443"
+
+    volumes:
+      # nginx main config — see nginx/nginx.conf for full details
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Mount your TLS certificates here.
+      # For local dev: generate a self-signed cert with:
+      #   mkdir -p nginx/certs
+      #   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+      #     -keyout nginx/certs/key.pem -out nginx/certs/cert.pem \
+      #     -subj "/CN=localhost"
+      # For production: use Let's Encrypt / Certbot and mount the live/ dir.
+      - ./nginx/certs:/etc/nginx/certs:ro
+
+    depends_on:
+      app:
+        condition: service_healthy
+
+    networks:
+      - internal
+      - public
+
+    security_opt:
+      - no-new-privileges:true
+
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: "64m"
+        reservations:
+          cpus: "0.05"
+          memory: "16m"
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

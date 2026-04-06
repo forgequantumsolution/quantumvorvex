@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs'
 import prisma from '../utils/prisma.js'
+import logger, { securityLog } from '../utils/logger.js'
 
 const SAFE_SELECT = {
   id: true,
@@ -43,6 +44,7 @@ export const createUser = async (req, res) => {
       data: { name, email, password: hash, role: role || 'staff', phone: phone || null },
       select: SAFE_SELECT,
     })
+    securityLog.userCreated(req.user?.userId, user.id, user.role)
     res.status(201).json(user)
   } catch (e) {
     if (e.code === 'P2002') return res.status(409).json({ error: 'Email already exists.' })
@@ -102,6 +104,7 @@ export const deleteUser = async (req, res) => {
     }
 
     await prisma.user.delete({ where: { id } })
+    securityLog.userDeleted(req.user?.userId, id)
     res.json({ success: true })
   } catch (e) {
     if (e.code === 'P2025') return res.status(404).json({ error: 'User not found.' })

@@ -1,38 +1,72 @@
-# Dependencies
+# ── Dependencies ──────────────────────────────────────────────
 node_modules/
 client/node_modules/
 server/node_modules/
 
-# Build output
+# ── Build output ───────────────────────────────────────────────
 client/dist/
 client/dist-ssr/
 
-# Database
+# ── Database ───────────────────────────────────────────────────
 server/prisma/dev.db
 server/prisma/dev.db-journal
 server/prisma/dev.db-shm
 server/prisma/dev.db-wal
+*.db
+*.db-*
 
-# Environment
-server/.env
+# ── Environment / Secrets (NEVER commit these) ─────────────────
 .env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
+client/.env
+client/.env.*
+!client/.env.example
 .env.local
 .env.*.local
 
-# Uploads
+# ── Uploads ────────────────────────────────────────────────────
 server/uploads/
+uploads/
 
-# Logs
+# ── Logs ───────────────────────────────────────────────────────
 *.log
+*.log.*
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
 
-# OS
+# ── Security scan outputs ──────────────────────────────────────
+.secrets.baseline
+gitleaks-report.json
+semgrep-results.json
+trivy-results.json
+k6-results.json
+
+# ── OS ─────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+Desktop.ini
 
-# IDE
+# ── IDE ────────────────────────────────────────────────────────
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# Prisma generated client (regenerated via prisma generate)
+# ── Coverage ───────────────────────────────────────────────────
+coverage/
+.nyc_output/
+
+# ── Prisma generated client ────────────────────────────────────
 server/node_modules/.prisma/
+
+# ── Nginx certs (generate locally, never commit) ───────────────
+nginx/certs/
+
+# ── Docker ─────────────────────────────────────────────────────
+docker-compose.override.yml

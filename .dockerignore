@@ -1,0 +1,82 @@
+# =============================================================================
+# .dockerignore — Quantum Vorvex
+# Excludes files that must never end up in the Docker build context or image.
+# Keeping the build context small speeds up image builds and prevents
+# accidental inclusion of secrets, dev artifacts, and local state.
+# =============================================================================
+
+# ── Dependency directories ────────────────────────────────────────────────────
+node_modules
+*/node_modules
+**/.npm
+
+# ── Version control ───────────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+
+# ── Secrets and environment files ─────────────────────────────────────────────
+# IMPORTANT: These must NEVER be baked into an image.
+.env
+.env.*
+*.env
+server/.env
+server/.env.*
+client/.env
+client/.env.*
+
+# ── SQLite database files ─────────────────────────────────────────────────────
+# The dev database is local state — production uses its own mounted volume.
+server/prisma/dev.db
+server/prisma/dev.db-shm
+server/prisma/dev.db-wal
+server/prisma/*.db
+server/prisma/*.db-*
+
+# ── Client build output ───────────────────────────────────────────────────────
+# The pipeline artifact is copied in explicitly; we do not want a stale local
+# dist/ accidentally overwriting the CI-built one.
+client/dist
+
+# ── Test coverage and reports ─────────────────────────────────────────────────
+coverage
+**/.nyc_output
+**/jest_results
+**/__snapshots__
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# ── OS-generated files ────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ── Editor and IDE configuration ─────────────────────────────────────────────
+.vscode
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ── Claude / AI tooling ───────────────────────────────────────────────────────
+.claude
+
+# ── Documentation and repo metadata ──────────────────────────────────────────
+README.md
+CREDENTIALS.md
+*.md
+!server/prisma/migrations/**/*.md
+
+# ── Miscellaneous dev artifacts ──────────────────────────────────────────────
+.eslintcache
+*.tsbuildinfo
+.parcel-cache

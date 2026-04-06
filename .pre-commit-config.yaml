@@ -1,0 +1,108 @@
+# Pre-commit configuration for Quantum Vorvex
+# Install pre-commit: pip install pre-commit
+# Activate hooks:     pre-commit install
+# Run manually:       pre-commit run --all-files
+# Update hook repos:  pre-commit autoupdate
+
+default_stages: [commit]
+fail_fast: false
+
+repos:
+  # ---------------------------------------------------------------------------
+  # Secret detection — gitleaks
+  # Scans every commit for accidentally committed credentials, tokens, and keys.
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0
+    hooks:
+      - id: gitleaks
+        name: "gitleaks — detect hardcoded secrets"
+        description: "Detect secrets, API keys, and credentials before they are committed"
+        # Fail loudly: a secret committed to git history is very hard to undo
+        always_run: true
+        # Optionally point to a custom config:
+        # args: ["--config", ".gitleaks.toml"]
+
+  # ---------------------------------------------------------------------------
+  # General file hygiene — pre-commit-hooks
+  # ---------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+        name: "trim trailing whitespace"
+        description: "Removes trailing whitespace from all files"
+        args: [--markdown-linebreak-ext=md]
+
+      - id: end-of-file-fixer
+        name: "fix end of file"
+        description: "Ensures files end with a single newline"
+
+      - id: check-yaml
+        name: "check YAML syntax"
+        description: "Validates YAML files for syntax errors"
+        args: [--allow-multiple-documents]
+
+      - id: check-json
+        name: "check JSON syntax"
+        description: "Validates JSON files for syntax errors"
+
+      - id: check-added-large-files
+        name: "check for large files"
+        description: "Prevents large files from being committed (default 500KB)"
+        args: [--maxkb=500]
+
+      - id: check-merge-conflict
+        name: "check for merge conflict markers"
+        description: "Detects unresolved merge conflict markers"
+
+      - id: detect-private-key
+        name: "detect private keys"
+        description: "Detects the presence of private keys"
+
+      - id: check-case-conflict
+        name: "check for case conflicts"
+        description: "Checks for files that would conflict on case-insensitive filesystems"
+
+  # ---------------------------------------------------------------------------
+  # ESLint — run via local node_modules
+  # Lints server/ and client/ source files for code quality and security issues.
+  # Requires eslint to be installed: npm install --save-dev eslint eslint-plugin-security
+  # ---------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: eslint-server
+        name: "ESLint — server (Node.js)"
+        language: node
+        entry: node_modules/.bin/eslint
+        args:
+          - "--max-warnings=0"
+          - "--ext"
+          - ".js,.mjs,.cjs"
+          - "server/src"
+        files: ^server/src/.*\.(js|mjs|cjs)$
+        pass_filenames: false
+        additional_dependencies: []
+
+      - id: eslint-client
+        name: "ESLint — client (React)"
+        language: node
+        entry: node_modules/.bin/eslint
+        args:
+          - "--max-warnings=0"
+          - "--ext"
+          - ".js,.jsx,.ts,.tsx"
+          - "client/src"
+        files: ^client/src/.*\.(js|jsx|ts|tsx)$
+        pass_filenames: false
+        additional_dependencies: []
+
+      # -----------------------------------------------------------------------
+      # Block .env files from being committed
+      # -----------------------------------------------------------------------
+      - id: block-env-files
+        name: "block .env file commits"
+        language: fail
+        entry: "ERROR: Attempted to commit a .env file. Remove it and add to .gitignore."
+        files: '(^|/)\.env(\.[a-z]+)?$'
+        exclude: '\.env\.example$'

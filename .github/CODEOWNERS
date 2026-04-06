@@ -1,0 +1,28 @@
+# =============================================================================
+# CODEOWNERS — Quantum Vorvex Hotel Management System
+# =============================================================================
+# GitHub uses this file to automatically request reviews from the appropriate
+# owner(s) whenever a pull request modifies files in the listed paths.
+#
+# Rules are evaluated from top to bottom; the LAST matching rule wins.
+# Reference: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# =============================================================================
+
+# ── Default owner for every file in the repository ────────────────────────────
+# Covers anything not matched by a more specific rule below.
+*                                       @forgequantumsolution
+
+# ── Authentication & authorization middleware ──────────────────────────────────
+# Any changes to middleware (auth guards, rate limiters, validators, etc.)
+# require explicit sign-off given the security surface area.
+server/src/middleware/                  @forgequantumsolution
+
+# ── Database schema and migrations ────────────────────────────────────────────
+# Prisma schema changes and generated migrations must be reviewed carefully to
+# prevent data loss or unintended schema drift in production.
+server/prisma/                          @forgequantumsolution
+
+# ── CI/CD pipeline and repository configuration ───────────────────────────────
+# Changes to workflows, Dependabot config, PR templates, and CODEOWNERS itself
+# go through the same owner to maintain pipeline integrity.
+.github/                                @forgequantumsolution
