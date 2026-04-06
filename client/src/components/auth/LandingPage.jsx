@@ -42,7 +42,9 @@ export default function LandingPage({ onLogin }) {
       fontFamily: "'Inter', sans-serif",
       background: CREAM,
       color: INK,
-      minHeight: '100vh',
+      width: '100%',
+      height: '100dvh',
+      overflowY: 'auto',
       overflowX: 'hidden',
     }}>
 
@@ -151,9 +153,9 @@ export default function LandingPage({ onLogin }) {
         maxWidth: 1200, margin: '0 auto',
         padding: 'clamp(40px,7vh,88px) clamp(16px,5vw,40px) clamp(36px,6vh,72px)',
       }}>
-        <div style={{
+        <div className="lp-hero-grid" style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%,440px), 1fr))',
+          gridTemplateColumns: '1fr 1fr',
           gap: 'clamp(32px,5vw,72px)',
           alignItems: 'center',
         }}>
@@ -292,9 +294,9 @@ export default function LandingPage({ onLogin }) {
         maxWidth: 1200, margin: '0 auto',
         padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
       }}>
-        <div style={{
+        <div className="lp-modules-grid" style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%,260px), 1fr))',
+          gridTemplateColumns: '280px 1fr',
           gap: 'clamp(24px,4vw,60px)',
           alignItems: 'start',
         }}>
@@ -374,9 +376,9 @@ export default function LandingPage({ onLogin }) {
               fontWeight: 900, color: INK, margin: 0, lineHeight: 1.1,
             }}>Right access.<br />Right people.</h2>
           </div>
-          <div style={{
+          <div className="lp-roles-grid" style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%,220px), 1fr))',
+            gridTemplateColumns: 'repeat(3,1fr)',
             gap: 16,
           }}>
             {ROLES.map(r => (
@@ -453,6 +455,27 @@ export default function LandingPage({ onLogin }) {
           © 2026 Forge Quantum Solutions · GST-ready · Made for India
         </div>
       </footer>
+
+      <style>{`
+        /* Hero: 2 cols on ≥860px, 1 col below */
+        .lp-hero-grid { grid-template-columns: 1fr 1fr !important; }
+        @media (max-width: 860px) {
+          .lp-hero-grid { grid-template-columns: 1fr !important; }
+        }
+        /* Modules outer: sidebar + grid on ≥800px */
+        .lp-modules-grid { grid-template-columns: 280px 1fr !important; }
+        @media (max-width: 800px) {
+          .lp-modules-grid { grid-template-columns: 1fr !important; }
+        }
+        /* Roles: 3 cols on ≥640px, 1 col below */
+        .lp-roles-grid { grid-template-columns: repeat(3,1fr) !important; }
+        @media (max-width: 640px) {
+          .lp-roles-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 860px) and (min-width: 641px) {
+          .lp-roles-grid { grid-template-columns: repeat(2,1fr) !important; }
+        }
+      `}</style>
     </div>
   )
 }
