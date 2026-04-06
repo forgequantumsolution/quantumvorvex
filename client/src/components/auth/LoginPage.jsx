@@ -1,39 +1,46 @@
 import { useState } from 'react'
 import { useStore } from '../../store/useStore'
-import { ROLE_LABELS, ROLE_COLORS } from '../../utils/permissions'
 
-export default function LoginPage() {
+const GOLD   = '#9a7820'
+const GOLD_L = '#c9a84c'
+const WHITE  = '#ffffff'
+const INK    = '#0f0f0f'
+const FAINT  = 'rgba(255,255,255,0.4)'
+
+const ROLES = [
+  { role: 'owner',   label: 'Owner',   color: '#c9a84c', email: 'owner@quantumvorvex.com',   pass: 'owner123'   },
+  { role: 'manager', label: 'Manager', color: '#6fa3d8', email: 'manager@quantumvorvex.com', pass: 'manager123' },
+  { role: 'staff',   label: 'Staff',   color: '#5cb85c', email: 'staff@quantumvorvex.com',   pass: 'staff123'   },
+]
+
+const PILLS = ['Check-In', 'Billing', 'Housekeeping', 'Reports', 'AI Insights']
+
+export default function LoginPage({ onBack }) {
   const login = useStore((s) => s.login)
-  const darkMode = useStore((s) => s.darkMode)
-  const toggleDarkMode = useStore((s) => s.toggleDarkMode)
 
-  const [email, setEmail]       = useState('')
+  const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError]       = useState('')
-  const [loading, setLoading]   = useState(false)
+  const [error,    setError]    = useState('')
+  const [loading,  setLoading]  = useState(false)
   const [showPass, setShowPass] = useState(false)
+  const [focusEmail, setFocusEmail] = useState(false)
+  const [focusPass,  setFocusPass]  = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
-    if (!email || !password) {
-      setError('Email and password are required.')
-      return
-    }
+    if (!email || !password) { setError('Email and password are required.'); return }
     setLoading(true)
     try {
-      const res = await fetch('/api/v1/auth/login', {
+      const res  = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ email, password }),
       })
       const data = await res.json()
-      if (!res.ok) {
-        setError(data.message || 'Login failed.')
-      } else {
-        login(data.token, data.user)
-      }
+      if (!res.ok) setError(data.error || data.message || 'Login failed.')
+      else login(data.token, data.user)
     } catch {
       setError('Server unreachable. Please try again.')
     } finally {
@@ -41,208 +48,358 @@ export default function LoginPage() {
     }
   }
 
-  const roleColor = ROLE_COLORS
-
   return (
     <div style={{
       minHeight: '100vh',
-      background: darkMode ? '#0e0e0e' : '#f4f1ec',
+      position: 'relative',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
       fontFamily: "'Inter', sans-serif",
-      position: 'relative',
+      overflow: 'hidden',
     }}>
-      {/* Dark mode toggle */}
-      <button
-        onClick={toggleDarkMode}
-        style={{
-          position: 'absolute', top: 20, right: 20,
-          background: 'transparent',
-          border: '1px solid ' + (darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)'),
-          borderRadius: 6, padding: '6px 12px', cursor: 'pointer',
-          color: darkMode ? '#888' : '#666', fontSize: 12,
-        }}
-      >
-        {darkMode ? '☀ Light' : '🌙 Dark'}
-      </button>
-
+      {/* ── Background ─────────────────────────────────────────────── */}
       <div style={{
-        width: '100%', maxWidth: 420, padding: '0 20px',
+        position: 'absolute', inset: 0,
+        background: `
+          radial-gradient(ellipse at 20% 50%, rgba(154,120,32,0.12) 0%, transparent 60%),
+          radial-gradient(ellipse at 80% 20%, rgba(60,40,10,0.3) 0%, transparent 50%),
+          linear-gradient(135deg, #0a0906 0%, #141008 30%, #1a1408 60%, #0d0c08 100%)
+        `,
+      }} />
+
+      {/* Subtle texture dots */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: `radial-gradient(circle, rgba(154,120,32,0.07) 1px, transparent 1px)`,
+        backgroundSize: '28px 28px',
+        pointerEvents: 'none',
+      }} />
+
+      {/* Gold ambient glow bottom-left */}
+      <div style={{
+        position: 'absolute', bottom: '-15%', left: '-5%',
+        width: 600, height: 600,
+        background: 'radial-gradient(circle, rgba(154,120,32,0.18) 0%, transparent 60%)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* ── Layout ─────────────────────────────────────────────────── */}
+      <div style={{
+        position: 'relative', zIndex: 1,
+        width: '100%', maxWidth: 1280,
+        margin: '0 auto',
+        display: 'grid',
+        gridTemplateColumns: '1fr 460px',
+        gap: 0,
+        alignItems: 'center',
+        padding: '48px 6vw',
+        minHeight: '100vh',
+        boxSizing: 'border-box',
       }}>
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+
+        {/* ── LEFT — Text overlay ───────────────────────────────────── */}
+        <div style={{ padding: '0 48px 0 0' }}>
+
+          {/* Badge */}
           <div style={{
-            width: 52, height: 52,
-            background: '#c9a84c',
-            borderRadius: 12,
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 26, marginBottom: 14,
-          }}>🏨</div>
-          <h1 style={{
-            margin: 0,
-            fontFamily: "'Syne', sans-serif",
-            fontSize: 26, fontWeight: 800,
-            color: darkMode ? '#fff' : '#111',
-            letterSpacing: '-0.02em',
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'rgba(154,120,32,0.12)',
+            border: '1px solid rgba(154,120,32,0.3)',
+            borderRadius: 100, padding: '6px 14px',
+            marginBottom: 32,
           }}>
-            Quantum <span style={{ color: '#c9a84c' }}>Vorvex</span>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD_L, display: 'block' }} />
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.18em', color: GOLD_L }}>
+              HOTEL MANAGEMENT SYSTEM
+            </span>
+          </div>
+
+          {/* Headline */}
+          <h1 style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: 'clamp(40px, 5vw, 66px)',
+            fontWeight: 900,
+            color: WHITE,
+            margin: '0 0 4px',
+            lineHeight: 1.05,
+            letterSpacing: '-0.01em',
+          }}>
+            Seamless
           </h1>
-          <p style={{ margin: '6px 0 0', fontSize: 13, color: darkMode ? '#666' : '#888' }}>
-            Hotel Management System
+          <h1 style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: 'clamp(40px, 5vw, 66px)',
+            fontWeight: 900,
+            color: WHITE,
+            margin: '0 0 8px',
+            lineHeight: 1.05,
+            letterSpacing: '-0.01em',
+          }}>
+            Operations.
+          </h1>
+          <h2 style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: 'clamp(32px, 4vw, 52px)',
+            fontWeight: 700,
+            fontStyle: 'italic',
+            color: GOLD_L,
+            margin: '0 0 28px',
+            lineHeight: 1.1,
+          }}>
+            Intelligent Control.
+          </h2>
+
+          <p style={{
+            fontSize: 15, color: 'rgba(255,255,255,0.52)',
+            lineHeight: 1.75, maxWidth: 460, margin: '0 0 40px',
+          }}>
+            One unified platform for Indian hospitality — GST-compliant billing,
+            smart guest check-in, real-time room tracking, and intelligent analytics.
           </p>
+
+          {/* Feature pills */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {PILLS.map((pill) => (
+              <div key={pill} style={{
+                background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 100,
+                padding: '7px 16px',
+                fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.65)',
+                letterSpacing: '0.03em',
+              }}>{pill}</div>
+            ))}
+          </div>
+
+          {/* Back link */}
+          {onBack && (
+            <button onClick={onBack} style={{
+              marginTop: 48, background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 12, color: 'rgba(255,255,255,0.3)', padding: 0,
+              display: 'flex', alignItems: 'center', gap: 6,
+              letterSpacing: '0.04em', transition: 'color 0.15s',
+            }}
+              onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.3)'}
+            >← Back to home</button>
+          )}
         </div>
 
-        {/* Card */}
+        {/* ── RIGHT — Glass card ────────────────────────────────────── */}
         <div style={{
-          background: darkMode ? '#1a1a1a' : '#fff',
-          border: '1px solid ' + (darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)'),
-          borderRadius: 14,
-          padding: '32px 28px',
-          boxShadow: darkMode ? 'none' : '0 4px 24px rgba(0,0,0,0.06)',
+          background: 'rgba(18,14,8,0.82)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          border: '1px solid rgba(154,120,32,0.22)',
+          borderRadius: 20,
+          padding: '40px 36px',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset',
         }}>
-          <h2 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 700, color: darkMode ? '#fff' : '#111' }}>
-            Sign in
-          </h2>
-          <p style={{ margin: '0 0 24px', fontSize: 12.5, color: darkMode ? '#555' : '#999' }}>
-            Enter your credentials to access the dashboard
-          </p>
 
+          {/* Logo */}
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: 14,
+              background: 'linear-gradient(135deg, rgba(154,120,32,0.3), rgba(154,120,32,0.08))',
+              border: '1px solid rgba(154,120,32,0.4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 22, margin: '0 auto 12px',
+            }}>🏨</div>
+            <div style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: 17, fontWeight: 700, fontStyle: 'italic',
+              color: GOLD_L, letterSpacing: '0.02em',
+            }}>Quantum Vorvex</div>
+          </div>
+
+          {/* Heading + status */}
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h2 style={{
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: 26, fontWeight: 900,
+                color: WHITE, margin: 0,
+              }}>Sign In</h2>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: 'rgba(50,200,80,0.1)',
+                border: '1px solid rgba(50,200,80,0.25)',
+                borderRadius: 100, padding: '4px 10px',
+              }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#32c850', display: 'block', boxShadow: '0 0 6px #32c850' }} />
+                <span style={{ fontSize: 10, color: '#32c850', fontWeight: 600, letterSpacing: '0.06em' }}>System Online</span>
+              </div>
+            </div>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)', margin: '6px 0 0' }}>
+              Enter your credentials to continue.
+            </p>
+          </div>
+
+          {/* Form */}
           <form onSubmit={handleSubmit}>
             {/* Email */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6, color: darkMode ? '#aaa' : '#555', letterSpacing: '0.02em' }}>
-                EMAIL ADDRESS
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@hotel.com"
-                autoComplete="email"
-                style={{
-                  width: '100%', boxSizing: 'border-box',
-                  padding: '10px 12px',
-                  background: darkMode ? '#111' : '#f9f9f9',
-                  border: '1px solid ' + (darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'),
-                  borderRadius: 8, color: darkMode ? '#fff' : '#111',
-                  fontSize: 14, outline: 'none',
-                  fontFamily: "'Inter', sans-serif",
-                  transition: 'border-color 0.15s',
-                }}
-                onFocus={(e) => { e.target.style.borderColor = '#c9a84c' }}
-                onBlur={(e)  => { e.target.style.borderColor = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)' }}
-              />
+            <div style={{ marginBottom: 14 }}>
+              <label style={{
+                display: 'block', fontSize: 10, fontWeight: 700,
+                letterSpacing: '0.14em', color: 'rgba(255,255,255,0.4)',
+                marginBottom: 7,
+              }}>EMAIL ADDRESS</label>
+              <div style={{ position: 'relative' }}>
+                <span style={{
+                  position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)',
+                  fontSize: 15, pointerEvents: 'none', opacity: focusEmail ? 0.9 : 0.4,
+                  transition: 'opacity 0.15s',
+                }}>✉</span>
+                <input
+                  type="email" value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="you@hotel.com"
+                  autoComplete="email"
+                  onFocus={() => setFocusEmail(true)}
+                  onBlur={() => setFocusEmail(false)}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: '11px 13px 11px 40px',
+                    background: focusEmail ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${focusEmail ? 'rgba(154,120,32,0.6)' : 'rgba(255,255,255,0.1)'}`,
+                    borderRadius: 9,
+                    fontSize: 14, color: WHITE, outline: 'none',
+                    fontFamily: "'Inter', sans-serif",
+                    transition: 'all 0.15s',
+                    boxShadow: focusEmail ? '0 0 0 3px rgba(154,120,32,0.1)' : 'none',
+                  }}
+                />
+              </div>
             </div>
 
             {/* Password */}
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6, color: darkMode ? '#aaa' : '#555', letterSpacing: '0.02em' }}>
-                PASSWORD
-              </label>
+            <div style={{ marginBottom: 22 }}>
+              <label style={{
+                display: 'block', fontSize: 10, fontWeight: 700,
+                letterSpacing: '0.14em', color: 'rgba(255,255,255,0.4)',
+                marginBottom: 7,
+              }}>PASSWORD</label>
               <div style={{ position: 'relative' }}>
+                <span style={{
+                  position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)',
+                  fontSize: 15, pointerEvents: 'none', opacity: focusPass ? 0.9 : 0.4,
+                  transition: 'opacity 0.15s',
+                }}>🔒</span>
                 <input
                   type={showPass ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••"
                   autoComplete="current-password"
+                  onFocus={() => setFocusPass(true)}
+                  onBlur={() => setFocusPass(false)}
                   style={{
                     width: '100%', boxSizing: 'border-box',
-                    padding: '10px 40px 10px 12px',
-                    background: darkMode ? '#111' : '#f9f9f9',
-                    border: '1px solid ' + (darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'),
-                    borderRadius: 8, color: darkMode ? '#fff' : '#111',
-                    fontSize: 14, outline: 'none',
+                    padding: '11px 42px 11px 40px',
+                    background: focusPass ? 'rgba(255,255,255,0.07)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${focusPass ? 'rgba(154,120,32,0.6)' : 'rgba(255,255,255,0.1)'}`,
+                    borderRadius: 9,
+                    fontSize: 14, color: WHITE, outline: 'none',
                     fontFamily: "'Inter', sans-serif",
-                    transition: 'border-color 0.15s',
+                    transition: 'all 0.15s',
+                    boxShadow: focusPass ? '0 0 0 3px rgba(154,120,32,0.1)' : 'none',
                   }}
-                  onFocus={(e) => { e.target.style.borderColor = '#c9a84c' }}
-                  onBlur={(e)  => { e.target.style.borderColor = darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)' }}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  style={{
-                    position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: darkMode ? '#555' : '#aaa', fontSize: 14, padding: 4,
-                  }}
-                >
-                  {showPass ? '🙈' : '👁'}
-                </button>
+                <button type="button" onClick={() => setShowPass(!showPass)} style={{
+                  position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'rgba(255,255,255,0.35)', fontSize: 14, padding: 0,
+                  transition: 'color 0.15s',
+                }}
+                  onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}
+                >{showPass ? '🙈' : '👁'}</button>
               </div>
             </div>
 
             {/* Error */}
             {error && (
               <div style={{
-                marginBottom: 16, padding: '10px 12px',
-                background: 'rgba(220,53,69,0.1)',
-                border: '1px solid rgba(220,53,69,0.3)',
-                borderRadius: 7, fontSize: 12.5,
-                color: '#dc3545',
-              }}>
-                {error}
-              </div>
+                marginBottom: 16, padding: '10px 14px',
+                background: 'rgba(180,30,30,0.12)',
+                border: '1px solid rgba(180,30,30,0.3)',
+                borderRadius: 8, fontSize: 12.5, color: '#e07070',
+              }}>{error}</div>
             )}
 
             {/* Submit */}
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%', padding: '11px',
-                background: loading ? '#999' : '#c9a84c',
-                color: '#000',
-                border: 'none', borderRadius: 8,
-                fontSize: 14, fontWeight: 700,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                fontFamily: "'Inter', sans-serif",
-                transition: 'opacity 0.15s',
-                letterSpacing: '0.02em',
-              }}
+            <button type="submit" disabled={loading} style={{
+              width: '100%', padding: '13px',
+              background: loading
+                ? 'rgba(154,120,32,0.5)'
+                : 'linear-gradient(135deg, #b89030, #9a7820)',
+              color: WHITE, border: 'none', borderRadius: 9,
+              fontSize: 11.5, fontWeight: 700, letterSpacing: '0.14em',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s',
+              boxShadow: loading ? 'none' : '0 4px 20px rgba(154,120,32,0.4)',
+            }}
+              onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = 'linear-gradient(135deg, #c9a030, #a88225)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(154,120,32,0.55)' } }}
+              onMouseLeave={e => { if (!loading) { e.currentTarget.style.background = 'linear-gradient(135deg, #b89030, #9a7820)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(154,120,32,0.4)' } }}
             >
-              {loading ? 'Signing in…' : 'Sign In'}
+              {loading ? 'SIGNING IN…' : 'SIGN IN →'}
             </button>
           </form>
-        </div>
 
-        {/* Role hint cards */}
-        <div style={{ marginTop: 24 }}>
-          <p style={{ textAlign: 'center', fontSize: 11.5, color: darkMode ? '#444' : '#bbb', marginBottom: 12 }}>
-            Sample credentials
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-            {[
-              { role: 'owner',   email: 'owner@quantumvorvex.com',   pass: 'owner123'   },
-              { role: 'manager', email: 'manager@quantumvorvex.com', pass: 'manager123' },
-              { role: 'staff',   email: 'staff@quantumvorvex.com',   pass: 'staff123'   },
-            ].map(({ role, email: e, pass }) => (
-              <button
-                key={role}
-                onClick={() => { setEmail(e); setPassword(pass); setError('') }}
-                style={{
-                  background: darkMode ? '#111' : '#f9f9f9',
-                  border: '1px solid ' + (darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)'),
-                  borderRadius: 8, padding: '10px 8px',
-                  cursor: 'pointer', textAlign: 'center',
-                  transition: 'border-color 0.15s',
-                }}
-                onMouseEnter={(el) => { el.currentTarget.style.borderColor = roleColor[role] }}
-                onMouseLeave={(el) => { el.currentTarget.style.borderColor = darkMode ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)' }}
-              >
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: roleColor[role], textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2 }}>
-                  {ROLE_LABELS[role]}
-                </div>
-                <div style={{ fontSize: 9.5, color: darkMode ? '#444' : '#bbb', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {pass}
-                </div>
-              </button>
-            ))}
+          {/* Demo accounts */}
+          <div style={{ marginTop: 24 }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12,
+            }}>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+              <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.25)' }}>
+                DEMO ACCOUNTS — CLICK TO FILL
+              </span>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+              {ROLES.map(({ role, label, color, email: e, pass }) => (
+                <button
+                  key={role}
+                  onClick={() => { setEmail(e); setPassword(pass); setError('') }}
+                  style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 8, padding: '9px 6px',
+                    cursor: 'pointer', textAlign: 'center',
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={ev => {
+                    ev.currentTarget.style.borderColor = color
+                    ev.currentTarget.style.background = `rgba(${color === '#c9a84c' ? '201,168,76' : color === '#6fa3d8' ? '111,163,216' : '92,184,92'},0.1)`
+                    ev.currentTarget.style.boxShadow = `0 4px 14px rgba(0,0,0,0.3)`
+                  }}
+                  onMouseLeave={ev => {
+                    ev.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                    ev.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                    ev.currentTarget.style.boxShadow = 'none'
+                  }}
+                >
+                  <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color, marginBottom: 3 }}>{label}</div>
+                  <div style={{ fontSize: 9.5, color: 'rgba(255,255,255,0.3)', fontFamily: "'JetBrains Mono', monospace" }}>{pass}</div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
+
+      <style>{`
+        * { box-sizing: border-box; }
+        input::placeholder { color: rgba(255,255,255,0.22) !important; }
+        @media (max-width: 860px) {
+          div[style*="grid-template-columns: 1fr 460px"] {
+            grid-template-columns: 1fr !important;
+          }
+          div[style*="padding: 0px 48px 0px 0px"] { display: none !important; }
+        }
+      `}</style>
     </div>
   )
 }

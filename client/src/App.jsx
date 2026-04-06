@@ -10,6 +10,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import SetupWizard from './components/modules/setup/SetupWizard'
 import GuestPortal from './components/modules/portal/GuestPortal'
 import LoginPage from './components/auth/LoginPage'
+import LandingPage from './components/auth/LandingPage'
 import { canAccess } from './utils/permissions'
 
 // Lazy load modules for performance
@@ -100,6 +101,7 @@ const PANEL_MAP = {
 export default function App() {
   const { activePanel, initDarkMode, currentUser, token } = useStore()
   const [showSetup, setShowSetup] = useState(false)
+  const [page, setPage] = useState('landing') // 'landing' | 'login'
 
   // Init dark mode on mount
   useEffect(() => {
@@ -109,11 +111,19 @@ export default function App() {
   // Keyboard shortcuts
   useKeyboardShortcuts({})
 
-  // ── Not authenticated → show login ──────────────────────────────────────────
+  // ── Not authenticated → show landing or login ───────────────────────────────
   if (!currentUser || !token) {
+    if (page === 'landing') {
+      return (
+        <>
+          <LandingPage onLogin={() => setPage('login')} />
+          <Toast />
+        </>
+      )
+    }
     return (
       <>
-        <LoginPage />
+        <LoginPage onBack={() => setPage('landing')} />
         <Toast />
       </>
     )
