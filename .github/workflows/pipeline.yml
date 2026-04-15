@@ -366,7 +366,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload Trivy SARIF to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: "trivy-fs-results.sarif"
@@ -434,7 +434,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload container scan SARIF to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: "trivy-image-results.sarif"
