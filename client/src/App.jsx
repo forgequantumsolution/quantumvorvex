@@ -10,7 +10,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import SetupWizard from './components/modules/setup/SetupWizard'
 import GuestPortal from './components/modules/portal/GuestPortal'
 import LoginPage from './components/auth/LoginPage'
-import LandingPage from './components/auth/LandingPage'
+// import LandingPage from './components/auth/LandingPage'
 import { canAccess } from './utils/permissions'
 import { MOCK_USER, MOCK_TOKEN } from './api/mockData.js'
 
@@ -108,7 +108,8 @@ const PANEL_MAP = {
 export default function App() {
   const { activePanel, initDarkMode, currentUser, token, login } = useStore()
   const [showSetup, setShowSetup] = useState(false)
-  const [page, setPage] = useState('landing') // 'landing' | 'login'
+  // Landing page disabled — login is the default unauthenticated view
+  // const [page, setPage] = useState('login')
   // Prevent mock auto-login from re-firing after the user deliberately signs out
   const mockDidAutoLogin = useRef(false)
 
@@ -128,19 +129,19 @@ export default function App() {
   // Keyboard shortcuts
   useKeyboardShortcuts({})
 
-  // ── Not authenticated → show landing or login ───────────────────────────────
+  // ── Not authenticated → show login (landing commented out) ──────────────────
   if (!currentUser || !token) {
-    if (page === 'landing') {
-      return (
-        <>
-          <LandingPage onLogin={() => setPage('login')} />
-          <Toast />
-        </>
-      )
-    }
+    // if (page === 'landing') {
+    //   return (
+    //     <>
+    //       <LandingPage onLogin={() => setPage('login')} />
+    //       <Toast />
+    //     </>
+    //   )
+    // }
     return (
       <>
-        <LoginPage onBack={() => setPage('landing')} />
+        <LoginPage />
         <Toast />
       </>
     )
