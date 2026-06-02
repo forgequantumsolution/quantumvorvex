@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Button from '../../ui/Button'
-import { useStore } from '../../../store/useStore'
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const mockRooms = [
@@ -219,8 +218,6 @@ function FloorRoomCell({ room, onClick }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function FloorPlan({ rooms: propRooms }) {
-  useStore() // subscribe to global store
-
   const rooms = propRooms ?? mockRooms
 
   const [selectedRoom, setSelectedRoom] = useState(null)

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Button from '../../ui/Button'
-import { useStore } from '../../../store/useStore'
 
 // ─── Mock Data ───────────────────────────────────────────────────────────────
 const mockRooms = [
@@ -246,8 +245,6 @@ function AddRoomForm({ form, onChange }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Rooms() {
-  useStore() // subscribe so component re-renders on store changes if needed
-
   const [rooms, setRooms]             = useState(mockRooms)
   const [filter, setFilter]           = useState('All')
   const [search, setSearch]           = useState('')

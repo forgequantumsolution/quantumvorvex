@@ -1,4 +1,5 @@
-import { useToastStore } from '../../store/useStore'
+import { useAppDispatch, useAppSelector } from '../../store/hooks'
+import { removeToast as removeToastAction } from '../../store/slices/toastSlice'
 
 const BORDER_COLORS = {
   success: 'var(--green)',
@@ -16,8 +17,9 @@ const ICONS = {
 }
 
 export default function Toast() {
-  const toasts = useToastStore((s) => s.toasts)
-  const removeToast = useToastStore((s) => s.removeToast)
+  const toasts = useAppSelector((s) => s.toast.toasts)
+  const dispatch = useAppDispatch()
+  const removeToast = (id) => dispatch(removeToastAction(id))
 
   if (!toasts.length) return null
 

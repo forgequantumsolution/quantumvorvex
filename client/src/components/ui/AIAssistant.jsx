@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useStore } from '../../store/useStore'
+import { useAppSelector, useUiActions } from '../../store/hooks'
 import { formatCurrency } from '../../utils/format'
 
 const SUGGESTED_PROMPTS = [
@@ -105,7 +105,8 @@ function Message({ msg, onAction }) {
 }
 
 export default function AIAssistant() {
-  const { setActivePanel, hotelName } = useStore()
+  const hotelName = useAppSelector((s) => s.hotel.hotelName)
+  const { setActivePanel } = useUiActions()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')

@@ -40,7 +40,7 @@ const __dirname  = path.dirname(__filename)
 
 const app = express()
 
-// ── Trust proxy (correct IP behind nginx / Vercel edge) ───────────────────────
+// ── Trust proxy (correct client IP when running behind a reverse proxy) ───────
 app.set('trust proxy', 1)
 
 // ── Security headers ─────────────────────────────────────────────────────────

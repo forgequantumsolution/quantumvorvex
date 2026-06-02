@@ -256,6 +256,13 @@
   font-family: "DM Sans", "Inter", sans-serif;
 }
 
+.login-field-error {
+  margin-top: 5px;
+  font-size: 0.72rem;
+  color: #DC2626;
+  font-family: "DM Sans", "Inter", sans-serif;
+}
+
 .login-submit {
   width: 100%;
   display: flex;

@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react'
+import { Formik, Form } from 'formik'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
+import FormikField from '../../ui/FormikField'
 import { useToast } from '../../../hooks/useToast'
+import { staffSchema } from '../../../validation/staffSchema'
 import { formatDateTime, timeAgo } from '../../../utils/format'
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
@@ -109,20 +112,15 @@ function Avatar({ name, role, size = 34 }) {
 // ─── Add / Edit Staff Modal ───────────────────────────────────────────────────
 function StaffModal({ isOpen, onClose, staff, onSave }) {
   const isEdit = !!staff
-  const [form, setForm] = useState(staff ? {
-    name: staff.name, phone: staff.phone, email: staff.email, role: staff.role,
-  } : { name: '', phone: '', email: '', role: 'front_desk' })
   const [generatedPwd, setGeneratedPwd] = useState(() => isEdit ? '' : generatePassword())
   const [copied, setCopied] = useState(false)
-  const addToast = useToast()
 
-  function handleChange(field, val) {
-    setForm(f => ({ ...f, [field]: val }))
-  }
+  const initialValues = staff
+    ? { name: staff.name, phone: staff.phone, email: staff.email, role: staff.role }
+    : { name: '', phone: '', email: '', role: 'front_desk' }
 
   function handleResetPassword() {
-    const pwd = generatePassword()
-    setGeneratedPwd(pwd)
+    setGeneratedPwd(generatePassword())
   }
 
   function handleCopy(pwd) {
@@ -132,105 +130,74 @@ function StaffModal({ isOpen, onClose, staff, onSave }) {
     })
   }
 
-  function handleSubmit() {
-    if (!form.name.trim() || !form.email.trim()) {
-      addToast({ type: 'error', message: 'Name and email are required.' })
-      return
-    }
-    onSave({ ...form })
-  }
-
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEdit ? `Edit Staff — ${staff.name}` : '+ Add Staff Member'}
-      footer={
-        <>
-          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSubmit}>
-            {isEdit ? 'Save Changes' : 'Create Staff'}
-          </button>
-        </>
-      }
+    <Formik
+      initialValues={initialValues}
+      validationSchema={staffSchema}
+      enableReinitialize
+      onSubmit={(values) => onSave({ ...values })}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div>
-          <label className="form-label">Full Name</label>
-          <input
-            className="form-input"
-            value={form.name}
-            onChange={e => handleChange('name', e.target.value)}
-            placeholder="e.g. Ramesh Gupta"
-          />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <label className="form-label">Phone</label>
-            <input
-              className="form-input"
-              value={form.phone}
-              onChange={e => handleChange('phone', e.target.value)}
-              placeholder="10-digit mobile"
-            />
-          </div>
-          <div>
-            <label className="form-label">Email</label>
-            <input
-              className="form-input"
-              type="email"
-              value={form.email}
-              onChange={e => handleChange('email', e.target.value)}
-              placeholder="staff@hotel.com"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="form-label">Role</label>
-          <select
-            className="form-select"
-            value={form.role}
-            onChange={e => handleChange('role', e.target.value)}
-          >
-            {Object.entries(ROLE_META).map(([key, { label }]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
-        </div>
+      {({ submitForm, isSubmitting }) => (
+        <Modal
+          isOpen={isOpen}
+          onClose={onClose}
+          title={isEdit ? `Edit Staff — ${staff.name}` : '+ Add Staff Member'}
+          footer={
+            <>
+              <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+              <button className="btn btn-primary" onClick={submitForm} disabled={isSubmitting}>
+                {isEdit ? 'Save Changes' : 'Create Staff'}
+              </button>
+            </>
+          }
+        >
+          <Form style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <FormikField name="name" label="Full Name" required placeholder="e.g. Ramesh Gupta" />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <FormikField name="phone" label="Phone" required placeholder="10-digit mobile" />
+              <FormikField name="email" label="Email" type="email" required placeholder="staff@hotel.com" />
+            </div>
+            <FormikField name="role" label="Role" required as="select">
+              {Object.entries(ROLE_META).map(([key, { label }]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </FormikField>
 
-        {/* Password section */}
-        <div>
-          <label className="form-label">{isEdit ? 'Reset Password' : 'Auto-Generated Password'}</label>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              className="form-input"
-              readOnly
-              value={generatedPwd || '••••••••••'}
-              style={{ fontFamily: 'monospace', flex: 1 }}
-            />
-            {isEdit && (
-              <button className="btn btn-outline btn-sm" onClick={handleResetPassword} type="button">
-                Regenerate
-              </button>
-            )}
-            {generatedPwd && (
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={() => handleCopy(generatedPwd)}
-                type="button"
-              >
-                {copied ? '✓ Copied' : 'Copy'}
-              </button>
-            )}
-          </div>
-          {!isEdit && (
-            <p style={{ margin: '5px 0 0', fontSize: 11, color: 'var(--text3)' }}>
-              Share this password with the staff member securely. They can change it after first login.
-            </p>
-          )}
-        </div>
-      </div>
-    </Modal>
+            {/* Password section */}
+            <div>
+              <label className="form-label">{isEdit ? 'Reset Password' : 'Auto-Generated Password'}</label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  className="form-input"
+                  readOnly
+                  value={generatedPwd || '••••••••••'}
+                  style={{ fontFamily: 'monospace', flex: 1 }}
+                />
+                {isEdit && (
+                  <button className="btn btn-outline btn-sm" onClick={handleResetPassword} type="button">
+                    Regenerate
+                  </button>
+                )}
+                {generatedPwd && (
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => handleCopy(generatedPwd)}
+                    type="button"
+                  >
+                    {copied ? '✓ Copied' : 'Copy'}
+                  </button>
+                )}
+              </div>
+              {!isEdit && (
+                <p style={{ margin: '5px 0 0', fontSize: 11, color: 'var(--text3)' }}>
+                  Share this password with the staff member securely. They can change it after first login.
+                </p>
+              )}
+            </div>
+          </Form>
+        </Modal>
+      )}
+    </Formik>
   )
 }
 

@@ -9,7 +9,7 @@ import {
   LineChart,
   Line,
 } from 'recharts'
-import { useStore } from '../../../store/useStore'
+import { useAppSelector, useUiActions } from '../../../store/hooks'
 import { useToast } from '../../../hooks/useToast'
 import { formatCurrency, formatCurrencyCompact, statusColor } from '../../../utils/format'
 import StatCard from '../../ui/StatCard'
@@ -137,8 +137,8 @@ const SHORTCUTS = [
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const hotelName    = useStore((s) => s.hotelName)
-  const setActivePanel = useStore((s) => s.setActivePanel)
+  const hotelName    = useAppSelector((s) => s.hotel.hotelName)
+  const { setActivePanel } = useUiActions()
   const addToast     = useToast()
 
   const [shortcutsOpen, setShortcutsOpen] = useState(false)

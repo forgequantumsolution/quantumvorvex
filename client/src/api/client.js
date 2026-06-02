@@ -8,6 +8,13 @@ const api = axios.create({
   withCredentials: true,
 })
 
+// ── Attach the persisted auth token to every request ─────────────────────────
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('qv_token')
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
+
 // ── Mock adapter — short-circuits all HTTP when VITE_MOCK=true ────────────────
 if (MOCK) {
   api.defaults.adapter = async (config) => {

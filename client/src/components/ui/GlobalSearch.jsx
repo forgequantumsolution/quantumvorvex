@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useStore } from '../../store/useStore'
+import { useAppSelector, useUiActions } from '../../store/hooks'
 
 const PANELS = [
   { id: 'dashboard', label: 'Dashboard', meta: 'Overview & stats', icon: '▦' },
@@ -23,7 +23,8 @@ const MOCK_GUESTS = [
 ]
 
 export default function GlobalSearch() {
-  const { setActivePanel, searchOpen, setSearchOpen } = useStore()
+  const searchOpen = useAppSelector((s) => s.ui.searchOpen)
+  const { setActivePanel, setSearchOpen } = useUiActions()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState([])
   const [selected, setSelected] = useState(0)

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, lazy, Suspense } from 'react'
-import { useStore } from './store/useStore'
+import { useAppSelector, useAuthActions } from './store/hooks'
 import Layout from './components/layout/Layout'
 import Toast from './components/ui/Toast'
 import GlobalSearch from './components/ui/GlobalSearch'
@@ -16,24 +16,12 @@ import { MOCK_USER, MOCK_TOKEN } from './api/mockData.js'
 
 const IS_MOCK = import.meta.env.VITE_MOCK === 'true'
 
-// Lazy load modules for performance
-const Dashboard    = lazy(() => import('./components/modules/dashboard/Dashboard'))
-const Rooms        = lazy(() => import('./components/modules/rooms/Rooms'))
-const FloorPlan    = lazy(() => import('./components/modules/floorplan/FloorPlan'))
-const Reports      = lazy(() => import('./components/modules/reports/Reports'))
-const CheckIn      = lazy(() => import('./components/modules/checkin/CheckIn'))
-const Guests       = lazy(() => import('./components/modules/guests/Guests'))
-const Bookings     = lazy(() => import('./components/modules/bookings/Bookings'))
-const Documents    = lazy(() => import('./components/modules/documents/Documents'))
-const Food         = lazy(() => import('./components/modules/food/Food'))
-const Billing      = lazy(() => import('./components/modules/billing/Billing'))
-const Settings     = lazy(() => import('./components/modules/settings/Settings'))
-const Maintenance  = lazy(() => import('./components/modules/maintenance/Maintenance'))
-const Housekeeping = lazy(() => import('./components/modules/housekeeping/Housekeeping'))
-const Staff        = lazy(() => import('./components/modules/staff/Staff'))
-const Channels     = lazy(() => import('./components/modules/channels/Channels'))
-const Calendar     = lazy(() => import('./components/modules/calendar/Calendar'))
-const NightAudit   = lazy(() => import('./components/modules/nightaudit/NightAudit'))
+// Lazy load the five front-desk modules for performance
+const Bookings      = lazy(() => import('./components/modules/bookings/Bookings'))
+const CheckIn       = lazy(() => import('./components/modules/checkin/CheckIn'))
+const CheckOut      = lazy(() => import('./components/modules/checkout/CheckOut'))
+const Cancellations = lazy(() => import('./components/modules/cancellations/Cancellations'))
+const Maintenance   = lazy(() => import('./components/modules/maintenance/Maintenance'))
 
 function PanelSkeleton() {
   return (
@@ -86,37 +74,29 @@ function AccessDenied({ panel }) {
 }
 
 const PANEL_MAP = {
-  dashboard:   Dashboard,
-  rooms:       Rooms,
-  floorplan:   FloorPlan,
-  reports:     Reports,
-  checkin:     CheckIn,
-  guests:      Guests,
-  bookings:    Bookings,
-  documents:   Documents,
-  food:        Food,
-  billing:     Billing,
-  settings:    Settings,
-  maintenance:  Maintenance,
-  housekeeping: Housekeeping,
-  staff:        Staff,
-  channels:     Channels,
-  calendar:     Calendar,
-  nightaudit:   NightAudit,
+  bookings:      Bookings,
+  checkin:       CheckIn,
+  checkout:      CheckOut,
+  cancellations: Cancellations,
+  maintenance:   Maintenance,
 }
 
 export default function App() {
-  const { activePanel, initDarkMode, currentUser, token, login } = useStore()
+  const activePanel = useAppSelector((s) => s.ui.activePanel)
+  const darkMode    = useAppSelector((s) => s.ui.darkMode)
+  const currentUser = useAppSelector((s) => s.auth.currentUser)
+  const token       = useAppSelector((s) => s.auth.token)
+  const { login } = useAuthActions()
   const [showSetup, setShowSetup] = useState(false)
   // Landing page disabled — login is the default unauthenticated view
   // const [page, setPage] = useState('login')
   // Prevent mock auto-login from re-firing after the user deliberately signs out
   const mockDidAutoLogin = useRef(false)
 
-  // Init dark mode on mount
+  // Sync dark mode to the document whenever it changes (and on mount)
   useEffect(() => {
-    initDarkMode()
-  }, [initDarkMode])
+    document.documentElement.classList.toggle('dark', darkMode)
+  }, [darkMode])
 
   // Auto-login with mock user on first load only — skip if user signed out
   useEffect(() => {
@@ -148,7 +128,7 @@ export default function App() {
   }
 
   const role = currentUser.role
-  const ActivePanel = PANEL_MAP[activePanel] || Dashboard
+  const ActivePanel = PANEL_MAP[activePanel] || Bookings
 
   // Check if current user can access the active panel
   const hasAccess = canAccess(role, activePanel)

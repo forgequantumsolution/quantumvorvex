@@ -1,6 +1,8 @@
 import { useState } from 'react'
-import { useStore } from '../../store/useStore'
+import { Formik, Form, Field, ErrorMessage } from 'formik'
+import { useAuthActions } from '../../store/hooks'
 import { authApi } from '../../api/client'
+import { loginSchema, loginInitialValues } from '../../validation/authSchema'
 import hotelBg from '../../assets/hotel-bg.jpg'
 import goldenLogo from '../../assets/golden_blue_logo.png'
 import './LoginPage.css'
@@ -27,21 +29,18 @@ const DEMO_ACCOUNTS = [
 ]
 
 export default function LoginPage() {
-  const login = useStore((s) => s.login)
+  const { login } = useAuthActions()
 
-  const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
-  const [showPw, setShowPw]     = useState(false)
-  const [error, setError]       = useState('')
-  const [loading, setLoading]   = useState(false)
+  const [showPw, setShowPw] = useState(false)
+  const [error, setError]   = useState('')
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (values, { setSubmitting }) => {
     setError('')
-    if (!email || !password) { setError('Email and password are required.'); return }
-    setLoading(true)
     try {
-      const { data } = await authApi.login({ email, password })
+      const { data } = await authApi.login({
+        email: values.email.trim(),
+        password: values.password,
+      })
       login(data.token, data.user)
     } catch (err) {
       const data = err.response?.data
@@ -54,7 +53,7 @@ export default function LoginPage() {
          'Cannot reach server. Make sure the backend is running.')
       )
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
@@ -110,69 +109,81 @@ export default function LoginPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit}>
-              <div className="login-field">
-                <label className="login-field-label">Email address</label>
-                <div className="login-field-wrap">
-                  <span className="login-field-icon"><MailIcon /></span>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="you@hotel.com"
-                    className="login-input"
-                    autoComplete="email"
-                  />
-                </div>
-              </div>
+            <Formik
+              initialValues={loginInitialValues}
+              validationSchema={loginSchema}
+              onSubmit={handleSubmit}
+            >
+              {({ isSubmitting, setFieldValue }) => (
+                <>
+                  <Form>
+                    <div className="login-field">
+                      <label className="login-field-label">Email address</label>
+                      <div className="login-field-wrap">
+                        <span className="login-field-icon"><MailIcon /></span>
+                        <Field
+                          type="email"
+                          name="email"
+                          placeholder="you@hotel.com"
+                          className="login-input"
+                          autoComplete="email"
+                        />
+                      </div>
+                      <ErrorMessage name="email" component="div" className="login-field-error" />
+                    </div>
 
-              <div className="login-field">
-                <label className="login-field-label">Password</label>
-                <div className="login-field-wrap">
-                  <span className="login-field-icon"><LockIcon /></span>
-                  <input
-                    type={showPw ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="••••••••"
-                    className="login-input"
-                    style={{ paddingRight: 40 }}
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    className="login-pw-toggle"
-                    onClick={() => setShowPw(!showPw)}
-                    tabIndex={-1}
-                  >
-                    {showPw ? <EyeOffIcon /> : <EyeIcon />}
-                  </button>
-                </div>
-              </div>
+                    <div className="login-field">
+                      <label className="login-field-label">Password</label>
+                      <div className="login-field-wrap">
+                        <span className="login-field-icon"><LockIcon /></span>
+                        <Field
+                          type={showPw ? 'text' : 'password'}
+                          name="password"
+                          placeholder="••••••••"
+                          className="login-input"
+                          style={{ paddingRight: 40 }}
+                          autoComplete="current-password"
+                        />
+                        <button
+                          type="button"
+                          className="login-pw-toggle"
+                          onClick={() => setShowPw(!showPw)}
+                          tabIndex={-1}
+                        >
+                          {showPw ? <EyeOffIcon /> : <EyeIcon />}
+                        </button>
+                      </div>
+                      <ErrorMessage name="password" component="div" className="login-field-error" />
+                    </div>
 
-              <button type="submit" disabled={loading} className="login-submit">
-                {loading && <span className="login-spinner" />}
-                {loading ? 'Signing in…' : 'Sign In'}
-              </button>
-            </form>
+                    <button type="submit" disabled={isSubmitting} className="login-submit">
+                      {isSubmitting && <span className="login-spinner" />}
+                      {isSubmitting ? 'Signing in…' : 'Sign In'}
+                    </button>
+                  </Form>
 
-            <div className="login-demo-section">
-              <span className="login-demo-label">Demo Accounts — Click to Fill</span>
-              <div className="login-demo-chips">
-                {DEMO_ACCOUNTS.map(({ role, label, email: e, pass }) => (
-                  <button
-                    key={role}
-                    type="button"
-                    className="login-demo-chip"
-                    onClick={() => { setEmail(e); setPassword(pass); setError('') }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
+                  <div className="login-demo-section">
+                    <span className="login-demo-label">Demo Accounts — Click to Fill</span>
+                    <div className="login-demo-chips">
+                      {DEMO_ACCOUNTS.map(({ role, label, email: e, pass }) => (
+                        <button
+                          key={role}
+                          type="button"
+                          className="login-demo-chip"
+                          onClick={() => {
+                            setFieldValue('email', e)
+                            setFieldValue('password', pass)
+                            setError('')
+                          }}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </Formik>
           </div>
 
           <div className="login-card-footer">

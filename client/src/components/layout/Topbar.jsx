@@ -1,24 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useStore } from '../../store/useStore'
+import { useAppSelector, useUiActions } from '../../store/hooks'
 
 const PANEL_LABELS = {
-  dashboard:   'Dashboard',
-  rooms:       'Rooms',
-  floorplan:   'Floor Plan',
-  reports:     'Reports',
-  checkin:     'Check-In',
-  guests:      'All Guests',
-  bookings:    'Bookings',
-  documents:   'Documents',
-  food:        'Food Options',
-  billing:     'Billing',
-  settings:    'Settings',
-  maintenance: 'Maintenance',
-  housekeeping:'Housekeeping',
-  staff:       'Staff',
-  channels:    'Channels',
-  calendar:    'Room Calendar',
-  nightaudit:  'Night Audit',
+  bookings:      'Bookings',
+  checkin:       'Check-In',
+  checkout:      'Check-Out',
+  cancellations: 'Cancellations',
+  maintenance:   'Maintenance',
 }
 
 const MOCK_NOTIFS = [
@@ -41,12 +29,9 @@ function formatTime(d) { return `${pad(d.getHours())}:${pad(d.getMinutes())}:${p
 function formatDate(d) { return d.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' }) }
 
 export default function Topbar() {
-  const activePanel    = useStore((s) => s.activePanel)
-  const setActivePanel = useStore((s) => s.setActivePanel)
-  const toggleSidebar  = useStore((s) => s.toggleSidebar)
-  const darkMode       = useStore((s) => s.darkMode)
-  const toggleDarkMode = useStore((s) => s.toggleDarkMode)
-  const setSearchOpen  = useStore((s) => s.setSearchOpen)
+  const activePanel = useAppSelector((s) => s.ui.activePanel)
+  const darkMode    = useAppSelector((s) => s.ui.darkMode)
+  const { setActivePanel, toggleSidebar, toggleDarkMode, setSearchOpen } = useUiActions()
 
   const [time, setTime]                     = useState(new Date())
   const [searchFocused, setSearchFocused]   = useState(false)

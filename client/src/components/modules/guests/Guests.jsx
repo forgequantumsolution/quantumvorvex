@@ -1,9 +1,12 @@
 import { useState, useMemo } from 'react'
+import { Formik, Form } from 'formik'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
+import FormikField from '../../ui/FormikField'
 import { useToast } from '../../../hooks/useToast'
-import { useStore } from '../../../store/useStore'
+import { useUiActions } from '../../../store/hooks'
+import { guestEditSchema } from '../../../validation/guestSchema'
 import { formatDate, formatCurrency, statusColor } from '../../../utils/format'
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────────
@@ -493,72 +496,79 @@ function CheckoutModal({ guest, onClose, onConfirm }) {
 // ─── Edit Guest Modal ──────────────────────────────────────────────────────────
 
 function EditGuestModal({ guest, onClose, onSave }) {
-  const [form, setForm] = useState(guest ? { ...guest } : {})
   if (!guest) return null
-  const set = (field, value) => setForm(f => ({ ...f, [field]: value }))
-  const toggleTag = (tag) => {
-    const tags = form.tags.includes(tag) ? form.tags.filter(t => t !== tag) : [...form.tags, tag]
-    set('tags', tags)
+
+  const initialValues = {
+    ...guest,
+    email: guest.email || '',
+    tags: guest.tags || [],
   }
 
   return (
-    <Modal
-      isOpen={!!guest}
-      onClose={onClose}
-      title={`Edit — ${guest.name}`}
-      maxWidth="580px"
-      footer={
-        <>
-          <button className="btn btn-outline btn-sm" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary btn-sm" onClick={() => onSave(form)}>Save Changes</button>
-        </>
-      }
+    <Formik
+      initialValues={initialValues}
+      validationSchema={guestEditSchema}
+      enableReinitialize
+      onSubmit={(values) => onSave(values)}
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-        <div><label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Name</label><input className="form-input" value={form.name || ''} onChange={e => set('name', e.target.value)} /></div>
-        <div><label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Phone</label><input className="form-input" value={form.phone || ''} onChange={e => set('phone', e.target.value)} /></div>
-        <div><label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Email</label><input className="form-input" value={form.email || ''} onChange={e => set('email', e.target.value)} /></div>
-        <div><label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Room</label><input className="form-input" value={form.room || ''} onChange={e => set('room', e.target.value)} /></div>
-        <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Stay Type</label>
-          <select className="form-select" value={form.stayType} onChange={e => set('stayType', e.target.value)}>
-            <option value="daily">Daily</option>
-            <option value="monthly">Monthly</option>
-          </select>
-        </div>
-        <div><label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Check-In Date</label><input type="date" className="form-input" value={form.checkInDate || ''} onChange={e => set('checkInDate', e.target.value)} /></div>
-        <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>{form.stayType === 'monthly' ? 'Months' : 'Check-Out Date'}</label>
-          {form.stayType === 'monthly'
-            ? <input type="number" className="form-input" min="1" value={form.months || ''} onChange={e => set('months', Number(e.target.value))} />
-            : <input type="date" className="form-input" value={form.checkOutDate || ''} onChange={e => set('checkOutDate', e.target.value)} />}
-        </div>
-        <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Food Plan</label>
-          <select className="form-select" value={form.foodPlan} onChange={e => set('foodPlan', e.target.value)}>
-            {FOOD_PLANS.map(p => <option key={p}>{p}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Status</label>
-          <select className="form-select" value={form.status} onChange={e => set('status', e.target.value)}>
-            {['Active', 'Due', 'Checked Out'].map(s => <option key={s}>{s}</option>)}
-          </select>
-        </div>
-      </div>
-      <div style={{ marginTop: 14 }}>
-        <label className="form-label" style={{ display: 'block', marginBottom: 7 }}>Tags</label>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {GUEST_TAGS.map(tag => (
-            <button key={tag} type="button" onClick={() => toggleTag(tag)}
-              className={getTagClass(tag)}
-              style={{ cursor: 'pointer', opacity: form.tags?.includes(tag) ? 1 : 0.4, border: form.tags?.includes(tag) ? undefined : '1px dashed var(--border2)' }}>
-              {tag}
-            </button>
-          ))}
-        </div>
-      </div>
-    </Modal>
+      {({ values, setFieldValue, submitForm, isSubmitting }) => {
+        const toggleTag = (tag) => {
+          const tags = values.tags?.includes(tag)
+            ? values.tags.filter(t => t !== tag)
+            : [...(values.tags || []), tag]
+          setFieldValue('tags', tags)
+        }
+        return (
+          <Modal
+            isOpen={!!guest}
+            onClose={onClose}
+            title={`Edit — ${guest.name}`}
+            maxWidth="580px"
+            footer={
+              <>
+                <button className="btn btn-outline btn-sm" onClick={onClose}>Cancel</button>
+                <button className="btn btn-primary btn-sm" onClick={submitForm} disabled={isSubmitting}>
+                  Save Changes
+                </button>
+              </>
+            }
+          >
+            <Form style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <FormikField name="name" label="Name" required />
+              <FormikField name="phone" label="Phone" required />
+              <FormikField name="email" label="Email" type="email" />
+              <FormikField name="room" label="Room" required />
+              <FormikField name="stayType" label="Stay Type" as="select">
+                <option value="daily">Daily</option>
+                <option value="monthly">Monthly</option>
+              </FormikField>
+              <FormikField name="checkInDate" label="Check-In Date" required type="date" />
+              {values.stayType === 'monthly'
+                ? <FormikField name="months" label="Months" required type="number" min="1" />
+                : <FormikField name="checkOutDate" label="Check-Out Date" required type="date" />}
+              <FormikField name="foodPlan" label="Food Plan" as="select">
+                {FOOD_PLANS.map(p => <option key={p}>{p}</option>)}
+              </FormikField>
+              <FormikField name="status" label="Status" as="select">
+                {['Active', 'Due', 'Checked Out'].map(s => <option key={s}>{s}</option>)}
+              </FormikField>
+            </Form>
+            <div style={{ marginTop: 14 }}>
+              <label className="form-label" style={{ display: 'block', marginBottom: 7 }}>Tags</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {GUEST_TAGS.map(tag => (
+                  <button key={tag} type="button" onClick={() => toggleTag(tag)}
+                    className={getTagClass(tag)}
+                    style={{ cursor: 'pointer', opacity: values.tags?.includes(tag) ? 1 : 0.4, border: values.tags?.includes(tag) ? undefined : '1px dashed var(--border2)' }}>
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </Modal>
+        )
+      }}
+    </Formik>
   )
 }
 
@@ -566,7 +576,7 @@ function EditGuestModal({ guest, onClose, onSave }) {
 
 export default function Guests() {
   const addToast = useToast()
-  const setActivePanel = useStore(s => s.setActivePanel)
+  const { setActivePanel } = useUiActions()
 
   const [guests, setGuests] = useState(MOCK_GUESTS)
   const [search, setSearch] = useState('')

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import Tabs from '../../ui/Tabs'
 import Modal from '../../ui/Modal'
-import { useStore } from '../../../store/useStore'
+import { useAppSelector, useHotelActions } from '../../../store/hooks'
 import { useToast } from '../../../hooks/useToast'
 import api from '../../../api/client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
@@ -1382,8 +1382,8 @@ function PropertiesTab({ settings, setSettings, addToast }) {
 const EMPTY_USER_FORM = { name: '', email: '', phone: '', role: 'staff', password: '', status: 'active' }
 
 function UsersAccessTab({ addToast }) {
-  const token       = useStore(s => s.token)
-  const currentUser = useStore(s => s.currentUser)
+  const token       = useAppSelector(s => s.auth.token)
+  const currentUser = useAppSelector(s => s.auth.currentUser)
   const isOwner     = currentUser?.role === 'owner' || currentUser?.role === 'admin'
 
   const [users, setUsers]     = useState([])
@@ -1691,9 +1691,8 @@ export default function Settings({ onRunSetup }) {
   const [activeTab, setActiveTab] = useState('profile')
   const [settings, setSettings]   = useState(initSettings)
   const addToast     = useToast()
-  const setHotelName = useStore(s => s.setHotelName)
-  const setOwnerName = useStore(s => s.setOwnerName)
-  const currentUser  = useStore(s => s.currentUser)
+  const { setHotelName, setOwnerName } = useHotelActions()
+  const currentUser  = useAppSelector(s => s.auth.currentUser)
   const role         = currentUser?.role || 'staff'
 
   // Filter tabs based on role permissions

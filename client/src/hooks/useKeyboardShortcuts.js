@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useStore } from '../store/useStore'
+import { useUiActions } from '../store/hooks'
 
 // Keyboard shortcuts:
 //   D = dashboard      R = rooms        F = floorplan
@@ -44,7 +44,7 @@ function isTyping(e) {
  * @param {function} [options.onAssistantToggle]  - Callback to toggle the AI assistant (bound to Shift+A)
  */
 export function useKeyboardShortcuts({ onShortcutsModal, onAssistantToggle } = {}) {
-  const setActivePanel = useStore((s) => s.setActivePanel)
+  const { setActivePanel } = useUiActions()
 
   useEffect(() => {
     function handleKeyDown(e) {

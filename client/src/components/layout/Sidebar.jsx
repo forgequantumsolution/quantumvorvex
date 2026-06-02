@@ -1,43 +1,16 @@
-import { useState } from 'react'
-import { useStore } from '../../store/useStore'
+import { useEffect, useState } from 'react'
+import { useAppSelector, useUiActions, useAuthActions } from '../../store/hooks'
 import { getAllowedPanels, ROLE_LABELS, ROLE_COLORS } from '../../utils/permissions'
 
 const NAV_SECTIONS = [
   {
-    label: 'Operations',
+    label: 'Front Desk',
     items: [
-      { id: 'dashboard',    label: 'Dashboard',    icon: '▦',  shortcut: 'D' },
-      { id: 'rooms',        label: 'Rooms',         icon: '⊟',  shortcut: 'R' },
-      { id: 'floorplan',   label: 'Floor Plan',    icon: '◫',  shortcut: 'F' },
-      { id: 'calendar',    label: 'Room Calendar', icon: '📅' },
-      { id: 'maintenance', label: 'Maintenance',   icon: '🔧', shortcut: 'M', badge: '3' },
-      { id: 'housekeeping',label: 'Housekeeping',  icon: '🧹', shortcut: 'H', badge: '5' },
-      { id: 'reports',     label: 'Reports',       icon: '◈',  shortcut: 'T' },
-      { id: 'nightaudit',  label: 'Night Audit',   icon: '🌙' },
-    ],
-  },
-  {
-    label: 'Guests',
-    items: [
-      { id: 'checkin',   label: 'Check-In',   icon: '↗',  shortcut: 'C' },
-      { id: 'guests',    label: 'All Guests', icon: '◎',  shortcut: 'G' },
-      { id: 'bookings',  label: 'Bookings',   icon: '◷' },
-      { id: 'channels',  label: 'Channels',   icon: '🔗' },
-      { id: 'documents', label: 'Documents',  icon: '◫' },
-    ],
-  },
-  {
-    label: 'Services',
-    items: [
-      { id: 'food',    label: 'Food Options', icon: '⊕' },
-      { id: 'billing', label: 'Billing',      icon: '◑', shortcut: 'B' },
-    ],
-  },
-  {
-    label: 'System',
-    items: [
-      { id: 'staff',    label: 'Staff',    icon: '👤' },
-      { id: 'settings', label: 'Settings', icon: '◌', shortcut: 'S' },
+      { id: 'bookings',      label: 'Bookings',      icon: '◷',  shortcut: 'B' },
+      { id: 'checkin',       label: 'Check-In',      icon: '↗',  shortcut: 'C' },
+      { id: 'checkout',      label: 'Check-Out',     icon: '↘',  shortcut: 'O' },
+      { id: 'cancellations', label: 'Cancellations', icon: '✕' },
+      { id: 'maintenance',   label: 'Maintenance',   icon: '🔧', shortcut: 'M' },
     ],
   },
 ]
@@ -60,15 +33,26 @@ function splitHotelName(name = '') {
 }
 
 export default function Sidebar() {
-  const activePanel    = useStore((s) => s.activePanel)
-  const setActivePanel = useStore((s) => s.setActivePanel)
-  const sidebarOpen    = useStore((s) => s.sidebarOpen)
-  const closeSidebar   = useStore((s) => s.closeSidebar)
-  const darkMode       = useStore((s) => s.darkMode)
-  const toggleDarkMode = useStore((s) => s.toggleDarkMode)
-  const hotelName      = useStore((s) => s.hotelName)
-  const currentUser    = useStore((s) => s.currentUser)
-  const logout         = useStore((s) => s.logout)
+  const activePanel      = useAppSelector((s) => s.ui.activePanel)
+  const sidebarOpen      = useAppSelector((s) => s.ui.sidebarOpen)
+  const sidebarCollapsed = useAppSelector((s) => s.ui.sidebarCollapsed)
+  const darkMode         = useAppSelector((s) => s.ui.darkMode)
+  const hotelName        = useAppSelector((s) => s.hotel.hotelName)
+  const currentUser      = useAppSelector((s) => s.auth.currentUser)
+  const { setActivePanel, closeSidebar, toggleDarkMode, toggleSidebarCollapsed } = useUiActions()
+  const { logout } = useAuthActions()
+
+  // Collapse is a desktop-only affordance; the mobile drawer always shows full.
+  const [isDesktop, setIsDesktop] = useState(
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true,
+  )
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth >= 1024)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  const collapsed = sidebarCollapsed && isDesktop
 
   const role          = currentUser?.role || 'staff'
   const allowedPanels = getAllowedPanels(role)
@@ -98,6 +82,8 @@ export default function Sidebar() {
     }))
     .filter(section => section.items.length > 0)
 
+  const width = collapsed ? 72 : 252
+
   return (
     <>
       {/* Mobile overlay — only rendered when sidebar is open */}
@@ -107,8 +93,8 @@ export default function Sidebar() {
       <div
         id="sidebar"
         style={{
-          width: 252,
-          minWidth: 252,
+          width,
+          minWidth: width,
           height: '100dvh',
           background: '#141414',
           display: 'flex',
@@ -117,48 +103,73 @@ export default function Sidebar() {
           overflowX: 'hidden',
           flexShrink: 0,
           zIndex: 100,
+          transition: 'width 0.2s ease, min-width 0.2s ease',
         }}
         className={sidebarOpen ? 'sb-open' : ''}
       >
         {/* Logo section */}
-        <div style={{ padding: '20px 18px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-            <div style={{
-              width: 36, height: 36,
-              background: '#c9a84c',
-              borderRadius: 8,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 18, flexShrink: 0,
-            }}>
-              🏨
-            </div>
-            <div>
+        <div style={{ padding: collapsed ? '18px 0 14px' : '20px 18px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 11,
+            justifyContent: collapsed ? 'center' : 'space-between',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
               <div style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: 15, fontWeight: 700,
-                color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2,
+                width: 36, height: 36,
+                background: '#c9a84c',
+                borderRadius: 8,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 18, flexShrink: 0,
               }}>
-                {head && <span>{head} </span>}
-                <span style={{ color: '#c9a84c' }}>{tail}</span>
+                🏨
               </div>
-              <div style={{
-                fontSize: 9.5, color: '#555', marginTop: 2,
-                letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 500,
-              }}>
-                Powered by Forge Quantum Solutions
-              </div>
+              {!collapsed && (
+                <div style={{ minWidth: 0 }}>
+                  <div style={{
+                    fontFamily: "'Syne', sans-serif",
+                    fontSize: 15, fontWeight: 700,
+                    color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2,
+                  }}>
+                    {head && <span>{head} </span>}
+                    <span style={{ color: '#c9a84c' }}>{tail}</span>
+                  </div>
+                  <div style={{
+                    fontSize: 9.5, color: '#555', marginTop: 2,
+                    letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 500,
+                  }}>
+                    Powered by Forge Quantum Solutions
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* Collapse toggle — desktop only */}
+            {isDesktop && !collapsed && (
+              <CollapseButton collapsed={collapsed} onClick={toggleSidebarCollapsed} />
+            )}
           </div>
+
+          {/* Expand toggle (collapsed state) — centered under the logo */}
+          {isDesktop && collapsed && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+              <CollapseButton collapsed={collapsed} onClick={toggleSidebarCollapsed} />
+            </div>
+          )}
 
           {/* Dark mode toggle */}
           <button
             onClick={toggleDarkMode}
+            title={darkMode ? 'Light Mode' : 'Dark Mode'}
             style={{
-              marginTop: 13, width: '100%',
+              marginTop: collapsed ? 10 : 13,
+              width: collapsed ? 40 : '100%',
+              marginLeft: collapsed ? 'auto' : 0,
+              marginRight: collapsed ? 'auto' : 0,
               background: 'rgba(255,255,255,0.04)',
               border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 6, padding: '6px 10px',
-              display: 'flex', alignItems: 'center', gap: 7,
+              borderRadius: 6, padding: collapsed ? '8px 0' : '6px 10px',
+              display: 'flex', alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'flex-start', gap: 7,
               cursor: 'pointer', color: '#888', fontSize: 11.5,
               fontFamily: "'Inter', sans-serif", transition: 'all 0.14s',
             }}
@@ -166,7 +177,7 @@ export default function Sidebar() {
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#888' }}
           >
             <span style={{ fontSize: 13 }}>{darkMode ? '☀' : '🌙'}</span>
-            <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+            {!collapsed && <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>}
           </button>
         </div>
 
@@ -174,18 +185,21 @@ export default function Sidebar() {
         <nav style={{ flex: 1, padding: '8px 0' }}>
           {filteredSections.map((section) => (
             <div key={section.label} style={{ marginBottom: 4 }}>
-              <div style={{
-                fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
-                textTransform: 'uppercase', color: '#3a3a3a',
-                padding: '10px 18px 4px', fontFamily: "'Inter', sans-serif",
-              }}>
-                {section.label}
-              </div>
+              {!collapsed && (
+                <div style={{
+                  fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
+                  textTransform: 'uppercase', color: '#3a3a3a',
+                  padding: '10px 18px 4px', fontFamily: "'Inter', sans-serif",
+                }}>
+                  {section.label}
+                </div>
+              )}
               {section.items.map((item) => (
                 <NavItem
                   key={item.id}
                   item={item}
                   isActive={activePanel === item.id}
+                  collapsed={collapsed}
                   onClick={() => handleNavClick(item.id)}
                 />
               ))}
@@ -195,52 +209,65 @@ export default function Sidebar() {
 
         {/* User footer */}
         <div style={{
-          padding: '12px 14px',
+          padding: collapsed ? '12px 0' : '12px 14px',
           borderTop: '1px solid rgba(255,255,255,0.07)',
           marginTop: 'auto',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: '50%',
-              background: roleColor,
-              color: '#000',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11.5, fontWeight: 700, flexShrink: 0,
-              fontFamily: "'Inter', sans-serif",
-            }}>
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: 10, marginBottom: 10,
+          }}>
+            <div
+              title={collapsed ? `${userName} · ${roleLabel}` : undefined}
+              style={{
+                width: 32, height: 32, borderRadius: '50%',
+                background: roleColor,
+                color: '#000',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 11.5, fontWeight: 700, flexShrink: 0,
+                fontFamily: "'Inter', sans-serif",
+              }}
+            >
               {userInitials}
             </div>
-            <div style={{ overflow: 'hidden', flex: 1 }}>
-              <div style={{
-                color: '#fff', fontSize: 12.5, fontWeight: 600,
-                fontFamily: "'Inter', sans-serif",
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              }}>
-                {userName}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                <span style={{
-                  fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
-                  textTransform: 'uppercase', color: roleColor,
-                  background: roleColor + '1a',
-                  padding: '1px 5px', borderRadius: 3,
+            {!collapsed && (
+              <div style={{ overflow: 'hidden', flex: 1 }}>
+                <div style={{
+                  color: '#fff', fontSize: 12.5, fontWeight: 600,
                   fontFamily: "'Inter', sans-serif",
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 }}>
-                  {roleLabel}
-                </span>
+                  {userName}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
+                    textTransform: 'uppercase', color: roleColor,
+                    background: roleColor + '1a',
+                    padding: '1px 5px', borderRadius: 3,
+                    fontFamily: "'Inter', sans-serif",
+                  }}>
+                    {roleLabel}
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Logout button */}
           <button
             onClick={handleLogout}
+            title="Sign Out"
             style={{
-              width: '100%',
+              width: collapsed ? 40 : '100%',
+              marginLeft: collapsed ? 'auto' : 0,
+              marginRight: collapsed ? 'auto' : 0,
               background: 'rgba(220,53,69,0.08)',
               border: '1px solid rgba(220,53,69,0.2)',
-              borderRadius: 6, padding: '7px 10px',
-              display: 'flex', alignItems: 'center', gap: 7,
+              borderRadius: 6, padding: collapsed ? '8px 0' : '7px 10px',
+              display: 'flex', alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'flex-start', gap: 7,
               cursor: 'pointer', color: '#dc5555', fontSize: 12,
               fontFamily: "'Inter', sans-serif", transition: 'all 0.14s',
             }}
@@ -248,7 +275,7 @@ export default function Sidebar() {
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(220,53,69,0.08)'; e.currentTarget.style.borderColor = 'rgba(220,53,69,0.2)' }}
           >
             <span style={{ fontSize: 13 }}>⎋</span>
-            <span>Sign Out</span>
+            {!collapsed && <span>Sign Out</span>}
           </button>
         </div>
       </div>
@@ -258,7 +285,31 @@ export default function Sidebar() {
   )
 }
 
-function NavItem({ item, isActive, onClick }) {
+function CollapseButton({ collapsed, onClick }) {
+  const [hovered, setHovered] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      style={{
+        width: 28, height: 28, flexShrink: 0,
+        borderRadius: 6,
+        background: hovered ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        color: hovered ? '#c9a84c' : '#888',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', fontSize: 14, transition: 'all 0.14s',
+      }}
+    >
+      {collapsed ? '»' : '«'}
+    </button>
+  )
+}
+
+function NavItem({ item, isActive, collapsed, onClick }) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -266,9 +317,13 @@ function NavItem({ item, isActive, onClick }) {
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      title={collapsed ? item.label : undefined}
       style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '9px 16px', cursor: 'pointer', fontSize: 13.5,
+        display: 'flex', alignItems: 'center',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        gap: collapsed ? 0 : 10,
+        padding: collapsed ? '11px 0' : '9px 16px',
+        cursor: 'pointer', fontSize: 13.5,
         color: isActive ? '#fff' : hovered ? '#fff' : '#888',
         borderLeft: isActive ? '2px solid #c9a84c' : '2px solid transparent',
         background: isActive
@@ -285,8 +340,8 @@ function NavItem({ item, isActive, onClick }) {
       }}>
         {item.icon}
       </span>
-      <span style={{ flex: 1 }}>{item.label}</span>
-      {item.badge && (
+      {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
+      {!collapsed && item.badge && (
         <span style={{
           background: '#c9a84c', color: '#000', fontSize: 9.5, fontWeight: 700,
           padding: '2px 6px', borderRadius: 20,
@@ -295,7 +350,7 @@ function NavItem({ item, isActive, onClick }) {
           {item.badge}
         </span>
       )}
-      {item.shortcut && !item.badge && (
+      {!collapsed && item.shortcut && !item.badge && (
         <span style={{
           fontSize: 9.5, color: '#3a3a3a',
           fontFamily: "'JetBrains Mono', monospace",

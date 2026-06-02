@@ -23,25 +23,14 @@ export const ROLE_COLORS = {
 }
 
 // Panels each role can access
+// Trimmed to the five front-desk panels — every role sees the same set.
+const FRONT_DESK_PANELS = ['bookings', 'checkin', 'checkout', 'cancellations', 'maintenance']
+
 export const ROLE_PANELS = {
-  owner: [
-    'dashboard', 'rooms', 'floorplan', 'calendar', 'checkin', 'guests', 'bookings',
-    'documents', 'food', 'billing', 'reports', 'settings',
-    'maintenance', 'housekeeping', 'staff', 'channels', 'nightaudit',
-  ],
-  manager: [
-    'dashboard', 'rooms', 'floorplan', 'calendar', 'checkin', 'guests', 'bookings',
-    'documents', 'food', 'billing', 'reports', 'settings',
-    'maintenance', 'housekeeping', 'channels', 'nightaudit',
-  ],
-  staff: [
-    'dashboard', 'rooms', 'calendar', 'checkin', 'guests', 'housekeeping', 'maintenance',
-  ],
-  admin: [
-    'dashboard', 'rooms', 'floorplan', 'calendar', 'checkin', 'guests', 'bookings',
-    'documents', 'food', 'billing', 'reports', 'settings',
-    'maintenance', 'housekeeping', 'staff', 'channels', 'nightaudit',
-  ],
+  owner: FRONT_DESK_PANELS,
+  manager: FRONT_DESK_PANELS,
+  staff: FRONT_DESK_PANELS,
+  admin: FRONT_DESK_PANELS,
 }
 
 // Settings tabs each role can see

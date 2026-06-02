@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import Badge from '../../ui/Badge'
 import { useToast } from '../../../hooks/useToast'
 import { formatCurrency } from '../../../utils/format'
-import { useStore } from '../../../store/useStore'
+import { useAppSelector, useHotelActions } from '../../../store/hooks'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -853,7 +853,9 @@ function Step7Preview({ wizardData, onLaunch }) {
 
 export default function SetupWizard({ onComplete }) {
   const addToast = useToast()
-  const { setHotelName, setOwnerName, hotelName, ownerName } = useStore()
+  const hotelName = useAppSelector((s) => s.hotel.hotelName)
+  const ownerName = useAppSelector((s) => s.hotel.ownerName)
+  const { setHotelName, setOwnerName } = useHotelActions()
 
   const [step, setStep] = useState(1)
 
