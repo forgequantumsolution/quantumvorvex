@@ -71,7 +71,7 @@ export default function CancelModal({ isOpen, onClose, booking, bookings = [], o
           label="Booking"
           value={target?.id || ''}
           onChange={(e) => setSelectedId(e.target.value)}
-          options={bookings.map((b) => ({ value: b.id, label: `${b.bookingNo} · ${b.guestName} · Room ${b.room}` }))}
+          options={bookings.map((b) => ({ value: b.id, label: `${b.bookingNo} · ${b.guestName} · Room ${b.roomNumber || b.room}` }))}
           error={error}
           className="mb-4"
         />
@@ -80,7 +80,7 @@ export default function CancelModal({ isOpen, onClose, booking, bookings = [], o
       {target && (
         <div className="rounded-lg bg-surface2 border border-line px-4 py-3 mb-4 text-sm space-y-1.5">
           <Row label="Guest" value={target.guestName} />
-          <Row label="Room" value={`${target.room} · ${target.roomType}`} />
+          <Row label="Room" value={`${target.roomNumber || target.room} · ${target.roomType}`} />
           <Row label="Stay" value={dateRangeLabel(target)} />
           <Row label="Outstanding" value={formatCurrency(balance(target))} />
         </div>

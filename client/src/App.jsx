@@ -10,6 +10,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import SetupWizard from './components/modules/setup/SetupWizard'
 import GuestPortal from './components/modules/portal/GuestPortal'
 import LoginPage from './components/auth/LoginPage'
+import ResetPasswordPage from './components/auth/ResetPasswordPage'
 // import LandingPage from './components/auth/LandingPage'
 import { canAccess } from './utils/permissions'
 import { MOCK_USER, MOCK_TOKEN } from './api/mockData.js'
@@ -88,6 +89,14 @@ export default function App() {
   const token       = useAppSelector((s) => s.auth.token)
   const { login } = useAuthActions()
   const [showSetup, setShowSetup] = useState(false)
+  // True when the user arrived via a password-reset email link (/reset-password?token=…)
+  const [resetRoute, setResetRoute] = useState(
+    () => typeof window !== 'undefined' && window.location.pathname === '/reset-password'
+  )
+  const exitResetRoute = () => {
+    window.history.replaceState({}, '', '/')
+    setResetRoute(false)
+  }
   // Landing page disabled — login is the default unauthenticated view
   // const [page, setPage] = useState('login')
   // Prevent mock auto-login from re-firing after the user deliberately signs out
@@ -108,6 +117,16 @@ export default function App() {
 
   // Keyboard shortcuts
   useKeyboardShortcuts({})
+
+  // ── Password-reset deep link — show regardless of any existing session ───────
+  if (resetRoute) {
+    return (
+      <>
+        <ResetPasswordPage onDone={exitResetRoute} />
+        <Toast />
+      </>
+    )
+  }
 
   // ── Not authenticated → show login (landing commented out) ──────────────────
   if (!currentUser || !token) {

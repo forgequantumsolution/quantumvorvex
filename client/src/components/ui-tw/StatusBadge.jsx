@@ -20,6 +20,11 @@ const STATUS_MAP = {
   CheckedIn: { tone: 'green', label: 'Checked In' },
   CheckedOut: { tone: 'grey', label: 'Checked Out' },
   Cancelled: { tone: 'red', label: 'Cancelled' },
+  NoShow: { tone: 'red', label: 'No-show' },
+  // payment status
+  paid: { tone: 'green', label: 'Paid' },
+  partial: { tone: 'amber', label: 'Partial' },
+  unpaid: { tone: 'grey', label: 'Unpaid' },
   // maintenance tickets
   Open: { tone: 'amber', label: 'Open' },
   'In Progress': { tone: 'blue', label: 'In Progress' },

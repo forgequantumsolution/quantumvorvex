@@ -47,6 +47,32 @@ export const schemas = {
     password: z.string().min(1, 'Password is required').max(128),
   }),
 
+  // Forgot password — request a reset link
+  forgotPassword: z.object({
+    email: z.string().email('Invalid email address').toLowerCase().trim(),
+  }),
+
+  // Reset password — submit new password with the emailed token
+  resetPassword: z.object({
+    token:    z.string().min(20, 'Invalid reset token').max(200),
+    password: z.string()
+                .min(8, 'Password must be at least 8 characters')
+                .max(128)
+                .regex(/[A-Z]/, 'Must contain an uppercase letter')
+                .regex(/[0-9]/, 'Must contain a number'),
+  }),
+
+  // Passwordless OTP — request a code
+  requestOtp: z.object({
+    email: z.string().email('Invalid email address').toLowerCase().trim(),
+  }),
+
+  // Passwordless OTP — verify the code
+  verifyOtp: z.object({
+    email: z.string().email('Invalid email address').toLowerCase().trim(),
+    code:  z.string().regex(/^\d{6}$/, 'Code must be 6 digits'),
+  }),
+
   createUser: z.object({
     name:     z.string().min(2).max(100).trim(),
     email:    z.string().email().toLowerCase().trim(),
@@ -115,18 +141,78 @@ export const schemas = {
     tags:           z.string().default('[]'),
   }),
 
-  // Booking
+  // Booking — create. The server computes subtotal/tax/total/balance from these inputs.
   createBooking: z.object({
-    guestName: z.string().min(2).max(100).trim(),
-    roomId:    z.string().cuid(),
-    stayType:  z.enum(['daily', 'monthly']),
-    fromDate:  z.string().datetime(),
-    toDate:    z.string().datetime().optional().nullable(),
-    months:    z.number().int().min(1).max(36).optional().nullable(),
-    amount:    z.number().positive().max(1000000),
-    advance:   z.number().min(0).max(1000000).default(0),
-    notes:     z.string().max(500).optional().nullable(),
-    source:    z.enum(['walk_in', 'booking', 'online', 'referral', 'corporate']).default('walk_in'),
+    // Guest
+    guestName:    z.string().min(2, 'Guest name is required').max(100).trim(),
+    guestPhone:   z.string().max(20).optional().nullable(),
+    guestEmail:   z.preprocess(v => (v === '' ? undefined : v),
+                    z.string().email('Invalid email').max(120).optional().nullable()),
+    guestAddress: z.string().max(300).optional().nullable(),
+    nationality:  z.string().max(50).optional().nullable(),
+    idType:       z.string().max(50).optional().nullable(),
+    idNumber:     z.string().max(50).optional().nullable(),
+    adults:       z.coerce.number().int().min(1).max(20).default(1),
+    children:     z.coerce.number().int().min(0).max(20).default(0),
+    // Room + stay
+    roomId:       z.string().cuid('Select a valid room'),
+    stayType:     z.enum(['daily', 'monthly']),
+    fromDate:     z.string().datetime(),
+    toDate:       z.string().datetime().optional().nullable(),
+    months:       z.coerce.number().int().min(1).max(36).optional().nullable(),
+    // Pricing inputs (server recomputes totals)
+    roomRate:     z.coerce.number().min(0).max(1000000).optional(),
+    discount:     z.coerce.number().min(0).max(1000000).default(0),
+    taxRate:      z.coerce.number().min(0).max(30).optional(),
+    extraCharges: z.coerce.number().min(0).max(1000000).default(0),
+    advance:      z.coerce.number().min(0).max(1000000).default(0),
+    // Meta
+    notes:           z.string().max(1000).optional().nullable(),
+    specialRequests: z.string().max(1000).optional().nullable(),
+    source:          z.enum(['walk_in', 'phone', 'website', 'ota', 'referral', 'corporate']).default('walk_in'),
+  }),
+
+  // Booking — general edit (all optional)
+  updateBooking: z.object({
+    guestName:       z.string().min(2).max(100).trim().optional(),
+    guestPhone:      z.string().max(20).optional().nullable(),
+    guestEmail:      z.preprocess(v => (v === '' ? undefined : v),
+                       z.string().email('Invalid email').max(120).optional().nullable()),
+    guestAddress:    z.string().max(300).optional().nullable(),
+    nationality:     z.string().max(50).optional().nullable(),
+    idType:          z.string().max(50).optional().nullable(),
+    idNumber:        z.string().max(50).optional().nullable(),
+    adults:          z.coerce.number().int().min(1).max(20).optional(),
+    children:        z.coerce.number().int().min(0).max(20).optional(),
+    fromDate:        z.string().datetime().optional(),
+    toDate:          z.string().datetime().optional().nullable(),
+    months:          z.coerce.number().int().min(1).max(36).optional().nullable(),
+    roomRate:        z.coerce.number().min(0).max(1000000).optional(),
+    discount:        z.coerce.number().min(0).max(1000000).optional(),
+    taxRate:         z.coerce.number().min(0).max(30).optional(),
+    extraCharges:    z.coerce.number().min(0).max(1000000).optional(),
+    advance:         z.coerce.number().min(0).max(1000000).optional(),
+    notes:           z.string().max(1000).optional().nullable(),
+    specialRequests: z.string().max(1000).optional().nullable(),
+    source:          z.enum(['walk_in', 'phone', 'website', 'ota', 'referral', 'corporate']).optional(),
+  }),
+
+  // Booking — cancel
+  cancelBooking: z.object({
+    reason: z.string().max(500).optional().nullable(),
+  }),
+
+  // Booking — check-in (optionally completes guest ID details + advance)
+  checkInBooking: z.object({
+    idType:   z.string().max(50).optional().nullable(),
+    idNumber: z.string().max(50).optional().nullable(),
+    advance:  z.coerce.number().min(0).max(1000000).optional(),
+  }),
+
+  // Booking — check-out (settle balance + final extra charges)
+  checkOutBooking: z.object({
+    extraCharges: z.coerce.number().min(0).max(1000000).optional(),
+    finalPayment: z.coerce.number().min(0).max(1000000).optional(),
   }),
 
   // Invoice / Payment

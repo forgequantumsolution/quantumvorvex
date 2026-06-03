@@ -1,54 +1,77 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageWrapper, StatCard, Card, FilterTabs, SearchInput, Button } from '../../ui-tw'
 import BookingsTable from './BookingsTable'
 import NewBookingModal from './NewBookingModal'
 import CancelModal from '../cancellations/CancelModal'
-import { useAppSelector, useOpsActions } from '../../../store/hooks'
 import { useToast } from '../../../hooks/useToast'
+import { bookingsApi } from '../../../api/client'
 import { formatCurrency } from '../../../utils/format'
-import { isUpcoming, balance } from '../../../utils/booking'
+import { isUpcoming } from '../../../utils/booking'
 
 const TABS = [
   { id: 'all', label: 'All' },
   { id: 'Upcoming', label: 'Upcoming' },
   { id: 'Confirmed', label: 'Confirmed' },
-  { id: 'Pending', label: 'Pending' },
+  { id: 'CheckedIn', label: 'Checked In' },
+  { id: 'CheckedOut', label: 'Checked Out' },
   { id: 'Cancelled', label: 'Cancelled' },
 ]
 
+// Flatten the API booking (room is an object) into the shape the table reads.
+const normalize = (b) => ({
+  ...b,
+  roomNumber: typeof b.room === 'object' ? b.room?.number : b.room,
+  roomType: b.room?.type?.name || b.roomType || '',
+  balanceDue: b.balance != null ? b.balance : Math.max(0, (b.amount || 0) - (b.advance || 0)),
+})
+
 export default function Bookings() {
-  const bookings = useAppSelector((s) => s.ops.bookings)
-  const { addBooking, cancelBooking } = useOpsActions()
   const toast = useToast()
 
+  const [bookings, setBookings] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [tab, setTab] = useState('all')
   const [query, setQuery] = useState('')
   const [showNew, setShowNew] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
+  const [busyId, setBusyId] = useState(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const { data } = await bookingsApi.getAll()
+      setBookings((data.bookings || []).map(normalize))
+    } catch {
+      setError('Could not load bookings. Make sure the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
 
   // Stats
   const stats = useMemo(() => {
-    const active = bookings.filter((b) => b.status !== 'Cancelled' && b.status !== 'CheckedOut')
+    const active = bookings.filter((b) => !['Cancelled', 'CheckedOut', 'NoShow'].includes(b.status))
     return {
       total: bookings.length,
       confirmed: bookings.filter((b) => b.status === 'Confirmed').length,
-      pending: bookings.filter((b) => b.status === 'Pending').length,
-      revenue: active.reduce((sum, b) => sum + (Number(b.amount) || 0), 0),
-      dues: active.reduce((sum, b) => sum + balance(b), 0),
+      checkedIn: bookings.filter((b) => b.status === 'CheckedIn').length,
+      revenue: active.reduce((s, b) => s + (Number(b.amount) || 0), 0),
+      dues: active.reduce((s, b) => s + (Number(b.balanceDue) || 0), 0),
     }
   }, [bookings])
 
-  // Tab counts
-  const counts = useMemo(
-    () => ({
-      all: bookings.length,
-      Upcoming: bookings.filter(isUpcoming).length,
-      Confirmed: bookings.filter((b) => b.status === 'Confirmed').length,
-      Pending: bookings.filter((b) => b.status === 'Pending').length,
-      Cancelled: bookings.filter((b) => b.status === 'Cancelled').length,
-    }),
-    [bookings],
-  )
+  const counts = useMemo(() => ({
+    all: bookings.length,
+    Upcoming: bookings.filter(isUpcoming).length,
+    Confirmed: bookings.filter((b) => b.status === 'Confirmed').length,
+    CheckedIn: bookings.filter((b) => b.status === 'CheckedIn').length,
+    CheckedOut: bookings.filter((b) => b.status === 'CheckedOut').length,
+    Cancelled: bookings.filter((b) => b.status === 'Cancelled').length,
+  }), [bookings])
 
   const filtered = useMemo(() => {
     let list = bookings
@@ -57,26 +80,41 @@ export default function Bookings() {
 
     const q = query.trim().toLowerCase()
     if (q) {
-      list = list.filter(
-        (b) =>
-          b.guestName.toLowerCase().includes(q) ||
-          b.bookingNo.toLowerCase().includes(q) ||
-          b.room.includes(q),
-      )
+      list = list.filter((b) =>
+        b.guestName?.toLowerCase().includes(q) ||
+        b.bookingNo?.toLowerCase().includes(q) ||
+        String(b.roomNumber || '').includes(q))
     }
     return list
   }, [bookings, tab, query])
 
-  const handleCreate = (booking) => {
-    addBooking(booking)
+  // ── Actions ──
+  const handleCreated = (booking) => {
+    setBookings((prev) => [normalize(booking), ...prev])
     toast(`Booking ${booking.bookingNo} created for ${booking.guestName}`)
     setShowNew(false)
   }
 
-  const handleCancel = ({ id, reason }) => {
+  const runAction = async (id, fn, successMsg, tone) => {
+    setBusyId(id)
+    try {
+      const { data } = await fn()
+      setBookings((prev) => prev.map((b) => (b.id === id ? normalize(data.booking) : b)))
+      toast(successMsg, tone)
+    } catch (err) {
+      toast(err.response?.data?.message || 'Action failed', 'error')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  const handleCheckIn  = (b) => runAction(b.id, () => bookingsApi.checkIn(b.id), `${b.guestName} checked in`)
+  const handleCheckOut = (b) => runAction(b.id, () => bookingsApi.checkOut(b.id), `${b.guestName} checked out`)
+  const handleConfirm  = (b) => runAction(b.id, () => bookingsApi.confirm(b.id), `Booking ${b.bookingNo} confirmed`)
+
+  const handleCancel = async ({ id, reason }) => {
     const b = bookings.find((x) => x.id === id)
-    cancelBooking({ id, reason })
-    toast(`Booking ${b?.bookingNo || ''} cancelled`, 'error')
+    await runAction(id, () => bookingsApi.cancel(id, { reason }), `Booking ${b?.bookingNo || ''} cancelled`, 'error')
     setCancelTarget(null)
   }
 
@@ -85,11 +123,16 @@ export default function Bookings() {
       title="Bookings"
       subtitle="Create and manage room reservations"
       icon="◷"
-      actions={<Button icon="＋" onClick={() => setShowNew(true)}>New Booking</Button>}
+      actions={
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
+          <Button icon="＋" onClick={() => setShowNew(true)}>New Booking</Button>
+        </div>
+      }
       stats={
         <>
           <StatCard icon="◷" tone="gold" label="Total bookings" value={stats.total} />
-          <StatCard icon="✓" tone="blue" label="Confirmed" value={stats.confirmed} hint={`${stats.pending} pending`} />
+          <StatCard icon="✓" tone="blue" label="Confirmed" value={stats.confirmed} hint={`${stats.checkedIn} checked in`} />
           <StatCard icon="₹" tone="green" label="Active value" value={formatCurrency(stats.revenue)} />
           <StatCard icon="!" tone="amber" label="Outstanding dues" value={formatCurrency(stats.dues)} />
         </>
@@ -97,25 +140,29 @@ export default function Bookings() {
     >
       <Card
         title="All Bookings"
-        actions={
-          <SearchInput value={query} onChange={setQuery} placeholder="Search name, no. or room" className="w-56" />
-        }
+        actions={<SearchInput value={query} onChange={setQuery} placeholder="Search name, no. or room" className="w-56" />}
       >
         <div className="px-5 py-3 border-b border-line">
-          <FilterTabs
-            tabs={TABS.map((t) => ({ ...t, count: counts[t.id] }))}
-            active={tab}
-            onChange={setTab}
-          />
+          <FilterTabs tabs={TABS.map((t) => ({ ...t, count: counts[t.id] }))} active={tab} onChange={setTab} />
         </div>
+
+        {error && (
+          <div className="px-5 py-3 text-sm text-danger-text bg-danger-bg border-b border-line">{error}</div>
+        )}
+
         <BookingsTable
           bookings={filtered}
+          loading={loading}
+          busyId={busyId}
+          onCheckIn={handleCheckIn}
+          onCheckOut={handleCheckOut}
+          onConfirm={handleConfirm}
           onCancel={setCancelTarget}
           emptyMessage={query ? 'No bookings match your search.' : 'Create a booking to get started.'}
         />
       </Card>
 
-      <NewBookingModal isOpen={showNew} onClose={() => setShowNew(false)} onSave={handleCreate} />
+      <NewBookingModal isOpen={showNew} onClose={() => setShowNew(false)} onSaved={handleCreated} />
       <CancelModal
         isOpen={!!cancelTarget}
         booking={cancelTarget}

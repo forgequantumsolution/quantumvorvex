@@ -1,9 +1,15 @@
 import { DataTable, StatusBadge, Button, EmptyState } from '../../ui-tw'
 import { formatCurrency, formatDate } from '../../../utils/format'
-import { balance, dateRangeLabel, stayLabel } from '../../../utils/booking'
+import { dateRangeLabel, stayLabel } from '../../../utils/booking'
 
-/** Bookings list. Shows a Cancel action for still-cancellable rows. */
-export default function BookingsTable({ bookings, onCancel, emptyMessage }) {
+/**
+ * Bookings list (API-backed). Shows guest, room, stay, pricing + payment, status,
+ * and the lifecycle actions valid for each row's status.
+ */
+export default function BookingsTable({
+  bookings, loading, busyId,
+  onConfirm, onCheckIn, onCheckOut, onCancel, emptyMessage,
+}) {
   const columns = [
     {
       key: 'booking',
@@ -12,6 +18,7 @@ export default function BookingsTable({ bookings, onCancel, emptyMessage }) {
         <div>
           <div className="font-medium text-ink">{b.guestName}</div>
           <div className="text-xs text-ink3 font-mono mt-0.5">{b.bookingNo}</div>
+          {b.guestPhone && <div className="text-xs text-ink3 mt-0.5">{b.guestPhone}</div>}
         </div>
       ),
     },
@@ -20,8 +27,10 @@ export default function BookingsTable({ bookings, onCancel, emptyMessage }) {
       header: 'Room',
       render: (b) => (
         <div>
-          <div className="text-ink">Room {b.room}</div>
-          <div className="text-xs text-ink3 mt-0.5">{b.roomType}</div>
+          <div className="text-ink">Room {b.roomNumber}</div>
+          <div className="text-xs text-ink3 mt-0.5">
+            {b.roomType}{(b.adults || b.children) ? ` · ${b.adults || 1}A${b.children ? ` ${b.children}C` : ''}` : ''}
+          </div>
         </div>
       ),
     },
@@ -40,10 +49,11 @@ export default function BookingsTable({ bookings, onCancel, emptyMessage }) {
       header: 'Amount',
       align: 'right',
       render: (b) => (
-        <div>
+        <div className="flex flex-col items-end gap-1">
           <div className="text-ink font-medium">{formatCurrency(b.amount)}</div>
-          <div className="text-xs text-ink3 mt-0.5">
-            {balance(b) > 0 ? `${formatCurrency(balance(b))} due` : 'Fully paid'}
+          <StatusBadge status={b.paymentStatus} dot={false} />
+          <div className="text-xs text-ink3">
+            {Number(b.balanceDue) > 0 ? `${formatCurrency(b.balanceDue)} due` : 'Fully paid'}
           </div>
         </div>
       ),
@@ -59,6 +69,9 @@ export default function BookingsTable({ bookings, onCancel, emptyMessage }) {
               {b.cancelReason}
             </div>
           )}
+          {b.status === 'CheckedOut' && b.checkedOutAt && (
+            <div className="text-[11px] text-ink3 mt-1">Out · {formatDate(b.checkedOutAt)}</div>
+          )}
         </div>
       ),
     },
@@ -66,12 +79,25 @@ export default function BookingsTable({ bookings, onCancel, emptyMessage }) {
       key: 'actions',
       header: '',
       align: 'right',
-      render: (b) =>
-        b.status === 'Confirmed' || b.status === 'Pending' ? (
-          <Button variant="ghost" size="sm" onClick={() => onCancel(b)}>Cancel</Button>
-        ) : b.status === 'CheckedOut' ? (
-          <span className="text-xs text-ink3">Out · {formatDate(b.checkedOutAt)}</span>
-        ) : null,
+      render: (b) => {
+        const busy = busyId === b.id
+        return (
+          <div className="flex items-center justify-end gap-1.5">
+            {b.status === 'Pending' && (
+              <Button variant="ghost" size="sm" disabled={busy} onClick={() => onConfirm(b)}>Confirm</Button>
+            )}
+            {(b.status === 'Confirmed' || b.status === 'Pending') && (
+              <Button size="sm" disabled={busy} onClick={() => onCheckIn(b)}>Check-in</Button>
+            )}
+            {b.status === 'CheckedIn' && (
+              <Button size="sm" disabled={busy} onClick={() => onCheckOut(b)}>Check-out</Button>
+            )}
+            {['Pending', 'Confirmed'].includes(b.status) && (
+              <Button variant="ghost" size="sm" disabled={busy} onClick={() => onCancel(b)}>Cancel</Button>
+            )}
+          </div>
+        )
+      },
     },
   ]
 
@@ -79,6 +105,7 @@ export default function BookingsTable({ bookings, onCancel, emptyMessage }) {
     <DataTable
       columns={columns}
       rows={bookings}
+      loading={loading}
       empty={<EmptyState icon="◷" title="No bookings here" message={emptyMessage} />}
     />
   )

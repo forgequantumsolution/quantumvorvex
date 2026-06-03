@@ -58,9 +58,16 @@ export const billingApi = {
 }
 
 export const bookingsApi = {
-  getAll: (params) => api.get('/bookings', { params }),
-  create: (data)   => api.post('/bookings', data),
-  update: (id, data) => api.put(`/bookings/${id}`, data),
+  getAll:   (params)   => api.get('/bookings', { params }),
+  getOne:   (id)       => api.get(`/bookings/${id}`),
+  create:   (data)     => api.post('/bookings', data),
+  update:   (id, data) => api.put(`/bookings/${id}`, data),
+  confirm:  (id)       => api.post(`/bookings/${id}/confirm`),
+  checkIn:  (id, data) => api.post(`/bookings/${id}/check-in`, data || {}),
+  checkOut: (id, data) => api.post(`/bookings/${id}/check-out`, data || {}),
+  cancel:   (id, data) => api.post(`/bookings/${id}/cancel`, data || {}),
+  noShow:   (id)       => api.post(`/bookings/${id}/no-show`),
+  remove:   (id)       => api.delete(`/bookings/${id}`),
 }
 
 export const documentsApi = {
@@ -94,7 +101,11 @@ export const notificationsApi = {
 }
 
 export const authApi = {
-  login:  (data) => api.post('/auth/login', data),
-  logout: ()     => api.post('/auth/logout'),
-  me:     ()     => api.get('/auth/me'),
+  login:          (data) => api.post('/auth/login', data),
+  logout:         ()     => api.post('/auth/logout'),
+  me:             ()     => api.get('/auth/me'),
+  forgotPassword: (data) => api.post('/auth/forgot-password', data),
+  resetPassword:  (data) => api.post('/auth/reset-password', data),
+  requestOtp:     (data) => api.post('/auth/otp/request', data),
+  verifyOtp:      (data) => api.post('/auth/otp/verify', data),
 }

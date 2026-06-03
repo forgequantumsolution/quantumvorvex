@@ -113,6 +113,7 @@ model Guest {
   invoices        Invoice[]
   payments        Payment[]
   reminders       Reminder[]
+  bookings        Booking[]
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 }
@@ -164,22 +165,57 @@ model Payment {
 model Booking {
   id                  String    @id @default(cuid())
   bookingNo           String    @unique
+
+  // ── Guest details (inline) + optional link to a Guest record ──
   guestName           String
+  guestPhone          String?
+  guestEmail          String?
+  guestAddress        String?
+  nationality         String?
+  idType              String?
+  idNumber            String?
+  adults              Int       @default(1)
+  children            Int       @default(0)
+  guestId             String?
+  guest               Guest?    @relation(fields: [guestId], references: [id])
+
+  // ── Room + stay ──
   roomId              String
   room                Room      @relation(fields: [roomId], references: [id])
-  stayType            String    @default("daily")
+  stayType            String    @default("daily")     // daily | monthly
   fromDate            DateTime
   toDate              DateTime?
   months              Int?
-  amount              Float
+  nights              Int?
+
+  // ── Pricing breakdown ──
+  roomRate            Float     @default(0)
+  subtotal            Float     @default(0)
+  discount            Float     @default(0)
+  taxRate             Float     @default(0)
+  taxAmount           Float     @default(0)
+  extraCharges        Float     @default(0)
+  amount              Float                            // grand total
   advance             Float     @default(0)
+  balance             Float     @default(0)
+  paymentStatus       String    @default("unpaid")     // unpaid | partial | paid
+
+  // ── Meta + lifecycle ──
   notes               String?
-  source              String    @default("walk_in")
+  specialRequests     String?
+  source              String    @default("walk_in")    // walk_in | phone | website | ota | referral | corporate
+  status              String    @default("Pending")    // Pending | Confirmed | CheckedIn | CheckedOut | Cancelled | NoShow
+  confirmedAt         DateTime?
+  checkedInAt         DateTime?
+  checkedOutAt        DateTime?
+  cancelledAt         DateTime?
+  cancelReason        String?
+
   selfCheckinToken    String?
   selfCheckinComplete Boolean   @default(false)
-  status              String    @default("Pending")
   propertyId          String?
   createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }
 
 model Notification {
@@ -200,6 +236,30 @@ model User {
   phone     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// ─── AUTH: password reset + passwordless OTP login ──────────────────────────────
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String                       // sha256 of the raw token (raw value only ever sent in email)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model LoginOtp {
+  id        String    @id @default(cuid())
+  email     String
+  codeHash  String                       // sha256 of the 6-digit code
+  expiresAt DateTime
+  attempts  Int       @default(0)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
 }
 
 model FoodPlan {
