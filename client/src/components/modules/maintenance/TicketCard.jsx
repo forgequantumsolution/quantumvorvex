@@ -10,7 +10,7 @@ const PRIORITY_BAR = {
 }
 
 /** A single maintenance ticket with an inline status switcher. */
-export default function TicketCard({ ticket, onStatusChange }) {
+export default function TicketCard({ ticket, busy, onStatusChange }) {
   return (
     <div className="relative bg-surface border border-line rounded-xl shadow-soft overflow-hidden flex flex-col">
       <span className={`absolute left-0 top-0 h-full w-1 ${PRIORITY_BAR[ticket.priority] || 'bg-line2'}`} />
@@ -19,7 +19,7 @@ export default function TicketCard({ ticket, onStatusChange }) {
         <div className="flex items-start justify-between gap-2">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-ink">Room {ticket.room}</span>
+              <span className="font-medium text-ink">Room {ticket.roomNumber || ticket.room}</span>
               <StatusBadge status={ticket.priority} />
             </div>
             <div className="text-xs text-ink3 font-mono mt-0.5">{ticket.ticketNo} · {ticket.category}</div>
@@ -44,9 +44,10 @@ export default function TicketCard({ ticket, onStatusChange }) {
         {TICKET_STATUSES.map((s) => (
           <button
             key={s}
+            disabled={busy}
             onClick={() => onStatusChange(ticket.id, s)}
             className={[
-              'text-xs px-2.5 py-1 rounded-md font-medium transition-colors',
+              'text-xs px-2.5 py-1 rounded-md font-medium transition-colors disabled:opacity-50',
               ticket.status === s
                 ? 'bg-gold text-black'
                 : 'bg-surface border border-line2 text-ink2 hover:border-gold hover:text-gold',

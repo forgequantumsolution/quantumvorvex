@@ -7,6 +7,7 @@ import { useToast } from '../../../hooks/useToast'
 import { bookingsApi } from '../../../api/client'
 import { formatCurrency } from '../../../utils/format'
 import { isUpcoming } from '../../../utils/booking'
+import { normalizeBooking as normalize } from '../../../utils/normalizeBooking'
 
 const TABS = [
   { id: 'all', label: 'All' },
@@ -16,14 +17,6 @@ const TABS = [
   { id: 'CheckedOut', label: 'Checked Out' },
   { id: 'Cancelled', label: 'Cancelled' },
 ]
-
-// Flatten the API booking (room is an object) into the shape the table reads.
-const normalize = (b) => ({
-  ...b,
-  roomNumber: typeof b.room === 'object' ? b.room?.number : b.room,
-  roomType: b.room?.type?.name || b.roomType || '',
-  balanceDue: b.balance != null ? b.balance : Math.max(0, (b.amount || 0) - (b.advance || 0)),
-})
 
 export default function Bookings() {
   const toast = useToast()

@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageWrapper, StatCard, Card, FilterTabs, SearchInput, Button, EmptyState } from '../../ui-tw'
 import TicketCard from './TicketCard'
 import NewTicketModal from './NewTicketModal'
-import { useAppSelector, useOpsActions } from '../../../store/hooks'
 import { useToast } from '../../../hooks/useToast'
+import { maintenanceApi } from '../../../api/client'
 
 const TABS = [
   { id: 'all', label: 'All' },
@@ -12,24 +12,38 @@ const TABS = [
   { id: 'Resolved', label: 'Resolved' },
 ]
 
-export default function Maintenance() {
-  const tickets = useAppSelector((s) => s.ops.tickets)
-  const { addTicket, updateTicketStatus } = useOpsActions()
-  const toast = useToast()
+const normalize = (t) => ({ ...t, roomNumber: t.room?.number || t.room || '' })
 
+export default function Maintenance() {
+  const toast = useToast()
+  const [tickets, setTickets] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [tab, setTab] = useState('all')
   const [query, setQuery] = useState('')
   const [showNew, setShowNew] = useState(false)
+  const [busyId, setBusyId] = useState(null)
 
-  const counts = useMemo(
-    () => ({
-      all: tickets.length,
-      Open: tickets.filter((t) => t.status === 'Open').length,
-      'In Progress': tickets.filter((t) => t.status === 'In Progress').length,
-      Resolved: tickets.filter((t) => t.status === 'Resolved').length,
-    }),
-    [tickets],
-  )
+  const load = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const { data } = await maintenanceApi.getAll()
+      setTickets((data.requests || []).map(normalize))
+    } catch {
+      setError('Could not load tickets. Make sure the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const counts = useMemo(() => ({
+    all: tickets.length,
+    Open: tickets.filter((t) => t.status === 'Open').length,
+    'In Progress': tickets.filter((t) => t.status === 'In Progress').length,
+    Resolved: tickets.filter((t) => t.status === 'Resolved').length,
+  }), [tickets])
 
   const urgent = useMemo(
     () => tickets.filter((t) => t.priority === 'Urgent' && t.status !== 'Resolved').length,
@@ -41,26 +55,37 @@ export default function Maintenance() {
     if (tab !== 'all') list = list.filter((t) => t.status === tab)
     const q = query.trim().toLowerCase()
     if (q) {
-      list = list.filter(
-        (t) =>
-          t.title.toLowerCase().includes(q) ||
-          t.room.includes(q) ||
-          t.ticketNo.toLowerCase().includes(q) ||
-          t.category.toLowerCase().includes(q),
-      )
+      list = list.filter((t) =>
+        t.title?.toLowerCase().includes(q) ||
+        String(t.roomNumber || '').includes(q) ||
+        t.ticketNo?.toLowerCase().includes(q) ||
+        t.category?.toLowerCase().includes(q))
     }
     return list
   }, [tickets, tab, query])
 
-  const handleCreate = (ticket) => {
-    addTicket(ticket)
-    toast(`Ticket ${ticket.ticketNo} created for Room ${ticket.room}`)
-    setShowNew(false)
+  const handleCreate = async (payload) => {
+    try {
+      const { data } = await maintenanceApi.create(payload)
+      setTickets((prev) => [normalize(data.request), ...prev])
+      toast(`Ticket ${data.request.ticketNo} created for Room ${data.request.room?.number}`)
+      setShowNew(false)
+    } catch (err) {
+      toast(err.response?.data?.message || err.response?.data?.error || 'Could not create ticket', 'error')
+    }
   }
 
-  const handleStatus = (id, status) => {
-    updateTicketStatus({ id, status })
-    toast(`Ticket marked ${status}`, status === 'Resolved' ? 'success' : 'info')
+  const handleStatus = async (id, status) => {
+    setBusyId(id)
+    try {
+      const { data } = await maintenanceApi.update(id, { status })
+      setTickets((prev) => prev.map((t) => (t.id === id ? normalize(data.request) : t)))
+      toast(`Ticket marked ${status}`, status === 'Resolved' ? 'success' : 'info')
+    } catch (err) {
+      toast(err.response?.data?.message || 'Update failed', 'error')
+    } finally {
+      setBusyId(null)
+    }
   }
 
   return (
@@ -68,7 +93,12 @@ export default function Maintenance() {
       title="Maintenance"
       subtitle="Track and resolve property maintenance issues"
       icon="🔧"
-      actions={<Button icon="＋" onClick={() => setShowNew(true)}>New Ticket</Button>}
+      actions={
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
+          <Button icon="＋" onClick={() => setShowNew(true)}>New Ticket</Button>
+        </div>
+      }
       stats={
         <>
           <StatCard icon="🔧" tone="gold" label="Total tickets" value={counts.all} />
@@ -87,23 +117,24 @@ export default function Maintenance() {
         </div>
 
         <div className="p-4">
+          {error && <div className="text-sm text-danger-text mb-3">{error}</div>}
           {filtered.length === 0 ? (
             <EmptyState
               icon="🔧"
-              title={query ? 'No matching tickets' : 'No tickets here'}
-              message={query ? 'Try a different search.' : 'Create a ticket to track an issue.'}
+              title={loading ? 'Loading…' : query ? 'No matching tickets' : 'No tickets here'}
+              message={loading ? 'Fetching tickets.' : query ? 'Try a different search.' : 'Create a ticket to track an issue.'}
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((t) => (
-                <TicketCard key={t.id} ticket={t} onStatusChange={handleStatus} />
+                <TicketCard key={t.id} ticket={t} busy={busyId === t.id} onStatusChange={handleStatus} />
               ))}
             </div>
           )}
         </div>
       </Card>
 
-      <NewTicketModal isOpen={showNew} existing={tickets} onClose={() => setShowNew(false)} onSave={handleCreate} />
+      <NewTicketModal isOpen={showNew} onClose={() => setShowNew(false)} onSave={handleCreate} />
     </PageWrapper>
   )
 }

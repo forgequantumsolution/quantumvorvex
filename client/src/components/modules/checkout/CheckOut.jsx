@@ -1,52 +1,69 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageWrapper, StatCard, Card, DataTable, StatusBadge, SearchInput, Button, EmptyState } from '../../ui-tw'
 import CheckOutModal from './CheckOutModal'
-import { useAppSelector, useOpsActions } from '../../../store/hooks'
 import { useToast } from '../../../hooks/useToast'
+import { bookingsApi } from '../../../api/client'
+import { normalizeBooking } from '../../../utils/normalizeBooking'
 import { formatCurrency, formatDate } from '../../../utils/format'
-import { balance, stayLabel } from '../../../utils/booking'
+import { stayLabel } from '../../../utils/booking'
 
 export default function CheckOut() {
-  const bookings = useAppSelector((s) => s.ops.bookings)
-  const { checkOutBooking } = useOpsActions()
   const toast = useToast()
+  const [bookings, setBookings] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [target, setTarget] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
 
-  // In-house guests = currently checked in.
-  const inHouse = useMemo(() => bookings.filter((b) => b.status === 'CheckedIn'), [bookings])
+  const load = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const { data } = await bookingsApi.getAll({ status: 'CheckedIn' })
+      setBookings((data.bookings || []).map(normalizeBooking))
+    } catch {
+      setError('Could not load in-house guests. Make sure the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
-  const stats = useMemo(
-    () => ({
-      inHouse: inHouse.length,
-      dueAmount: inHouse.reduce((s, b) => s + balance(b), 0),
-      departedToday: bookings.filter((b) => b.status === 'CheckedOut' && b.checkedOutAt).length,
-      withBalance: inHouse.filter((b) => balance(b) > 0).length,
-    }),
-    [inHouse, bookings],
-  )
+  useEffect(() => { load() }, [load])
+
+  const stats = useMemo(() => ({
+    inHouse: bookings.length,
+    dueAmount: bookings.reduce((s, b) => s + (Number(b.balanceDue) || 0), 0),
+    withBalance: bookings.filter((b) => Number(b.balanceDue) > 0).length,
+    settled: bookings.filter((b) => Number(b.balanceDue) <= 0).length,
+  }), [bookings])
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return inHouse
-    return inHouse.filter(
-      (b) =>
-        b.guestName.toLowerCase().includes(q) ||
-        b.bookingNo.toLowerCase().includes(q) ||
-        b.room.includes(q),
-    )
-  }, [inHouse, query])
+    if (!q) return bookings
+    return bookings.filter((b) =>
+      b.guestName?.toLowerCase().includes(q) ||
+      b.bookingNo?.toLowerCase().includes(q) ||
+      String(b.roomNumber || '').includes(q))
+  }, [bookings, query])
 
-  const handleCheckOut = (booking) => {
-    checkOutBooking(booking.id)
-    toast(`${booking.guestName} checked out from Room ${booking.room}`)
-    setTarget(null)
+  const handleCheckOut = async ({ id, finalPayment, extraCharges }) => {
+    setSubmitting(true)
+    const b = bookings.find((x) => x.id === id)
+    try {
+      await bookingsApi.checkOut(id, { finalPayment, extraCharges })
+      setBookings((prev) => prev.filter((x) => x.id !== id))   // leaves the in-house list
+      toast(`${b?.guestName || 'Guest'} checked out from Room ${b?.roomNumber}`)
+      setTarget(null)
+    } catch (err) {
+      toast(err.response?.data?.message || 'Check-out failed', 'error')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const columns = [
     {
-      key: 'guest',
-      header: 'Guest',
+      key: 'guest', header: 'Guest',
       render: (b) => (
         <div>
           <div className="font-medium text-ink">{b.guestName}</div>
@@ -54,10 +71,9 @@ export default function CheckOut() {
         </div>
       ),
     },
-    { key: 'room', header: 'Room', render: (b) => `${b.room} · ${b.roomType}` },
+    { key: 'room', header: 'Room', render: (b) => `${b.roomNumber} · ${b.roomType}` },
     {
-      key: 'stay',
-      header: 'Stay',
+      key: 'stay', header: 'Stay',
       render: (b) => (
         <div>
           <div className="text-ink">{stayLabel(b)}</div>
@@ -66,24 +82,16 @@ export default function CheckOut() {
       ),
     },
     {
-      key: 'balance',
-      header: 'Balance',
-      align: 'right',
+      key: 'balance', header: 'Balance', align: 'right',
       render: (b) =>
-        balance(b) > 0 ? (
-          <span className="text-danger-text font-semibold">{formatCurrency(balance(b))}</span>
-        ) : (
-          <StatusBadge status="Resolved" label="Settled" dot={false} />
-        ),
+        Number(b.balanceDue) > 0
+          ? <span className="text-danger-text font-semibold">{formatCurrency(b.balanceDue)}</span>
+          : <StatusBadge status="Resolved" label="Settled" dot={false} />,
     },
     {
-      key: 'actions',
-      header: '',
-      align: 'right',
+      key: 'actions', header: '', align: 'right',
       render: (b) => (
-        <Button variant="success" size="sm" icon="✓" onClick={() => setTarget(b)}>
-          Check Out
-        </Button>
+        <Button variant="success" size="sm" icon="✓" onClick={() => setTarget(b)}>Check Out</Button>
       ),
     },
   ]
@@ -93,31 +101,43 @@ export default function CheckOut() {
       title="Check-Out"
       subtitle="Settle bills and release rooms for departing guests"
       icon="↘"
-      actions={<SearchInput value={query} onChange={setQuery} placeholder="Search in-house" className="w-56" />}
+      actions={
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
+          <SearchInput value={query} onChange={setQuery} placeholder="Search in-house" className="w-56" />
+        </div>
+      }
       stats={
         <>
           <StatCard icon="🏨" tone="gold" label="In-house guests" value={stats.inHouse} />
           <StatCard icon="!" tone="amber" label="With balance due" value={stats.withBalance} />
           <StatCard icon="₹" tone="red" label="Total collectable" value={formatCurrency(stats.dueAmount)} />
-          <StatCard icon="✓" tone="green" label="Checked out" value={stats.departedToday} />
+          <StatCard icon="✓" tone="green" label="Fully settled" value={stats.settled} />
         </>
       }
     >
       <Card title="In-House Guests">
+        {error && <div className="px-5 py-3 text-sm text-danger-text border-b border-line">{error}</div>}
         <DataTable
           columns={columns}
           rows={filtered}
           empty={
             <EmptyState
               icon="↘"
-              title={query ? 'No matching guests' : 'No guests in-house'}
-              message={query ? 'Try a different search.' : 'Check in a guest to see them here.'}
+              title={loading ? 'Loading…' : query ? 'No matching guests' : 'No guests in-house'}
+              message={loading ? 'Fetching in-house guests.' : query ? 'Try a different search.' : 'Check in a guest to see them here.'}
             />
           }
         />
       </Card>
 
-      <CheckOutModal isOpen={!!target} booking={target} onClose={() => setTarget(null)} onConfirm={handleCheckOut} />
+      <CheckOutModal
+        isOpen={!!target}
+        booking={target}
+        submitting={submitting}
+        onClose={() => setTarget(null)}
+        onConfirm={handleCheckOut}
+      />
     </PageWrapper>
   )
 }

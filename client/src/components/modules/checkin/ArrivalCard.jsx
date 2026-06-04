@@ -1,13 +1,14 @@
 import { StatusBadge, Button } from '../../ui-tw'
 import { formatCurrency, formatDate } from '../../../utils/format'
-import { balance, stayLabel } from '../../../utils/booking'
+import { stayLabel } from '../../../utils/booking'
 
 function initials(name = '') {
   return name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
 }
 
 /** Arrival card for an expected guest, with a one-click Check-In action. */
-export default function ArrivalCard({ booking, isToday, onCheckIn }) {
+export default function ArrivalCard({ booking, isToday, busy, onCheckIn }) {
+  const due = Number(booking.balanceDue) || 0
   return (
     <div className="bg-surface border border-line rounded-xl shadow-soft p-4 flex flex-col gap-3">
       <div className="flex items-start gap-3">
@@ -29,15 +30,15 @@ export default function ArrivalCard({ booking, isToday, onCheckIn }) {
       </div>
 
       <div className="grid grid-cols-2 gap-y-2 gap-x-3 text-sm border-t border-line pt-3">
-        <Detail label="Room" value={`${booking.room} · ${booking.roomType}`} />
+        <Detail label="Room" value={`${booking.roomNumber} · ${booking.roomType}`} />
         <Detail label="Guests" value={booking.guests} />
         <Detail label="Arrival" value={formatDate(booking.fromDate)} />
         <Detail label="Stay" value={stayLabel(booking)} />
         <Detail label="Amount" value={formatCurrency(booking.amount)} />
         <Detail
           label="Balance"
-          value={balance(booking) > 0 ? formatCurrency(balance(booking)) : 'Paid'}
-          highlight={balance(booking) > 0}
+          value={due > 0 ? formatCurrency(due) : 'Paid'}
+          highlight={due > 0}
         />
       </div>
 
@@ -47,8 +48,8 @@ export default function ArrivalCard({ booking, isToday, onCheckIn }) {
         </div>
       )}
 
-      <Button className="w-full" icon="↗" onClick={() => onCheckIn(booking)}>
-        Check In
+      <Button className="w-full" icon="↗" disabled={busy} onClick={() => onCheckIn(booking)}>
+        {busy ? 'Checking in…' : 'Check In'}
       </Button>
     </div>
   )

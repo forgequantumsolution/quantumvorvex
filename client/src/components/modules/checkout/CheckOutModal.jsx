@@ -1,25 +1,45 @@
-import { Modal, Button } from '../../ui-tw'
+import { useEffect, useState } from 'react'
+import { Modal, Button, Field } from '../../ui-tw'
 import { formatCurrency, formatDate } from '../../../utils/format'
-import { balance, stayLabel } from '../../../utils/booking'
+import { stayLabel } from '../../../utils/booking'
 
-/** Final bill summary shown before confirming a guest's check-out. */
-export default function CheckOutModal({ isOpen, booking, onClose, onConfirm }) {
+/** Final bill + settlement before confirming a guest's check-out. */
+export default function CheckOutModal({ isOpen, booking, submitting, onClose, onConfirm }) {
+  const [extra, setExtra] = useState(0)
+  const [payment, setPayment] = useState(0)
+
+  const baseDue = Number(booking?.balanceDue) || 0
+  // New balance after adding extra charges and collecting a final payment
+  const dueAfter = baseDue + (Number(extra) || 0) - (Number(payment) || 0)
+
+  // When a new booking is targeted, default the payment to the full balance.
+  useEffect(() => {
+    if (booking) { setExtra(0); setPayment(baseDue > 0 ? baseDue : 0) }
+  }, [booking]) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!booking) return null
-
-  const due = balance(booking)
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="Check Out"
-      subtitle={`${booking.guestName} · Room ${booking.room}`}
+      subtitle={`${booking.guestName} · Room ${booking.roomNumber}`}
       size="sm"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="success" onClick={() => onConfirm(booking)} icon="✓">
-            {due > 0 ? `Settle ₹${due.toLocaleString('en-IN')} & Check Out` : 'Confirm Check Out'}
+          <Button variant="ghost" onClick={onClose} disabled={submitting}>Cancel</Button>
+          <Button
+            variant="success"
+            icon="✓"
+            disabled={submitting}
+            onClick={() => onConfirm({
+              id: booking.id,
+              extraCharges: (Number(booking.extraCharges) || 0) + (Number(extra) || 0),
+              finalPayment: Number(payment) || 0,
+            })}
+          >
+            {submitting ? 'Processing…' : Number(payment) > 0 ? `Collect ₹${Number(payment).toLocaleString('en-IN')} & Check Out` : 'Confirm Check Out'}
           </Button>
         </>
       }
@@ -30,25 +50,33 @@ export default function CheckOutModal({ isOpen, booking, onClose, onConfirm }) {
           <div className="font-mono text-sm text-ink mt-0.5">{booking.bookingNo}</div>
         </div>
         <div className="px-4 py-3 text-sm space-y-2">
-          <Line label="Room" value={`${booking.room} · ${booking.roomType}`} />
+          <Line label="Room" value={`${booking.roomNumber} · ${booking.roomType}`} />
           <Line label="Checked in" value={formatDate(booking.checkedInAt || booking.fromDate)} />
           <Line label="Duration" value={stayLabel(booking)} />
-          <Line
-            label={booking.stayType === 'monthly' ? 'Monthly rate' : `Room (${stayLabel(booking)})`}
-            value={formatCurrency(booking.amount)}
-          />
+          <Line label="Total amount" value={formatCurrency(booking.amount)} />
           <Line label="Advance paid" value={`− ${formatCurrency(booking.advance)}`} />
-          <div className="border-t border-line pt-2 mt-2 flex items-center justify-between">
-            <span className="font-syne font-semibold text-ink">Balance due</span>
-            <span className={`font-syne font-bold text-lg ${due > 0 ? 'text-danger-text' : 'text-success-text'}`}>
-              {due > 0 ? formatCurrency(due) : 'Settled'}
-            </span>
+          <div className="border-t border-line pt-2 mt-2">
+            <Line label="Balance before settlement" value={formatCurrency(baseDue)} />
           </div>
         </div>
       </div>
 
-      <p className="mt-4 text-[12.5px] text-ink3">
-        Confirming releases Room {booking.room} and moves the guest to checked-out history.
+      <div className="grid grid-cols-2 gap-3 mt-4">
+        <Field label="Extra charges (₹)" type="number" min="0" value={extra}
+               onChange={(e) => setExtra(e.target.value)} placeholder="0" />
+        <Field label="Collect now (₹)" type="number" min="0" value={payment}
+               onChange={(e) => setPayment(e.target.value)} placeholder="0" />
+      </div>
+
+      <div className="mt-4 flex items-center justify-between rounded-lg bg-surface2 border border-line px-4 py-3">
+        <span className="font-syne font-semibold text-ink">Balance after check-out</span>
+        <span className={`font-syne font-bold text-lg ${dueAfter > 0 ? 'text-danger-text' : 'text-success-text'}`}>
+          {dueAfter > 0 ? formatCurrency(dueAfter) : 'Settled'}
+        </span>
+      </div>
+
+      <p className="mt-3 text-[12.5px] text-ink3">
+        Confirming releases Room {booking.roomNumber} and moves the guest to checked-out history.
       </p>
     </Modal>
   )

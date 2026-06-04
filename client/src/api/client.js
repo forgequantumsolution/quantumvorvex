@@ -100,6 +100,15 @@ export const notificationsApi = {
   clearAll: ()   => api.delete('/notifications'),
 }
 
+export const maintenanceApi = {
+  getAll:    (params)   => api.get('/maintenance', { params }),
+  create:    (data)     => api.post('/maintenance', data),
+  update:    (id, data) => api.put(`/maintenance/${id}`, data),
+  addNote:   (id, data) => api.post(`/maintenance/${id}/notes`, data),
+  remove:    (id)       => api.delete(`/maintenance/${id}`),
+  schedules: ()         => api.get('/maintenance/schedule'),
+}
+
 export const authApi = {
   login:          (data) => api.post('/auth/login', data),
   logout:         ()     => api.post('/auth/logout'),

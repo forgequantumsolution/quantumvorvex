@@ -1,31 +1,41 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Modal, Field, Button } from '../../ui-tw'
+import { roomsApi } from '../../../api/client'
 import { TICKET_CATEGORIES, TICKET_PRIORITIES } from '../../../data/opsSeed'
-import { TODAY } from '../../../utils/booking'
 
 const EMPTY = {
-  room: '', category: TICKET_CATEGORIES[0], title: '',
+  roomId: '', category: TICKET_CATEGORIES[0], title: '',
   description: '', priority: 'Medium', assignedTo: '', reportedBy: 'Front Desk',
 }
 
-function nextTicketNo(tickets) {
-  const max = tickets.reduce((m, t) => {
-    const n = parseInt((t.ticketNo || '').split('-').pop(), 10)
-    return isNaN(n) ? m : Math.max(m, n)
-  }, 0)
-  return `MT-2026-${String(max + 1).padStart(3, '0')}`
-}
-
-/** Create a maintenance ticket. Calls onSave(ticket) with a shaped record. */
-export default function NewTicketModal({ isOpen, onClose, onSave, existing }) {
+/**
+ * Create a maintenance ticket. Loads real rooms from the API and calls
+ * onSave(payload) with the API-shaped body. The parent posts it.
+ */
+export default function NewTicketModal({ isOpen, onClose, onSave }) {
   const [values, setValues] = useState(EMPTY)
   const [errors, setErrors] = useState({})
+  const [rooms, setRooms] = useState([])
+  const [loadingRooms, setLoadingRooms] = useState(false)
 
   const set = (k) => (e) => setValues((v) => ({ ...v, [k]: e.target.value }))
 
+  useEffect(() => {
+    if (!isOpen) return
+    setLoadingRooms(true)
+    roomsApi.getAll()
+      .then((res) => {
+        const list = res.data?.rooms || res.data || []
+        setRooms(list)
+        setValues((v) => ({ ...v, roomId: v.roomId || list[0]?.id || '' }))
+      })
+      .catch(() => setRooms([]))
+      .finally(() => setLoadingRooms(false))
+  }, [isOpen])
+
   const validate = () => {
     const e = {}
-    if (!values.room.trim()) e.room = 'Room number is required'
+    if (!values.roomId) e.roomId = 'Select a room'
     if (!values.title.trim()) e.title = 'A short title is required'
     setErrors(e)
     return Object.keys(e).length === 0
@@ -34,28 +44,19 @@ export default function NewTicketModal({ isOpen, onClose, onSave, existing }) {
   const handleSubmit = () => {
     if (!validate()) return
     onSave({
-      id: `mt-${Date.now()}`,
-      ticketNo: nextTicketNo(existing),
-      room: values.room.trim(),
+      roomId: values.roomId,
       category: values.category,
       title: values.title.trim(),
-      description: values.description.trim(),
+      description: values.description.trim() || undefined,
       priority: values.priority,
-      status: 'Open',
-      assignedTo: values.assignedTo.trim() || 'Unassigned',
+      assignedTo: values.assignedTo.trim() || undefined,
       reportedBy: values.reportedBy,
-      createdAt: TODAY,
-      resolvedAt: null,
     })
     setValues(EMPTY)
     setErrors({})
   }
 
-  const close = () => {
-    setValues(EMPTY)
-    setErrors({})
-    onClose()
-  }
+  const close = () => { setValues(EMPTY); setErrors({}); onClose() }
 
   return (
     <Modal
@@ -66,12 +67,19 @@ export default function NewTicketModal({ isOpen, onClose, onSave, existing }) {
       footer={
         <>
           <Button variant="ghost" onClick={close}>Cancel</Button>
-          <Button onClick={handleSubmit} icon="＋">Create Ticket</Button>
+          <Button onClick={handleSubmit} icon="＋" disabled={loadingRooms}>Create Ticket</Button>
         </>
       }
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Room" value={values.room} onChange={set('room')} placeholder="e.g. 204" error={errors.room} required />
+        <Field label="Room" value={values.roomId} onChange={set('roomId')} error={errors.roomId}
+               options={
+                 loadingRooms
+                   ? [{ value: '', label: 'Loading rooms…' }]
+                   : rooms.length
+                     ? rooms.map((r) => ({ value: r.id, label: `Room ${r.number}` }))
+                     : [{ value: '', label: 'No rooms found' }]
+               } />
         <Field label="Category" value={values.category} onChange={set('category')} options={TICKET_CATEGORIES} />
         <Field label="Title" value={values.title} onChange={set('title')} placeholder="Short summary"
                error={errors.title} required className="sm:col-span-2" />
