@@ -72,7 +72,21 @@ quantumvorvex/
    JWT_SECRET="<32+ random chars — node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\">"
    ```
 
-3. **Create the database schema and seed demo data:**
+3. **Start PostgreSQL.** If you don't have a local Postgres, the quickest option is
+   Docker (matches the `DATABASE_URL` above):
+   ```bash
+   docker run --name vorvex-pg --restart unless-stopped \
+     -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
+     -e POSTGRES_DB=quantumvorvex -p 5432:5432 -d postgres:16
+   ```
+   The data persists across restarts. After a reboot (or restarting Docker), the
+   container comes back automatically thanks to `--restart unless-stopped`; if it's
+   stopped you can bring it back with:
+   ```bash
+   docker start vorvex-pg
+   ```
+
+4. **Create the database schema and seed demo data:**
    ```bash
    cd server
    npx prisma migrate dev --name init   # creates tables in PostgreSQL

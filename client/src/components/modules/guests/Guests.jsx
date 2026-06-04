@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Formik, Form } from 'formik'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
@@ -6,81 +6,72 @@ import Tabs from '../../ui/Tabs'
 import FormikField from '../../ui/FormikField'
 import { useToast } from '../../../hooks/useToast'
 import { useUiActions } from '../../../store/hooks'
+import { guestsApi } from '../../../api/client'
 import { guestEditSchema } from '../../../validation/guestSchema'
 import { formatDate, formatCurrency, statusColor } from '../../../utils/format'
 
-// ─── Mock Data ─────────────────────────────────────────────────────────────────
+// tags/amenities/facilities are stored as JSON strings server-side.
+function parseArr(v) {
+  if (Array.isArray(v)) return v
+  if (typeof v === 'string') { try { const p = JSON.parse(v); return Array.isArray(p) ? p : [] } catch { return [] } }
+  return []
+}
 
-const MOCK_GUESTS = [
-  {
-    id: '1', docId: 'DOC-0001', name: 'Rahul Sharma', phone: '9876543210', email: 'rahul@email.com',
-    room: '102', stayType: 'monthly', checkInDate: '2026-03-01', checkOutDate: null, months: 3,
-    status: 'Active', foodPlan: 'Breakfast Only', tags: ['VIP'], stayCount: 3, idType: 'Aadhaar',
-    idNumber: '1234-5678-9012', documents: 2, amenities: ['AC', 'WiFi'], facilities: ['AC', 'WiFi', 'TV'],
-    nationality: 'Indian', address: '14, Residency Road, Bengaluru', advance: 5000,
-    billingHistory: [
-      { invoiceNo: 'INV-001', period: 'Mar 2026', total: 13776, status: 'Paid',    paidOn: '2026-04-02', method: 'UPI' },
-    ],
-    commLog: [
-      { type: 'WhatsApp', msg: 'Welcome message sent', time: '2026-03-01 12:05' },
-      { type: 'Receipt',  msg: 'INV-001 PDF shared',   time: '2026-04-02 11:30' },
-    ],
-  },
-  {
-    id: '2', docId: 'DOC-0002', name: 'Priya Patel', phone: '9123456789', email: 'priya@email.com',
-    room: '205', stayType: 'daily', checkInDate: '2026-04-03', checkOutDate: '2026-04-10', months: null,
-    status: 'Active', foodPlan: 'All Meals', tags: ['Corporate'], stayCount: 1, idType: 'PAN',
-    idNumber: 'ABCDE1234F', documents: 3, amenities: [], facilities: ['AC', 'WiFi'],
-    nationality: 'Indian', address: 'C-12, Sector 5, Gurugram', advance: 2000,
-    billingHistory: [
-      { invoiceNo: 'INV-002', period: '03–10 Apr 2026', total: 9016, status: 'Pending', paidOn: null, method: null },
-    ],
-    commLog: [
-      { type: 'WhatsApp', msg: 'Booking confirmation sent', time: '2026-04-03 09:10' },
-    ],
-  },
-  {
-    id: '3', docId: 'DOC-0003', name: 'Ankit Singh', phone: '9988776655', email: '',
-    room: '312', stayType: 'monthly', checkInDate: '2026-03-15', checkOutDate: null, months: 1,
-    status: 'Due', foodPlan: 'No Meals', tags: ['Long-term'], stayCount: 5, idType: 'Aadhaar',
-    idNumber: '9876-5432-1098', documents: 4, amenities: ['Mini Fridge'], facilities: ['AC'],
-    nationality: 'Indian', address: 'Plot 7, Anand Nagar, Pune', advance: 0,
-    billingHistory: [
-      { invoiceNo: 'INV-003', period: 'Mar 2026', total: 17024, status: 'Overdue', paidOn: null, method: null },
-    ],
-    commLog: [
-      { type: 'SMS', msg: 'Payment due reminder sent', time: '2026-04-01 10:00' },
-    ],
-  },
-  {
-    id: '4', docId: 'DOC-0004', name: 'Sneha Rao', phone: '9654321098', email: 'sneha@email.com',
-    room: '118', stayType: 'daily', checkInDate: '2026-04-01', checkOutDate: '2026-04-06', months: null,
-    status: 'Due', foodPlan: 'Dinner Only', tags: [], stayCount: 2, idType: 'Passport',
-    idNumber: 'P1234567', documents: 2, amenities: [], facilities: ['WiFi'],
-    nationality: 'Indian', address: '8B, Marine Drive, Mumbai', advance: 1000,
-    billingHistory: [
-      { invoiceNo: 'INV-006', period: '01–06 Apr 2026', total: 6000, status: 'Pending', paidOn: null, method: null },
-    ],
-    commLog: [
-      { type: 'WhatsApp', msg: 'Check-out reminder sent', time: '2026-04-05 08:00' },
-    ],
-  },
-  {
-    id: '5', docId: 'DOC-0005', name: 'Vijay Kumar', phone: '9543210987', email: 'vijay@email.com',
-    room: '221', stayType: 'monthly', checkInDate: '2026-02-01', checkOutDate: '2026-04-01', months: 2,
-    status: 'Checked Out', foodPlan: 'Breakfast Only', tags: ['VIP', 'Long-term'], stayCount: 8, idType: 'Voter ID',
-    idNumber: 'ABC1234567', documents: 3, amenities: [], facilities: ['AC', 'WiFi', 'TV', 'Geyser'],
-    nationality: 'Indian', address: '22, Vasant Vihar, New Delhi', advance: 10000,
-    billingHistory: [
-      { invoiceNo: 'INV-004', period: 'Feb 2026', total: 15288, status: 'Paid', paidOn: '2026-03-02', method: 'Bank Transfer' },
-      { invoiceNo: 'INV-005', period: 'Mar 2026', total: 15288, status: 'Paid', paidOn: '2026-04-01', method: 'UPI' },
-    ],
-    commLog: [
-      { type: 'WhatsApp', msg: 'Farewell message sent', time: '2026-04-01 11:00' },
-      { type: 'Receipt',  msg: 'Final invoice PDF shared', time: '2026-04-01 11:05' },
-    ],
-  },
-]
+// Map an API guest (with room/_count/invoices relations) to the flat shape the
+// UI renders. Fields the API doesn't track (commLog) get safe defaults.
+function normalizeGuest(g) {
+  return {
+    id: g.id,
+    docId: g.docId,
+    name: g.name,
+    phone: g.phone,
+    email: g.email || '',
+    room: g.room?.number || '',
+    roomId: g.roomId,
+    stayType: g.stayType || 'daily',
+    checkInDate: g.checkInDate,
+    checkOutDate: g.checkOutDate,
+    months: g.months,
+    status: g.status,
+    foodPlan: g.foodPlan || 'No Meals',
+    tags: parseArr(g.tags),
+    stayCount: g.stayCount || 1,
+    idType: g.idType,
+    idNumber: g.idNumber,
+    documents: g._count?.documents ?? (Array.isArray(g.documents) ? g.documents.length : 0),
+    amenities: parseArr(g.amenities),
+    facilities: parseArr(g.facilities),
+    nationality: g.nationality || '',
+    address: g.address || '',
+    advance: g.deposit || 0,
+    billingHistory: (g.invoices || []).map((inv) => ({
+      invoiceNo: inv.invoiceNo,
+      period: inv.period,
+      total: inv.total,
+      status: inv.status,
+      paidOn: inv.paidAt || null,
+      method: inv.method || null,
+    })),
+    commLog: [],
+  }
+}
+
+// Only these columns may be sent to PUT /guests/:id — the rest are UI-only.
+function editPayload(values) {
+  const payload = {
+    name: values.name,
+    phone: values.phone,
+    email: values.email || null,
+    stayType: values.stayType,
+    foodPlan: values.foodPlan,
+    status: values.status,
+    tags: values.tags || [],
+  }
+  if (values.checkInDate) payload.checkInDate = values.checkInDate
+  if (values.stayType === 'monthly') payload.months = Number(values.months) || 1
+  else if (values.checkOutDate) payload.checkOutDate = values.checkOutDate
+  return payload
+}
 
 const FOOD_PLANS = ['Breakfast Only', 'All Meals', 'Dinner Only', 'No Meals']
 const GUEST_TAGS = ['VIP', 'Corporate', 'Long-term']
@@ -578,7 +569,9 @@ export default function Guests() {
   const addToast = useToast()
   const { setActivePanel } = useUiActions()
 
-  const [guests, setGuests] = useState(MOCK_GUESTS)
+  const [guests, setGuests] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [stayFilter, setStayFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -586,6 +579,20 @@ export default function Guests() {
   const [profileGuest,  setProfileGuest]  = useState(null)
   const [checkoutGuest, setCheckoutGuest] = useState(null)
   const [editGuest,     setEditGuest]     = useState(null)
+
+  const load = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const { data } = await guestsApi.getAll()
+      setGuests((data.guests || []).map(normalizeGuest))
+    } catch {
+      setError('Could not load guests. Make sure the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
 
   const filtered = useMemo(() => guests.filter(g => {
     const q = search.toLowerCase()
@@ -599,16 +606,36 @@ export default function Guests() {
   const dueCount         = guests.filter(g => g.status === 'Due').length
   const checkedOutCount  = guests.filter(g => g.status === 'Checked Out').length
 
-  const handleCheckoutConfirm = (guest) => {
-    setGuests(gs => gs.map(g => g.id === guest.id ? { ...g, status: 'Checked Out', room: '' } : g))
-    setCheckoutGuest(null)
-    addToast(`${guest.name} checked out. Room marked for housekeeping.`, 'success')
+  const handleCheckoutConfirm = async (guest) => {
+    try {
+      await guestsApi.checkout(guest.id)
+      setCheckoutGuest(null)
+      addToast(`${guest.name} checked out. Room marked for housekeeping.`, 'success')
+      load()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Checkout failed', 'error')
+    }
   }
 
-  const handleEditSave = (updated) => {
-    setGuests(gs => gs.map(g => g.id === updated.id ? updated : g))
-    setEditGuest(null)
-    addToast('Guest details updated', 'success')
+  const handleEditSave = async (updated) => {
+    try {
+      await guestsApi.update(updated.id, editPayload(updated))
+      setEditGuest(null)
+      addToast('Guest details updated', 'success')
+      load()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not update guest', 'error')
+    }
+  }
+
+  // Open the profile with list data immediately, then enrich with detail
+  // (documents + invoices) from GET /guests/:id.
+  const openProfile = async (guest) => {
+    setProfileGuest(guest)
+    try {
+      const { data } = await guestsApi.getOne(guest.id)
+      if (data.guest) setProfileGuest(normalizeGuest(data.guest))
+    } catch { /* keep list-level data */ }
   }
 
   const openCheckout = (guest) => { setProfileGuest(null); setCheckoutGuest(guest) }
@@ -623,10 +650,17 @@ export default function Guests() {
           <p style={{ margin: '4px 0 0', color: 'var(--text3)', fontSize: '13px' }}>Guest registry, stay history & billing</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn btn-outline btn-sm" onClick={load} disabled={loading}>↻ Refresh</button>
           <button className="btn btn-outline btn-sm" onClick={() => exportGuestCSV(filtered)}>↓ Export CSV</button>
           <button className="btn btn-primary" onClick={() => setActivePanel('checkin')}>+ Check-In</button>
         </div>
       </div>
+
+      {error && (
+        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+          {error}
+        </div>
+      )}
 
       {/* Summary Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '18px' }}>
@@ -672,12 +706,12 @@ export default function Guests() {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={11}><div className="empty-state">No guests found</div></td></tr>
+                <tr><td colSpan={11}><div className="empty-state">{loading ? 'Loading guests…' : 'No guests found'}</div></td></tr>
               )}
               {filtered.map(guest => {
                 const dueDate = getDueDate(guest)
                 return (
-                  <tr key={guest.id} style={{ cursor: 'pointer' }} onClick={() => setProfileGuest(guest)}>
+                  <tr key={guest.id} style={{ cursor: 'pointer' }} onClick={() => openProfile(guest)}>
                     <td><span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--gold)', fontSize: '12px', fontWeight: 600 }}>{guest.docId}</span></td>
                     <td>
                       <div style={{ fontWeight: 600, color: 'var(--text)' }}>{guest.name}</div>
@@ -693,7 +727,7 @@ export default function Guests() {
                     <td><Badge type={statusColor(guest.status).replace('badge-', '')}>{guest.status}</Badge></td>
                     <td onClick={e => e.stopPropagation()}>
                       <div style={{ display: 'flex', gap: '5px' }}>
-                        <button className="btn btn-outline btn-xs" onClick={() => setProfileGuest(guest)}>View</button>
+                        <button className="btn btn-outline btn-xs" onClick={() => openProfile(guest)}>View</button>
                         {(guest.status === 'Active' || guest.status === 'Due') && (
                           <button className="btn btn-danger btn-xs" onClick={() => setCheckoutGuest(guest)}>Checkout</button>
                         )}

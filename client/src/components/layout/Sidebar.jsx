@@ -13,6 +13,30 @@ const NAV_SECTIONS = [
       { id: 'maintenance',   label: 'Maintenance',   icon: '🔧', shortcut: 'M' },
     ],
   },
+  {
+    label: 'Operations',
+    items: [
+      { id: 'guests',        label: 'Guests',        icon: '🧑', shortcut: 'G' },
+      { id: 'rooms',         label: 'Rooms',         icon: '🛏', shortcut: 'R' },
+      { id: 'documents',     label: 'Documents',     icon: '📄' },
+      { id: 'food',          label: 'Food',          icon: '🍽' },
+      { id: 'housekeeping',  label: 'Housekeeping',  icon: '🧹', shortcut: 'H' },
+    ],
+  },
+  {
+    label: 'Finance',
+    items: [
+      { id: 'billing',       label: 'Billing',       icon: '💳' },
+      { id: 'reports',       label: 'Reports',       icon: '📊' },
+    ],
+  },
+  {
+    label: 'Administration',
+    items: [
+      { id: 'staff',         label: 'Staff',         icon: '👤' },
+      { id: 'settings',      label: 'Settings',      icon: '⚙' },
+    ],
+  },
 ]
 
 function getInitials(name = '') {

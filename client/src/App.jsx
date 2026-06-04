@@ -23,6 +23,15 @@ const CheckIn       = lazy(() => import('./components/modules/checkin/CheckIn'))
 const CheckOut      = lazy(() => import('./components/modules/checkout/CheckOut'))
 const Cancellations = lazy(() => import('./components/modules/cancellations/Cancellations'))
 const Maintenance   = lazy(() => import('./components/modules/maintenance/Maintenance'))
+const Housekeeping  = lazy(() => import('./components/modules/housekeeping/Housekeeping'))
+const Staff         = lazy(() => import('./components/modules/staff/Staff'))
+const Guests        = lazy(() => import('./components/modules/guests/Guests'))
+const Rooms         = lazy(() => import('./components/modules/rooms/Rooms'))
+const Billing       = lazy(() => import('./components/modules/billing/Billing'))
+const Documents     = lazy(() => import('./components/modules/documents/Documents'))
+const Food          = lazy(() => import('./components/modules/food/Food'))
+const Reports       = lazy(() => import('./components/modules/reports/Reports'))
+const Settings      = lazy(() => import('./components/modules/settings/Settings'))
 
 function PanelSkeleton() {
   return (
@@ -80,6 +89,15 @@ const PANEL_MAP = {
   checkout:      CheckOut,
   cancellations: Cancellations,
   maintenance:   Maintenance,
+  housekeeping:  Housekeeping,
+  staff:         Staff,
+  guests:        Guests,
+  rooms:         Rooms,
+  billing:       Billing,
+  documents:     Documents,
+  food:          Food,
+  reports:       Reports,
+  settings:      Settings,
 }
 
 export default function App() {

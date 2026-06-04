@@ -39,6 +39,9 @@ export const getDocuments = async (req, res) => {
         name: true,
         phone: true,
         status: true,
+        idType: true,
+        idNumber: true,
+        room: { select: { number: true } },
         documents: {
           orderBy: { uploadedAt: 'desc' },
         },

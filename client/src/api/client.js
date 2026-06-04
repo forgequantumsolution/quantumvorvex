@@ -77,8 +77,11 @@ export const documentsApi = {
 }
 
 export const foodApi = {
-  getPlans:  () => api.get('/food-plans'),
-  getOrders: () => api.get('/food-orders'),
+  getPlans:   ()         => api.get('/food-plans'),
+  getOrders:  ()         => api.get('/food-orders'),
+  createPlan: (data)     => api.post('/food-plans', data),
+  updatePlan: (id, data) => api.put(`/food-plans/${id}`, data),
+  deletePlan: (id)       => api.delete(`/food-plans/${id}`),
 }
 
 export const reportsApi = {
@@ -106,7 +109,45 @@ export const maintenanceApi = {
   update:    (id, data) => api.put(`/maintenance/${id}`, data),
   addNote:   (id, data) => api.post(`/maintenance/${id}/notes`, data),
   remove:    (id)       => api.delete(`/maintenance/${id}`),
-  schedules: ()         => api.get('/maintenance/schedule'),
+  schedules:      ()     => api.get('/maintenance/schedule'),
+  createSchedule: (data) => api.post('/maintenance/schedule', data),
+}
+
+export const housekeepingApi = {
+  getBoard:         ()             => api.get('/housekeeping/board'),
+  updateStatus:     (roomId, data) => api.put(`/housekeeping/${roomId}/status`, data),
+  getDaily:         ()             => api.get('/housekeeping/daily'),
+  getLinen:         ()             => api.get('/housekeeping/linen'),
+  markLinen:        (roomId, data) => api.put(`/housekeeping/linen/${roomId}`, data),
+  submitInspection: (data)         => api.post('/housekeeping/inspection', data),
+}
+
+export const staffApi = {
+  getAll:            ()         => api.get('/staff'),
+  create:            (data)     => api.post('/staff', data),
+  update:            (id, data) => api.put(`/staff/${id}`, data),
+  getActivity:       (params)   => api.get('/staff/activity', { params }),
+  getPermissions:    ()         => api.get('/staff/permissions'),
+  updatePermissions: (data)     => api.put('/staff/permissions', data),
+}
+
+export const usersApi = {
+  getAll: ()         => api.get('/users'),
+  create: (data)     => api.post('/users', data),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  remove: (id)       => api.delete(`/users/${id}`),
+}
+
+export const pricingApi = {
+  getRules:  ()      => api.get('/pricing/rules'),
+  saveRules: (rules) => api.put('/pricing/rules', { rules }),
+  compute:   (data)  => api.post('/pricing/compute', data),
+}
+
+export const remindersApi = {
+  send:           (data)     => api.post('/reminders/send', data),
+  getTemplates:   ()         => api.get('/reminders/templates'),
+  updateTemplate: (id, data) => api.put(`/reminders/templates/${id}`, data),
 }
 
 export const authApi = {

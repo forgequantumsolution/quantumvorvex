@@ -727,6 +727,36 @@ const YOUR_RATES = { Single: 500, Double: 800, Suite: 1500, Deluxe: 1200 }
 function PricingRulesTab({ addToast }) {
   const [rules, setRules]           = useState(initRules)
   const [competitors, setCompetitors] = useState(initCompetitors)
+  const [saving, setSaving]         = useState(false)
+
+  // Load saved dynamic-pricing rules from the backend.
+  useEffect(() => {
+    api.get('/pricing/rules')
+      .then(({ data }) => {
+        const rows = Array.isArray(data) ? data : (data.rules || [])
+        if (rows.length) setRules(rows.map(r => ({
+          id: r.id, name: r.name, triggerType: r.triggerType,
+          threshold: r.threshold, adjustment: r.adjustment, active: r.active,
+        })))
+      })
+      .catch(() => { /* keep defaults */ })
+  }, [])
+
+  const handleSaveRules = async () => {
+    setSaving(true)
+    try {
+      const payload = rules.map(r => ({
+        name: r.name, triggerType: r.triggerType,
+        threshold: Number(r.threshold), adjustment: Number(r.adjustment), active: !!r.active,
+      }))
+      await api.put('/pricing/rules', { rules: payload })
+      addToast('Pricing rules saved', 'success')
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Could not save rules', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const thStyle = {
     padding: '8px 10px',
@@ -997,8 +1027,8 @@ function PricingRulesTab({ addToast }) {
       </div>
 
       <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', marginTop: 8 }}>
-        <button className="btn btn-primary" onClick={() => addToast('Pricing rules saved', 'success')}>
-          Save Rules
+        <button className="btn btn-primary" onClick={handleSaveRules} disabled={saving}>
+          {saving ? 'Saving…' : 'Save Rules'}
         </button>
       </div>
     </div>
@@ -1691,6 +1721,13 @@ export default function Settings({ onRunSetup }) {
   const [activeTab, setActiveTab] = useState('profile')
   const [settings, setSettings]   = useState(initSettings)
   const addToast     = useToast()
+
+  // Load the hotel's saved settings so profile/tax tabs reflect real data.
+  useEffect(() => {
+    api.get('/settings')
+      .then(({ data }) => { if (data.settings) setSettings(s => ({ ...s, ...data.settings })) })
+      .catch(() => { /* keep defaults */ })
+  }, [])
   const { setHotelName, setOwnerName } = useHotelActions()
   const currentUser  = useAppSelector(s => s.auth.currentUser)
   const role         = currentUser?.role || 'staff'

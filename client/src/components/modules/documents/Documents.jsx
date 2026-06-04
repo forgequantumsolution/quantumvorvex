@@ -1,16 +1,25 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import { useToast } from '../../../hooks/useToast'
+import { documentsApi } from '../../../api/client'
 
-// ─── Mock Data ─────────────────────────────────────────────────────────────────
-
-const MOCK_DOCS = [
-  { id: '1', docId: 'DOC-0001', guestName: 'Rahul Sharma', room: '102', idType: 'Aadhaar', idNumber: '1234****9012', photo: null, uploaded: 2, total: 4, verified: false },
-  { id: '2', docId: 'DOC-0002', guestName: 'Priya Patel', room: '205', idType: 'PAN', idNumber: 'ABCDE***4F', photo: null, uploaded: 3, total: 4, verified: false },
-  { id: '3', docId: 'DOC-0003', guestName: 'Ankit Singh', room: '312', idType: 'Aadhaar', idNumber: '9876****1098', photo: null, uploaded: 4, total: 4, verified: true },
-  { id: '4', docId: 'DOC-0004', guestName: 'Sneha Rao', room: '118', idType: 'Passport', idNumber: 'P123****7', photo: null, uploaded: 2, total: 4, verified: false },
-]
+// Map an API guest (with documents[] + _count) to the row shape the UI renders.
+function normalizeDocGuest(g) {
+  const documents = g.documents || []
+  const uploaded = g._count?.documents ?? documents.length
+  return {
+    id: g.id,
+    docId: g.docId,
+    guestName: g.name,
+    room: g.room?.number || '—',
+    idType: g.idType || '—',
+    idNumber: g.idNumber || '—',
+    documents,
+    uploaded,
+    verified: documents.length > 0 && documents.every((d) => d.verified),
+  }
+}
 
 const DOC_SLOTS = [
   { key: 'idFront', label: 'ID Front', icon: '🪪' },
@@ -72,7 +81,7 @@ function UploadModal({ doc, onClose, onSave }) {
           <button className="btn btn-outline btn-sm" onClick={onClose}>Cancel</button>
           <button
             className="btn btn-primary btn-sm"
-            onClick={() => onSave(doc, newUploadCount)}
+            onClick={() => onSave(doc, files)}
             disabled={newUploadCount === 0}
           >
             Save Documents
@@ -149,11 +158,15 @@ function UploadModal({ doc, onClose, onSave }) {
 function ViewDocsModal({ doc, onClose, onVerify }) {
   if (!doc) return null
 
-  const mockDocList = DOC_SLOTS.slice(0, doc.uploaded).map((slot, i) => ({
-    ...slot,
-    uploadDate: '01 Apr 2026',
-    verified: doc.verified || i < doc.uploaded - 1,
+  const docList = (doc.documents || []).map((d) => ({
+    key: d.id,
+    label: d.docType || 'Document',
+    icon: '📄',
+    url: d.url,
+    uploadDate: d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString() : '—',
+    verified: d.verified,
   }))
+  const allVerified = docList.length > 0 && docList.every((d) => d.verified)
 
   return (
     <Modal
@@ -171,7 +184,7 @@ function ViewDocsModal({ doc, onClose, onVerify }) {
       footer={
         <>
           <button className="btn btn-outline btn-sm" onClick={onClose}>Close</button>
-          {doc.uploaded === 4 && !doc.verified && (
+          {docList.length > 0 && !allVerified && (
             <button className="btn btn-primary btn-sm" onClick={() => onVerify(doc)}>
               Verify All
             </button>
@@ -189,32 +202,23 @@ function ViewDocsModal({ doc, onClose, onVerify }) {
 
       {/* Document list */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {mockDocList.length === 0 && (
+        {docList.length === 0 && (
           <div className="empty-state" style={{ padding: '24px' }}>No documents uploaded yet</div>
         )}
-        {mockDocList.map(d => (
+        {docList.map(d => (
           <div key={d.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--surface2)', borderRadius: '7px', padding: '10px 14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '18px' }}>{d.icon}</span>
               <div>
-                <div style={{ fontWeight: 600, fontSize: '13px' }}>{d.label}</div>
+                <div style={{ fontWeight: 600, fontSize: '13px' }}>
+                  {d.url ? <a href={d.url} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>{d.label}</a> : d.label}
+                </div>
                 <div style={{ fontSize: '11.5px', color: 'var(--text3)' }}>Uploaded {d.uploadDate}</div>
               </div>
             </div>
             <Badge type={d.verified ? 'green' : 'amber'}>
               {d.verified ? '✓ Verified' : 'Pending'}
             </Badge>
-          </div>
-        ))}
-        {/* Pending slots */}
-        {DOC_SLOTS.slice(doc.uploaded).map(slot => (
-          <div key={slot.key} style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--surface2)', borderRadius: '7px', padding: '10px 14px', opacity: 0.45 }}>
-            <span style={{ fontSize: '18px' }}>{slot.icon}</span>
-            <div>
-              <div style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text2)' }}>{slot.label}</div>
-              <div style={{ fontSize: '11.5px', color: 'var(--text3)' }}>Not uploaded</div>
-            </div>
-            <Badge type="red" className="ml-auto">Missing</Badge>
           </div>
         ))}
       </div>
@@ -226,10 +230,26 @@ function ViewDocsModal({ doc, onClose, onVerify }) {
 
 export default function Documents() {
   const addToast = useToast()
-  const [docs, setDocs] = useState(MOCK_DOCS)
+  const [docs, setDocs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [uploadDoc, setUploadDoc] = useState(null)
   const [viewDoc, setViewDoc] = useState(null)
+
+  const load = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const { data } = await documentsApi.getAll()
+      setDocs((data.guests || []).map(normalizeDocGuest))
+    } catch {
+      setError('Could not load documents. Make sure the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -243,35 +263,61 @@ export default function Documents() {
   const verifiedCount = docs.filter(d => d.verified).length
   const incompleteCount = docs.filter(d => d.uploaded < 3).length
 
-  const handleUploadSave = (doc, newCount) => {
-    setDocs(ds => ds.map(d => d.id === doc.id
-      ? { ...d, uploaded: Math.min(4, d.uploaded + newCount) }
-      : d
-    ))
-    setUploadDoc(null)
-    addToast(`Documents uploaded for ${doc.guestName}`, 'success')
+  const handleUploadSave = async (doc, files) => {
+    const selected = Object.entries(files).filter(([, file]) => file)
+    if (selected.length === 0) return
+    try {
+      for (const [docType, file] of selected) {
+        const form = new FormData()
+        form.append('document', file)
+        form.append('docType', docType)
+        await documentsApi.upload(doc.id, form)
+      }
+      setUploadDoc(null)
+      addToast(`Documents uploaded for ${doc.guestName}`, 'success')
+      load()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Upload failed', 'error')
+    }
   }
 
-  const handleVerify = (doc) => {
-    setDocs(ds => ds.map(d => d.id === doc.id ? { ...d, verified: true } : d))
-    setViewDoc(null)
+  const verifyAll = async (doc) => {
+    const pending = (doc.documents || []).filter(d => !d.verified)
+    if (pending.length === 0) { addToast('No documents to verify', 'info'); return false }
+    await Promise.all(pending.map(d => documentsApi.verify(d.id)))
     addToast(`${doc.guestName} KYC verified`, 'success')
+    load()
+    return true
   }
 
-  const handleQuickVerify = (doc) => {
-    setDocs(ds => ds.map(d => d.id === doc.id ? { ...d, verified: true } : d))
-    addToast(`${doc.guestName} KYC verified`, 'success')
+  const handleVerify = async (doc) => {
+    try { if (await verifyAll(doc)) setViewDoc(null) }
+    catch { addToast('Could not verify documents', 'error') }
+  }
+
+  const handleQuickVerify = async (doc) => {
+    try { await verifyAll(doc) }
+    catch { addToast('Could not verify documents', 'error') }
   }
 
   return (
     <div style={{ padding: '24px', maxWidth: '1200px' }}>
       {/* Header */}
-      <div style={{ marginBottom: '20px' }}>
-        <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>
-          Documents
-        </h1>
-        <p style={{ margin: '4px 0 0', color: 'var(--text3)', fontSize: '13px' }}>KYC verification & ID management</p>
+      <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>
+            Documents
+          </h1>
+          <p style={{ margin: '4px 0 0', color: 'var(--text3)', fontSize: '13px' }}>KYC verification & ID management</p>
+        </div>
+        <button className="btn btn-outline btn-sm" onClick={load} disabled={loading}>↻ Refresh</button>
       </div>
+
+      {error && (
+        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+          {error}
+        </div>
+      )}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '18px' }}>
@@ -322,7 +368,7 @@ export default function Documents() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7}>
-                    <div className="empty-state">No documents found</div>
+                    <div className="empty-state">{loading ? 'Loading documents…' : 'No documents found'}</div>
                   </td>
                 </tr>
               )}
@@ -366,7 +412,7 @@ export default function Documents() {
                       <div style={{ display: 'flex', gap: '5px' }}>
                         <button className="btn btn-outline btn-xs" onClick={() => setViewDoc(doc)}>View Docs</button>
                         <button className="btn btn-outline btn-xs" onClick={() => setUploadDoc(doc)}>Upload</button>
-                        {doc.uploaded === 4 && !doc.verified && (
+                        {doc.uploaded > 0 && !doc.verified && (
                           <button
                             className="btn btn-xs"
                             style={{ background: 'var(--green-bg)', color: 'var(--green-text)' }}

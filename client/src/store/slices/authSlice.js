@@ -35,12 +35,13 @@ export default authSlice.reducer
 export const login = (token, user) => (dispatch) => {
   localStorage.setItem('qv_token', token)
   dispatch(setCredentials({ token, user }))
-  dispatch(setActivePanel('dashboard'))
+  // Land on the first accessible front-desk panel (the app is scoped to five).
+  dispatch(setActivePanel('bookings'))
 }
 
 export const logout = () => async (dispatch) => {
   try { await authApi.logout() } catch { /* ignore errors on logout */ }
   localStorage.removeItem('qv_token')
   dispatch(clearCredentials())
-  dispatch(setActivePanel('dashboard'))
+  dispatch(setActivePanel('bookings'))
 }

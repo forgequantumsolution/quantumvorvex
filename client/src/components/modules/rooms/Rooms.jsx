@@ -1,23 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Button from '../../ui/Button'
+import { roomsApi } from '../../../api/client'
+import { useToast } from '../../../hooks/useToast'
 
-// ─── Mock Data ───────────────────────────────────────────────────────────────
-const mockRooms = [
-  { id: '1',  number: '101', type: 'Single',  floor: 1, status: 'available',   dailyRate: 500,  monthlyRate: 9000  },
-  { id: '2',  number: '102', type: 'Double',  floor: 1, status: 'occupied',    dailyRate: 800,  monthlyRate: 14000, guest: { name: 'Rahul Sharma', phone: '9876543210' } },
-  { id: '3',  number: '103', type: 'Suite',   floor: 1, status: 'maintenance', dailyRate: 1500, monthlyRate: 28000 },
-  { id: '4',  number: '104', type: 'Deluxe',  floor: 1, status: 'reserved',    dailyRate: 1200, monthlyRate: 22000 },
-  { id: '5',  number: '201', type: 'Single',  floor: 2, status: 'available',   dailyRate: 500,  monthlyRate: 9000  },
-  { id: '6',  number: '202', type: 'Double',  floor: 2, status: 'occupied',    dailyRate: 800,  monthlyRate: 14000, guest: { name: 'Priya Patel', phone: '9123456789' } },
-  { id: '7',  number: '203', type: 'Suite',   floor: 2, status: 'available',   dailyRate: 1500, monthlyRate: 28000 },
-  { id: '8',  number: '204', type: 'Deluxe',  floor: 2, status: 'occupied',    dailyRate: 1200, monthlyRate: 22000, guest: { name: 'Ankit Singh', phone: '9988776655' } },
-  { id: '9',  number: '301', type: 'Single',  floor: 3, status: 'available',   dailyRate: 500,  monthlyRate: 9000  },
-  { id: '10', number: '302', type: 'Double',  floor: 3, status: 'reserved',    dailyRate: 800,  monthlyRate: 14000 },
-  { id: '11', number: '303', type: 'Suite',   floor: 3, status: 'occupied',    dailyRate: 1500, monthlyRate: 28000, guest: { name: 'Sneha Rao', phone: '9654321098' } },
-  { id: '12', number: '304', type: 'Single',  floor: 3, status: 'available',   dailyRate: 500,  monthlyRate: 9000  },
-]
+// Flatten an API room (type is a relation object) to the shape the UI renders.
+const normalizeRoom = (r) => ({
+  id: r.id,
+  number: r.number,
+  floor: r.floor,
+  status: r.status,
+  type: r.type?.name || (typeof r.type === 'string' ? r.type : 'Standard'),
+  dailyRate: r.dailyRate,
+  monthlyRate: r.monthlyRate,
+})
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const STATUS_BADGE = {
@@ -245,13 +242,30 @@ function AddRoomForm({ form, onChange }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Rooms() {
-  const [rooms, setRooms]             = useState(mockRooms)
+  const addToast = useToast()
+  const [rooms, setRooms]             = useState([])
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState('')
   const [filter, setFilter]           = useState('All')
   const [search, setSearch]           = useState('')
   const [view, setView]               = useState('grid')   // 'grid' | 'kanban'
   const [selectedRoom, setSelectedRoom] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [addForm, setAddForm]         = useState(EMPTY_FORM)
+
+  const load = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const { data } = await roomsApi.getAll()
+      setRooms((data.rooms || []).map(normalizeRoom))
+    } catch {
+      setError('Could not load rooms. Make sure the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
 
   // ── Filtering ──────────────────────────────────────────────────────────────
   const filtered = rooms.filter(r => {
@@ -261,25 +275,35 @@ export default function Rooms() {
   })
 
   // ── Handlers ───────────────────────────────────────────────────────────────
-  const handleStatusChange = (id, newStatus) => {
-    setRooms(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r))
+  const handleStatusChange = async (id, newStatus) => {
+    const prev = rooms
+    setRooms(rs => rs.map(r => r.id === id ? { ...r, status: newStatus } : r))
+    try {
+      await roomsApi.update(id, { status: newStatus })
+    } catch {
+      setRooms(prev)
+      addToast('Could not update room status', 'error')
+    }
   }
 
-  const handleAddRoom = () => {
+  const handleAddRoom = async () => {
     if (!addForm.number.trim() || !addForm.floor) return
-    const newRoom = {
-      id:           Date.now().toString(),
-      number:       addForm.number.trim(),
-      type:         addForm.type,
-      floor:        parseInt(addForm.floor, 10),
-      status:       'available',
-      dailyRate:    parseFloat(addForm.dailyRate) || 0,
-      monthlyRate:  parseFloat(addForm.monthlyRate) || 0,
-      maxOccupancy: parseInt(addForm.maxOccupancy, 10) || 1,
+    try {
+      await roomsApi.create({
+        number: addForm.number.trim(),
+        typeName: addForm.type,
+        floor: parseInt(addForm.floor, 10),
+        dailyRate: parseFloat(addForm.dailyRate) || undefined,
+        monthlyRate: parseFloat(addForm.monthlyRate) || undefined,
+        status: 'available',
+      })
+      setAddForm(EMPTY_FORM)
+      setShowAddModal(false)
+      addToast(`Room ${addForm.number.trim()} added`, 'success')
+      load()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not add room', 'error')
     }
-    setRooms(prev => [...prev, newRoom])
-    setAddForm(EMPTY_FORM)
-    setShowAddModal(false)
   }
 
   // ── Stats ──────────────────────────────────────────────────────────────────
@@ -311,10 +335,17 @@ export default function Rooms() {
             Manage room inventory
           </p>
         </div>
-        <Button variant="primary" onClick={() => setShowAddModal(true)}>
-          + Add Room
-        </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button variant="outline" size="sm" onClick={load} disabled={loading}>↻ Refresh</Button>
+          <Button variant="primary" onClick={() => setShowAddModal(true)}>+ Add Room</Button>
+        </div>
       </div>
+
+      {error && (
+        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+          {error}
+        </div>
+      )}
 
       {/* ── Quick Stats ────────────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 20 }}>

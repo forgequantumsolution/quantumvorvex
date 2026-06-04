@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import { useToast } from '../../../hooks/useToast'
+import { useAppSelector } from '../../../store/hooks'
+import { housekeepingApi } from '../../../api/client'
 import { formatDate, timeAgo } from '../../../utils/format'
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── Status config ──────────────────────────────────────────────────────────
 const HK_STATUSES = {
   clean_available:     { label: 'Clean',       color: 'var(--green)',     bg: 'var(--green-bg)',  text: 'var(--green-text)' },
   dirty_available:     { label: 'Dirty',       color: 'var(--amber)',     bg: 'var(--amber-bg)',  text: 'var(--amber-text)' },
@@ -15,25 +17,6 @@ const HK_STATUSES = {
   maintenance:         { label: 'Maintenance', color: 'var(--grey-text)', bg: 'var(--grey-bg)',   text: 'var(--grey-text)' },
 }
 
-const MOCK_HK_ROOMS = [
-  { id:'1',  number:'101', floor:1, status:'clean_available',      assignedTo:null },
-  { id:'2',  number:'102', floor:1, status:'occupied',             assignedTo:null },
-  { id:'3',  number:'103', floor:1, status:'maintenance',          assignedTo:null },
-  { id:'4',  number:'104', floor:1, status:'dirty_available',      assignedTo:'Priya Desai' },
-  { id:'5',  number:'105', floor:1, status:'clean_available',      assignedTo:null },
-  { id:'6',  number:'106', floor:1, status:'cleaning_in_progress', assignedTo:'Meena Kumari' },
-  { id:'7',  number:'107', floor:1, status:'checkout_pending',     assignedTo:null },
-  { id:'8',  number:'108', floor:1, status:'clean_available',      assignedTo:null },
-  { id:'9',  number:'201', floor:2, status:'dirty_available',      assignedTo:'Priya Desai' },
-  { id:'10', number:'202', floor:2, status:'occupied',             assignedTo:null },
-  { id:'11', number:'203', floor:2, status:'clean_available',      assignedTo:null },
-  { id:'12', number:'204', floor:2, status:'occupied',             assignedTo:null },
-  { id:'13', number:'205', floor:2, status:'dirty_available',      assignedTo:'Meena Kumari' },
-  { id:'14', number:'206', floor:2, status:'clean_available',      assignedTo:null },
-  { id:'15', number:'207', floor:2, status:'maintenance',          assignedTo:null },
-  { id:'16', number:'208', floor:2, status:'cleaning_in_progress', assignedTo:'Sunita Rao' },
-]
-
 const HK_STAFF = ['Priya Desai', 'Meena Kumari', 'Sunita Rao', 'Rekha Singh', 'Anita Joshi']
 
 const CHECKLIST_ITEMS = [
@@ -41,28 +24,26 @@ const CHECKLIST_ITEMS = [
   'Bathroom clean', 'Bed made', 'Fresh towels', 'Floor mopped', 'Dustbin emptied',
 ]
 
-// Derive linen data from rooms (lastChanged 3-7 days ago, nextDue 7 days after)
-function buildLinenData(rooms) {
-  return rooms.map((r, i) => {
-    const daysAgo = 3 + (i % 5)
-    const lastChanged = new Date(Date.now() - daysAgo * 86400000).toISOString()
-    const nextDue = new Date(new Date(lastChanged).getTime() + 7 * 86400000).toISOString()
-    const changedBy = HK_STAFF[i % HK_STAFF.length]
-    return { roomId: r.id, roomNumber: r.number, lastChanged, nextDue, changedBy }
-  })
-}
-
-// Mock inspection history per room (3 per room)
-function buildInspectionHistory(rooms) {
-  const hist = {}
-  rooms.forEach(r => {
-    hist[r.id] = [
-      { id: `${r.id}-h1`, date: '2026-03-28', staff: HK_STAFF[0], pass: 8, fail: 1, total: 9 },
-      { id: `${r.id}-h2`, date: '2026-03-14', staff: HK_STAFF[1], pass: 9, fail: 0, total: 9 },
-      { id: `${r.id}-h3`, date: '2026-02-28', staff: HK_STAFF[2], pass: 7, fail: 2, total: 9 },
-    ]
-  })
-  return hist
+// Map a raw API room (with its housekeepingStatus relation) to the flat shape
+// the board/tables render. Falls back to the room's own status when no
+// housekeeping record exists yet.
+function mapBoardRoom(room) {
+  const hk = room.housekeepingStatus
+  let status = hk?.status
+  if (!status) {
+    if (room.status === 'occupied') status = 'occupied'
+    else if (room.status === 'maintenance') status = 'maintenance'
+    else status = 'clean_available'
+  }
+  return {
+    id: room.id,
+    number: room.number,
+    floor: room.floor,
+    status,
+    assignedTo: hk?.assignedTo || null,
+    startedAt: hk?.startedAt || null,
+    completedAt: hk?.completedAt || null,
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -84,7 +65,6 @@ function linenDueColor(nextDue) {
   if (!nextDue) return 'var(--text3)'
   const diff = Math.floor((new Date(nextDue) - Date.now()) / 86400000)
   if (diff < 0)  return 'var(--red-text)'
-  if (diff <= 1) return 'var(--amber-text)'
   if (diff <= 7) return 'var(--amber-text)'
   return 'var(--green-text)'
 }
@@ -93,7 +73,6 @@ function linenDueBadge(nextDue) {
   if (!nextDue) return 'grey'
   const diff = Math.floor((new Date(nextDue) - Date.now()) / 86400000)
   if (diff < 0)  return 'red'
-  if (diff <= 1) return 'amber'
   if (diff <= 7) return 'amber'
   return 'green'
 }
@@ -103,7 +82,6 @@ function linenDueLabel(nextDue) {
   const diff = Math.floor((new Date(nextDue) - Date.now()) / 86400000)
   if (diff < 0)  return 'Overdue'
   if (diff === 0) return 'Due Today'
-  if (diff <= 7) return `${diff}d`
   return `${diff}d`
 }
 
@@ -251,7 +229,6 @@ function DailyListTab({ rooms, onUpdateRoom }) {
   const addToast = useToast()
   const [staffFilter, setStaffFilter] = useState('All')
   const [floorFilter, setFloorFilter] = useState('All')
-  const [timestamps, setTimestamps] = useState({}) // { roomId: { startedAt, completedAt } }
 
   const filtered = useMemo(() => rooms.filter(r => {
     const staffOk = staffFilter === 'All' || r.assignedTo === staffFilter
@@ -259,19 +236,13 @@ function DailyListTab({ rooms, onUpdateRoom }) {
     return staffOk && floorOk
   }), [rooms, staffFilter, floorFilter])
 
-  function getTs(roomId) { return timestamps[roomId] || {} }
-
   function handleStart(room) {
-    const now = new Date().toISOString()
-    setTimestamps(t => ({ ...t, [room.id]: { ...getTs(room.id), startedAt: now } }))
-    onUpdateRoom(room.id, { status: 'cleaning_in_progress' })
+    onUpdateRoom(room.id, { status: 'cleaning_in_progress', startedAt: new Date().toISOString() })
     addToast(`Room ${room.number} cleaning started`, 'info')
   }
 
   function handleDone(room) {
-    const now = new Date().toISOString()
-    setTimestamps(t => ({ ...t, [room.id]: { ...getTs(room.id), completedAt: now } }))
-    onUpdateRoom(room.id, { status: 'clean_available' })
+    onUpdateRoom(room.id, { status: 'clean_available', completedAt: new Date().toISOString() })
     addToast(`Room ${room.number} marked clean`, 'success')
   }
 
@@ -329,7 +300,6 @@ function DailyListTab({ rooms, onUpdateRoom }) {
             </thead>
             <tbody>
               {filtered.map(room => {
-                const ts = getTs(room.id)
                 const st = HK_STATUSES[room.status] || HK_STATUSES.clean_available
                 return (
                   <tr key={room.id}>
@@ -354,13 +324,13 @@ function DailyListTab({ rooms, onUpdateRoom }) {
                       </select>
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--text3)' }}>
-                      {ts.startedAt ? timeAgo(ts.startedAt) : '—'}
+                      {room.startedAt ? timeAgo(room.startedAt) : '—'}
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--text3)' }}>
-                      {ts.completedAt ? timeAgo(ts.completedAt) : '—'}
+                      {room.completedAt ? timeAgo(room.completedAt) : '—'}
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>
-                      {calcDuration(ts.startedAt, ts.completedAt)}
+                      {calcDuration(room.startedAt, room.completedAt)}
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: 4 }}>
@@ -384,21 +354,7 @@ function DailyListTab({ rooms, onUpdateRoom }) {
 }
 
 // ─── Linen Tracker Tab ────────────────────────────────────────────────────────
-function LinenTrackerTab({ rooms }) {
-  const addToast = useToast()
-  const [linen, setLinen] = useState(() => buildLinenData(rooms))
-
-  function handleMarkChanged(roomId) {
-    const now = new Date().toISOString()
-    const nextDue = new Date(Date.now() + 7 * 86400000).toISOString()
-    setLinen(ls => ls.map(l => l.roomId === roomId
-      ? { ...l, lastChanged: now, nextDue, changedBy: 'Front Desk' }
-      : l
-    ))
-    const room = rooms.find(r => r.id === roomId)
-    addToast(`Linen changed for Room ${room?.number}`, 'success')
-  }
-
+function LinenTrackerTab({ rooms, linenByRoom, onMarkChanged }) {
   return (
     <div style={{ overflowX: 'auto' }}>
       <table>
@@ -414,28 +370,30 @@ function LinenTrackerTab({ rooms }) {
           </tr>
         </thead>
         <tbody>
-          {linen.map(l => {
-            const diff = Math.floor((new Date(l.nextDue) - Date.now()) / 86400000)
+          {rooms.map(room => {
+            const rec = linenByRoom[room.id]
+            const nextDue = rec?.nextDue || null
+            const diff = nextDue ? Math.floor((new Date(nextDue) - Date.now()) / 86400000) : null
             return (
-              <tr key={l.roomId}>
+              <tr key={room.id}>
                 <td>
                   <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 12.5, color: 'var(--text)' }}>
-                    {l.roomNumber}
+                    {room.number}
                   </span>
                 </td>
-                <td style={{ fontSize: 12, color: 'var(--text3)' }}>{formatDate(l.lastChanged)}</td>
-                <td style={{ fontSize: 12.5, fontWeight: 600, color: linenDueColor(l.nextDue) }}>
-                  {formatDate(l.nextDue)}
+                <td style={{ fontSize: 12, color: 'var(--text3)' }}>{rec ? formatDate(rec.lastChanged) : '—'}</td>
+                <td style={{ fontSize: 12.5, fontWeight: 600, color: linenDueColor(nextDue) }}>
+                  {nextDue ? formatDate(nextDue) : '—'}
                 </td>
-                <td style={{ fontSize: 12.5, fontWeight: 700, color: linenDueColor(l.nextDue) }}>
-                  {diff < 0 ? `${Math.abs(diff)}d overdue` : diff === 0 ? 'Today' : `${diff}d`}
+                <td style={{ fontSize: 12.5, fontWeight: 700, color: linenDueColor(nextDue) }}>
+                  {diff === null ? '—' : diff < 0 ? `${Math.abs(diff)}d overdue` : diff === 0 ? 'Today' : `${diff}d`}
                 </td>
                 <td>
-                  <Badge type={linenDueBadge(l.nextDue)}>{linenDueLabel(l.nextDue)}</Badge>
+                  <Badge type={linenDueBadge(nextDue)}>{linenDueLabel(nextDue)}</Badge>
                 </td>
-                <td style={{ fontSize: 12.5 }}>{l.changedBy}</td>
+                <td style={{ fontSize: 12.5 }}>{rec?.changedBy || '—'}</td>
                 <td>
-                  <button className="btn btn-outline btn-xs" onClick={() => handleMarkChanged(l.roomId)}>
+                  <button className="btn btn-outline btn-xs" onClick={() => onMarkChanged(room)}>
                     Mark Changed
                   </button>
                 </td>
@@ -449,11 +407,15 @@ function LinenTrackerTab({ rooms }) {
 }
 
 // ─── Inspection Tab ───────────────────────────────────────────────────────────
-function InspectionTab({ rooms }) {
-  const addToast = useToast()
+function InspectionTab({ rooms, onSubmit }) {
   const [selectedRoomId, setSelectedRoomId] = useState(rooms[0]?.id || '')
   const [checklist, setChecklist] = useState({}) // { item: 'pass' | 'fail' | null }
-  const [history, setHistory] = useState(() => buildInspectionHistory(rooms))
+  const [history, setHistory] = useState({})     // session-only; no GET endpoint exists
+
+  // Keep a valid selection as rooms load in.
+  useEffect(() => {
+    if (!selectedRoomId && rooms[0]) setSelectedRoomId(rooms[0].id)
+  }, [rooms, selectedRoomId])
 
   const selectedRoom = rooms.find(r => r.id === selectedRoomId)
   const roomHistory = history[selectedRoomId] || []
@@ -469,20 +431,21 @@ function InspectionTab({ rooms }) {
   const passCount = CHECKLIST_ITEMS.filter(item => checklist[item] === 'pass').length
   const failCount = CHECKLIST_ITEMS.filter(item => checklist[item] === 'fail').length
 
-  function handleSubmit() {
-    if (!allChecked) return
+  async function handleSubmit() {
+    if (!allChecked || !selectedRoom) return
+    const checklistPayload = CHECKLIST_ITEMS.map(item => ({ item, result: checklist[item] }))
+    const ok = await onSubmit(selectedRoom, checklistPayload, { passCount, failCount })
+    if (!ok) return
     const result = {
-      id: `${selectedRoomId}-h${Date.now()}`,
+      id: `${selectedRoomId}-h${passCount}-${failCount}-${roomHistory.length}`,
       date: new Date().toISOString().split('T')[0],
-      staff: 'Front Desk',
+      staff: 'You',
       pass: passCount,
       fail: failCount,
       total: CHECKLIST_ITEMS.length,
     }
     setHistory(h => ({ ...h, [selectedRoomId]: [result, ...(h[selectedRoomId] || [])] }))
     setChecklist({})
-    const score = Math.round((passCount / CHECKLIST_ITEMS.length) * 100)
-    addToast(`Inspection saved — Score: ${score}%`, score >= 80 ? 'success' : 'warning')
   }
 
   function handleRoomChange(id) {
@@ -597,14 +560,14 @@ function InspectionTab({ rooms }) {
         </div>
       </div>
 
-      {/* Right: History */}
+      {/* Right: History (this session) */}
       <div>
         <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           Inspection History — Room {selectedRoom?.number}
         </p>
         {roomHistory.length === 0 ? (
           <div className="empty-state">
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text3)' }}>No inspections yet for this room.</p>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text3)' }}>No inspections submitted this session.</p>
           </div>
         ) : (
           <div className="card" style={{ overflow: 'hidden' }}>
@@ -653,38 +616,100 @@ function InspectionTab({ rooms }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Housekeeping() {
   const addToast = useToast()
-  const [rooms, setRooms] = useState(MOCK_HK_ROOMS)
+  const currentUser = useAppSelector(s => s.auth.currentUser)
+  const [rooms, setRooms] = useState([])
+  const [linenByRoom, setLinenByRoom] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('board')
   const [assignRoomTarget, setAssignRoomTarget] = useState(null)
 
+  const loadBoard = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const { data } = await housekeepingApi.getBoard()
+      const list = Array.isArray(data) ? data : (data.rooms || [])
+      setRooms(list.map(mapBoardRoom))
+    } catch {
+      setError('Could not load housekeeping board. Make sure the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const loadLinen = useCallback(async () => {
+    try {
+      const { data } = await housekeepingApi.getLinen()
+      const records = Array.isArray(data) ? data : (data.records || [])
+      // Keep the most-recently-changed record per room.
+      const byRoom = {}
+      for (const rec of records) {
+        const prev = byRoom[rec.roomId]
+        if (!prev || new Date(rec.lastChanged) > new Date(prev.lastChanged)) byRoom[rec.roomId] = rec
+      }
+      setLinenByRoom(byRoom)
+    } catch {
+      /* linen is non-critical; leave empty on failure */
+    }
+  }, [])
+
+  useEffect(() => { loadBoard(); loadLinen() }, [loadBoard, loadLinen])
+
   // Stat counts
-  const cleanCount   = rooms.filter(r => r.status === 'clean_available').length
-  const dirtyCount   = rooms.filter(r => r.status === 'dirty_available' || r.status === 'checkout_pending').length
+  const cleanCount    = rooms.filter(r => r.status === 'clean_available').length
+  const dirtyCount    = rooms.filter(r => r.status === 'dirty_available' || r.status === 'checkout_pending').length
   const cleaningCount = rooms.filter(r => r.status === 'cleaning_in_progress').length
 
-  function handleUpdateRoom(id, patch) {
+  // Persist a room status/assignment change, with optimistic UI.
+  const handleUpdateRoom = useCallback(async (id, patch) => {
+    const prev = rooms
     setRooms(rs => rs.map(r => r.id === id ? { ...r, ...patch } : r))
-  }
+    try {
+      await housekeepingApi.updateStatus(id, patch)
+    } catch {
+      setRooms(prev)
+      addToast('Could not save room update', 'error')
+    }
+  }, [rooms, addToast])
 
-  function handleAssignSave(id, patch) {
-    handleUpdateRoom(id, patch)
+  async function handleAssignSave(id, patch) {
+    await handleUpdateRoom(id, patch)
     const room = rooms.find(r => r.id === id)
     addToast(`Room ${room?.number} updated`, 'success')
     setAssignRoomTarget(null)
   }
 
-  function handleMarkCheckoutsDirty() {
-    const checkouts = rooms.filter(r => r.status === 'checkout_pending')
-    if (checkouts.length === 0) { addToast('No checkout rooms found', 'info'); return }
-    setRooms(rs => rs.map(r => r.status === 'checkout_pending' ? { ...r, status: 'dirty_available' } : r))
-    addToast(`${checkouts.length} room(s) marked Dirty`, 'success')
+  async function handleBulk(fromStatus, toStatus, label) {
+    const targets = rooms.filter(r => (Array.isArray(fromStatus) ? fromStatus.includes(r.status) : r.status === fromStatus))
+    if (targets.length === 0) { addToast('No matching rooms found', 'info'); return }
+    await Promise.all(targets.map(r => handleUpdateRoom(r.id, { status: toStatus })))
+    addToast(`${targets.length} room(s) ${label}`, 'success')
   }
 
-  function handleMarkDirtyInProgress() {
-    const dirty = rooms.filter(r => r.status === 'dirty_available')
-    if (dirty.length === 0) { addToast('No dirty rooms found', 'info'); return }
-    setRooms(rs => rs.map(r => r.status === 'dirty_available' ? { ...r, status: 'cleaning_in_progress' } : r))
-    addToast(`${dirty.length} room(s) marked Cleaning In Progress`, 'success')
+  async function handleMarkLinenChanged(room) {
+    try {
+      await housekeepingApi.markLinen(room.id, { changedBy: currentUser?.name || 'Front Desk', frequency: 7 })
+      addToast(`Linen changed for Room ${room.number}`, 'success')
+      loadLinen()
+    } catch {
+      addToast('Could not record linen change', 'error')
+    }
+  }
+
+  async function handleSubmitInspection(room, checklistPayload, { passCount }) {
+    try {
+      await housekeepingApi.submitInspection({
+        roomId: room.id,
+        staffId: currentUser?.id || 'front-desk',
+        checklist: JSON.stringify(checklistPayload),
+      })
+      const score = Math.round((passCount / CHECKLIST_ITEMS.length) * 100)
+      addToast(`Inspection saved — Score: ${score}%`, score >= 80 ? 'success' : 'warning')
+      return true
+    } catch {
+      addToast('Could not save inspection', 'error')
+      return false
+    }
   }
 
   const tabs = [
@@ -707,14 +732,21 @@ export default function Housekeeping() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="btn btn-outline btn-sm" onClick={handleMarkCheckoutsDirty}>
+          <button className="btn btn-outline btn-sm" onClick={loadBoard} disabled={loading}>↻ Refresh</button>
+          <button className="btn btn-outline btn-sm" onClick={() => handleBulk('checkout_pending', 'dirty_available', 'marked Dirty')}>
             Mark Checkouts as Dirty
           </button>
-          <button className="btn btn-outline btn-sm" onClick={handleMarkDirtyInProgress}>
+          <button className="btn btn-outline btn-sm" onClick={() => handleBulk('dirty_available', 'cleaning_in_progress', 'marked Cleaning')}>
             Mark All Dirty → In Progress
           </button>
         </div>
       </div>
+
+      {error && (
+        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+          {error}
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
@@ -740,7 +772,9 @@ export default function Housekeeping() {
         <div style={{ padding: '0 18px' }}>
           <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab}>
             <div data-tab-id="board">
-              <BoardTab rooms={rooms} onRoomClick={setAssignRoomTarget} />
+              {loading && rooms.length === 0
+                ? <div className="empty-state"><p style={{ margin: 0, color: 'var(--text3)' }}>Loading board…</p></div>
+                : <BoardTab rooms={rooms} onRoomClick={setAssignRoomTarget} />}
             </div>
 
             <div data-tab-id="daily">
@@ -748,11 +782,11 @@ export default function Housekeeping() {
             </div>
 
             <div data-tab-id="linen">
-              <LinenTrackerTab rooms={rooms} />
+              <LinenTrackerTab rooms={rooms} linenByRoom={linenByRoom} onMarkChanged={handleMarkLinenChanged} />
             </div>
 
             <div data-tab-id="inspection">
-              <InspectionTab rooms={rooms} />
+              <InspectionTab rooms={rooms} onSubmit={handleSubmitInspection} />
             </div>
           </Tabs>
         </div>

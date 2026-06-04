@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Formik, Form } from 'formik'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
@@ -6,24 +6,8 @@ import Tabs from '../../ui/Tabs'
 import FormikField from '../../ui/FormikField'
 import { useToast } from '../../../hooks/useToast'
 import { staffSchema } from '../../../validation/staffSchema'
+import { staffApi } from '../../../api/client'
 import { formatDateTime, timeAgo } from '../../../utils/format'
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_STAFF = [
-  { id: '1', name: 'Ramesh Gupta',  phone: '9876543210', email: 'ramesh@hotel.com', role: 'super_admin',  status: 'active',   lastLogin: '2026-04-06T08:30:00Z', sessions: 1 },
-  { id: '2', name: 'Priya Sharma',  phone: '9123456789', email: 'priya@hotel.com',  role: 'manager',      status: 'active',   lastLogin: '2026-04-06T07:15:00Z', sessions: 1 },
-  { id: '3', name: 'Ankit Verma',   phone: '9988776655', email: 'ankit@hotel.com',  role: 'front_desk',   status: 'active',   lastLogin: '2026-04-05T20:00:00Z', sessions: 0 },
-  { id: '4', name: 'Sunita Rao',    phone: '9654321098', email: 'sunita@hotel.com', role: 'housekeeping', status: 'active',   lastLogin: '2026-04-06T06:00:00Z', sessions: 1 },
-  { id: '5', name: 'Deepak CA',     phone: '9543210987', email: 'deepak@hotel.com', role: 'accountant',   status: 'inactive', lastLogin: '2026-03-20T10:00:00Z', sessions: 0 },
-]
-
-const ACTIVITY_LOGS = [
-  { id: '1', staffId: '1', staff: 'Ramesh Gupta',  action: 'Guest Checked In',    module: 'Check-In', record: 'DOC-0001',      ip: '192.168.1.1', createdAt: '2026-04-06T08:45:00Z' },
-  { id: '2', staffId: '2', staff: 'Priya Sharma',  action: 'Invoice Generated',   module: 'Billing',  record: 'INV-006',       ip: '192.168.1.2', createdAt: '2026-04-06T08:30:00Z' },
-  { id: '3', staffId: '3', staff: 'Ankit Verma',   action: 'Room Status Updated', module: 'Rooms',    record: 'Room 104',      ip: '192.168.1.3', createdAt: '2026-04-05T22:00:00Z' },
-  { id: '4', staffId: '1', staff: 'Ramesh Gupta',  action: 'Settings Updated',    module: 'Settings', record: 'Tax & Pricing', ip: '192.168.1.1', createdAt: '2026-04-05T15:00:00Z' },
-  { id: '5', staffId: '2', staff: 'Priya Sharma',  action: 'Guest Checked Out',   module: 'Guests',   record: 'DOC-0005',      ip: '192.168.1.2', createdAt: '2026-04-05T12:30:00Z' },
-]
 
 const ROLE_META = {
   super_admin:  { label: 'Super Admin', badgeType: 'gold'   },
@@ -135,7 +119,7 @@ function StaffModal({ isOpen, onClose, staff, onSave }) {
       initialValues={initialValues}
       validationSchema={staffSchema}
       enableReinitialize
-      onSubmit={(values) => onSave({ ...values })}
+      onSubmit={(values) => onSave({ ...values, ...(generatedPwd ? { password: generatedPwd } : {}) })}
     >
       {({ submitForm, isSubmitting }) => (
         <Modal
@@ -441,15 +425,45 @@ function ActivityLogTab({ logs, staffList }) {
 // ─── Permissions Tab ──────────────────────────────────────────────────────────
 function PermissionsTab() {
   const [perms, setPerms] = useState(DEFAULT_PERMISSIONS)
+  const [saving, setSaving] = useState(false)
   const addToast = useToast()
   const roles = Object.keys(ROLE_META)
+
+  // Load saved permissions and overlay them on the sensible defaults.
+  useEffect(() => {
+    staffApi.getPermissions()
+      .then(({ data }) => {
+        const rows = Array.isArray(data) ? data : (data.permissions || [])
+        if (!rows.length) return
+        setPerms(prev => {
+          const next = structuredClone(prev)
+          for (const { role, module: mod, level } of rows) {
+            if (!next[role]) next[role] = {}
+            next[role][mod] = level
+          }
+          return next
+        })
+      })
+      .catch(() => { /* fall back to defaults */ })
+  }, [])
 
   function handleChange(role, mod, val) {
     setPerms(p => ({ ...p, [role]: { ...p[role], [mod]: val } }))
   }
 
-  function handleSave() {
-    addToast({ type: 'success', message: 'Permissions saved successfully.' })
+  async function handleSave() {
+    setSaving(true)
+    const permissions = roles.flatMap(role =>
+      MODULES_LIST.map(mod => ({ role, module: mod, level: perms[role]?.[mod] || '—' })),
+    )
+    try {
+      await staffApi.updatePermissions({ permissions })
+      addToast('Permissions saved successfully.', 'success')
+    } catch {
+      addToast('Could not save permissions.', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -497,8 +511,8 @@ function PermissionsTab() {
       </div>
 
       <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="btn btn-primary" onClick={handleSave}>
-          Save Permissions
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving…' : 'Save Permissions'}
         </button>
       </div>
     </div>
@@ -508,44 +522,89 @@ function PermissionsTab() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Staff() {
   const [activeTab, setActiveTab] = useState('staff')
-  const [staffList, setStaffList] = useState(MOCK_STAFF)
+  const [staffList, setStaffList] = useState([])
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingStaff, setEditingStaff] = useState(null)
   const [forceLogoutTarget, setForceLogoutTarget] = useState(null)
   const addToast = useToast()
 
-  function handleAddSave(form) {
-    const newMember = {
-      id: String(Date.now()),
-      ...form,
-      status: 'active',
-      lastLogin: null,
-      sessions: 0,
+  const loadStaff = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const { data } = await staffApi.getAll()
+      setStaffList(Array.isArray(data) ? data : (data.staff || []))
+    } catch {
+      setError('Could not load staff. Make sure the backend is running.')
+    } finally {
+      setLoading(false)
     }
-    setStaffList(s => [...s, newMember])
-    setShowAddModal(false)
-    addToast({ type: 'success', message: `${form.name} added to staff.` })
+  }, [])
+
+  const loadActivity = useCallback(async () => {
+    try {
+      const { data } = await staffApi.getActivity()
+      const rows = Array.isArray(data) ? data : (data.logs || [])
+      setLogs(rows.map(l => ({
+        id: l.id,
+        staffId: l.staffId,
+        staff: l.staff?.name || '—',
+        action: l.action,
+        module: l.module,
+        record: l.recordId || l.detail || '—',
+        ip: l.ipAddress || '—',
+        createdAt: l.createdAt,
+      })))
+    } catch {
+      /* activity is non-critical */
+    }
+  }, [])
+
+  useEffect(() => { loadStaff(); loadActivity() }, [loadStaff, loadActivity])
+
+  async function handleAddSave(form) {
+    try {
+      await staffApi.create(form)
+      setShowAddModal(false)
+      addToast(`${form.name} added to staff.`, 'success')
+      loadStaff()
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Could not add staff member.', 'error')
+    }
   }
 
-  function handleEditSave(form) {
-    setStaffList(s => s.map(m => m.id === editingStaff.id ? { ...m, ...form } : m))
-    setEditingStaff(null)
-    addToast({ type: 'success', message: 'Staff details updated.' })
+  async function handleEditSave(form) {
+    const id = editingStaff.id
+    try {
+      await staffApi.update(id, form)
+      setEditingStaff(null)
+      addToast('Staff details updated.', 'success')
+      loadStaff()
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Could not update staff member.', 'error')
+    }
   }
 
   function handleForceLogout() {
+    // No server-side session store yet — clear the local indicator only.
     setStaffList(s => s.map(m => m.id === forceLogoutTarget.id ? { ...m, sessions: 0 } : m))
-    addToast({ type: 'success', message: `Session terminated for ${forceLogoutTarget.name}.` })
+    addToast(`Session terminated for ${forceLogoutTarget.name}.`, 'success')
     setForceLogoutTarget(null)
   }
 
-  function handleToggleStatus(member) {
+  async function handleToggleStatus(member) {
     const newStatus = member.status === 'active' ? 'inactive' : 'active'
+    const prev = staffList
     setStaffList(s => s.map(m => m.id === member.id ? { ...m, status: newStatus } : m))
-    addToast({
-      type: 'success',
-      message: `${member.name} has been ${newStatus === 'active' ? 'reactivated' : 'deactivated'}.`,
-    })
+    try {
+      await staffApi.update(member.id, { status: newStatus })
+      addToast(`${member.name} has been ${newStatus === 'active' ? 'reactivated' : 'deactivated'}.`, 'success')
+    } catch {
+      setStaffList(prev)
+      addToast('Could not update status.', 'error')
+    }
   }
 
   const tabs = [
@@ -577,6 +636,15 @@ export default function Staff() {
         </button>
       </div>
 
+      {error && (
+        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+          {error}
+        </div>
+      )}
+      {loading && staffList.length === 0 && !error && (
+        <p style={{ color: 'var(--text3)', fontSize: 13, marginBottom: 12 }}>Loading staff…</p>
+      )}
+
       {/* Tabs */}
       <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab}>
         <div data-tab-id="staff">
@@ -589,7 +657,7 @@ export default function Staff() {
           />
         </div>
         <div data-tab-id="activity">
-          <ActivityLogTab logs={ACTIVITY_LOGS} staffList={staffList} />
+          <ActivityLogTab logs={logs} staffList={staffList} />
         </div>
         <div data-tab-id="permissions">
           <PermissionsTab />

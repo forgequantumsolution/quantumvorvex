@@ -1,18 +1,32 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import { useToast } from '../../../hooks/useToast'
-import { formatCurrency, formatDate, generateInvoiceNo } from '../../../utils/format'
+import { billingApi, guestsApi, remindersApi } from '../../../api/client'
+import { formatCurrency, formatDate } from '../../../utils/format'
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_INVOICES = [
-  { id: '1', invoiceNo: 'INV-001', guest: 'Rahul Sharma',  room: '102', period: 'Mar 2026',        rent: 9000,  food: 2500, amenities: 800,  gstRate: 12, gstAmount: 1476, total: 13776, status: 'Paid',    createdAt: '2026-04-01', paidAt: '2026-04-02' },
-  { id: '2', invoiceNo: 'INV-002', guest: 'Priya Patel',   room: '205', period: '03–10 Apr 2026',  rent: 5600,  food: 2450, amenities: 0,    gstRate: 12, gstAmount: 966,  total: 9016,  status: 'Pending', createdAt: '2026-04-03', paidAt: null },
-  { id: '3', invoiceNo: 'INV-003', guest: 'Ankit Singh',   room: '312', period: 'Mar 2026',        rent: 14000, food: 0,    amenities: 1200, gstRate: 12, gstAmount: 1824, total: 17024, status: 'Overdue', createdAt: '2026-03-31', paidAt: null },
-  { id: '4', invoiceNo: 'INV-004', guest: 'Neha Gupta',    room: '204', period: 'Apr 2026',        rent: 22000, food: 4200, amenities: 0,    gstRate: 12, gstAmount: 3144, total: 29344, status: 'Pending', createdAt: '2026-04-01', paidAt: null },
-  { id: '5', invoiceNo: 'INV-005', guest: 'Vijay Kumar',   room: '221', period: 'Feb–Mar 2026',    rent: 20000, food: 5000, amenities: 2400, gstRate: 12, gstAmount: 3288, total: 30688, status: 'Paid',    createdAt: '2026-04-01', paidAt: '2026-04-01' },
-]
+// Flatten an API invoice (guest is a relation) to the flat shape the UI renders.
+function normalizeInvoice(inv) {
+  return {
+    id: inv.id,
+    invoiceNo: inv.invoiceNo,
+    guestId: inv.guestId || inv.guest?.id,
+    guest: inv.guest?.name || '—',
+    room: inv.guest?.room?.number || '—',
+    period: inv.period,
+    rent: inv.rent || 0,
+    food: inv.food || 0,
+    amenities: inv.amenities || 0,
+    gstRate: inv.gstRate || 12,
+    gstAmount: inv.gstAmount || 0,
+    total: inv.total || 0,
+    status: inv.status,
+    createdAt: inv.createdAt,
+    paidAt: inv.paidAt || null,
+  }
+}
 
+// Used only by the (backend-less) Ledger tab mock below.
 const GUEST_OPTIONS = ['Rahul Sharma', 'Priya Patel', 'Ankit Singh', 'Neha Gupta', 'Vijay Kumar']
 
 // ─── Ledger mock data ─────────────────────────────────────────────────────────
@@ -385,33 +399,36 @@ function RemindModal({ invoice, onClose, onSend }) {
 }
 
 // ─── Generate Invoice Modal ───────────────────────────────────────────────────
-function GenerateInvoiceModal({ isOpen, onClose, onGenerate, existingNos }) {
-  const EMPTY = { guest: GUEST_OPTIONS[0], period: '', rent: '', food: '', amenities: '', gstRate: 12 }
+function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
+  const EMPTY = { guestId: '', period: '', rent: '', food: '', amenities: '', gstRate: 12 }
   const [form, setForm] = useState(EMPTY)
+  const [guests, setGuests] = useState([])
+
+  // Load real guests to invoice against whenever the modal opens.
+  useEffect(() => {
+    if (!isOpen) return
+    guestsApi.getAll()
+      .then(({ data }) => {
+        const list = data.guests || []
+        setGuests(list)
+        setForm(p => ({ ...p, guestId: p.guestId || list[0]?.id || '' }))
+      })
+      .catch(() => setGuests([]))
+  }, [isOpen])
 
   const subtotal    = (parseFloat(form.rent) || 0) + (parseFloat(form.food) || 0) + (parseFloat(form.amenities) || 0)
   const gstAmount   = Math.round(subtotal * (form.gstRate / 100))
   const total       = subtotal + gstAmount
 
   const handleGenerate = () => {
-    if (!form.period.trim() || !form.rent) return
-    const invoice = {
-      id:         Date.now().toString(),
-      invoiceNo:  generateInvoiceNo(existingNos),
-      guest:      form.guest,
-      room:       '—',
-      period:     form.period.trim(),
-      rent:       parseFloat(form.rent) || 0,
-      food:       parseFloat(form.food) || 0,
-      amenities:  parseFloat(form.amenities) || 0,
-      gstRate:    form.gstRate,
-      gstAmount,
-      total,
-      status:     'Pending',
-      createdAt:  new Date().toISOString().slice(0, 10),
-      paidAt:     null,
-    }
-    onGenerate(invoice)
+    if (!form.guestId || !form.period.trim() || !form.rent) return
+    onGenerate({
+      guestId:   form.guestId,
+      period:    form.period.trim(),
+      rent:      parseFloat(form.rent) || 0,
+      food:      parseFloat(form.food) || 0,
+      amenities: parseFloat(form.amenities) || 0,
+    })
     setForm(EMPTY)
   }
 
@@ -434,10 +451,12 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate, existingNos }) {
           <select
             className="form-select"
             style={{ width: '100%' }}
-            value={form.guest}
-            onChange={e => setForm(p => ({ ...p, guest: e.target.value }))}
+            value={form.guestId}
+            onChange={e => setForm(p => ({ ...p, guestId: e.target.value }))}
           >
-            {GUEST_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
+            {guests.length === 0
+              ? <option value="">No guests available</option>
+              : guests.map(g => <option key={g.id} value={g.id}>{g.name} · {g.docId}</option>)}
           </select>
         </div>
 
@@ -903,13 +922,29 @@ export default function Billing() {
   const addToast = useToast()
 
   const [activeTab, setActiveTab]           = useState('invoices')
-  const [invoices, setInvoices]             = useState(MOCK_INVOICES)
+  const [invoices, setInvoices]             = useState([])
+  const [loading, setLoading]               = useState(true)
+  const [error, setError]                   = useState('')
   const [search, setSearch]                 = useState('')
   const [statusFilter, setStatusFilter]     = useState('All')
   const [invoiceModal, setInvoiceModal]     = useState(null)   // invoice obj
   const [collectModal, setCollectModal]     = useState(null)   // invoice obj
   const [remindModal, setRemindModal]       = useState(null)   // invoice obj
   const [showGenerate, setShowGenerate]     = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const { data } = await billingApi.getAll()
+      setInvoices((data.invoices || []).map(normalizeInvoice))
+    } catch {
+      setError('Could not load invoices. Make sure the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -940,27 +975,41 @@ export default function Billing() {
   }, [invoices, search, statusFilter])
 
   // ── Handlers ───────────────────────────────────────────────────────────────
-  const handleCollect = (method) => {
+  const handleCollect = async (method) => {
     if (!collectModal) return
-    setInvoices(prev => prev.map(inv =>
-      inv.id === collectModal.id
-        ? { ...inv, status: 'Paid', paidAt: new Date().toISOString().slice(0, 10), paymentMethod: method || 'Cash' }
-        : inv
-    ))
-    addToast(`${formatCurrency(collectModal.total)} collected via ${method || 'Cash'} for ${collectModal.guest}`, 'success')
-    setCollectModal(null)
+    const target = collectModal
+    try {
+      await billingApi.collect(target.id)
+      addToast(`${formatCurrency(target.total)} collected via ${method || 'Cash'} for ${target.guest}`, 'success')
+      setCollectModal(null)
+      load()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not record payment', 'error')
+    }
   }
 
-  const handleRemind = (channel) => {
+  const handleRemind = async (channel, message) => {
     if (!remindModal) return
-    addToast(`Reminder sent via ${channel}`, 'success')
-    setRemindModal(null)
+    try {
+      if (remindModal.guestId) {
+        await remindersApi.send({ guestId: remindModal.guestId, channel, message })
+      }
+      addToast(`Reminder sent via ${channel}`, 'success')
+      setRemindModal(null)
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Could not send reminder', 'error')
+    }
   }
 
-  const handleGenerate = (invoice) => {
-    setInvoices(prev => [...prev, invoice])
-    addToast(`Invoice ${invoice.invoiceNo} generated`, 'success')
-    setShowGenerate(false)
+  const handleGenerate = async (payload) => {
+    try {
+      const { data } = await billingApi.generate(payload)
+      addToast(`Invoice ${data.invoice?.invoiceNo || ''} generated`, 'success')
+      setShowGenerate(false)
+      load()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not generate invoice', 'error')
+    }
   }
 
   const handleExportCSV = () => {
@@ -1008,11 +1057,18 @@ export default function Billing() {
         </div>
         {activeTab === 'invoices' && (
           <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-outline btn-sm" onClick={load} disabled={loading}>↻ Refresh</button>
             <button className="btn btn-outline btn-sm" onClick={handleExportCSV}>↓ Export CSV</button>
             <button className="btn btn-primary" onClick={() => setShowGenerate(true)}>+ Generate Invoice</button>
           </div>
         )}
       </div>
+
+      {error && (
+        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+          {error}
+        </div>
+      )}
 
       {/* ── Stat Cards ─────────────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 22 }}>
@@ -1144,8 +1200,8 @@ export default function Billing() {
           <div className="card" style={{ overflowX: 'auto' }}>
             {filtered.length === 0 ? (
               <div className="empty-state">
-                <p style={{ margin: 0, fontWeight: 600, color: 'var(--text2)' }}>No invoices found</p>
-                <p style={{ margin: '4px 0 0', fontSize: 12 }}>Try adjusting your filters</p>
+                <p style={{ margin: 0, fontWeight: 600, color: 'var(--text2)' }}>{loading ? 'Loading invoices…' : 'No invoices found'}</p>
+                {!loading && <p style={{ margin: '4px 0 0', fontSize: 12 }}>Generate an invoice or adjust your filters</p>}
               </div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -1329,7 +1385,6 @@ export default function Billing() {
         isOpen={showGenerate}
         onClose={() => setShowGenerate(false)}
         onGenerate={handleGenerate}
-        existingNos={invoices.map(i => i.invoiceNo)}
       />
     </div>
   )

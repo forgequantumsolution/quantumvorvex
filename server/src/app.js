@@ -94,7 +94,8 @@ app.use(cors({
 
 // ── Rate limiters ─────────────────────────────────────────────────────────────
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, max: 10,
+  // Strict in production; generous in dev/test so local E2E runs aren't locked out.
+  windowMs: 15 * 60 * 1000, max: process.env.NODE_ENV === 'production' ? 10 : 1000,
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many auth requests. Try again in 15 minutes.', code: 'ERR_RATE_LIMIT' },
   skip: (req) => req.path === '/logout',

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -6,23 +6,34 @@ import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import { useToast } from '../../../hooks/useToast'
+import { foodApi } from '../../../api/client'
 import { formatCurrency } from '../../../utils/format'
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_PLANS = [
-  { id: '1', name: 'Breakfast Only', desc: 'Morning meal — Idli, Dosa, Poha or Bread + Tea', oneTime: 120, weekly: 700, monthly: 2500, active: true },
-  { id: '2', name: 'All Meals', desc: 'Breakfast + Lunch + Dinner — Full board', oneTime: 350, weekly: 2100, monthly: 8000, active: true },
-  { id: '3', name: 'Dinner Only', desc: 'Evening meal — Rice, Dal, Sabji, Roti', oneTime: 180, weekly: 1050, monthly: 3500, active: true },
-  { id: '4', name: 'Lunch Only', desc: 'Afternoon meal — Thali with 3 items', oneTime: 150, weekly: 900, monthly: 3000, active: true },
-  { id: '5', name: 'No Meals', desc: 'Self-catering option', oneTime: 0, weekly: 0, monthly: 0, active: true },
-]
+// Flatten an API food plan to the UI shape.
+const normalizePlan = (p) => ({
+  id: p.id,
+  name: p.name,
+  desc: p.description || '',
+  oneTime: p.oneTimeRate || 0,
+  weekly: p.weeklyRate || 0,
+  monthly: p.monthlyRate || 0,
+  active: p.active !== false,
+})
 
-const MOCK_ORDERS = [
-  { id: '1', room: '102', guest: 'Rahul Sharma', plan: 'Breakfast Only', billing: 'monthly', amount: 2500, status: 'Active' },
-  { id: '2', room: '205', guest: 'Priya Patel', plan: 'All Meals', billing: 'daily', amount: 350, status: 'Active' },
-  { id: '3', room: '312', guest: 'Ankit Singh', plan: 'No Meals', billing: 'none', amount: 0, status: 'Active' },
-  { id: '4', room: '204', guest: 'Neha Gupta', plan: 'Dinner Only', billing: 'weekly', amount: 1050, status: 'Active' },
-]
+// Build an "order" row from an active guest on a food plan, pricing it from
+// the matching plan's monthly rate.
+const normalizeOrder = (g, planByName) => {
+  const plan = planByName[g.foodPlan]
+  return {
+    id: g.id,
+    room: g.room?.number || '—',
+    guest: g.name,
+    plan: g.foodPlan,
+    billing: g.stayType === 'monthly' ? 'monthly' : 'daily',
+    amount: plan ? (g.stayType === 'monthly' ? plan.monthly : plan.oneTime) : 0,
+    status: 'Active',
+  }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const BILLING_BADGE = {
@@ -42,40 +53,28 @@ const BILLING_LABEL = {
 const EMPTY_PLAN_FORM = { name: '', desc: '', oneTime: '', weekly: '', monthly: '' }
 
 // ─── Tab 1: Meal Catalog ──────────────────────────────────────────────────────
-function MealCatalog({ plans, onPlansChange }) {
-  const addToast = useToast()
+function MealCatalog({ plans, onCreate, onToggle, onDelete }) {
   const [showAddModal, setShowAddModal] = useState(false)
   const [form, setForm]                 = useState(EMPTY_PLAN_FORM)
-  const [billingSelect, setBillingSelect] = useState(() =>
-    Object.fromEntries(plans.map(p => [p.id, 'monthly']))
-  )
+  const [billingSelect, setBillingSelect] = useState({})
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!form.name.trim()) return
-    const newPlan = {
-      id:      Date.now().toString(),
-      name:    form.name.trim(),
-      desc:    form.desc.trim(),
-      oneTime: parseFloat(form.oneTime) || 0,
-      weekly:  parseFloat(form.weekly)  || 0,
-      monthly: parseFloat(form.monthly) || 0,
-      active:  true,
+    const ok = await onCreate({
+      name: form.name.trim(),
+      description: form.desc.trim(),
+      oneTimeRate: parseFloat(form.oneTime) || 0,
+      weeklyRate: parseFloat(form.weekly) || 0,
+      monthlyRate: parseFloat(form.monthly) || 0,
+    })
+    if (ok) {
+      setForm(EMPTY_PLAN_FORM)
+      setShowAddModal(false)
     }
-    onPlansChange(prev => [...prev, newPlan])
-    setBillingSelect(prev => ({ ...prev, [newPlan.id]: 'monthly' }))
-    setForm(EMPTY_PLAN_FORM)
-    setShowAddModal(false)
-    addToast(`Meal plan "${newPlan.name}" added`, 'success')
   }
 
-  const handleToggleActive = (id) => {
-    onPlansChange(prev => prev.map(p => p.id === id ? { ...p, active: !p.active } : p))
-  }
-
-  const handleDelete = (id, name) => {
-    onPlansChange(prev => prev.filter(p => p.id !== id))
-    addToast(`"${name}" removed`, 'info')
-  }
+  const handleToggleActive = (plan) => onToggle(plan.id, !plan.active)
+  const handleDelete = (id, name) => onDelete(id, name)
 
   const setBilling = (planId, type) => {
     setBillingSelect(prev => ({ ...prev, [planId]: type }))
@@ -106,7 +105,7 @@ function MealCatalog({ plans, onPlansChange }) {
               {/* Active toggle top-right */}
               <div
                 style={{ position: 'absolute', top: 11, right: 11, cursor: 'pointer' }}
-                onClick={() => handleToggleActive(plan.id)}
+                onClick={() => handleToggleActive(plan)}
                 title={plan.active ? 'Click to deactivate' : 'Click to activate'}
               >
                 <Badge type={plan.active ? 'green' : 'grey'}>
@@ -174,13 +173,6 @@ function MealCatalog({ plans, onPlansChange }) {
 
                 {/* Action buttons */}
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <button
-                    className="btn btn-outline btn-xs"
-                    style={{ flex: 1 }}
-                    onClick={() => addToast(`Edit "${plan.name}" (coming soon)`, 'info')}
-                  >
-                    Edit
-                  </button>
                   <button
                     className="btn btn-danger btn-xs"
                     style={{ flex: 1 }}
@@ -448,32 +440,93 @@ const TABS = [
 ]
 
 export default function Food() {
+  const addToast = useToast()
   const [activeTab, setActiveTab] = useState('catalog')
-  const [plans, setPlans]         = useState(MOCK_PLANS)
-  const orders                    = MOCK_ORDERS
+  const [plans, setPlans]         = useState([])
+  const [orders, setOrders]       = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [error, setError]         = useState('')
+
+  const load = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const [plansRes, ordersRes] = await Promise.all([foodApi.getPlans(), foodApi.getOrders()])
+      const normPlans = (plansRes.data.foodPlans || []).map(normalizePlan)
+      const planByName = Object.fromEntries(normPlans.map(p => [p.name, p]))
+      setPlans(normPlans)
+      setOrders((ordersRes.data.guests || []).map(g => normalizeOrder(g, planByName)))
+    } catch {
+      setError('Could not load food data. Make sure the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const handleCreate = async (planData) => {
+    try {
+      await foodApi.createPlan(planData)
+      addToast(`Meal plan "${planData.name}" added`, 'success')
+      load()
+      return true
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not add meal plan', 'error')
+      return false
+    }
+  }
+
+  const handleToggle = async (id, active) => {
+    setPlans(ps => ps.map(p => p.id === id ? { ...p, active } : p))
+    try {
+      await foodApi.updatePlan(id, { active })
+    } catch {
+      setPlans(ps => ps.map(p => p.id === id ? { ...p, active: !active } : p))
+      addToast('Could not update plan', 'error')
+    }
+  }
+
+  const handleDelete = async (id, name) => {
+    try {
+      await foodApi.deletePlan(id)
+      addToast(`"${name}" removed`, 'info')
+      load()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not delete plan', 'error')
+    }
+  }
 
   return (
     <div style={{ padding: '24px 28px', maxWidth: 1400, margin: '0 auto' }}>
       {/* Page header */}
-      <div style={{ marginBottom: 22 }}>
-        <h1 style={{
-          fontFamily: "'Syne', sans-serif",
-          fontSize: 26,
-          fontWeight: 800,
-          margin: 0,
-          color: 'var(--text)',
-          letterSpacing: '-0.03em',
-        }}>
-          Food Options
-        </h1>
-        <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--text3)' }}>
-          Meal plans, active orders, and food revenue
-        </p>
+      <div style={{ marginBottom: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{
+            fontFamily: "'Syne', sans-serif",
+            fontSize: 26,
+            fontWeight: 800,
+            margin: 0,
+            color: 'var(--text)',
+            letterSpacing: '-0.03em',
+          }}>
+            Food Options
+          </h1>
+          <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--text3)' }}>
+            Meal plans, active orders, and food revenue
+          </p>
+        </div>
+        <button className="btn btn-outline btn-sm" onClick={load} disabled={loading}>↻ Refresh</button>
       </div>
+
+      {error && (
+        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+          {error}
+        </div>
+      )}
 
       <Tabs tabs={TABS} active={activeTab} onChange={setActiveTab}>
         <div data-tab-id="catalog">
-          <MealCatalog plans={plans} onPlansChange={setPlans} />
+          <MealCatalog plans={plans} onCreate={handleCreate} onToggle={handleToggle} onDelete={handleDelete} />
         </div>
         <div data-tab-id="orders">
           <ActiveOrders orders={orders} />
