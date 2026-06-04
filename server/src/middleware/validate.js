@@ -11,7 +11,8 @@ import logger from '../utils/logger.js'
  */
 export function validate(schema) {
   return (req, res, next) => {
-    const result = schema.safeParse(req.body)
+    // Tolerate an empty/absent body for endpoints whose fields are all optional
+    const result = schema.safeParse(req.body ?? {})
     if (!result.success) {
       const errors = result.error.issues.map(i => ({
         field:   i.path.join('.'),
@@ -265,12 +266,28 @@ export const schemas = {
 
   // Maintenance
   createMaintenanceRequest: z.object({
-    roomId:      z.string().cuid(),
-    issueType:   z.string().min(1).max(50),
-    description: z.string().min(5).max(1000).trim(),
-    priority:    z.enum(['Low', 'Medium', 'High', 'Critical']).default('Medium'),
-    reportedBy:  z.string().min(1).max(100).trim(),
+    roomId:      z.string().cuid('Select a valid room'),
+    category:    z.enum(['Plumbing', 'Electrical', 'HVAC', 'Furniture', 'Housekeeping', 'Other']).default('Other'),
+    title:       z.string().min(2, 'A short title is required').max(120).trim(),
+    description: z.string().max(1000).optional().nullable(),
+    priority:    z.enum(['Low', 'Medium', 'High', 'Urgent']).default('Medium'),
+    reportedBy:  z.string().max(100).optional().nullable(),
     assignedTo:  z.string().max(100).optional().nullable(),
+    photoUrl:    z.string().max(500).optional().nullable(),
+  }),
+
+  updateMaintenanceRequest: z.object({
+    category:    z.enum(['Plumbing', 'Electrical', 'HVAC', 'Furniture', 'Housekeeping', 'Other']).optional(),
+    title:       z.string().min(2).max(120).trim().optional(),
+    description: z.string().max(1000).optional().nullable(),
+    priority:    z.enum(['Low', 'Medium', 'High', 'Urgent']).optional(),
+    status:      z.enum(['Open', 'In Progress', 'Resolved']).optional(),
+    assignedTo:  z.string().max(100).optional().nullable(),
+  }),
+
+  addMaintenanceNote: z.object({
+    author:  z.string().max(100).optional().nullable(),
+    content: z.string().min(1, 'Note cannot be empty').max(1000).trim(),
   }),
 
   // Food plan

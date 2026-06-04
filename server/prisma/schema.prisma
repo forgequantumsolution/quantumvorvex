@@ -325,17 +325,21 @@ model MessageTemplate {
 
 model MaintenanceRequest {
   id          String            @id @default(cuid())
+  ticketNo    String            @unique
   roomId      String
   room        Room              @relation(fields: [roomId], references: [id])
-  issueType   String
-  description String
-  priority    String            @default("Medium")
-  reportedBy  String
+  category    String            @default("Other")   // Plumbing | Electrical | HVAC | Furniture | Housekeeping | Other
+  title       String
+  issueType   String?                                // legacy alias for category
+  description String?
+  priority    String            @default("Medium")   // Low | Medium | High | Urgent
+  reportedBy  String            @default("Front Desk")
   assignedTo  String?
-  status      String            @default("Open")
+  status      String            @default("Open")     // Open | In Progress | Resolved
   photoUrl    String?
   notes       MaintenanceNote[]
   createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   resolvedAt  DateTime?
 }
 
