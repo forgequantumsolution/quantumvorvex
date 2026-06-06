@@ -1,40 +1,52 @@
 import { useEffect, useState } from 'react'
+import {
+  LuLayoutDashboard, LuCalendarCheck, LuLogIn, LuLogOut, LuCalendarX, LuWrench,
+  LuUsers, LuBedDouble, LuFileText, LuUtensils, LuSparkles,
+  LuCreditCard, LuChartColumn, LuUserCog, LuSettings,
+  LuPower, LuChevronsLeft, LuChevronsRight,
+} from 'react-icons/lu'
 import { useAppSelector, useUiActions, useAuthActions } from '../../store/hooks'
 import { getAllowedPanels, ROLE_LABELS, ROLE_COLORS } from '../../utils/permissions'
 
 const NAV_SECTIONS = [
   {
+    label: 'Overview',
+    items: [
+      { id: 'today',         label: 'Today',         Icon: LuLayoutDashboard },
+    ],
+  },
+  {
     label: 'Front Desk',
     items: [
-      { id: 'bookings',      label: 'Bookings',      icon: '◷',  shortcut: 'B' },
-      { id: 'checkin',       label: 'Check-In',      icon: '↗',  shortcut: 'C' },
-      { id: 'checkout',      label: 'Check-Out',     icon: '↘',  shortcut: 'O' },
-      { id: 'cancellations', label: 'Cancellations', icon: '✕' },
-      { id: 'maintenance',   label: 'Maintenance',   icon: '🔧', shortcut: 'M' },
+      { id: 'bookings',      label: 'Bookings',      Icon: LuCalendarCheck },
+      { id: 'checkin',       label: 'Check-In',      Icon: LuLogIn },
+      { id: 'checkout',      label: 'Check-Out',     Icon: LuLogOut },
+      { id: 'cancellations', label: 'Cancellations', Icon: LuCalendarX },
+      { id: 'maintenance',   label: 'Maintenance',   Icon: LuWrench },
     ],
   },
   {
     label: 'Operations',
     items: [
-      { id: 'guests',        label: 'Guests',        icon: '🧑', shortcut: 'G' },
-      { id: 'rooms',         label: 'Rooms',         icon: '🛏', shortcut: 'R' },
-      { id: 'documents',     label: 'Documents',     icon: '📄' },
-      { id: 'food',          label: 'Food',          icon: '🍽' },
-      { id: 'housekeeping',  label: 'Housekeeping',  icon: '🧹', shortcut: 'H' },
+      { id: 'guests',        label: 'Guests',        Icon: LuUsers },
+      { id: 'rooms',         label: 'Rooms',         Icon: LuBedDouble },
+      { id: 'documents',     label: 'Documents',     Icon: LuFileText },
+      { id: 'food',          label: 'Food',          Icon: LuUtensils },
+      { id: 'housekeeping',  label: 'Housekeeping',  Icon: LuSparkles },
     ],
   },
   {
     label: 'Finance',
     items: [
-      { id: 'billing',       label: 'Billing',       icon: '💳' },
-      { id: 'reports',       label: 'Reports',       icon: '📊' },
+      { id: 'billing',       label: 'Billing',       Icon: LuCreditCard },
+      { id: 'reports',       label: 'Reports',       Icon: LuChartColumn },
     ],
   },
   {
     label: 'Administration',
     items: [
-      { id: 'staff',         label: 'Staff',         icon: '👤' },
-      { id: 'settings',      label: 'Settings',      icon: '⚙' },
+      { id: 'staff',         label: 'Staff',         Icon: LuUserCog },
+      { id: 'settings',      label: 'Settings',      Icon: LuSettings },
     ],
   },
 ]
@@ -60,10 +72,9 @@ export default function Sidebar() {
   const activePanel      = useAppSelector((s) => s.ui.activePanel)
   const sidebarOpen      = useAppSelector((s) => s.ui.sidebarOpen)
   const sidebarCollapsed = useAppSelector((s) => s.ui.sidebarCollapsed)
-  const darkMode         = useAppSelector((s) => s.ui.darkMode)
   const hotelName        = useAppSelector((s) => s.hotel.hotelName)
   const currentUser      = useAppSelector((s) => s.auth.currentUser)
-  const { setActivePanel, closeSidebar, toggleDarkMode, toggleSidebarCollapsed } = useUiActions()
+  const { setActivePanel, closeSidebar, toggleSidebarCollapsed } = useUiActions()
   const { logout } = useAuthActions()
 
   // Collapse is a desktop-only affordance; the mobile drawer always shows full.
@@ -138,30 +149,15 @@ export default function Sidebar() {
             justifyContent: collapsed ? 'center' : 'space-between',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
-              <div style={{
-                width: 36, height: 36,
-                background: '#c9a84c',
-                borderRadius: 8,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, flexShrink: 0,
-              }}>
-                🏨
-              </div>
               {!collapsed && (
                 <div style={{ minWidth: 0 }}>
                   <div style={{
-                    fontFamily: "'Syne', sans-serif",
-                    fontSize: 15, fontWeight: 700,
+                    fontFamily: "'Playfair Display', sans-serif",
+                    fontSize: 17, fontWeight: 700,
                     color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2,
                   }}>
                     {head && <span>{head} </span>}
                     <span style={{ color: '#c9a84c' }}>{tail}</span>
-                  </div>
-                  <div style={{
-                    fontSize: 9.5, color: '#555', marginTop: 2,
-                    letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 500,
-                  }}>
-                    Powered by Forge Quantum Solutions
                   </div>
                 </div>
               )}
@@ -179,30 +175,6 @@ export default function Sidebar() {
               <CollapseButton collapsed={collapsed} onClick={toggleSidebarCollapsed} />
             </div>
           )}
-
-          {/* Dark mode toggle */}
-          <button
-            onClick={toggleDarkMode}
-            title={darkMode ? 'Light Mode' : 'Dark Mode'}
-            style={{
-              marginTop: collapsed ? 10 : 13,
-              width: collapsed ? 40 : '100%',
-              marginLeft: collapsed ? 'auto' : 0,
-              marginRight: collapsed ? 'auto' : 0,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 6, padding: collapsed ? '8px 0' : '6px 10px',
-              display: 'flex', alignItems: 'center',
-              justifyContent: collapsed ? 'center' : 'flex-start', gap: 7,
-              cursor: 'pointer', color: '#888', fontSize: 11.5,
-              fontFamily: "'Inter', sans-serif", transition: 'all 0.14s',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.4)'; e.currentTarget.style.color = '#c9a84c' }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#888' }}
-          >
-            <span style={{ fontSize: 13 }}>{darkMode ? '☀' : '🌙'}</span>
-            {!collapsed && <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>}
-          </button>
         </div>
 
         {/* Nav sections */}
@@ -213,7 +185,7 @@ export default function Sidebar() {
                 <div style={{
                   fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
                   textTransform: 'uppercase', color: '#3a3a3a',
-                  padding: '10px 18px 4px', fontFamily: "'Inter', sans-serif",
+                  padding: '10px 18px 4px', fontFamily: "'DM Sans', sans-serif",
                 }}>
                   {section.label}
                 </div>
@@ -250,7 +222,7 @@ export default function Sidebar() {
                 color: '#000',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 11.5, fontWeight: 700, flexShrink: 0,
-                fontFamily: "'Inter', sans-serif",
+                fontFamily: "'DM Sans', sans-serif",
               }}
             >
               {userInitials}
@@ -259,7 +231,7 @@ export default function Sidebar() {
               <div style={{ overflow: 'hidden', flex: 1 }}>
                 <div style={{
                   color: '#fff', fontSize: 12.5, fontWeight: 600,
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: "'DM Sans', sans-serif",
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 }}>
                   {userName}
@@ -270,7 +242,7 @@ export default function Sidebar() {
                     textTransform: 'uppercase', color: roleColor,
                     background: roleColor + '1a',
                     padding: '1px 5px', borderRadius: 3,
-                    fontFamily: "'Inter', sans-serif",
+                    fontFamily: "'DM Sans', sans-serif",
                   }}>
                     {roleLabel}
                   </span>
@@ -293,12 +265,12 @@ export default function Sidebar() {
               display: 'flex', alignItems: 'center',
               justifyContent: collapsed ? 'center' : 'flex-start', gap: 7,
               cursor: 'pointer', color: '#dc5555', fontSize: 12,
-              fontFamily: "'Inter', sans-serif", transition: 'all 0.14s',
+              fontFamily: "'DM Sans', sans-serif", transition: 'all 0.14s',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220,53,69,0.16)'; e.currentTarget.style.borderColor = 'rgba(220,53,69,0.4)' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(220,53,69,0.08)'; e.currentTarget.style.borderColor = 'rgba(220,53,69,0.2)' }}
           >
-            <span style={{ fontSize: 13 }}>⎋</span>
+            <LuPower size={15} />
             {!collapsed && <span>Sign Out</span>}
           </button>
         </div>
@@ -325,10 +297,10 @@ function CollapseButton({ collapsed, onClick }) {
         border: '1px solid rgba(255,255,255,0.08)',
         color: hovered ? '#c9a84c' : '#888',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer', fontSize: 14, transition: 'all 0.14s',
+        cursor: 'pointer', transition: 'all 0.14s',
       }}
     >
-      {collapsed ? '»' : '«'}
+      {collapsed ? <LuChevronsRight size={16} /> : <LuChevronsLeft size={16} />}
     </button>
   )
 }
@@ -354,37 +326,18 @@ function NavItem({ item, isActive, collapsed, onClick }) {
           ? 'rgba(201,168,76,0.08)'
           : hovered ? 'rgba(255,255,255,0.04)' : 'transparent',
         transition: 'all 0.12s', userSelect: 'none',
-        fontFamily: "'Inter', sans-serif",
+        fontFamily: "'DM Sans', sans-serif",
         fontWeight: isActive ? 500 : 400,
       }}
     >
       <span style={{
-        fontSize: 14, width: 18, textAlign: 'center', flexShrink: 0,
-        color: isActive ? '#c9a84c' : 'inherit',
+        width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0, color: isActive ? '#c9a84c' : hovered ? '#c9a84c' : '#8a857a',
+        transition: 'color 0.12s',
       }}>
-        {item.icon}
+        <item.Icon size={17} strokeWidth={isActive ? 2.3 : 1.9} />
       </span>
       {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
-      {!collapsed && item.badge && (
-        <span style={{
-          background: '#c9a84c', color: '#000', fontSize: 9.5, fontWeight: 700,
-          padding: '2px 6px', borderRadius: 20,
-          fontFamily: "'JetBrains Mono', monospace",
-        }}>
-          {item.badge}
-        </span>
-      )}
-      {!collapsed && item.shortcut && !item.badge && (
-        <span style={{
-          fontSize: 9.5, color: '#3a3a3a',
-          fontFamily: "'JetBrains Mono', monospace",
-          background: 'rgba(255,255,255,0.05)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 3, padding: '1px 4px',
-        }}>
-          {item.shortcut}
-        </span>
-      )}
     </div>
   )
 }

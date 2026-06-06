@@ -157,7 +157,7 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
             {guest.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div>
-            <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 700 }}>{guest.name}</div>
+            <div style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: 15, fontWeight: 700 }}>{guest.name}</div>
             <div style={{ fontSize: 11, color: 'var(--gold)', fontFamily: "'JetBrains Mono', monospace", fontWeight: 400 }}>{guest.docId}</div>
           </div>
         </div>
@@ -646,7 +646,7 @@ export default function Guests() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
-          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>All Guests</h1>
+          <h1 style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: '22px', fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>All Guests</h1>
           <p style={{ margin: '4px 0 0', color: 'var(--text3)', fontSize: '13px' }}>Guest registry, stay history & billing</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>

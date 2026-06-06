@@ -117,7 +117,7 @@ function MealCatalog({ plans, onCreate, onToggle, onDelete }) {
                 {/* Plan name */}
                 <p style={{
                   margin: '0 0 4px',
-                  fontFamily: "'Syne', sans-serif",
+                  fontFamily: "'Playfair Display', sans-serif",
                   fontSize: 14,
                   fontWeight: 700,
                   color: 'var(--text)',
@@ -360,7 +360,7 @@ function Revenue({ orders, plans }) {
           <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Total Food Revenue
           </p>
-          <p style={{ margin: 0, fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--gold)' }}>
+          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--gold)' }}>
             {formatCurrency(totalRevenue)}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>This month</p>
@@ -370,7 +370,7 @@ function Revenue({ orders, plans }) {
           <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Active Subscribers
           </p>
-          <p style={{ margin: 0, fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--blue)' }}>
+          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--blue)' }}>
             {activeCount}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>Guests on meal plan</p>
@@ -380,7 +380,7 @@ function Revenue({ orders, plans }) {
           <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Avg per Guest
           </p>
-          <p style={{ margin: 0, fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--purple)' }}>
+          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--purple)' }}>
             {formatCurrency(avgPerGuest)}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>Per active subscriber</p>
@@ -394,7 +394,7 @@ function Revenue({ orders, plans }) {
       >
         <p style={{
           margin: '0 0 16px',
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "'Playfair Display', sans-serif",
           fontSize: 13,
           fontWeight: 700,
           color: 'var(--text)',
@@ -502,7 +502,7 @@ export default function Food() {
       <div style={{ marginBottom: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <h1 style={{
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "'Playfair Display', sans-serif",
             fontSize: 26,
             fontWeight: 800,
             margin: 0,

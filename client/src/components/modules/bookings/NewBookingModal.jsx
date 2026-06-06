@@ -248,7 +248,7 @@ export default function NewBookingModal({ isOpen, onClose, onSaved }) {
         {Number(values.extraCharges) > 0 && (
           <div className="flex justify-between text-ink2 mt-1"><span>Extra charges</span><span>{inr(values.extraCharges)}</span></div>
         )}
-        <div className="flex justify-between font-syne font-bold text-base text-gold mt-2 pt-2 border-t border-gold-border">
+        <div className="flex justify-between font-display font-bold text-base text-gold mt-2 pt-2 border-t border-gold-border">
           <span>Total</span><span>{inr(pricing.total)}</span>
         </div>
         <div className="flex justify-between text-ink2 mt-1">

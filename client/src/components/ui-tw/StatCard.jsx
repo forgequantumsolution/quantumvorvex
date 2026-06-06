@@ -18,7 +18,7 @@ export default function StatCard({ icon, label, value, hint, tone = 'gold' }) {
         {icon}
       </div>
       <div className="min-w-0">
-        <div className="font-syne font-bold text-2xl text-ink leading-none">{value}</div>
+        <div className="font-display font-bold text-2xl text-ink leading-none">{value}</div>
         <div className="text-xs text-ink2 mt-1.5 font-medium">{label}</div>
         {hint && <div className="text-[11px] text-ink3 mt-0.5">{hint}</div>}
       </div>

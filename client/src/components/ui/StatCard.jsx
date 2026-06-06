@@ -55,7 +55,7 @@ export default function StatCard({
       </div>
       <div
         style={{
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "'Playfair Display', sans-serif",
           fontSize: '26px',
           fontWeight: 700,
           color: 'var(--text)',

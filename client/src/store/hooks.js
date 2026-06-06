@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { bindActionCreators } from '@reduxjs/toolkit'
 
@@ -28,11 +28,28 @@ export function useUiActions() {
           setSidebarCollapsed: ui.setSidebarCollapsed,
           setActivePanel: ui.setActivePanel,
           setSearchOpen: ui.setSearchOpen,
+          requestPrimaryAction: ui.requestPrimaryAction,
         },
         dispatch,
       ),
     [dispatch],
   )
+}
+
+// Run `handler` when the contextual header button fires for this `panel`.
+// Fires once per click (tracks the nonce) and always calls the latest handler.
+export function usePrimaryAction(panel, handler) {
+  const nonce    = useSelector((s) => s.ui.primaryActionNonce)
+  const reqPanel = useSelector((s) => s.ui.primaryActionPanel)
+  const seen = useRef(nonce)
+  const cb = useRef(handler)
+  cb.current = handler
+  useEffect(() => {
+    if (nonce !== seen.current) {
+      seen.current = nonce
+      if (reqPanel === panel) cb.current()
+    }
+  }, [nonce, reqPanel, panel])
 }
 
 export function useAuthActions() {

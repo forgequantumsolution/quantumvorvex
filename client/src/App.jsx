@@ -18,6 +18,7 @@ import { MOCK_USER, MOCK_TOKEN } from './api/mockData.js'
 const IS_MOCK = import.meta.env.VITE_MOCK === 'true'
 
 // Lazy load the five front-desk modules for performance
+const Today         = lazy(() => import('./components/modules/today/Today'))
 const Bookings      = lazy(() => import('./components/modules/bookings/Bookings'))
 const CheckIn       = lazy(() => import('./components/modules/checkin/CheckIn'))
 const CheckOut      = lazy(() => import('./components/modules/checkout/CheckOut'))
@@ -73,7 +74,7 @@ function AccessDenied({ panel }) {
   return (
     <div style={{ padding: 48, textAlign: 'center' }}>
       <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
-      <h2 style={{ margin: '0 0 8px', color: 'var(--text)', fontFamily: "'Syne', sans-serif" }}>
+      <h2 style={{ margin: '0 0 8px', color: 'var(--text)', fontFamily: "'Playfair Display', sans-serif" }}>
         Access Restricted
       </h2>
       <p style={{ color: 'var(--text3)', fontSize: 14 }}>
@@ -84,6 +85,7 @@ function AccessDenied({ panel }) {
 }
 
 const PANEL_MAP = {
+  today:         Today,
   bookings:      Bookings,
   checkin:       CheckIn,
   checkout:      CheckOut,
@@ -165,7 +167,7 @@ export default function App() {
   }
 
   const role = currentUser.role
-  const ActivePanel = PANEL_MAP[activePanel] || Bookings
+  const ActivePanel = PANEL_MAP[activePanel] || Today
 
   // Check if current user can access the active panel
   const hasAccess = canAccess(role, activePanel)

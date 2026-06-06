@@ -29,7 +29,7 @@ function MiniStat({ label, value, accent = '#c9a84c' }) {
   return (
     <div className="stat-card" style={{ borderTop: `3px solid ${accent}` }}>
       <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', fontFamily: "'Syne', sans-serif" }}>{value}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', fontFamily: "'Playfair Display', sans-serif" }}>{value}</div>
     </div>
   )
 }
@@ -308,7 +308,7 @@ export default function Reports() {
     <div style={{ padding: '24px', maxWidth: 1100, margin: '0 auto' }}>
       <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+          <h1 style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>
             Reports &amp; Analytics
           </h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text3)' }}>

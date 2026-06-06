@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageWrapper, StatCard, Card, DataTable, SearchInput, Button, EmptyState } from '../../ui-tw'
 import CancelModal from './CancelModal'
 import { useToast } from '../../../hooks/useToast'
+import { usePrimaryAction } from '../../../store/hooks'
 import { bookingsApi } from '../../../api/client'
 import { normalizeBooking } from '../../../utils/normalizeBooking'
 import { formatCurrency, formatDate } from '../../../utils/format'
@@ -34,6 +35,12 @@ export default function Cancellations() {
     () => bookings.filter((b) => b.status === 'Confirmed' || b.status === 'Pending' || b.status === 'CheckedIn'),
     [bookings],
   )
+
+  // Header "Cancel Booking" button
+  usePrimaryAction('cancellations', () => {
+    if (cancellable.length) setShowCancel(true)
+    else toast('No bookings are eligible to cancel', 'error')
+  })
 
   const stats = useMemo(() => {
     const lostRevenue = cancelled.reduce((s, b) => s + (Number(b.amount) || 0), 0)
@@ -88,9 +95,6 @@ export default function Cancellations() {
 
   return (
     <PageWrapper
-      title="Cancellations"
-      subtitle="Review cancelled bookings and cancel reservations"
-      icon="✕"
       actions={
         <div className="flex items-center gap-2">
           <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>

@@ -104,7 +104,7 @@ function Step1Welcome({ booking, onNext }) {
       <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
         <div style={{ fontSize: 28, marginBottom: 8 }}>👋</div>
         <h2 style={{
-          fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800,
+          fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800,
           color: 'var(--text)', margin: 0, letterSpacing: '-0.03em',
         }}>
           Welcome, {firstName}!
@@ -123,7 +123,7 @@ function Step1Welcome({ booking, onNext }) {
           background: 'var(--gold)', padding: '10px 16px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 13, color: '#000' }}>
+          <span style={{ fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 13, color: '#000' }}>
             {booking.hotelName}
           </span>
           <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: '#000', opacity: 0.8 }}>
@@ -479,7 +479,7 @@ function Step5Confirmation({ booking, guestName }) {
       {/* Title */}
       <div>
         <h2 style={{
-          fontFamily: "'Syne', sans-serif", fontSize: 20, fontWeight: 800,
+          fontFamily: "'Playfair Display', sans-serif", fontSize: 20, fontWeight: 800,
           color: 'var(--text)', margin: '0 0 6px', letterSpacing: '-0.03em',
         }}>
           Pre-Check-In Complete!
@@ -604,9 +604,9 @@ export default function GuestPortal() {
             width: 48, height: 48, borderRadius: '50%',
             background: 'var(--gold)', marginBottom: 10,
           }}>
-            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 18, color: '#000' }}>QV</span>
+            <span style={{ fontFamily: "'Playfair Display', sans-serif", fontWeight: 800, fontSize: 18, color: '#000' }}>QV</span>
           </div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>
+          <div style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>
             {MOCK_BOOKING.hotelName}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -628,7 +628,7 @@ export default function GuestPortal() {
           {/* Step heading */}
           <div style={{ marginBottom: 18 }}>
             <div style={{
-              fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 700,
+              fontFamily: "'Playfair Display', sans-serif", fontSize: 15, fontWeight: 700,
               color: 'var(--text)', letterSpacing: '-0.02em',
             }}>
               {STEP_LABELS[step - 1]}

@@ -66,7 +66,7 @@ export default function Modal({
         >
           <span
             style={{
-              fontFamily: "'Syne', sans-serif",
+              fontFamily: "'Playfair Display', sans-serif",
               fontSize: '16px',
               fontWeight: 700,
               color: 'var(--text)',

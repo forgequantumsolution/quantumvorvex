@@ -73,7 +73,7 @@ export default function InstallPrompt() {
         borderRadius:    12,
         boxShadow:       '0 8px 32px rgba(0,0,0,0.45)',
         padding:         '18px 20px',
-        fontFamily:      "'Inter', sans-serif",
+        fontFamily:      "'DM Sans', sans-serif",
         animation:       'qv-slide-up 0.25s ease',
       }}
     >
@@ -103,7 +103,7 @@ export default function InstallPrompt() {
         <div>
           <p style={{
             margin:      0,
-            fontFamily:  "'Syne', sans-serif",
+            fontFamily:  "'Playfair Display', sans-serif",
             fontSize:    14,
             fontWeight:  800,
             color:       'var(--gold)',
@@ -141,7 +141,7 @@ export default function InstallPrompt() {
             background:   'var(--gold)',
             border:       'none',
             color:        '#141414',
-            fontFamily:   "'Inter', sans-serif",
+            fontFamily:   "'DM Sans', sans-serif",
             transition:   'opacity 0.15s',
           }}
           onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
@@ -161,7 +161,7 @@ export default function InstallPrompt() {
             background:   'transparent',
             border:       '1px solid var(--border)',
             color:        'var(--text2)',
-            fontFamily:   "'Inter', sans-serif",
+            fontFamily:   "'DM Sans', sans-serif",
             transition:   'border-color 0.15s, color 0.15s',
           }}
           onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text3)'; e.currentTarget.style.color = 'var(--text)' }}

@@ -111,7 +111,7 @@ export default function NightAudit() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>Night Audit</h1>
+          <h1 style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>Night Audit</h1>
           <p style={{ margin: '4px 0 0', color: 'var(--text3)', fontSize: 13 }}>End-of-day close — {formatDate(TODAY)}</p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -151,7 +151,7 @@ export default function NightAudit() {
 
         {/* Revenue Breakdown */}
         <div className="card">
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14 }}>Revenue Breakdown</div>
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14 }}>Revenue Breakdown</div>
           <div style={{ padding: '14px 18px' }}>
             {[
               ['Room Rent',    REVENUE_TODAY.roomRent,  'var(--text)'],
@@ -176,7 +176,7 @@ export default function NightAudit() {
         {/* Checklist */}
         <div className="card">
           <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14 }}>Audit Checklist</span>
+            <span style={{ fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14 }}>Audit Checklist</span>
             <span style={{ fontSize: 11.5, color: 'var(--text3)', fontWeight: 600 }}>{completedCount}/{checklist.length} done</span>
           </div>
           {/* Progress bar */}
@@ -200,7 +200,7 @@ export default function NightAudit() {
 
         {/* Pending Checkouts */}
         <div className="card">
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14 }}>
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14 }}>
             Pending Checkouts
             {PENDING_CHECKOUTS.length > 0 && (
               <span style={{ marginLeft: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>{PENDING_CHECKOUTS.length}</span>
@@ -223,7 +223,7 @@ export default function NightAudit() {
 
         {/* Today's Check-Ins */}
         <div className="card">
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14 }}>Today's Check-Ins</div>
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14 }}>Today's Check-Ins</div>
           <div style={{ padding: '10px 18px' }}>
             {TODAYS_CHECKINS.map(c => (
               <div key={c.room} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
@@ -239,7 +239,7 @@ export default function NightAudit() {
 
         {/* Cash Register Summary */}
         <div className="card">
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14 }}>Cash Register</div>
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14 }}>Cash Register</div>
           <div style={{ padding: '10px 18px' }}>
             {CASH_REGISTER.slice(0, 4).map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
@@ -262,7 +262,7 @@ export default function NightAudit() {
 
       {/* Housekeeping Status */}
       <div className="card" style={{ marginBottom: 20 }}>
-        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14 }}>Housekeeping Status</div>
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14 }}>Housekeeping Status</div>
         <div style={{ padding: '14px 18px', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           {HOUSEKEEPING_STATUS.map(r => (
             <div key={r.room} style={{

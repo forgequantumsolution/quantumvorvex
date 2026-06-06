@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,19 +6,20 @@
 
 @layer base {
   :root {
-    --sb-bg: #141414;
-    --main-bg: #f4f4f2;
-    --surface: #fff;
-    --surface2: #f8f8f6;
-    --border: #e6e6e3;
-    --border2: #d0d0cb;
-    --text: #1a1a1a;
-    --text2: #52524d;
-    --text3: #98988f;
-    --gold: #c9a84c;
-    --gold2: #d4af5a;
-    --gold-bg: rgba(201,168,76,0.1);
-    --gold-border: rgba(201,168,76,0.35);
+    /* ── Pure white + gold theme ─────────────────────────────────────────── */
+    --sb-bg: #14110a;            /* deep espresso-black sidebar — luxe backdrop for gold */
+    --main-bg: #ffffff;          /* pure white page */
+    --surface: #ffffff;          /* pure white cards */
+    --surface2: #faf8f2;         /* faint warm gold-tinted wash for inputs/hover */
+    --border: #efece3;           /* soft warm hairline */
+    --border2: #e2dccc;          /* warm gold-grey border */
+    --text: #1a1712;             /* near-black ink with a warm cast */
+    --text2: #5c564a;
+    --text3: #9c9484;
+    --gold: #c9a84c;             /* signature gold */
+    --gold2: #b8923a;            /* deeper gold for hover (better contrast on white) */
+    --gold-bg: rgba(201,168,76,0.12);
+    --gold-border: rgba(201,168,76,0.40);
     --green: #16a34a;
     --green-bg: #dcfce7;
     --green-text: #15803d;
@@ -59,13 +60,21 @@
   * { box-sizing: border-box; }
 
   body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'DM Sans', sans-serif;
     background: var(--main-bg);
     color: var(--text);
     font-size: 14px;
     transition: background 0.25s, color 0.25s;
     margin: 0;
     overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings default to the Playfair Display serif for a luxury feel */
+  h1, h2, h3, h4, .font-display {
+    font-family: 'Playfair Display', serif;
   }
 
   #root {
@@ -75,6 +84,15 @@
     overflow: hidden;
     width: 100%;
   }
+
+  /* Compact density — tightens core spacing across every module (Appearance tab) */
+  .density-compact body { font-size: 13px; }
+  .density-compact .card-body   { padding: 13px; }
+  .density-compact .card-header { padding: 9px 14px; }
+  .density-compact td           { padding: 8px 12px; }
+  .density-compact th           { padding: 7px 12px; }
+  .density-compact .stat-card   { padding: 13px 15px; }
+  .density-compact .btn         { padding: 6px 12px; }
 }
 
 @layer components {
@@ -86,7 +104,7 @@
     padding: 8px 15px;
     border-radius: 6px;
     font-size: 13px;
-    font-family: 'Inter', sans-serif;
+    font-family: 'DM Sans', sans-serif;
     font-weight: 500;
     cursor: pointer;
     border: none;
@@ -142,7 +160,7 @@
     flex-wrap: wrap;
   }
   .card-title {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Playfair Display', sans-serif;
     font-size: 13.5px;
     font-weight: 700;
     color: var(--text);
@@ -180,7 +198,7 @@
     color: var(--text);
     padding: 8px 12px;
     border-radius: 6px;
-    font-family: 'Inter', sans-serif;
+    font-family: 'DM Sans', sans-serif;
     font-size: 13px;
     transition: border-color 0.14s;
     outline: none;
@@ -224,7 +242,7 @@
     background: none;
     white-space: nowrap;
     transition: all 0.14s;
-    font-family: 'Inter', sans-serif;
+    font-family: 'DM Sans', sans-serif;
   }
   .tab-btn:hover { color: var(--text); }
   .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); font-weight: 600; }

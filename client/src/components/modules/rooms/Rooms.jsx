@@ -54,7 +54,7 @@ function KanbanColumn({ title, rooms, badgeType, onSelect }) {
         alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+        <span style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
           {title}
         </span>
         <Badge type={badgeType}>{rooms.length}</Badge>
@@ -73,7 +73,7 @@ function KanbanColumn({ title, rooms, badgeType, onSelect }) {
             style={{ padding: '10px 13px' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-              <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>
+              <span style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>
                 {room.number}
               </span>
               <span style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -126,7 +126,7 @@ function RoomDetail({ room, onClose, onStatusChange }) {
               {label}
             </p>
             {value ? (
-              <p style={{ margin: '4px 0 0', fontSize: 14, fontWeight: 600, color: 'var(--text)', fontFamily: "'Syne', sans-serif" }}>
+              <p style={{ margin: '4px 0 0', fontSize: 14, fontWeight: 600, color: 'var(--text)', fontFamily: "'Playfair Display', sans-serif" }}>
                 {value}
               </p>
             ) : (
@@ -155,7 +155,7 @@ function RoomDetail({ room, onClose, onStatusChange }) {
               width: 36, height: 36, borderRadius: '50%',
               background: 'var(--red-text)', color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 800, flexShrink: 0,
+              fontFamily: "'Playfair Display', sans-serif", fontSize: 13, fontWeight: 800, flexShrink: 0,
             }}>
               {room.guest.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
@@ -322,7 +322,7 @@ export default function Rooms() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 22, gap: 16, flexWrap: 'wrap' }}>
         <div>
           <h1 style={{
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "'Playfair Display', sans-serif",
             fontSize: 26,
             fontWeight: 800,
             margin: 0,
@@ -363,7 +363,7 @@ export default function Rooms() {
             padding: '12px 16px',
             borderBottom: `3px solid ${s.color}`,
           }}>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, fontFamily: "'Syne', sans-serif", color: s.tc }}>{s.count}</p>
+            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, fontFamily: "'Playfair Display', sans-serif", color: s.tc }}>{s.count}</p>
             <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>{s.label}</p>
           </div>
         ))}
@@ -395,7 +395,7 @@ export default function Rooms() {
                   border: active ? '1px solid var(--gold)' : '1px solid var(--border)',
                   color: active ? 'var(--gold)' : 'var(--text2)',
                   transition: 'all 0.13s',
-                  fontFamily: "'Inter', sans-serif",
+                  fontFamily: "'DM Sans', sans-serif",
                 }}
               >
                 {f}
@@ -561,7 +561,7 @@ function RoomCard({ room, onClick }) {
       {/* Room number */}
       <p style={{
         margin: '0 0 2px',
-        fontFamily: "'Syne', sans-serif",
+        fontFamily: "'Playfair Display', sans-serif",
         fontSize: 20,
         fontWeight: 800,
         color: 'var(--text)',

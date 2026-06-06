@@ -83,7 +83,7 @@ function InvoiceModal({ invoice, onClose }) {
         </>
       }
     >
-      <div style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
         {/* Hotel header */}
         <div style={{
           textAlign: 'center',
@@ -93,7 +93,7 @@ function InvoiceModal({ invoice, onClose }) {
         }}>
           <p style={{
             margin: 0,
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "'Playfair Display', sans-serif",
             fontSize: 20,
             fontWeight: 800,
             color: 'var(--gold)',
@@ -109,7 +109,7 @@ function InvoiceModal({ invoice, onClose }) {
           </p>
           <p style={{
             margin: '12px 0 0',
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "'Playfair Display', sans-serif",
             fontSize: 13,
             fontWeight: 700,
             letterSpacing: '0.12em',
@@ -145,7 +145,7 @@ function InvoiceModal({ invoice, onClose }) {
                 color: 'var(--text)',
                 fontFamily: label === 'Invoice No' || label === 'Room'
                   ? "'JetBrains Mono', monospace"
-                  : "'Inter', sans-serif",
+                  : "'DM Sans', sans-serif",
               }}>
                 {val}
               </p>
@@ -207,7 +207,7 @@ function InvoiceModal({ invoice, onClose }) {
             <tr style={{ background: 'var(--gold-bg)' }}>
               <td style={{
                 padding: '11px 12px',
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "'Playfair Display', sans-serif",
                 fontSize: 14,
                 fontWeight: 800,
                 color: 'var(--gold)',
@@ -534,7 +534,7 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
                 paddingTop: 6,
                 marginTop: 2,
               }}>
-                <span style={{ fontFamily: "'Syne', sans-serif" }}>Total</span>
+                <span style={{ fontFamily: "'Playfair Display', sans-serif" }}>Total</span>
                 <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(total)}</span>
               </div>
             </div>
@@ -901,7 +901,7 @@ const TAB_STYLE_ACTIVE = {
   background: 'var(--gold-bg)',
   border: '1px solid var(--gold)',
   color: 'var(--gold)',
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'DM Sans', sans-serif",
   transition: 'all 0.13s',
 }
 const TAB_STYLE_INACTIVE = {
@@ -913,7 +913,7 @@ const TAB_STYLE_INACTIVE = {
   background: 'var(--surface)',
   border: '1px solid var(--border)',
   color: 'var(--text2)',
-  fontFamily: "'Inter', sans-serif",
+  fontFamily: "'DM Sans', sans-serif",
   transition: 'all 0.13s',
 }
 
@@ -1042,7 +1042,7 @@ export default function Billing() {
       }}>
         <div>
           <h1 style={{
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "'Playfair Display', sans-serif",
             fontSize: 26,
             fontWeight: 800,
             margin: 0,
@@ -1077,7 +1077,7 @@ export default function Billing() {
           <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Collected this month
           </p>
-          <p style={{ margin: 0, fontFamily: "'Syne', sans-serif", fontSize: 21, fontWeight: 800, color: 'var(--green-text)' }}>
+          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 21, fontWeight: 800, color: 'var(--green-text)' }}>
             {formatCurrency(stats.collected)}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>
@@ -1090,7 +1090,7 @@ export default function Billing() {
           <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Pending
           </p>
-          <p style={{ margin: 0, fontFamily: "'Syne', sans-serif", fontSize: 21, fontWeight: 800, color: 'var(--amber-text)' }}>
+          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 21, fontWeight: 800, color: 'var(--amber-text)' }}>
             {formatCurrency(stats.pendingTotal)}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>
@@ -1103,7 +1103,7 @@ export default function Billing() {
           <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             Overdue
           </p>
-          <p style={{ margin: 0, fontFamily: "'Syne', sans-serif", fontSize: 21, fontWeight: 800, color: 'var(--red-text)' }}>
+          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 21, fontWeight: 800, color: 'var(--red-text)' }}>
             {formatCurrency(stats.overdueTotal)}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>
@@ -1116,7 +1116,7 @@ export default function Billing() {
           <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
             GST Collected
           </p>
-          <p style={{ margin: 0, fontFamily: "'Syne', sans-serif", fontSize: 21, fontWeight: 800, color: 'var(--blue-text)' }}>
+          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 21, fontWeight: 800, color: 'var(--blue-text)' }}>
             {formatCurrency(stats.gstCollected)}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>From paid invoices</p>
@@ -1181,7 +1181,7 @@ export default function Billing() {
                       border: active ? '1px solid var(--gold)' : '1px solid var(--border)',
                       color: active ? 'var(--gold)' : 'var(--text2)',
                       transition: 'all 0.13s',
-                      fontFamily: "'Inter', sans-serif",
+                      fontFamily: "'DM Sans', sans-serif",
                     }}
                   >
                     {s}

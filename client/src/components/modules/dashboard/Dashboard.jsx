@@ -178,7 +178,7 @@ export default function Dashboard() {
         <div>
           <h1
             style={{
-              fontFamily: "'Syne', sans-serif",
+              fontFamily: "'Playfair Display', sans-serif",
               fontSize: 21,
               fontWeight: 800,
               color: 'var(--text)',
@@ -281,13 +281,13 @@ export default function Dashboard() {
                 >
                   <XAxis
                     dataKey="month"
-                    tick={{ fontSize: 11, fill: 'var(--text3)', fontFamily: 'Inter' }}
+                    tick={{ fontSize: 11, fill: 'var(--text3)', fontFamily: 'DM Sans' }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
                     tickFormatter={(v) => formatCurrencyCompact(v)}
-                    tick={{ fontSize: 10, fill: 'var(--text3)', fontFamily: 'Inter' }}
+                    tick={{ fontSize: 10, fill: 'var(--text3)', fontFamily: 'DM Sans' }}
                     axisLine={false}
                     tickLine={false}
                     width={52}
@@ -318,14 +318,14 @@ export default function Dashboard() {
                 >
                   <XAxis
                     dataKey="month"
-                    tick={{ fontSize: 11, fill: 'var(--text3)', fontFamily: 'Inter' }}
+                    tick={{ fontSize: 11, fill: 'var(--text3)', fontFamily: 'DM Sans' }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
                     domain={[0, 100]}
                     tickFormatter={(v) => `${v}%`}
-                    tick={{ fontSize: 10, fill: 'var(--text3)', fontFamily: 'Inter' }}
+                    tick={{ fontSize: 10, fill: 'var(--text3)', fontFamily: 'DM Sans' }}
                     axisLine={false}
                     tickLine={false}
                     width={36}

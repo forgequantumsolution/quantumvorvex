@@ -28,9 +28,14 @@ export default {
         violet: { DEFAULT: 'var(--purple)', bg: 'var(--purple-bg)', text: 'var(--purple-text)' },
       },
       fontFamily: {
-        syne: ['Syne', 'sans-serif'],
-        inter: ['Inter', 'sans-serif'],
-        mono: ['"JetBrains Mono"', 'monospace'],
+        // Luxury serif for headings/titles, clean sans for body — gold/white theme
+        display: ['"Playfair Display"', 'Georgia', 'serif'],
+        serif:   ['"Playfair Display"', 'Georgia', 'serif'],
+        sans:    ['"DM Sans"', 'system-ui', 'sans-serif'],
+        mono:    ['"JetBrains Mono"', 'monospace'],
+        // Back-compat aliases so any stray utility keeps resolving to the new pair
+        syne:    ['"Playfair Display"', 'serif'],
+        inter:   ['"DM Sans"', 'sans-serif'],
       },
       boxShadow: {
         soft: '0 1px 3px rgba(0,0,0,0.07), 0 4px 14px rgba(0,0,0,0.05)',

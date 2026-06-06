@@ -31,7 +31,7 @@ export default function Modal({ isOpen, onClose, title, subtitle, size = 'md', f
       >
         <div className="flex items-start justify-between gap-4 px-6 py-4 border-b border-line">
           <div>
-            <h2 className="font-syne font-bold text-ink text-lg leading-tight">{title}</h2>
+            <h2 className="font-display font-bold text-ink text-lg leading-tight">{title}</h2>
             {subtitle && <p className="text-sm text-ink3 mt-0.5">{subtitle}</p>}
           </div>
           <button

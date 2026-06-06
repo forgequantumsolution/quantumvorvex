@@ -84,7 +84,7 @@ function Avatar({ name, role, size = 34 }) {
       width: size, height: size, borderRadius: '50%',
       background: ROLE_AVATAR_COLORS[role] || '#6b7280',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontFamily: "'Syne', sans-serif", fontWeight: 700,
+      fontFamily: "'Playfair Display', sans-serif", fontWeight: 700,
       fontSize: size * 0.35, color: '#fff', flexShrink: 0,
       letterSpacing: '0.02em',
     }}>
@@ -622,7 +622,7 @@ export default function Staff() {
       }}>
         <div>
           <h1 style={{
-            margin: 0, fontFamily: "'Syne', sans-serif", fontSize: 22,
+            margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22,
             fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em',
           }}>
             👤 Staff Management

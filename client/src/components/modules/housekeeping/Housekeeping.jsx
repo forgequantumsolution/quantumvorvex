@@ -151,7 +151,7 @@ function BoardTab({ rooms, onRoomClick }) {
           <div key={floor} style={{ marginBottom: 24 }}>
             <p style={{
               margin: '0 0 10px',
-              fontFamily: "'Syne', sans-serif",
+              fontFamily: "'Playfair Display', sans-serif",
               fontSize: 13,
               fontWeight: 700,
               color: 'var(--text)',
@@ -724,7 +724,7 @@ export default function Housekeeping() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>
+          <h1 style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>
             🧹 Housekeeping
           </h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text3)' }}>
@@ -752,17 +752,17 @@ export default function Housekeeping() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
         <div className="stat-card stat-bar-green">
           <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Clean Available</p>
-          <p style={{ margin: '6px 0 0', fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, color: 'var(--green-text)', letterSpacing: '-0.03em' }}>{cleanCount}</p>
+          <p style={{ margin: '6px 0 0', fontFamily: "'Playfair Display', sans-serif", fontSize: 28, fontWeight: 800, color: 'var(--green-text)', letterSpacing: '-0.03em' }}>{cleanCount}</p>
           <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text3)' }}>Ready for check-in</p>
         </div>
         <div className="stat-card stat-bar-amber">
           <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dirty / Needs Cleaning</p>
-          <p style={{ margin: '6px 0 0', fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, color: 'var(--amber-text)', letterSpacing: '-0.03em' }}>{dirtyCount}</p>
+          <p style={{ margin: '6px 0 0', fontFamily: "'Playfair Display', sans-serif", fontSize: 28, fontWeight: 800, color: 'var(--amber-text)', letterSpacing: '-0.03em' }}>{dirtyCount}</p>
           <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text3)' }}>Dirty + checkout pending</p>
         </div>
         <div className="stat-card stat-bar-blue">
           <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cleaning In Progress</p>
-          <p style={{ margin: '6px 0 0', fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, color: 'var(--blue-text)', letterSpacing: '-0.03em' }}>{cleaningCount}</p>
+          <p style={{ margin: '6px 0 0', fontFamily: "'Playfair Display', sans-serif", fontSize: 28, fontWeight: 800, color: 'var(--blue-text)', letterSpacing: '-0.03em' }}>{cleaningCount}</p>
           <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text3)' }}>Currently being cleaned</p>
         </div>
       </div>

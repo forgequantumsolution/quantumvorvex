@@ -152,7 +152,7 @@ function Step1Profile({ data, onChange }) {
             overflow: 'hidden', flexShrink: 0,
             background: 'var(--gold-bg)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: "'Syne', sans-serif", fontWeight: 700,
+            fontFamily: "'Playfair Display', sans-serif", fontWeight: 700,
             fontSize: 22, color: 'var(--gold)',
           }}
         >
@@ -989,11 +989,11 @@ export default function SetupWizard({ onComplete }) {
             width: 52, height: 52, borderRadius: '50%',
             background: 'var(--gold)', marginBottom: 12,
           }}>
-            <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 20, color: '#000' }}>
+            <span style={{ fontFamily: "'Playfair Display', sans-serif", fontWeight: 800, fontSize: 20, color: '#000' }}>
               QV
             </span>
           </div>
-          <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>
+          <div style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>
             Quantum Vorvex Setup
           </div>
           <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 4 }}>
@@ -1017,7 +1017,7 @@ export default function SetupWizard({ onComplete }) {
           {/* Step heading */}
           <div style={{ marginBottom: 22 }}>
             <div style={{
-              fontFamily: "'Syne', sans-serif", fontSize: 17, fontWeight: 700,
+              fontFamily: "'Playfair Display', sans-serif", fontSize: 17, fontWeight: 700,
               color: 'var(--text)', letterSpacing: '-0.02em',
             }}>
               Step {step}: {STEP_LABELS[step - 1]}

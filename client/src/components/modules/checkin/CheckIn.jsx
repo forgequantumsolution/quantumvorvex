@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageWrapper, StatCard, Card, SearchInput, EmptyState, Button } from '../../ui-tw'
 import ArrivalCard from './ArrivalCard'
 import { useToast } from '../../../hooks/useToast'
+import { usePrimaryAction } from '../../../store/hooks'
 import { bookingsApi } from '../../../api/client'
 import { normalizeBooking } from '../../../utils/normalizeBooking'
 import { TODAY } from '../../../utils/booking'
@@ -69,15 +70,18 @@ export default function CheckIn() {
     }
   }
 
+  // Header "Check In" button — checks in the next pending arrival
+  usePrimaryAction('checkin', () => {
+    if (filtered.length) handleCheckIn(filtered[0])
+    else toast('No pending arrivals to check in', 'error')
+  })
+
   return (
     <PageWrapper
-      title="Check-In"
-      subtitle="Welcome arriving guests and assign their rooms"
-      icon="↗"
       actions={
         <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
           <SearchInput value={query} onChange={setQuery} placeholder="Search arrivals" className="w-56" />
+          <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
         </div>
       }
       stats={

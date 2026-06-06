@@ -5,6 +5,10 @@ import { PersistGate } from 'redux-persist/integration/react'
 import { store, persistor } from './store'
 import './index.css'
 import App from './App.jsx'
+import { applyAppearance } from './utils/theme'
+
+// Apply saved appearance (accent gold, density, corner radius) before first paint
+applyAppearance()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

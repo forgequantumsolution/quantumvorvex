@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import Tabs from '../../ui/Tabs'
 import Modal from '../../ui/Modal'
-import { useAppSelector, useHotelActions } from '../../../store/hooks'
+import { useAppSelector, useHotelActions, useUiActions } from '../../../store/hooks'
 import { useToast } from '../../../hooks/useToast'
 import api from '../../../api/client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ROLE_LABELS, ROLE_COLORS, canAccessSettingsTab } from '../../../utils/permissions'
+import {
+  ACCENT_PRESETS, RADIUS_PRESETS, getAppearance, saveAppearance, applyAppearance,
+} from '../../../utils/theme'
 
 // ─── Initial State ────────────────────────────────────────────────────────────
 const initSettings = {
@@ -145,7 +148,7 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
           {logoPreview ? (
             <img src={logoPreview} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--gold)', fontFamily: "'Syne', sans-serif" }}>
+            <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--gold)', fontFamily: "'Playfair Display', sans-serif" }}>
               {initials}
             </span>
           )}
@@ -1279,7 +1282,7 @@ function PropertiesTab({ settings, setSettings, addToast }) {
           {!editingMain ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 18, fontWeight: 800, fontFamily: "'Syne', sans-serif", color: 'var(--text)' }}>
+                <span style={{ fontSize: 18, fontWeight: 800, fontFamily: "'Playfair Display', sans-serif", color: 'var(--text)' }}>
                   {settings.hotelName}
                 </span>
                 <span style={{
@@ -1488,7 +1491,7 @@ function UsersAccessTab({ addToast }) {
     padding: '9px 11px',
     background: 'var(--surface2)', border: '1px solid var(--border)',
     borderRadius: 7, color: 'var(--text)', fontSize: 13,
-    fontFamily: "'Inter', sans-serif", outline: 'none',
+    fontFamily: "'DM Sans', sans-serif", outline: 'none',
   }
   const labelStyle = { fontSize: 11.5, fontWeight: 600, color: 'var(--text3)', letterSpacing: '0.04em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }
 
@@ -1703,6 +1706,337 @@ function UsersAccessTab({ addToast }) {
   )
 }
 
+// ─── Shared controls for the configuration tabs ───────────────────────────────
+function Segmented({ value, options, onChange }) {
+  return (
+    <div style={{ display: 'inline-flex', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: 3, gap: 3, flexWrap: 'wrap' }}>
+      {options.map(opt => {
+        const active = value === opt.value
+        return (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            style={{
+              padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
+              fontSize: 13, fontWeight: active ? 600 : 500,
+              background: active ? 'var(--gold)' : 'transparent',
+              color: active ? '#000' : 'var(--text2)',
+              transition: 'all 0.14s',
+            }}
+          >
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function ToggleRow({ label, hint, checked, onChange }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+      <div>
+        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{label}</div>
+        {hint && <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{hint}</div>}
+      </div>
+      <button
+        onClick={() => onChange(!checked)}
+        aria-pressed={checked}
+        style={{
+          width: 42, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
+          background: checked ? 'var(--gold)' : 'var(--border2)', position: 'relative', transition: 'background 0.16s',
+        }}
+      >
+        <span style={{
+          position: 'absolute', top: 3, left: checked ? 21 : 3, width: 18, height: 18, borderRadius: '50%',
+          background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)', transition: 'left 0.16s',
+        }} />
+      </button>
+    </div>
+  )
+}
+
+// ─── Tab: Appearance ──────────────────────────────────────────────────────────
+function AppearanceTab({ addToast }) {
+  const darkMode = useAppSelector(s => s.ui.darkMode)
+  const { toggleDarkMode } = useUiActions()
+  const [prefs, setPrefs] = useState(getAppearance)
+
+  // Apply + persist immediately so the whole app re-skins live as you tweak.
+  function update(patch) {
+    const next = { ...prefs, ...patch }
+    setPrefs(next)
+    applyAppearance(next)
+    saveAppearance(next)
+  }
+
+  function setTheme(mode) {
+    if ((mode === 'dark') !== darkMode) toggleDarkMode()
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="card">
+        <div className="card-header"><span className="card-title">Theme</span></div>
+        <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label className="form-label" style={{ fontSize: 12 }}>Color mode</label>
+          <Segmented
+            value={darkMode ? 'dark' : 'light'}
+            onChange={setTheme}
+            options={[{ value: 'light', label: '☀ Light' }, { value: 'dark', label: '☾ Dark' }]}
+          />
+          <p style={{ fontSize: 12, color: 'var(--text3)', margin: '4px 0 0' }}>
+            Light keeps the pure white &amp; gold look; dark switches to a warm charcoal palette.
+          </p>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><span className="card-title">Accent Color</span></div>
+        <div className="card-body">
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {ACCENT_PRESETS.map(a => {
+              const active = prefs.accent === a.id
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => update({ accent: a.id })}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer',
+                    background: 'none', border: 'none', padding: 4,
+                  }}
+                >
+                  <span style={{
+                    width: 44, height: 44, borderRadius: '50%',
+                    background: `linear-gradient(135deg, ${a.gold}, ${a.gold2})`,
+                    border: active ? '3px solid var(--text)' : '3px solid transparent',
+                    boxShadow: active ? '0 0 0 2px var(--surface) inset' : 'none',
+                  }} />
+                  <span style={{ fontSize: 11.5, fontWeight: active ? 700 : 500, color: active ? 'var(--text)' : 'var(--text3)' }}>
+                    {a.label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><span className="card-title">Layout</span></div>
+        <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label className="form-label" style={{ fontSize: 12 }}>Density</label>
+            <Segmented
+              value={prefs.density}
+              onChange={v => update({ density: v })}
+              options={[{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]}
+            />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label className="form-label" style={{ fontSize: 12 }}>Corner Style</label>
+            <Segmented
+              value={prefs.radius}
+              onChange={v => update({ radius: v })}
+              options={RADIUS_PRESETS.map(r => ({ value: r.id, label: r.label }))}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ paddingTop: 4 }}>
+        <button className="btn btn-primary" onClick={() => addToast('Appearance saved', 'success')}>
+          Save Appearance
+        </button>
+        <button
+          className="btn btn-outline"
+          style={{ marginLeft: 10 }}
+          onClick={() => { const d = { accent: 'classic', density: 'comfortable', radius: 'soft' }; setPrefs(d); applyAppearance(d); saveAppearance(d); addToast('Reset to defaults', 'info') }}
+        >
+          Reset to Default
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Tab: Branding ────────────────────────────────────────────────────────────
+const BRANDING_KEY = 'qv-branding'
+const initBranding = {
+  tagline:    'Luxury Redefined',
+  loginTitle: 'Welcome to Quantum Vorvex',
+  footerNote: '© Quantum Vorvex. All rights reserved.',
+  logoUrl:    '',
+}
+
+function BrandingTab({ settings, setSettings, addToast }) {
+  const { setHotelName } = useHotelActions()
+  const fileRef = useRef(null)
+  const [branding, setBranding] = useState(() => {
+    try { const r = localStorage.getItem(BRANDING_KEY); return r ? { ...initBranding, ...JSON.parse(r) } : initBranding }
+    catch { return initBranding }
+  })
+
+  function handleLogo(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => setBranding(b => ({ ...b, logoUrl: reader.result }))
+    reader.readAsDataURL(file)
+  }
+
+  function handleSave() {
+    try { localStorage.setItem(BRANDING_KEY, JSON.stringify(branding)) } catch { /* ignore */ }
+    setHotelName(settings.hotelName)
+    addToast('Branding saved', 'success')
+  }
+
+  const initials = (settings.hotelName || 'QV').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="card">
+        <div className="card-header"><span className="card-title">Logo &amp; Identity</span></div>
+        <div className="card-body" style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+          <div
+            onClick={() => fileRef.current?.click()}
+            style={{
+              width: 84, height: 84, borderRadius: 16, cursor: 'pointer', overflow: 'hidden', flexShrink: 0,
+              background: branding.logoUrl ? '#fff' : 'var(--gold-bg)', border: '2px solid var(--gold)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+            title="Click to upload logo"
+          >
+            {branding.logoUrl
+              ? <img src={branding.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              : <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 800, color: 'var(--gold)' }}>{initials}</span>}
+          </div>
+          <div>
+            <button className="btn btn-outline" style={{ fontSize: 12 }} onClick={() => fileRef.current?.click()}>Upload Logo</button>
+            {branding.logoUrl && (
+              <button className="btn btn-outline" style={{ fontSize: 12, marginLeft: 8 }} onClick={() => setBranding(b => ({ ...b, logoUrl: '' }))}>Remove</button>
+            )}
+            <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text3)' }}>PNG or SVG with transparent background recommended.</p>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogo} />
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><span className="card-title">Brand Text</span></div>
+        <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <Field label="Hotel / Brand Name">
+            <input className="form-input" value={settings.hotelName}
+              onChange={e => setSettings(s => ({ ...s, hotelName: e.target.value }))} />
+          </Field>
+          <Field label="Tagline">
+            <input className="form-input" value={branding.tagline}
+              onChange={e => setBranding(b => ({ ...b, tagline: e.target.value }))} />
+          </Field>
+          <Field label="Login Screen Title" fullWidth>
+            <input className="form-input" value={branding.loginTitle}
+              onChange={e => setBranding(b => ({ ...b, loginTitle: e.target.value }))} />
+          </Field>
+          <Field label="Footer Note" fullWidth>
+            <input className="form-input" value={branding.footerNote}
+              onChange={e => setBranding(b => ({ ...b, footerNote: e.target.value }))} />
+          </Field>
+        </div>
+      </div>
+
+      <SaveButton onClick={handleSave} />
+    </div>
+  )
+}
+
+// ─── Tab: Preferences ─────────────────────────────────────────────────────────
+const PREFS_KEY = 'qv-preferences'
+const initPreferences = {
+  language:    'en',
+  currency:    'INR',
+  dateFormat:  'DD/MM/YYYY',
+  timeFormat:  '12h',
+  itemsPerPage: 25,
+  soundAlerts:  true,
+  emailDigest:  false,
+  autoLogout:   true,
+}
+
+function PreferencesTab({ addToast }) {
+  const [prefs, setPrefs] = useState(() => {
+    try { const r = localStorage.getItem(PREFS_KEY); return r ? { ...initPreferences, ...JSON.parse(r) } : initPreferences }
+    catch { return initPreferences }
+  })
+  const set = (patch) => setPrefs(p => ({ ...p, ...patch }))
+
+  function handleSave() {
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)) } catch { /* ignore */ }
+    addToast('Preferences saved', 'success')
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="card">
+        <div className="card-header"><span className="card-title">Regional</span></div>
+        <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <Field label="Language">
+            <select className="form-select" value={prefs.language} onChange={e => set({ language: e.target.value })}>
+              <option value="en">English</option>
+              <option value="hi">हिन्दी (Hindi)</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="ar">العربية (Arabic)</option>
+            </select>
+          </Field>
+          <Field label="Currency">
+            <select className="form-select" value={prefs.currency} onChange={e => set({ currency: e.target.value })}>
+              <option value="INR">₹ Indian Rupee (INR)</option>
+              <option value="USD">$ US Dollar (USD)</option>
+              <option value="EUR">€ Euro (EUR)</option>
+              <option value="GBP">£ British Pound (GBP)</option>
+              <option value="AED">د.إ UAE Dirham (AED)</option>
+            </select>
+          </Field>
+          <Field label="Date Format">
+            <select className="form-select" value={prefs.dateFormat} onChange={e => set({ dateFormat: e.target.value })}>
+              <option>DD/MM/YYYY</option>
+              <option>MM/DD/YYYY</option>
+              <option>YYYY-MM-DD</option>
+              <option>DD MMM YYYY</option>
+            </select>
+          </Field>
+          <Field label="Time Format">
+            <Segmented
+              value={prefs.timeFormat}
+              onChange={v => set({ timeFormat: v })}
+              options={[{ value: '12h', label: '12-hour' }, { value: '24h', label: '24-hour' }]}
+            />
+          </Field>
+          <Field label="Rows Per Page">
+            <select className="form-select" value={prefs.itemsPerPage} onChange={e => set({ itemsPerPage: Number(e.target.value) })}>
+              {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </Field>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><span className="card-title">Notifications &amp; Session</span></div>
+        <div className="card-body" style={{ paddingTop: 4 }}>
+          <ToggleRow label="Sound alerts" hint="Play a chime for new bookings and check-ins"
+            checked={prefs.soundAlerts} onChange={v => set({ soundAlerts: v })} />
+          <ToggleRow label="Daily email digest" hint="Receive a summary of the day's activity each evening"
+            checked={prefs.emailDigest} onChange={v => set({ emailDigest: v })} />
+          <ToggleRow label="Auto sign-out when idle" hint="Lock the dashboard after 30 minutes of inactivity"
+            checked={prefs.autoLogout} onChange={v => set({ autoLogout: v })} />
+        </div>
+      </div>
+
+      <SaveButton onClick={handleSave} />
+    </div>
+  )
+}
+
 // ─── Settings (Root) ──────────────────────────────────────────────────────────
 const ALL_TABS = [
   { id: 'profile',       label: 'Hotel Profile'  },
@@ -1713,6 +2047,9 @@ const ALL_TABS = [
   { id: 'documents',     label: 'Documents'      },
   { id: 'pricing',       label: 'Pricing Rules'  },
   { id: 'notifications', label: 'Notifications'  },
+  { id: 'appearance',    label: 'Appearance'     },
+  { id: 'branding',      label: 'Branding'       },
+  { id: 'preferences',   label: 'Preferences'    },
   { id: 'properties',    label: 'Properties'     },
   { id: 'users',         label: 'Users & Access' },
 ]
@@ -1745,7 +2082,7 @@ export default function Settings({ onRunSetup }) {
         <div>
           <h1 style={{
             margin: 0,
-            fontFamily: "'Syne', sans-serif",
+            fontFamily: "'Playfair Display', sans-serif",
             fontSize: 22,
             fontWeight: 800,
             color: 'var(--text)',
@@ -1799,6 +2136,15 @@ export default function Settings({ onRunSetup }) {
         </div>
         <div data-tab-id="notifications">
           <NotificationsTab addToast={addToast} />
+        </div>
+        <div data-tab-id="appearance">
+          <AppearanceTab addToast={addToast} />
+        </div>
+        <div data-tab-id="branding">
+          <BrandingTab settings={settings} setSettings={setSettings} addToast={addToast} />
+        </div>
+        <div data-tab-id="preferences">
+          <PreferencesTab addToast={addToast} />
         </div>
         <div data-tab-id="properties">
           <PropertiesTab settings={settings} setSettings={setSettings} addToast={addToast} />

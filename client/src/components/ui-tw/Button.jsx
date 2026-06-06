@@ -27,7 +27,7 @@ export default function Button({
     <button
       type={type}
       className={[
-        'inline-flex items-center justify-center gap-2 rounded-lg font-medium font-inter',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-medium font-sans',
         'transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed',
         'tracking-tight whitespace-nowrap',
         VARIANTS[variant] || VARIANTS.primary,

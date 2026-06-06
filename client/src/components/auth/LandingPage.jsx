@@ -214,7 +214,7 @@ export default function LandingPage({ onLogin }) {
 
   return (
     <div style={{
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "'DM Sans', sans-serif",
       background: CREAM,
       color: INK,
       width: '100%',
@@ -497,7 +497,7 @@ export default function LandingPage({ onLogin }) {
             >
               <div style={{ fontSize: 28, marginBottom: 14 }}>{w.icon}</div>
               <div style={{
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "'Playfair Display', sans-serif",
                 fontSize: 15, fontWeight: 700, color: INK, marginBottom: 10,
               }}>{w.title}</div>
               <div style={{ fontSize: 13, color: '#6b6055', lineHeight: 1.75 }}>{w.desc}</div>
@@ -693,7 +693,7 @@ export default function LandingPage({ onLogin }) {
                   color: GOLD, lineHeight: 1, marginBottom: 16, opacity: 0.7,
                 }}>{s.step}</div>
                 <div style={{
-                  fontFamily: "'Syne', sans-serif",
+                  fontFamily: "'Playfair Display', sans-serif",
                   fontSize: 17, fontWeight: 700, color: '#fff', marginBottom: 10,
                 }}>{s.title}</div>
                 <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', lineHeight: 1.75 }}>{s.desc}</div>
@@ -745,7 +745,7 @@ export default function LandingPage({ onLogin }) {
             }}>
               <div style={{ fontSize: 24, marginBottom: 12 }}>{r.icon}</div>
               <div style={{
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: "'Playfair Display', sans-serif",
                 fontSize: 16, fontWeight: 700, color: INK, marginBottom: 10,
               }}>{r.role}</div>
               <div style={{ fontSize: 13, color: '#6b6055', lineHeight: 1.7 }}>{r.desc}</div>
@@ -1050,7 +1050,7 @@ export default function LandingPage({ onLogin }) {
                       width: '100%', boxSizing: 'border-box', padding: '9px 12px', resize: 'vertical',
                       background: '#f9f8f5', border: '1px solid rgba(0,0,0,0.12)',
                       borderRadius: 7, fontSize: 13, color: INK, outline: 'none',
-                      fontFamily: "'Inter', sans-serif", transition: 'all 0.15s',
+                      fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
                     }}
                     onFocus={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = GOLD; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.12)' }}
                     onBlur={e => { e.currentTarget.style.background = '#f9f8f5'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)'; e.currentTarget.style.boxShadow = 'none' }}

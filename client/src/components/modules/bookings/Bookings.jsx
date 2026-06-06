@@ -4,6 +4,7 @@ import BookingsTable from './BookingsTable'
 import NewBookingModal from './NewBookingModal'
 import CancelModal from '../cancellations/CancelModal'
 import { useToast } from '../../../hooks/useToast'
+import { usePrimaryAction } from '../../../store/hooks'
 import { bookingsApi } from '../../../api/client'
 import { formatCurrency } from '../../../utils/format'
 import { isUpcoming } from '../../../utils/booking'
@@ -44,6 +45,9 @@ export default function Bookings() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // Open the New Booking form when the header's contextual button fires
+  usePrimaryAction('bookings', () => setShowNew(true))
 
   // Stats
   const stats = useMemo(() => {
@@ -113,15 +117,6 @@ export default function Bookings() {
 
   return (
     <PageWrapper
-      title="Bookings"
-      subtitle="Create and manage room reservations"
-      icon="◷"
-      actions={
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
-          <Button icon="＋" onClick={() => setShowNew(true)}>New Booking</Button>
-        </div>
-      }
       stats={
         <>
           <StatCard icon="◷" tone="gold" label="Total bookings" value={stats.total} />
@@ -133,7 +128,12 @@ export default function Bookings() {
     >
       <Card
         title="All Bookings"
-        actions={<SearchInput value={query} onChange={setQuery} placeholder="Search name, no. or room" className="w-56" />}
+        actions={
+          <div className="flex items-center gap-2">
+            <SearchInput value={query} onChange={setQuery} placeholder="Search name, no. or room" className="w-56" />
+            <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
+          </div>
+        }
       >
         <div className="px-5 py-3 border-b border-line">
           <FilterTabs tabs={TABS.map((t) => ({ ...t, count: counts[t.id] }))} active={tab} onChange={setTab} />

@@ -12,7 +12,7 @@ export default function ArrivalCard({ booking, isToday, busy, onCheckIn }) {
   return (
     <div className="bg-surface border border-line rounded-xl shadow-soft p-4 flex flex-col gap-3">
       <div className="flex items-start gap-3">
-        <div className="w-11 h-11 rounded-full bg-gold-bg border border-gold-border text-gold flex items-center justify-center font-syne font-bold text-sm shrink-0">
+        <div className="w-11 h-11 rounded-full bg-gold-bg border border-gold-border text-gold flex items-center justify-center font-display font-bold text-sm shrink-0">
           {initials(booking.guestName)}
         </div>
         <div className="min-w-0 flex-1">

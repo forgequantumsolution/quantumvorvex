@@ -55,7 +55,7 @@ export default function OfflineBanner() {
         transition:      'opacity 0.6s ease',
         opacity:         fading ? 0 : 1,
         pointerEvents:   fading ? 'none' : 'auto',
-        fontFamily:      "'Inter', sans-serif",
+        fontFamily:      "'DM Sans', sans-serif",
       }}
     >
       {isOnline

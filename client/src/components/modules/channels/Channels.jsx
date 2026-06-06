@@ -82,7 +82,7 @@ function OverviewTab({ channels }) {
               {card.label}
             </div>
             <div style={{
-              fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800,
+              fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800,
               color: 'var(--text)', letterSpacing: '-0.02em',
             }}>
               {card.value}
@@ -104,7 +104,7 @@ function OverviewTab({ channels }) {
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <span style={{
-                  fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14,
+                  fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14,
                   color: 'var(--text)',
                 }}>
                   {ch.name}
@@ -615,7 +615,7 @@ export default function Channels() {
       {/* Page Header */}
       <div style={{ marginBottom: 20 }}>
         <h1 style={{
-          margin: 0, fontFamily: "'Syne', sans-serif", fontSize: 22,
+          margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22,
           fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em',
         }}>
           🔗 Booking Channels

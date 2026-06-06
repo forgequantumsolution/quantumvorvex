@@ -24,7 +24,7 @@ export const ROLE_COLORS = {
 
 // Panels each role can access. Panels are added here as their modules are
 // wired to the real backend (see docs/FRONTEND_API_PLAN.md).
-const FRONT_DESK_PANELS = ['bookings', 'checkin', 'checkout', 'cancellations', 'maintenance']
+const FRONT_DESK_PANELS = ['today', 'bookings', 'checkin', 'checkout', 'cancellations', 'maintenance']
 const OPERATIONS_PANELS = ['guests', 'rooms', 'housekeeping']
 // Owner/manager panels (staff excluded).
 const MANAGER_PANELS = ['documents', 'food', 'billing', 'reports', 'settings']
@@ -40,10 +40,10 @@ export const ROLE_PANELS = {
 
 // Settings tabs each role can see
 export const ROLE_SETTINGS_TABS = {
-  owner:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'properties', 'users'],
-  manager: ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'notifications'],
+  owner:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'appearance', 'branding', 'preferences', 'properties', 'users'],
+  manager: ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'notifications', 'appearance', 'preferences'],
   staff:   [],
-  admin:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'properties', 'users'],
+  admin:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'appearance', 'branding', 'preferences', 'properties', 'users'],
 }
 
 export function canAccess(role, panel) {

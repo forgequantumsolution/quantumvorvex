@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageWrapper, StatCard, Card, DataTable, StatusBadge, SearchInput, Button, EmptyState } from '../../ui-tw'
 import CheckOutModal from './CheckOutModal'
 import { useToast } from '../../../hooks/useToast'
+import { usePrimaryAction } from '../../../store/hooks'
 import { bookingsApi } from '../../../api/client'
 import { normalizeBooking } from '../../../utils/normalizeBooking'
 import { formatCurrency, formatDate } from '../../../utils/format'
@@ -45,6 +46,12 @@ export default function CheckOut() {
       b.bookingNo?.toLowerCase().includes(q) ||
       String(b.roomNumber || '').includes(q))
   }, [bookings, query])
+
+  // Header "Check Out" button — opens checkout for the next in-house guest
+  usePrimaryAction('checkout', () => {
+    if (filtered.length) setTarget(filtered[0])
+    else toast('No in-house guests to check out', 'error')
+  })
 
   const handleCheckOut = async ({ id, finalPayment, extraCharges }) => {
     setSubmitting(true)
@@ -98,13 +105,10 @@ export default function CheckOut() {
 
   return (
     <PageWrapper
-      title="Check-Out"
-      subtitle="Settle bills and release rooms for departing guests"
-      icon="↘"
       actions={
         <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
           <SearchInput value={query} onChange={setQuery} placeholder="Search in-house" className="w-56" />
+          <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
         </div>
       }
       stats={

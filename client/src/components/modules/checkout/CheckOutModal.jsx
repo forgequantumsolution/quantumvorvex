@@ -69,8 +69,8 @@ export default function CheckOutModal({ isOpen, booking, submitting, onClose, on
       </div>
 
       <div className="mt-4 flex items-center justify-between rounded-lg bg-surface2 border border-line px-4 py-3">
-        <span className="font-syne font-semibold text-ink">Balance after check-out</span>
-        <span className={`font-syne font-bold text-lg ${dueAfter > 0 ? 'text-danger-text' : 'text-success-text'}`}>
+        <span className="font-display font-semibold text-ink">Balance after check-out</span>
+        <span className={`font-display font-bold text-lg ${dueAfter > 0 ? 'text-danger-text' : 'text-success-text'}`}>
           {dueAfter > 0 ? formatCurrency(dueAfter) : 'Settled'}
         </span>
       </div>

@@ -305,7 +305,7 @@ export default function Documents() {
       {/* Header */}
       <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: '22px', fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>
+          <h1 style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: '22px', fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>
             Documents
           </h1>
           <p style={{ margin: '4px 0 0', color: 'var(--text3)', fontSize: '13px' }}>KYC verification & ID management</p>

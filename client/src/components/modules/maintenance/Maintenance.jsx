@@ -3,6 +3,7 @@ import { PageWrapper, StatCard, Card, FilterTabs, SearchInput, Button, EmptyStat
 import TicketCard from './TicketCard'
 import NewTicketModal from './NewTicketModal'
 import { useToast } from '../../../hooks/useToast'
+import { usePrimaryAction } from '../../../store/hooks'
 import { maintenanceApi } from '../../../api/client'
 
 const TABS = [
@@ -37,6 +38,9 @@ export default function Maintenance() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // Header "New Ticket" button
+  usePrimaryAction('maintenance', () => setShowNew(true))
 
   const counts = useMemo(() => ({
     all: tickets.length,
@@ -90,13 +94,10 @@ export default function Maintenance() {
 
   return (
     <PageWrapper
-      title="Maintenance"
-      subtitle="Track and resolve property maintenance issues"
-      icon="🔧"
       actions={
         <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
           <Button icon="＋" onClick={() => setShowNew(true)}>New Ticket</Button>
+          <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
         </div>
       }
       stats={

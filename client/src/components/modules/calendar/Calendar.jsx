@@ -277,7 +277,7 @@ export default function Calendar() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>Room Calendar</h1>
+          <h1 style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>Room Calendar</h1>
           <p style={{ margin: '4px 0 0', color: 'var(--text3)', fontSize: 13 }}>Visual booking timeline — click a cell to book or view details</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setNewPreRoom(''); setNewPreDate(todayYMD); setShowNew(true) }}>

@@ -73,7 +73,7 @@ function FloorPlanRoomDetail({ room, onClose }) {
             <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               {label}
             </p>
-            <p style={{ margin: '4px 0 0', fontSize: 14, fontWeight: 600, color: 'var(--text)', fontFamily: "'Syne', sans-serif" }}>
+            <p style={{ margin: '4px 0 0', fontSize: 14, fontWeight: 600, color: 'var(--text)', fontFamily: "'Playfair Display', sans-serif" }}>
               {value}
             </p>
           </div>
@@ -110,7 +110,7 @@ function FloorPlanRoomDetail({ room, onClose }) {
               width: 36, height: 36, borderRadius: '50%',
               background: 'var(--red-text)', color: '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 800, flexShrink: 0,
+              fontFamily: "'Playfair Display', sans-serif", fontSize: 13, fontWeight: 800, flexShrink: 0,
             }}>
               {room.guest.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
@@ -136,7 +136,7 @@ function FloorSection({ floorNum, rooms, onRoomClick }) {
       {/* Floor label + rule */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
         <span style={{
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "'Playfair Display', sans-serif",
           fontSize: 11,
           fontWeight: 800,
           letterSpacing: '0.12em',
@@ -180,7 +180,7 @@ function FloorRoomCell({ room, onClick }) {
       {/* Room number */}
       <p style={{
         margin: 0,
-        fontFamily: "'Syne', sans-serif",
+        fontFamily: "'Playfair Display', sans-serif",
         fontSize: 14,
         fontWeight: 800,
         lineHeight: 1.1,
@@ -250,7 +250,7 @@ export default function FloorPlan({ rooms: propRooms }) {
       {/* ── Page Header ────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 22 }}>
         <h1 style={{
-          fontFamily: "'Syne', sans-serif",
+          fontFamily: "'Playfair Display', sans-serif",
           fontSize: 26,
           fontWeight: 800,
           margin: 0,
@@ -331,7 +331,7 @@ export default function FloorPlan({ rooms: propRooms }) {
             fontSize: 12,
             fontWeight: 600,
           }}>
-            <span style={{ fontSize: 15, fontFamily: "'Syne', sans-serif", fontWeight: 800 }}>
+            <span style={{ fontSize: 15, fontFamily: "'Playfair Display', sans-serif", fontWeight: 800 }}>
               {counts[status]}
             </span>
             <span style={{ fontWeight: 500, opacity: 0.85 }}>{label}</span>
