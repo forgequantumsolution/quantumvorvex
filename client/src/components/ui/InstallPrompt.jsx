@@ -73,7 +73,6 @@ export default function InstallPrompt() {
         borderRadius:    12,
         boxShadow:       '0 8px 32px rgba(0,0,0,0.45)',
         padding:         '18px 20px',
-        fontFamily:      "'DM Sans', sans-serif",
         animation:       'qv-slide-up 0.25s ease',
       }}
     >
@@ -86,7 +85,7 @@ export default function InstallPrompt() {
 
       {/* Icon + heading */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-        <div style={{
+        <div className="t-h1" style={{
           width:        40,
           height:       40,
           borderRadius: 10,
@@ -95,32 +94,27 @@ export default function InstallPrompt() {
           display:      'flex',
           alignItems:   'center',
           justifyContent: 'center',
-          fontSize:     20,
           flexShrink:   0,
         }}>
           🏨
         </div>
         <div>
-          <p style={{
+          <p className="t-title" style={{
             margin:      0,
-            fontFamily:  "'Playfair Display', sans-serif",
-            fontSize:    14,
-            fontWeight:  800,
             color:       'var(--gold)',
             letterSpacing: '-0.02em',
           }}>
             Quantum Vortex Hotel
           </p>
-          <p style={{ margin: '1px 0 0', fontSize: 11, color: 'var(--text3)' }}>
+          <p className="t-xs" style={{ margin: '1px 0 0', color: 'var(--text3)' }}>
             Forge Quantum Solutions
           </p>
         </div>
       </div>
 
       {/* Message */}
-      <p style={{
+      <p className="t-sm" style={{
         margin:     '0 0 16px',
-        fontSize:   13,
         color:      'var(--text2)',
         lineHeight: 1.55,
       }}>
@@ -131,17 +125,15 @@ export default function InstallPrompt() {
       <div style={{ display: 'flex', gap: 10 }}>
         <button
           onClick={handleInstall}
+          className="t-title"
           style={{
             flex:         1,
             padding:      '9px 16px',
             borderRadius: 7,
-            fontSize:     13,
-            fontWeight:   700,
             cursor:       'pointer',
             background:   'var(--gold)',
             border:       'none',
             color:        '#141414',
-            fontFamily:   "'DM Sans', sans-serif",
             transition:   'opacity 0.15s',
           }}
           onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
@@ -151,17 +143,15 @@ export default function InstallPrompt() {
         </button>
         <button
           onClick={handleLater}
+          className="t-title"
           style={{
             flex:         1,
             padding:      '9px 16px',
             borderRadius: 7,
-            fontSize:     13,
-            fontWeight:   600,
             cursor:       'pointer',
             background:   'transparent',
             border:       '1px solid var(--border)',
             color:        'var(--text2)',
-            fontFamily:   "'DM Sans', sans-serif",
             transition:   'border-color 0.15s, color 0.15s',
           }}
           onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text3)'; e.currentTarget.style.color = 'var(--text)' }}

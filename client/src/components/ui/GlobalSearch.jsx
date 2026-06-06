@@ -104,7 +104,7 @@ export default function GlobalSearch() {
       }}>
         {/* Input */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: results.length ? '1px solid var(--border)' : 'none' }}>
-          <span style={{ color: 'var(--text3)', fontSize: 16 }}>⌕</span>
+          <span className="t-h3" style={{ color: 'var(--text3)' }}>⌕</span>
           <input
             ref={inputRef}
             value={query}
@@ -112,15 +112,16 @@ export default function GlobalSearch() {
             onKeyDown={handleKeyDown}
             placeholder="Search panels, guests, rooms..."
             autoFocus
+            className="t-h3"
             style={{
               flex: 1, background: 'none', border: 'none', outline: 'none',
-              fontSize: 15, color: 'var(--text)', fontFamily: 'Inter, sans-serif'
+              color: 'var(--text)'
             }}
           />
           <kbd style={{
             padding: '2px 6px', borderRadius: 4, background: 'var(--surface2)',
             border: '1px solid var(--border2)', fontSize: 10,
-            color: 'var(--text3)', fontFamily: 'JetBrains Mono, monospace'
+            color: 'var(--text3)', fontFamily: 'var(--font-mono)'
           }}>ESC</kbd>
         </div>
 
@@ -139,15 +140,15 @@ export default function GlobalSearch() {
                 }}
                 onMouseEnter={() => setSelected(i)}
               >
-                <span style={{ fontSize: 14, width: 20, textAlign: 'center', color: 'var(--text3)' }}>{item.icon}</span>
+                <span className="t-body" style={{ width: 20, textAlign: 'center', color: 'var(--text3)' }}>{item.icon}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{item.label}</div>
+                  <div className="t-sm" style={{ color: 'var(--text)' }}>{item.label}</div>
                   <div style={{ fontSize: 11.5, color: 'var(--text3)', marginTop: 1 }}>{item.meta}</div>
                 </div>
-                <span style={{
-                  fontSize: 10, padding: '2px 7px', borderRadius: 10,
+                <span className="t-label" style={{
+                  padding: '2px 7px', borderRadius: 10,
                   background: 'var(--gold-bg)', color: 'var(--gold)',
-                  fontWeight: 600, flexShrink: 0
+                  flexShrink: 0
                 }}>{item.resultType}</span>
               </div>
             ))}
@@ -155,20 +156,20 @@ export default function GlobalSearch() {
         )}
 
         {query && results.length === 0 && (
-          <div style={{ padding: '20px 16px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>
+          <div className="t-sm" style={{ padding: '20px 16px', textAlign: 'center', color: 'var(--text3)' }}>
             No results for "{query}"
           </div>
         )}
 
         {!query && (
           <div style={{ padding: '12px 16px' }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Quick Navigation</div>
+            <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 8 }}>Quick Navigation</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {PANELS.slice(0, 6).map(p => (
-                <button key={p.id} onClick={() => handleSelect(p)} style={{
+                <button key={p.id} onClick={() => handleSelect(p)} className="t-xs" style={{
                   padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)',
-                  background: 'var(--surface2)', color: 'var(--text2)', fontSize: 12,
-                  cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.12s'
+                  background: 'var(--surface2)', color: 'var(--text2)',
+                  cursor: 'pointer', transition: 'all 0.12s'
                 }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold)' }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text2)' }}

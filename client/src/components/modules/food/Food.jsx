@@ -115,11 +115,8 @@ function MealCatalog({ plans, onCreate, onToggle, onDelete }) {
 
               <div className="card-body" style={{ paddingTop: 14 }}>
                 {/* Plan name */}
-                <p style={{
+                <p className="t-title" style={{
                   margin: '0 0 4px',
-                  fontFamily: "'Playfair Display', sans-serif",
-                  fontSize: 14,
-                  fontWeight: 700,
                   color: 'var(--text)',
                   paddingRight: 60,
                 }}>
@@ -127,9 +124,8 @@ function MealCatalog({ plans, onCreate, onToggle, onDelete }) {
                 </p>
 
                 {/* Description */}
-                <p style={{
+                <p className="t-xs" style={{
                   margin: '0 0 12px',
-                  fontSize: 12,
                   color: 'var(--text3)',
                   lineHeight: 1.5,
                   minHeight: 34,
@@ -145,9 +141,9 @@ function MealCatalog({ plans, onCreate, onToggle, onDelete }) {
                     ['Monthly',  plan.monthly],
                   ].map(([label, val]) => (
                     <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 12, color: 'var(--text3)' }}>{label}</span>
+                      <span className="t-xs" style={{ color: 'var(--text3)' }}>{label}</span>
                       <span style={{
-                        fontFamily: "'JetBrains Mono', monospace",
+                        fontFamily: 'var(--font-mono)',
                         fontSize: 12,
                         color: val > 0 ? 'var(--text)' : 'var(--text3)',
                         fontWeight: 500,
@@ -272,14 +268,14 @@ function ActiveOrders({ orders }) {
             {orders.map(order => (
               <tr key={order.id}>
                 <td style={{ padding: '10px 12px' }}>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 600, color: 'var(--gold)' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: 'var(--gold)' }}>
                     {order.room}
                   </span>
                 </td>
-                <td style={{ padding: '10px 12px', fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>
+                <td className="t-sm" style={{ padding: '10px 12px', color: 'var(--text)', fontWeight: 500 }}>
                   {order.guest}
                 </td>
-                <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                <td className="t-title" style={{ padding: '10px 12px', color: 'var(--text)' }}>
                   {order.plan}
                 </td>
                 <td style={{ padding: '10px 12px' }}>
@@ -288,7 +284,7 @@ function ActiveOrders({ orders }) {
                   </Badge>
                 </td>
                 <td style={{ padding: '10px 12px' }}>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
                     {order.amount > 0 ? formatCurrency(order.amount) : '—'}
                   </span>
                 </td>
@@ -335,17 +331,16 @@ function Revenue({ orders, plans }) {
   const CustomTooltip = ({ active, payload }) => {
     if (!active || !payload?.length) return null
     return (
-      <div style={{
+      <div className="t-xs" style={{
         background: 'var(--surface)',
         border: '1px solid var(--border)',
         borderRadius: 6,
         padding: '8px 12px',
-        fontSize: 12,
         color: 'var(--text)',
         boxShadow: 'var(--shadow)',
       }}>
         <p style={{ margin: 0, fontWeight: 600 }}>{payload[0]?.payload?.fullName}</p>
-        <p style={{ margin: '3px 0 0', fontFamily: "'JetBrains Mono', monospace" }}>
+        <p style={{ margin: '3px 0 0', fontFamily: 'var(--font-mono)' }}>
           {formatCurrency(payload[0]?.value)}
         </p>
       </div>
@@ -357,30 +352,30 @@ function Revenue({ orders, plans }) {
       {/* Stat summary row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
         <div className="stat-card stat-bar-gold">
-          <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
             Total Food Revenue
           </p>
-          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--gold)' }}>
+          <p className="t-h1" style={{ margin: 0, color: 'var(--gold)' }}>
             {formatCurrency(totalRevenue)}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>This month</p>
         </div>
 
         <div className="stat-card stat-bar-blue">
-          <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
             Active Subscribers
           </p>
-          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--blue)' }}>
+          <p className="t-h1" style={{ margin: 0, color: 'var(--blue)' }}>
             {activeCount}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>Guests on meal plan</p>
         </div>
 
         <div className="stat-card stat-bar-purple">
-          <p style={{ margin: '0 0 4px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
             Avg per Guest
           </p>
-          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--purple)' }}>
+          <p className="t-h1" style={{ margin: 0, color: 'var(--purple)' }}>
             {formatCurrency(avgPerGuest)}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>Per active subscriber</p>
@@ -392,11 +387,8 @@ function Revenue({ orders, plans }) {
         className="card"
         style={{ padding: '18px 20px' }}
       >
-        <p style={{
+        <p className="t-title" style={{
           margin: '0 0 16px',
-          fontFamily: "'Playfair Display', sans-serif",
-          fontSize: 13,
-          fontWeight: 700,
           color: 'var(--text)',
         }}>
           Revenue by Meal Plan
@@ -404,7 +396,7 @@ function Revenue({ orders, plans }) {
 
         {revenueByPlan.length === 0 ? (
           <div className="empty-state" style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ margin: 0, color: 'var(--text3)', fontSize: 13 }}>No revenue data available</p>
+            <p className="t-sm" style={{ margin: 0, color: 'var(--text3)' }}>No revenue data available</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
@@ -412,12 +404,12 @@ function Revenue({ orders, plans }) {
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis
                 dataKey="name"
-                tick={{ fontSize: 11, fill: 'var(--text3)', fontFamily: 'Inter, sans-serif' }}
+                tick={{ fontSize: 11, fill: 'var(--text3)' }}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: 'var(--text3)', fontFamily: "'JetBrains Mono', monospace" }}
+                tick={{ fontSize: 11, fill: 'var(--text3)', fontFamily: 'var(--font-mono)' }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={v => `₹${(v / 1000).toFixed(0)}k`}
@@ -502,7 +494,6 @@ export default function Food() {
       <div style={{ marginBottom: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
           <h1 style={{
-            fontFamily: "'Playfair Display', sans-serif",
             fontSize: 26,
             fontWeight: 800,
             margin: 0,
@@ -511,7 +502,7 @@ export default function Food() {
           }}>
             Food Options
           </h1>
-          <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--text3)' }}>
+          <p className="t-sm" style={{ margin: '3px 0 0', color: 'var(--text3)' }}>
             Meal plans, active orders, and food revenue
           </p>
         </div>
@@ -519,7 +510,7 @@ export default function Food() {
       </div>
 
       {error && (
-        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
           {error}
         </div>
       )}

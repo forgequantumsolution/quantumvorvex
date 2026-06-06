@@ -47,9 +47,9 @@ function getParityStatus(row) {
 function RateTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div style={{
+    <div className="t-xs" style={{
       background: 'var(--surface)', border: '1px solid var(--border)',
-      borderRadius: 8, padding: '10px 14px', fontSize: 12,
+      borderRadius: 8, padding: '10px 14px',
     }}>
       <p style={{ margin: '0 0 6px', fontWeight: 700, color: 'var(--text)' }}>{label}</p>
       {payload.map(p => (
@@ -78,11 +78,10 @@ function OverviewTab({ channels }) {
           { label: 'Channels Connected', value: connectedCount,              sub: `of ${channels.length} channels` },
         ].map(card => (
           <div key={card.label} className="stat-card" style={{ padding: '16px 18px' }}>
-            <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+            <div className="t-label" style={{ color: 'var(--text3)', letterSpacing: '0.06em', marginBottom: 4 }}>
               {card.label}
             </div>
-            <div style={{
-              fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800,
+            <div className="t-h1" style={{
               color: 'var(--text)', letterSpacing: '-0.02em',
             }}>
               {card.value}
@@ -103,8 +102,7 @@ function OverviewTab({ channels }) {
             <div style={{ padding: '14px 16px' }}>
               {/* Header */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span style={{
-                  fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14,
+                <span className="t-title" style={{
                   color: 'var(--text)',
                 }}>
                   {ch.name}
@@ -121,7 +119,7 @@ function OverviewTab({ channels }) {
                 ].map(stat => (
                   <div key={stat.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: 11, color: 'var(--text3)' }}>{stat.label}</span>
-                    <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
                       {stat.value}
                     </span>
                   </div>
@@ -139,9 +137,9 @@ function OverviewTab({ channels }) {
                     Configure API
                   </button>
                 ) : (
-                  <label style={{
+                  <label className="t-xs" style={{
                     display: 'flex', alignItems: 'center', gap: 7,
-                    cursor: 'pointer', fontSize: 12, color: 'var(--text2)',
+                    cursor: 'pointer', color: 'var(--text2)',
                   }}>
                     <input
                       type="checkbox"
@@ -187,7 +185,7 @@ function RateParityTab() {
 
   return (
     <div>
-      <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--text2)' }}>
+      <p className="t-sm" style={{ margin: '0 0 16px', color: 'var(--text2)' }}>
         Compare your rates vs OTA platforms. Click competitor cells to edit inline.
       </p>
 
@@ -210,7 +208,7 @@ function RateParityTab() {
               return (
                 <tr key={row.type}>
                   <td style={{ fontWeight: 600 }}>{row.type}</td>
-                  <td style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--gold)' }}>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--gold)' }}>
                     ₹{row.yourRate.toLocaleString('en-IN')}
                   </td>
                   {[
@@ -221,14 +219,14 @@ function RateParityTab() {
                     const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.field === field
                     return (
                       <td key={field} onClick={() => handleCellClick(rowIndex, field)}
-                        style={{ cursor: 'pointer', fontFamily: 'monospace' }}>
+                        style={{ cursor: 'pointer', fontFamily: 'var(--font-mono)' }}>
                         {isEditing ? (
                           <input
                             autoFocus
                             type="number"
                             defaultValue={val}
                             className="form-input"
-                            style={{ width: 90, padding: '3px 7px', fontSize: 12, fontFamily: 'monospace' }}
+                            style={{ width: 90, padding: '3px 7px', fontSize: 12, fontFamily: 'var(--font-mono)' }}
                             onBlur={e => handleCellBlur(rowIndex, field, e.target.value)}
                             onKeyDown={e => {
                               if (e.key === 'Enter') e.target.blur()
@@ -361,10 +359,10 @@ function ImportTab() {
           onChange={handleFileInput}
         />
         <div style={{ fontSize: 36, marginBottom: 8 }}>☁</div>
-        <p style={{ margin: '0 0 4px', fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>
+        <p className="t-title" style={{ margin: '0 0 4px', color: 'var(--text)' }}>
           {fileUploaded ? '✓ File loaded — ready to map columns' : 'Drop your CSV file here, or click to browse'}
         </p>
-        <p style={{ margin: 0, fontSize: 12, color: 'var(--text3)' }}>
+        <p className="t-xs" style={{ margin: 0, color: 'var(--text3)' }}>
           Supports .csv files · Max 5 MB
         </p>
       </div>
@@ -374,7 +372,7 @@ function ImportTab() {
         <button className="btn btn-outline btn-sm" onClick={handleDownloadTemplate}>
           Download Template CSV
         </button>
-        <span style={{ fontSize: 12, color: 'var(--text3)' }}>
+        <span className="t-xs" style={{ color: 'var(--text3)' }}>
           Use this template to format your booking data correctly before importing.
         </span>
       </div>
@@ -395,11 +393,10 @@ function ImportTab() {
             <tbody>
               {CSV_SYSTEM_FIELDS.map(field => (
                 <tr key={field}>
-                  <td style={{ fontWeight: 600, fontSize: 13 }}>{field}</td>
+                  <td className="t-title">{field}</td>
                   <td>
                     <select
-                      className="form-select"
-                      style={{ fontSize: 12 }}
+                      className="form-select t-xs"
                       value={mapping[field]}
                       onChange={e => setMapping(m => ({ ...m, [field]: e.target.value }))}
                     >
@@ -431,7 +428,7 @@ function ImportTab() {
               {CSV_PREVIEW_ROWS.map((row, i) => (
                 <tr key={i}>
                   {row.map((cell, j) => (
-                    <td key={j} style={{ fontSize: 12, fontFamily: j === 4 ? 'monospace' : 'inherit' }}>
+                    <td key={j} className="t-xs" style={{ fontFamily: j === 4 ? 'monospace' : 'inherit' }}>
                       {cell}
                     </td>
                   ))}
@@ -465,9 +462,9 @@ function RevenueBySourceTab({ channels }) {
     if (!active || !payload?.length) return null
     const d = payload[0]
     return (
-      <div style={{
+      <div className="t-xs" style={{
         background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: 8, padding: '9px 13px', fontSize: 12,
+        borderRadius: 8, padding: '9px 13px',
       }}>
         <p style={{ margin: 0, fontWeight: 700, color: 'var(--text)' }}>{d.name}</p>
         <p style={{ margin: '3px 0 0', color: 'var(--text2)' }}>
@@ -511,13 +508,13 @@ function RevenueBySourceTab({ channels }) {
             justifyContent: 'center', marginTop: 12,
           }}>
             {channels.map(ch => (
-              <div key={ch.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+              <div key={ch.id} className="t-xs" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{
                   width: 10, height: 10, borderRadius: '50%',
                   background: ch.color, flexShrink: 0, display: 'inline-block',
                 }} />
                 <span style={{ color: 'var(--text2)' }}>{ch.name}</span>
-                <span style={{ fontWeight: 600, color: 'var(--text)', fontFamily: 'monospace' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
                   {formatCurrency(ch.revenue)}
                 </span>
                 <span style={{ color: 'var(--text3)' }}>
@@ -553,14 +550,14 @@ function RevenueBySourceTab({ channels }) {
                         width: 10, height: 10, borderRadius: '50%',
                         background: ch.color, flexShrink: 0, display: 'inline-block',
                       }} />
-                      <span style={{ fontWeight: 600, fontSize: 13 }}>{ch.name}</span>
+                      <span className="t-title">{ch.name}</span>
                     </div>
                   </td>
-                  <td style={{ fontFamily: 'monospace' }}>{ch.bookings}</td>
-                  <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>
+                  <td style={{ fontFamily: 'var(--font-mono)' }}>{ch.bookings}</td>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
                     {formatCurrency(ch.revenue)}
                   </td>
-                  <td style={{ fontFamily: 'monospace' }}>
+                  <td style={{ fontFamily: 'var(--font-mono)' }}>
                     {formatCurrency(ch.avgRate)}
                   </td>
                   <td>
@@ -576,7 +573,7 @@ function RevenueBySourceTab({ channels }) {
                           borderRadius: 3,
                         }} />
                       </div>
-                      <span style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
                         {((ch.revenue / totalRevenue) * 100).toFixed(1)}%
                       </span>
                     </div>
@@ -587,10 +584,10 @@ function RevenueBySourceTab({ channels }) {
             {/* Totals row */}
             <tr style={{ borderTop: '2px solid var(--border)', fontWeight: 700 }}>
               <td>Total</td>
-              <td style={{ fontFamily: 'monospace' }}>{totalBookings}</td>
-              <td style={{ fontFamily: 'monospace' }}>{formatCurrency(totalRevenue)}</td>
-              <td style={{ fontFamily: 'monospace', color: 'var(--text3)' }}>—</td>
-              <td style={{ fontFamily: 'monospace' }}>100%</td>
+              <td style={{ fontFamily: 'var(--font-mono)' }}>{totalBookings}</td>
+              <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(totalRevenue)}</td>
+              <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>—</td>
+              <td style={{ fontFamily: 'var(--font-mono)' }}>100%</td>
             </tr>
           </tbody>
         </table>
@@ -614,13 +611,12 @@ export default function Channels() {
     <div>
       {/* Page Header */}
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{
-          margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22,
-          fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em',
+        <h1 className="t-h1" style={{
+          margin: 0, color: 'var(--text)', letterSpacing: '-0.02em',
         }}>
           🔗 Booking Channels
         </h1>
-        <p style={{ margin: '3px 0 0', color: 'var(--text3)', fontSize: 13 }}>
+        <p className="t-sm" style={{ margin: '3px 0 0', color: 'var(--text3)' }}>
           Manage OTA and direct bookings
         </p>
       </div>

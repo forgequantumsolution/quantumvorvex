@@ -70,10 +70,10 @@ function FloorPlanRoomDetail({ room, onClose }) {
             borderRadius: 8,
             padding: '10px 14px',
           }}>
-            <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <p className="t-label" style={{ margin: 0, color: 'var(--text3)' }}>
               {label}
             </p>
-            <p style={{ margin: '4px 0 0', fontSize: 14, fontWeight: 600, color: 'var(--text)', fontFamily: "'Playfair Display', sans-serif" }}>
+            <p className="t-title" style={{ margin: '4px 0 0', color: 'var(--text)' }}>
               {value}
             </p>
           </div>
@@ -87,7 +87,7 @@ function FloorPlanRoomDetail({ room, onClose }) {
           padding: '10px 14px',
           gridColumn: '1 / -1',
         }}>
-          <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <p className="t-label" style={{ margin: '0 0 6px', color: 'var(--text3)' }}>
             Status
           </p>
           <Badge type={badgeType}>{STATUS_LABEL[room.status]}</Badge>
@@ -102,21 +102,20 @@ function FloorPlanRoomDetail({ room, onClose }) {
           padding: '13px 16px',
           marginBottom: 18,
         }}>
-          <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 700, color: 'var(--red-text)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          <p className="t-label" style={{ margin: '0 0 8px', color: 'var(--red-text)' }}>
             Current Occupant
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
+            <div className="t-title" style={{
               width: 36, height: 36, borderRadius: '50%',
               background: 'var(--red-text)', color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: "'Playfair Display', sans-serif", fontSize: 13, fontWeight: 800, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}>
               {room.guest.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
             <div>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{room.guest.name}</p>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text2)' }}>{room.guest.phone}</p>
+              <p className="t-title" style={{ margin: 0, color: 'var(--text)' }}>{room.guest.name}</p>
+              <p className="t-xs" style={{ margin: '2px 0 0', color: 'var(--text2)' }}>{room.guest.phone}</p>
             </div>
           </div>
         </div>
@@ -135,20 +134,15 @@ function FloorSection({ floorNum, rooms, onRoomClick }) {
     <div style={{ marginBottom: 32 }}>
       {/* Floor label + rule */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-        <span style={{
-          fontFamily: "'Playfair Display', sans-serif",
-          fontSize: 11,
-          fontWeight: 800,
-          letterSpacing: '0.12em',
+        <span className="t-label" style={{
           color: 'var(--text3)',
-          textTransform: 'uppercase',
           whiteSpace: 'nowrap',
           flexShrink: 0,
         }}>
           Floor {floorNum}
         </span>
         <hr style={{ flex: 1, border: 'none', borderTop: '1px solid var(--border)', margin: 0 }} />
-        <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>
+        <span className="t-label" style={{ color: 'var(--text3)', flexShrink: 0 }}>
           {rooms.length} room{rooms.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -178,11 +172,8 @@ function FloorRoomCell({ room, onClick }) {
       title={`Room ${room.number} — ${room.type} — ${STATUS_LABEL[room.status]}${room.guest ? ` — ${room.guest.name}` : ''}`}
     >
       {/* Room number */}
-      <p style={{
+      <p className="t-title" style={{
         margin: 0,
-        fontFamily: "'Playfair Display', sans-serif",
-        fontSize: 14,
-        fontWeight: 800,
         lineHeight: 1.1,
         letterSpacing: '-0.02em',
       }}>
@@ -250,7 +241,6 @@ export default function FloorPlan({ rooms: propRooms }) {
       {/* ── Page Header ────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 22 }}>
         <h1 style={{
-          fontFamily: "'Playfair Display', sans-serif",
           fontSize: 26,
           fontWeight: 800,
           margin: 0,
@@ -259,7 +249,7 @@ export default function FloorPlan({ rooms: propRooms }) {
         }}>
           Floor Plan
         </h1>
-        <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--text3)' }}>
+        <p className="t-sm" style={{ margin: '3px 0 0', color: 'var(--text3)' }}>
           Visual room layout by floor
         </p>
       </div>
@@ -279,7 +269,7 @@ export default function FloorPlan({ rooms: propRooms }) {
       }}>
         {/* Legend */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <span className="t-label" style={{ color: 'var(--text3)' }}>
             Legend
           </span>
           {LEGEND.map(({ status, label, bg, color, dot }) => (
@@ -291,14 +281,14 @@ export default function FloorPlan({ rooms: propRooms }) {
                 border: `1.5px solid ${dot}`,
                 flexShrink: 0,
               }} />
-              <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 500 }}>{label}</span>
+              <span className="t-xs" style={{ color: 'var(--text2)' }}>{label}</span>
             </div>
           ))}
         </div>
 
         {/* Occupancy summary */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+          <span className="t-label" style={{ color: 'var(--text3)' }}>
             {counts.occupied}/{counts.total} occupied
           </span>
           {/* Mini progress bar */}
@@ -311,7 +301,7 @@ export default function FloorPlan({ rooms: propRooms }) {
               transition: 'width 0.4s ease',
             }} />
           </div>
-          <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600 }}>
+          <span className="t-label" style={{ color: 'var(--text3)' }}>
             {Math.round((counts.occupied / counts.total) * 100)}%
           </span>
         </div>
@@ -331,7 +321,7 @@ export default function FloorPlan({ rooms: propRooms }) {
             fontSize: 12,
             fontWeight: 600,
           }}>
-            <span style={{ fontSize: 15, fontFamily: "'Playfair Display', sans-serif", fontWeight: 800 }}>
+            <span className="t-h3">
               {counts[status]}
             </span>
             <span style={{ fontWeight: 500, opacity: 0.85 }}>{label}</span>
@@ -342,7 +332,7 @@ export default function FloorPlan({ rooms: propRooms }) {
       {/* ── Floor Sections ──────────────────────────────────────────────────── */}
       {floors.length === 0 ? (
         <div className="empty-state">
-          <p style={{ fontSize: 32, margin: '0 0 8px' }}>🏨</p>
+          <p className="t-display" style={{ margin: '0 0 8px' }}>🏨</p>
           <p style={{ margin: 0, fontWeight: 600, color: 'var(--text2)' }}>No rooms found</p>
         </div>
       ) : (

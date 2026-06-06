@@ -83,7 +83,7 @@ function InvoiceModal({ invoice, onClose }) {
         </>
       }
     >
-      <div style={{ fontFamily: "'DM Sans', sans-serif" }}>
+      <div>
         {/* Hotel header */}
         <div style={{
           textAlign: 'center',
@@ -91,27 +91,21 @@ function InvoiceModal({ invoice, onClose }) {
           paddingBottom: 16,
           marginBottom: 20,
         }}>
-          <p style={{
+          <p className="t-h1" style={{
             margin: 0,
-            fontFamily: "'Playfair Display', sans-serif",
-            fontSize: 20,
-            fontWeight: 800,
             color: 'var(--gold)',
             letterSpacing: '-0.02em',
           }}>
             Quantum Vorvex
           </p>
-          <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text3)' }}>
+          <p className="t-xs" style={{ margin: '3px 0 0', color: 'var(--text3)' }}>
             Hotel Management System
           </p>
           <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text3)' }}>
             123 Quantum Nagar, Bengaluru — 560001 · GSTIN: 22AAAAA0000A1Z5
           </p>
-          <p style={{
+          <p className="t-title" style={{
             margin: '12px 0 0',
-            fontFamily: "'Playfair Display', sans-serif",
-            fontSize: 13,
-            fontWeight: 700,
             letterSpacing: '0.12em',
             color: 'var(--text)',
             textTransform: 'uppercase',
@@ -135,17 +129,15 @@ function InvoiceModal({ invoice, onClose }) {
               borderRadius: 6,
               padding: '8px 12px',
             }}>
-              <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <p className="t-label" style={{ margin: 0, color: 'var(--text3)' }}>
                 {label}
               </p>
-              <p style={{
+              <p className="t-title" style={{
                 margin: '3px 0 0',
-                fontSize: 13,
-                fontWeight: 600,
                 color: 'var(--text)',
                 fontFamily: label === 'Invoice No' || label === 'Room'
-                  ? "'JetBrains Mono', monospace"
-                  : "'DM Sans', sans-serif",
+                  ? 'var(--font-mono)'
+                  : undefined,
               }}>
                 {val}
               </p>
@@ -157,8 +149,8 @@ function InvoiceModal({ invoice, onClose }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
           <thead>
             <tr style={{ background: 'var(--surface2)' }}>
-              <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description</th>
-              <th style={{ textAlign: 'right', padding: '8px 12px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Amount</th>
+              <th className="t-label" style={{ textAlign: 'left', padding: '8px 12px', color: 'var(--text3)' }}>Description</th>
+              <th className="t-label" style={{ textAlign: 'right', padding: '8px 12px', color: 'var(--text3)' }}>Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -168,8 +160,8 @@ function InvoiceModal({ invoice, onClose }) {
               invoice.amenities  > 0 ? ['Amenities',  invoice.amenities]  : null,
             ].filter(Boolean).map(([desc, amt]) => (
               <tr key={desc} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '9px 12px', fontSize: 13, color: 'var(--text)' }}>{desc}</td>
-                <td style={{ padding: '9px 12px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--text)' }}>
+                <td className="t-sm" style={{ padding: '9px 12px', color: 'var(--text)' }}>{desc}</td>
+                <td className="t-sm" style={{ padding: '9px 12px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>
                   {formatCurrency(amt)}
                 </td>
               </tr>
@@ -177,49 +169,44 @@ function InvoiceModal({ invoice, onClose }) {
 
             {/* Subtotal */}
             <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              <td style={{ padding: '9px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>Subtotal</td>
-              <td style={{ padding: '9px 12px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>
+              <td className="t-title" style={{ padding: '9px 12px', color: 'var(--text2)' }}>Subtotal</td>
+              <td className="t-title" style={{ padding: '9px 12px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text2)' }}>
                 {formatCurrency(subtotal)}
               </td>
             </tr>
 
             {/* CGST */}
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              <td style={{ padding: '9px 12px', fontSize: 13, color: 'var(--text3)' }}>
+              <td className="t-sm" style={{ padding: '9px 12px', color: 'var(--text3)' }}>
                 CGST ({invoice.gstRate / 2}%)
               </td>
-              <td style={{ padding: '9px 12px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--text3)' }}>
+              <td className="t-sm" style={{ padding: '9px 12px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>
                 {formatCurrency(halfGst)}
               </td>
             </tr>
 
             {/* SGST */}
             <tr style={{ borderBottom: '2px solid var(--border)' }}>
-              <td style={{ padding: '9px 12px', fontSize: 13, color: 'var(--text3)' }}>
+              <td className="t-sm" style={{ padding: '9px 12px', color: 'var(--text3)' }}>
                 SGST ({invoice.gstRate / 2}%)
               </td>
-              <td style={{ padding: '9px 12px', textAlign: 'right', fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--text3)' }}>
+              <td className="t-sm" style={{ padding: '9px 12px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>
                 {formatCurrency(halfGst)}
               </td>
             </tr>
 
             {/* Grand Total */}
             <tr style={{ background: 'var(--gold-bg)' }}>
-              <td style={{
+              <td className="t-title" style={{
                 padding: '11px 12px',
-                fontFamily: "'Playfair Display', sans-serif",
-                fontSize: 14,
-                fontWeight: 800,
                 color: 'var(--gold)',
               }}>
                 Grand Total
               </td>
-              <td style={{
+              <td className="t-h3" style={{
                 padding: '11px 12px',
                 textAlign: 'right',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 15,
-                fontWeight: 700,
+                fontFamily: 'var(--font-mono)',
                 color: 'var(--gold)',
               }}>
                 {formatCurrency(invoice.total)}
@@ -239,10 +226,10 @@ function InvoiceModal({ invoice, onClose }) {
           border: '1px solid var(--border)',
           marginBottom: 16,
         }}>
-          <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 600 }}>Payment Status:</span>
+          <span className="t-xs" style={{ color: 'var(--text3)' }}>Payment Status:</span>
           <Badge type={statusBadgeType(invoice.status)}>{invoice.status}</Badge>
           {invoice.paidAt && (
-            <span style={{ fontSize: 12, color: 'var(--text3)', marginLeft: 4 }}>
+            <span className="t-xs" style={{ color: 'var(--text3)', marginLeft: 4 }}>
               · Paid on {formatDate(invoice.paidAt)}
             </span>
           )}
@@ -286,9 +273,9 @@ function CollectModal({ invoice, onClose, onConfirm }) {
       <div style={{ background: 'var(--gold-bg)', borderRadius: 8, padding: '12px 14px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>Amount Due</div>
-          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 700, color: 'var(--gold)' }}>{formatCurrency(invoice.total)}</div>
+          <div className="t-h1" style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>{formatCurrency(invoice.total)}</div>
         </div>
-        <div style={{ textAlign: 'right', fontSize: 12, color: 'var(--text3)' }}>
+        <div className="t-xs" style={{ textAlign: 'right', color: 'var(--text3)' }}>
           <div>{invoice.guest}</div>
           <div>Room {invoice.room}</div>
           <div>{invoice.invoiceNo}</div>
@@ -300,8 +287,8 @@ function CollectModal({ invoice, onClose, onConfirm }) {
         <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Payment Method</label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
           {['Cash', 'UPI', 'Card', 'Bank Transfer'].map(m => (
-            <button key={m} onClick={() => setMethod(m)} style={{
-              padding: '8px 6px', borderRadius: 7, fontSize: 12, fontWeight: 600,
+            <button key={m} onClick={() => setMethod(m)} className="t-xs" style={{
+              padding: '8px 6px', borderRadius: 7,
               cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s',
               background: method === m ? 'var(--gold-bg)' : 'var(--surface2)',
               border: method === m ? '1.5px solid var(--gold)' : '1px solid var(--border)',
@@ -519,23 +506,21 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
                 ['Subtotal',              subtotal],
                 [`GST (${form.gstRate}%)`, gstAmount],
               ].map(([label, val]) => (
-                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text2)' }}>
+                <div key={label} className="t-xs" style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text2)' }}>
                   <span>{label}</span>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(val)}</span>
+                  <span style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(val)}</span>
                 </div>
               ))}
-              <div style={{
+              <div className="t-title" style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                fontSize: 14,
-                fontWeight: 700,
                 color: 'var(--gold)',
                 borderTop: '1px solid var(--gold-border)',
                 paddingTop: 6,
                 marginTop: 2,
               }}>
-                <span style={{ fontFamily: "'Playfair Display', sans-serif" }}>Total</span>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(total)}</span>
+                <span>Total</span>
+                <span style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(total)}</span>
               </div>
             </div>
           </div>
@@ -558,7 +543,7 @@ function LedgerTab() {
   const ledgerRows = selectedGuest ? (MOCK_LEDGER[selectedGuest] || []) : []
   const closingBalance = ledgerRows.length > 0 ? ledgerRows[ledgerRows.length - 1].balance : null
 
-  const monoStyle = { fontFamily: "'JetBrains Mono', monospace" }
+  const monoStyle = { fontFamily: 'var(--font-mono)' }
 
   return (
     <div>
@@ -590,9 +575,9 @@ function LedgerTab() {
               <div
                 key={g}
                 onClick={() => { setSelectedGuest(g); setGuestSearch(g); setDropdownOpen(false) }}
+                className="t-sm"
                 style={{
                   padding: '9px 14px',
-                  fontSize: 13,
                   cursor: 'pointer',
                   color: 'var(--text)',
                   borderBottom: '1px solid var(--border)',
@@ -635,31 +620,27 @@ function LedgerTab() {
                   <tbody>
                     {ledgerRows.map((row, i) => (
                       <tr key={i} style={{ borderTop: '1px solid var(--border)' }}>
-                        <td style={{ padding: '11px 14px', fontSize: 12, color: 'var(--text3)', ...monoStyle }}>
+                        <td className="t-xs" style={{ padding: '11px 14px', color: 'var(--text3)', ...monoStyle }}>
                           {row.date}
                         </td>
                         <td style={{ padding: '11px 14px' }}>
-                          <span style={{
-                            fontSize: 12,
-                            fontWeight: 700,
+                          <span className="t-xs" style={{
                             color: row.type === 'Credit' ? 'var(--green-text)' : 'var(--red-text)',
                             ...monoStyle,
                           }}>
                             {row.type}
                           </span>
                         </td>
-                        <td style={{ padding: '11px 14px', fontSize: 13, color: 'var(--text)' }}>
+                        <td className="t-sm" style={{ padding: '11px 14px', color: 'var(--text)' }}>
                           {row.desc}
                         </td>
-                        <td style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle, fontSize: 13, color: 'var(--text2)' }}>
+                        <td className="t-sm" style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle, color: 'var(--text2)' }}>
                           {formatCurrency(row.amount)}
                         </td>
-                        <td style={{
+                        <td className="t-title" style={{
                           padding: '11px 14px',
                           textAlign: 'right',
                           ...monoStyle,
-                          fontSize: 13,
-                          fontWeight: 600,
                           color: row.balance >= 0 ? 'var(--green-text)' : 'var(--red-text)',
                         }}>
                           {row.balance >= 0 ? '+' : ''}{formatCurrency(row.balance)}
@@ -681,13 +662,11 @@ function LedgerTab() {
                 padding: '12px 16px',
                 marginBottom: 16,
               }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)' }}>
+                <span className="t-title" style={{ color: 'var(--text2)' }}>
                   Closing Balance — {selectedGuest}
                 </span>
-                <span style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 16,
-                  fontWeight: 700,
+                <span className="t-h3" style={{
+                  fontFamily: 'var(--font-mono)',
                   color: closingBalance >= 0 ? 'var(--green-text)' : 'var(--red-text)',
                 }}>
                   {closingBalance >= 0 ? '+' : ''}{formatCurrency(closingBalance)}
@@ -704,7 +683,7 @@ function LedgerTab() {
 
       {!selectedGuest && (
         <div className="empty-state">
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--text3)' }}>
+          <p className="t-sm" style={{ margin: 0, color: 'var(--text3)' }}>
             Select a guest to view their account ledger
           </p>
         </div>
@@ -726,7 +705,7 @@ function CashRegisterTab() {
   const totalOut = transactions.reduce((s, t) => s + t.cashOut, 0)
   const closing  = openingBalance + totalIn - totalOut
 
-  const monoStyle = { fontFamily: "'JetBrains Mono', monospace" }
+  const monoStyle = { fontFamily: 'var(--font-mono)' }
 
   const handleExportCSV = () => {
     const header = 'Time,Type,Description,Cash In,Cash Out'
@@ -766,7 +745,7 @@ function CashRegisterTab() {
             min="0"
             value={openingBalance}
             onChange={e => setOpening(parseFloat(e.target.value) || 0)}
-            style={{ width: 160, fontFamily: "'JetBrains Mono', monospace" }}
+            style={{ width: 160, fontFamily: 'var(--font-mono)' }}
           />
         </div>
       </div>
@@ -792,7 +771,7 @@ function CashRegisterTab() {
               const badge = cashTypeBadge(txn.type)
               return (
                 <tr key={i} style={{ borderTop: '1px solid var(--border)' }}>
-                  <td style={{ padding: '11px 14px', ...monoStyle, fontSize: 12, color: 'var(--text3)' }}>
+                  <td className="t-xs" style={{ padding: '11px 14px', ...monoStyle, color: 'var(--text3)' }}>
                     {txn.time}
                   </td>
                   <td style={{ padding: '11px 14px' }}>
@@ -809,15 +788,15 @@ function CashRegisterTab() {
                       {badge.label}
                     </span>
                   </td>
-                  <td style={{ padding: '11px 14px', fontSize: 13, color: 'var(--text)' }}>
+                  <td className="t-sm" style={{ padding: '11px 14px', color: 'var(--text)' }}>
                     {txn.desc}
                   </td>
-                  <td style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle, fontSize: 13 }}>
+                  <td className="t-sm" style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle }}>
                     {txn.cashIn > 0
                       ? <span style={{ color: 'var(--green-text)', fontWeight: 600 }}>{formatCurrency(txn.cashIn)}</span>
                       : <span style={{ color: 'var(--text3)' }}>—</span>}
                   </td>
-                  <td style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle, fontSize: 13 }}>
+                  <td className="t-sm" style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle }}>
                     {txn.cashOut > 0
                       ? <span style={{ color: 'var(--red-text)', fontWeight: 600 }}>{formatCurrency(txn.cashOut)}</span>
                       : <span style={{ color: 'var(--text3)' }}>—</span>}
@@ -828,13 +807,13 @@ function CashRegisterTab() {
 
             {/* Totals row */}
             <tr style={{ borderTop: '2px solid var(--border)', background: 'var(--surface2)' }}>
-              <td colSpan={3} style={{ padding: '11px 14px', fontSize: 13, fontWeight: 700, color: 'var(--text2)' }}>
+              <td colSpan={3} className="t-title" style={{ padding: '11px 14px', color: 'var(--text2)' }}>
                 Totals
               </td>
-              <td style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle, fontSize: 13, fontWeight: 700, color: 'var(--green-text)' }}>
+              <td className="t-title" style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle, color: 'var(--green-text)' }}>
                 {formatCurrency(totalIn)}
               </td>
-              <td style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle, fontSize: 13, fontWeight: 700, color: 'var(--red-text)' }}>
+              <td className="t-title" style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle, color: 'var(--red-text)' }}>
                 {formatCurrency(totalOut)}
               </td>
             </tr>
@@ -862,14 +841,12 @@ function CashRegisterTab() {
             borderRadius: 6,
             padding: '10px 14px',
           }}>
-            <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <p className="t-label" style={{ margin: 0, color: 'var(--text3)' }}>
               {item.label}
             </p>
-            <p style={{
+            <p className="t-h3" style={{
               margin: '4px 0 0',
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: 16,
-              fontWeight: item.bold ? 800 : 600,
+              fontFamily: 'var(--font-mono)',
               color: item.color,
             }}>
               {item.value}
@@ -901,7 +878,6 @@ const TAB_STYLE_ACTIVE = {
   background: 'var(--gold-bg)',
   border: '1px solid var(--gold)',
   color: 'var(--gold)',
-  fontFamily: "'DM Sans', sans-serif",
   transition: 'all 0.13s',
 }
 const TAB_STYLE_INACTIVE = {
@@ -913,7 +889,6 @@ const TAB_STYLE_INACTIVE = {
   background: 'var(--surface)',
   border: '1px solid var(--border)',
   color: 'var(--text2)',
-  fontFamily: "'DM Sans', sans-serif",
   transition: 'all 0.13s',
 }
 
@@ -1042,7 +1017,6 @@ export default function Billing() {
       }}>
         <div>
           <h1 style={{
-            fontFamily: "'Playfair Display', sans-serif",
             fontSize: 26,
             fontWeight: 800,
             margin: 0,
@@ -1051,7 +1025,7 @@ export default function Billing() {
           }}>
             Billing &amp; Payments
           </h1>
-          <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--text3)' }}>
+          <p className="t-sm" style={{ margin: '3px 0 0', color: 'var(--text3)' }}>
             Invoice management with GST compliance
           </p>
         </div>
@@ -1065,7 +1039,7 @@ export default function Billing() {
       </div>
 
       {error && (
-        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
           {error}
         </div>
       )}
@@ -1074,10 +1048,10 @@ export default function Billing() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 22 }}>
         {/* Collected */}
         <div className="stat-card stat-bar-green">
-          <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
             Collected this month
           </p>
-          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 21, fontWeight: 800, color: 'var(--green-text)' }}>
+          <p className="t-h1" style={{ margin: 0, color: 'var(--green-text)' }}>
             {formatCurrency(stats.collected)}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>
@@ -1087,10 +1061,10 @@ export default function Billing() {
 
         {/* Pending */}
         <div className="stat-card stat-bar-amber">
-          <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
             Pending
           </p>
-          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 21, fontWeight: 800, color: 'var(--amber-text)' }}>
+          <p className="t-h1" style={{ margin: 0, color: 'var(--amber-text)' }}>
             {formatCurrency(stats.pendingTotal)}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>
@@ -1100,10 +1074,10 @@ export default function Billing() {
 
         {/* Overdue */}
         <div className="stat-card stat-bar-red">
-          <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
             Overdue
           </p>
-          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 21, fontWeight: 800, color: 'var(--red-text)' }}>
+          <p className="t-h1" style={{ margin: 0, color: 'var(--red-text)' }}>
             {formatCurrency(stats.overdueTotal)}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>
@@ -1113,10 +1087,10 @@ export default function Billing() {
 
         {/* GST Collected */}
         <div className="stat-card stat-bar-blue">
-          <p style={{ margin: '0 0 4px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
             GST Collected
           </p>
-          <p style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 21, fontWeight: 800, color: 'var(--blue-text)' }}>
+          <p className="t-h1" style={{ margin: 0, color: 'var(--blue-text)' }}>
             {formatCurrency(stats.gstCollected)}
           </p>
           <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>From paid invoices</p>
@@ -1147,9 +1121,9 @@ export default function Billing() {
           <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
             {/* Search */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
-              <span style={{
+              <span className="t-sm" style={{
                 position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
-                fontSize: 13, color: 'var(--text3)', pointerEvents: 'none',
+                color: 'var(--text3)', pointerEvents: 'none',
               }}>
                 ⌕
               </span>
@@ -1171,17 +1145,15 @@ export default function Billing() {
                   <button
                     key={s}
                     onClick={() => setStatusFilter(s)}
+                    className="t-xs"
                     style={{
                       padding: '5px 13px',
                       borderRadius: 20,
-                      fontSize: 12,
-                      fontWeight: active ? 600 : 500,
                       cursor: 'pointer',
                       background: active ? 'var(--gold-bg)' : 'var(--surface)',
                       border: active ? '1px solid var(--gold)' : '1px solid var(--border)',
                       color: active ? 'var(--gold)' : 'var(--text2)',
                       transition: 'all 0.13s',
-                      fontFamily: "'DM Sans', sans-serif",
                     }}
                   >
                     {s}
@@ -1191,7 +1163,7 @@ export default function Billing() {
             </div>
 
             <div style={{ flex: 1 }} />
-            <p style={{ margin: 0, fontSize: 12, color: 'var(--text3)', flexShrink: 0 }}>
+            <p className="t-xs" style={{ margin: 0, color: 'var(--text3)', flexShrink: 0 }}>
               {filtered.length} of {invoices.length} records
             </p>
           </div>
@@ -1201,7 +1173,7 @@ export default function Billing() {
             {filtered.length === 0 ? (
               <div className="empty-state">
                 <p style={{ margin: 0, fontWeight: 600, color: 'var(--text2)' }}>{loading ? 'Loading invoices…' : 'No invoices found'}</p>
-                {!loading && <p style={{ margin: '4px 0 0', fontSize: 12 }}>Generate an invoice or adjust your filters</p>}
+                {!loading && <p className="t-xs" style={{ margin: '4px 0 0' }}>Generate an invoice or adjust your filters</p>}
               </div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -1223,10 +1195,8 @@ export default function Billing() {
                     <tr key={inv.id} style={{ transition: 'background 0.1s' }}>
                       {/* Invoice # */}
                       <td style={{ padding: '11px 12px' }}>
-                        <span style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 12,
-                          fontWeight: 600,
+                        <span className="t-xs" style={{
+                          fontFamily: 'var(--font-mono)',
                           color: 'var(--gold)',
                         }}>
                           {inv.invoiceNo}
@@ -1235,57 +1205,55 @@ export default function Billing() {
 
                       {/* Guest */}
                       <td style={{ padding: '11px 12px' }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                        <span className="t-title" style={{ color: 'var(--text)' }}>
                           {inv.guest}
                         </span>
                       </td>
 
                       {/* Room */}
                       <td style={{ padding: '11px 12px' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--text2)' }}>
+                        <span className="t-sm" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text2)' }}>
                           {inv.room}
                         </span>
                       </td>
 
                       {/* Period */}
-                      <td style={{ padding: '11px 12px', fontSize: 12, color: 'var(--text3)', whiteSpace: 'nowrap' }}>
+                      <td className="t-xs" style={{ padding: '11px 12px', color: 'var(--text3)', whiteSpace: 'nowrap' }}>
                         {inv.period}
                       </td>
 
                       {/* Rent */}
                       <td style={{ padding: '11px 12px', textAlign: 'right' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--text2)' }}>
+                        <span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text2)' }}>
                           {formatCurrency(inv.rent)}
                         </span>
                       </td>
 
                       {/* Food */}
                       <td style={{ padding: '11px 12px', textAlign: 'right' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: inv.food > 0 ? 'var(--text2)' : 'var(--text3)' }}>
+                        <span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: inv.food > 0 ? 'var(--text2)' : 'var(--text3)' }}>
                           {inv.food > 0 ? formatCurrency(inv.food) : '—'}
                         </span>
                       </td>
 
                       {/* Amenities */}
                       <td style={{ padding: '11px 12px', textAlign: 'right' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: inv.amenities > 0 ? 'var(--text2)' : 'var(--text3)' }}>
+                        <span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: inv.amenities > 0 ? 'var(--text2)' : 'var(--text3)' }}>
                           {inv.amenities > 0 ? formatCurrency(inv.amenities) : '—'}
                         </span>
                       </td>
 
                       {/* GST */}
                       <td style={{ padding: '11px 12px', textAlign: 'right' }}>
-                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--text2)' }}>
+                        <span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text2)' }}>
                           {formatCurrency(inv.gstAmount)}
                         </span>
                       </td>
 
                       {/* Total */}
                       <td style={{ padding: '11px 12px', textAlign: 'right' }}>
-                        <span style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 13,
-                          fontWeight: 700,
+                        <span className="t-title" style={{
+                          fontFamily: 'var(--font-mono)',
                           color: 'var(--text)',
                         }}>
                           {formatCurrency(inv.total)}

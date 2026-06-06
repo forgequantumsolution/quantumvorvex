@@ -70,7 +70,7 @@ function UploadModal({ doc, onClose, onSave }) {
       title={
         <span>
           Upload Documents —{' '}
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--gold)', fontWeight: 400, fontSize: '12px' }}>
+          <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontWeight: 400, fontSize: '12px' }}>
             {doc.docId}
           </span>
         </span>
@@ -93,11 +93,11 @@ function UploadModal({ doc, onClose, onSave }) {
       <div style={{ background: 'var(--surface2)', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', display: 'flex', gap: '16px' }}>
         <div>
           <div className="form-label" style={{ marginBottom: '2px' }}>Guest</div>
-          <div style={{ fontWeight: 600, fontSize: '13px' }}>{doc.guestName}</div>
+          <div className="t-title">{doc.guestName}</div>
         </div>
         <div>
           <div className="form-label" style={{ marginBottom: '2px' }}>Room</div>
-          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, fontSize: '13px' }}>{doc.room}</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, fontSize: '13px' }}>{doc.room}</div>
         </div>
         <div>
           <div className="form-label" style={{ marginBottom: '2px' }}>Uploaded</div>
@@ -175,7 +175,7 @@ function ViewDocsModal({ doc, onClose, onVerify }) {
       title={
         <span>
           Documents —{' '}
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--gold)', fontWeight: 400, fontSize: '12px' }}>
+          <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontWeight: 400, fontSize: '12px' }}>
             {doc.docId}
           </span>
         </span>
@@ -194,8 +194,8 @@ function ViewDocsModal({ doc, onClose, onVerify }) {
     >
       {/* Guest summary */}
       <div style={{ background: 'var(--surface2)', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px' }}>
-        <div style={{ fontWeight: 600, fontSize: '13px', marginBottom: '2px' }}>{doc.guestName}</div>
-        <div style={{ fontSize: '12px', color: 'var(--text3)' }}>
+        <div className="t-title" style={{ marginBottom: '2px' }}>{doc.guestName}</div>
+        <div className="t-xs" style={{ color: 'var(--text3)' }}>
           Room {doc.room} &middot; {doc.idType} &middot; {doc.idNumber}
         </div>
       </div>
@@ -210,7 +210,7 @@ function ViewDocsModal({ doc, onClose, onVerify }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '18px' }}>{d.icon}</span>
               <div>
-                <div style={{ fontWeight: 600, fontSize: '13px' }}>
+                <div className="t-title">
                   {d.url ? <a href={d.url} target="_blank" rel="noreferrer" style={{ color: 'var(--gold)' }}>{d.label}</a> : d.label}
                 </div>
                 <div style={{ fontSize: '11.5px', color: 'var(--text3)' }}>Uploaded {d.uploadDate}</div>
@@ -305,16 +305,16 @@ export default function Documents() {
       {/* Header */}
       <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: '22px', fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>
+          <h1 className="t-h1" style={{ margin: 0, letterSpacing: '-0.03em' }}>
             Documents
           </h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--text3)', fontSize: '13px' }}>KYC verification & ID management</p>
+          <p className="t-sm" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>KYC verification & ID management</p>
         </div>
         <button className="btn btn-outline btn-sm" onClick={load} disabled={loading}>↻ Refresh</button>
       </div>
 
       {error && (
-        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
           {error}
         </div>
       )}
@@ -327,8 +327,8 @@ export default function Documents() {
           { label: 'Incomplete', count: incompleteCount, bar: 'stat-bar-red' },
         ].map(({ label, count, bar }) => (
           <div key={label} className={`stat-card ${bar}`}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>{label}</div>
-            <div style={{ fontSize: '26px', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700 }}>{count}</div>
+            <div className="t-label" style={{ marginBottom: '6px' }}>{label}</div>
+            <div style={{ fontSize: '26px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{count}</div>
           </div>
         ))}
       </div>
@@ -378,7 +378,7 @@ export default function Documents() {
                   <tr key={doc.id}>
                     {/* DOC ID */}
                     <td>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--gold)', fontSize: '12px', fontWeight: 600 }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)', fontSize: '12px', fontWeight: 600 }}>
                         {doc.docId}
                       </span>
                     </td>
@@ -393,7 +393,7 @@ export default function Documents() {
                     </td>
                     {/* ID Number */}
                     <td>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '12.5px', letterSpacing: '0.03em' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12.5px', letterSpacing: '0.03em' }}>
                         {doc.idNumber}
                       </span>
                     </td>

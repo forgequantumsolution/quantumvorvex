@@ -86,7 +86,7 @@ function PortalProgressBar({ current, total }) {
 function Field({ label, required, children }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+      <label className="t-label" style={{ color: 'var(--text3)' }}>
         {label}{required && <span style={{ color: 'var(--red)', marginLeft: 2 }}>*</span>}
       </label>
       {children}
@@ -102,14 +102,13 @@ function Step1Welcome({ booking, onNext }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Welcome message */}
       <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
-        <div style={{ fontSize: 28, marginBottom: 8 }}>👋</div>
-        <h2 style={{
-          fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800,
+        <div className="t-display" style={{ marginBottom: 8 }}>👋</div>
+        <h2 className="t-h1" style={{
           color: 'var(--text)', margin: 0, letterSpacing: '-0.03em',
         }}>
           Welcome, {firstName}!
         </h2>
-        <p style={{ fontSize: 13, color: 'var(--text2)', marginTop: 6 }}>
+        <p className="t-sm" style={{ color: 'var(--text2)', marginTop: 6 }}>
           Complete your self check-in in just a few steps.
         </p>
       </div>
@@ -123,43 +122,43 @@ function Step1Welcome({ booking, onNext }) {
           background: 'var(--gold)', padding: '10px 16px',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
-          <span style={{ fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 13, color: '#000' }}>
+          <span className="t-title" style={{ color: '#000' }}>
             {booking.hotelName}
           </span>
-          <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: '#000', opacity: 0.8 }}>
+          <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: '#000', opacity: 0.8 }}>
             {booking.bookingNo}
           </span>
         </div>
         <div style={{ padding: '16px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 20px' }}>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Room</div>
-              <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>{booking.room}</div>
-              <div style={{ fontSize: 12, color: 'var(--text3)' }}>{booking.type}</div>
+              <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 4 }}>Room</div>
+              <div className="t-h3" style={{ color: 'var(--text)' }}>{booking.room}</div>
+              <div className="t-xs" style={{ color: 'var(--text3)' }}>{booking.type}</div>
             </div>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Guest</div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{booking.guestName}</div>
+              <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 4 }}>Guest</div>
+              <div className="t-title" style={{ color: 'var(--text)' }}>{booking.guestName}</div>
             </div>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Check-In</div>
-              <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{formatDate(booking.checkIn)}</div>
+              <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 4 }}>Check-In</div>
+              <div className="t-title" style={{ color: 'var(--text)' }}>{formatDate(booking.checkIn)}</div>
             </div>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Check-Out</div>
-              <div style={{ fontSize: 13, color: 'var(--text)', fontWeight: 600 }}>{formatDate(booking.checkOut)}</div>
+              <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 4 }}>Check-Out</div>
+              <div className="t-title" style={{ color: 'var(--text)' }}>{formatDate(booking.checkOut)}</div>
             </div>
           </div>
-          <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)', fontSize: 12, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="t-xs" style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)', color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6 }}>
             📞 {booking.hotelPhone}
           </div>
         </div>
       </div>
 
       <button
-        className="btn btn-primary"
+        className="btn btn-primary t-title"
         onClick={onNext}
-        style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: 14, fontWeight: 700, borderRadius: 9 }}
+        style={{ width: '100%', justifyContent: 'center', padding: '13px', borderRadius: 9 }}
       >
         Begin Self Check-In →
       </button>
@@ -179,7 +178,7 @@ function Step2Verify({ booking, data, onChange, onNext }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <p style={{ fontSize: 13, color: 'var(--text2)', margin: 0 }}>
+      <p className="t-sm" style={{ color: 'var(--text2)', margin: 0 }}>
         Please verify and complete your personal details below.
       </p>
 
@@ -220,9 +219,9 @@ function Step2Verify({ booking, data, onChange, onNext }) {
       </div>
 
       <button
-        className="btn btn-primary"
+        className="btn btn-primary t-title"
         onClick={handleSubmit}
-        style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: 14, fontWeight: 700, borderRadius: 9, marginTop: 6 }}
+        style={{ width: '100%', justifyContent: 'center', padding: '12px', borderRadius: 9, marginTop: 6 }}
       >
         Confirm Details →
       </button>
@@ -243,7 +242,7 @@ function UploadZone({ label, required, hint, file, onFile }) {
 
   return (
     <div>
-      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>
+      <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 6 }}>
         {label}{required && <span style={{ color: 'var(--red)', marginLeft: 2 }}>*</span>}
       </div>
       {file ? (
@@ -254,13 +253,13 @@ function UploadZone({ label, required, hint, file, onFile }) {
           {file.type?.startsWith('image/') ? (
             <img src={file.url} alt="preview" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} />
           ) : (
-            <div style={{ fontSize: 28 }}>📄</div>
+            <div className="t-display">📄</div>
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--green-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {file.name}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Uploaded successfully ✓</div>
+            <div className="t-label" style={{ color: 'var(--text3)', marginTop: 2 }}>Uploaded successfully ✓</div>
           </div>
           <button
             className="btn btn-outline btn-xs"
@@ -278,9 +277,9 @@ function UploadZone({ label, required, hint, file, onFile }) {
           onDragLeave={() => setDrag(false)}
           onDrop={(e) => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]) }}
         >
-          <div style={{ fontSize: 22, marginBottom: 4 }}>📤</div>
-          <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text2)' }}>Tap to upload or drag & drop</div>
-          {hint && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>{hint}</div>}
+          <div className="t-h1" style={{ marginBottom: 4 }}>📤</div>
+          <div className="t-sm" style={{ color: 'var(--text2)' }}>Tap to upload or drag & drop</div>
+          {hint && <div className="t-xs" style={{ color: 'var(--text3)', marginTop: 3 }}>{hint}</div>}
           <input ref={inputRef} type="file" accept="image/*,.pdf" style={{ display: 'none' }}
             onChange={(e) => handleFile(e.target.files[0])} capture="environment" />
         </div>
@@ -305,7 +304,7 @@ function Step3Documents({ data, onChange, onNext }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <p style={{ fontSize: 13, color: 'var(--text2)', margin: 0 }}>
+      <p className="t-sm" style={{ color: 'var(--text2)', margin: 0 }}>
         Upload your government ID and a clear photo of yourself.
       </p>
 
@@ -337,18 +336,18 @@ function Step3Documents({ data, onChange, onNext }) {
       />
 
       {/* Camera hint */}
-      <div style={{
+      <div className="t-xs" style={{
         background: 'var(--blue-bg)', border: '1px solid var(--blue)',
         borderRadius: 8, padding: '10px 14px',
-        fontSize: 12, color: 'var(--blue-text)', display: 'flex', alignItems: 'center', gap: 8,
+        color: 'var(--blue-text)', display: 'flex', alignItems: 'center', gap: 8,
       }}>
         📷 <span>On mobile? Tap the upload zones above to use your device camera directly.</span>
       </div>
 
       <button
-        className="btn btn-primary"
+        className="btn btn-primary t-title"
         onClick={handleContinue}
-        style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: 14, fontWeight: 700, borderRadius: 9 }}
+        style={{ width: '100%', justifyContent: 'center', padding: '12px', borderRadius: 9 }}
       >
         Continue →
       </button>
@@ -370,16 +369,16 @@ function Step4Terms({ data, onChange, onNext }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <p style={{ fontSize: 13, color: 'var(--text2)', margin: 0 }}>
+      <p className="t-sm" style={{ color: 'var(--text2)', margin: 0 }}>
         Please read and accept our terms and conditions to complete your pre check-in.
       </p>
 
       {/* Terms scroll box */}
-      <div style={{
+      <div className="t-xs" style={{
         height: 150, overflowY: 'auto',
         background: 'var(--surface2)', border: '1px solid var(--border)',
         borderRadius: 8, padding: '14px 16px',
-        fontSize: 12, color: 'var(--text2)', lineHeight: 1.7,
+        color: 'var(--text2)', lineHeight: 1.7,
         scrollbarWidth: 'thin',
       }}>
         {TERMS_TEXT.split('\n\n').map((para, i) => (
@@ -389,7 +388,7 @@ function Step4Terms({ data, onChange, onNext }) {
 
       {/* Digital signature */}
       <div>
-        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>
+        <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 6 }}>
           Digital Signature <span style={{ color: 'var(--red)' }}>*</span>
         </div>
         <div style={{
@@ -397,7 +396,7 @@ function Step4Terms({ data, onChange, onNext }) {
           borderRadius: 8, overflow: 'hidden', transition: 'border-color 0.14s',
           background: 'var(--surface)',
         }}>
-          <div style={{ fontSize: 10, color: 'var(--text3)', padding: '6px 12px 0', fontWeight: 600, letterSpacing: '0.03em' }}>
+          <div className="t-label" style={{ color: 'var(--text3)', padding: '6px 12px 0' }}>
             TYPE YOUR FULL NAME AS SIGNATURE
           </div>
           <input
@@ -409,11 +408,11 @@ function Step4Terms({ data, onChange, onNext }) {
               width: '100%', border: 'none', outline: 'none',
               background: 'transparent', padding: '8px 14px 12px',
               fontSize: 20, fontStyle: 'italic', textDecoration: 'underline',
-              color: 'var(--text)', fontFamily: 'Georgia, serif',
+              color: 'var(--text)',
             }}
           />
         </div>
-        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>
+        <div className="t-xs" style={{ color: 'var(--text3)', marginTop: 4 }}>
           This constitutes a legally binding digital signature.
         </div>
       </div>
@@ -432,15 +431,15 @@ function Step4Terms({ data, onChange, onNext }) {
           onChange={(e) => set('agreed', e.target.checked)}
           style={{ accentColor: 'var(--gold)', width: 16, height: 16, flexShrink: 0, marginTop: 1 }}
         />
-        <span style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>
+        <span className="t-sm" style={{ color: 'var(--text2)', lineHeight: 1.5 }}>
           I agree to the <strong style={{ color: 'var(--text)' }}>Terms and Conditions</strong> of {MOCK_BOOKING.hotelName} and confirm that all information provided is accurate.
         </span>
       </label>
 
       <button
-        className="btn btn-primary"
+        className="btn btn-primary t-title"
         onClick={handleSubmit}
-        style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: 14, fontWeight: 700, borderRadius: 9 }}
+        style={{ width: '100%', justifyContent: 'center', padding: '12px', borderRadius: 9 }}
       >
         Confirm & Submit ✓
       </button>
@@ -467,24 +466,23 @@ function Step5Confirmation({ booking, guestName }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, textAlign: 'center', padding: '8px 0' }}>
       {/* Green checkmark */}
-      <div style={{
+      <div className="t-display" style={{
         width: 72, height: 72, borderRadius: '50%',
         background: 'var(--green-bg)', border: '3px solid var(--green)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 34, color: 'var(--green)',
+        color: 'var(--green)',
       }}>
         ✓
       </div>
 
       {/* Title */}
       <div>
-        <h2 style={{
-          fontFamily: "'Playfair Display', sans-serif", fontSize: 20, fontWeight: 800,
+        <h2 className="t-h1" style={{
           color: 'var(--text)', margin: '0 0 6px', letterSpacing: '-0.03em',
         }}>
           Pre-Check-In Complete!
         </h2>
-        <p style={{ fontSize: 13, color: 'var(--text2)', margin: 0 }}>
+        <p className="t-sm" style={{ color: 'var(--text2)', margin: 0 }}>
           Your details have been submitted successfully. Our team will verify everything before your arrival.
         </p>
       </div>
@@ -495,7 +493,7 @@ function Step5Confirmation({ booking, guestName }) {
         border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px',
         textAlign: 'left',
       }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 14 }}>
+        <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 14 }}>
           Booking Summary
         </div>
         {[
@@ -506,17 +504,17 @@ function Step5Confirmation({ booking, guestName }) {
           { label: 'Booking No', value: booking.bookingNo },
         ].map(({ label, value }) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
-            <span style={{ fontSize: 12, color: 'var(--text3)' }}>{label}</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{value}</span>
+            <span className="t-xs" style={{ color: 'var(--text3)' }}>{label}</span>
+            <span className="t-title" style={{ color: 'var(--text)' }}>{value}</span>
           </div>
         ))}
       </div>
 
       {/* See you message */}
-      <div style={{
+      <div className="t-title" style={{
         background: 'var(--gold-bg)', border: '1px solid var(--gold-border)',
         borderRadius: 8, padding: '12px 16px', width: '100%',
-        fontSize: 13, color: 'var(--gold)', fontWeight: 600,
+        color: 'var(--gold)',
       }}>
         See you on {formatDate(booking.checkIn)}! 🎉
       </div>
@@ -524,16 +522,17 @@ function Step5Confirmation({ booking, guestName }) {
       {/* Action buttons */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
         <button
-          className="btn btn-outline"
+          className="btn btn-outline t-sm"
           onClick={handleDownload}
-          style={{ width: '100%', justifyContent: 'center', padding: '11px', fontSize: 13 }}
+          style={{ width: '100%', justifyContent: 'center', padding: '11px' }}
         >
           📄 Download Confirmation
         </button>
         <button
+          className="t-title"
           onClick={handleWhatsApp}
           style={{
-            width: '100%', padding: '11px', fontSize: 13, fontWeight: 600,
+            width: '100%', padding: '11px',
             borderRadius: 6, border: 'none', cursor: 'pointer',
             background: '#25D366', color: '#fff', display: 'flex',
             alignItems: 'center', justifyContent: 'center', gap: 7,
@@ -604,9 +603,9 @@ export default function GuestPortal() {
             width: 48, height: 48, borderRadius: '50%',
             background: 'var(--gold)', marginBottom: 10,
           }}>
-            <span style={{ fontFamily: "'Playfair Display', sans-serif", fontWeight: 800, fontSize: 18, color: '#000' }}>QV</span>
+            <span className="t-h2" style={{ color: '#000' }}>QV</span>
           </div>
-          <div style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: 18, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>
+          <div className="t-h2" style={{ color: 'var(--text)', letterSpacing: '-0.03em' }}>
             {MOCK_BOOKING.hotelName}
           </div>
           <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
@@ -627,8 +626,7 @@ export default function GuestPortal() {
         }}>
           {/* Step heading */}
           <div style={{ marginBottom: 18 }}>
-            <div style={{
-              fontFamily: "'Playfair Display', sans-serif", fontSize: 15, fontWeight: 700,
+            <div className="t-h3" style={{
               color: 'var(--text)', letterSpacing: '-0.02em',
             }}>
               {STEP_LABELS[step - 1]}
@@ -648,9 +646,10 @@ export default function GuestPortal() {
             <div style={{ marginTop: 14, textAlign: 'center' }}>
               <button
                 onClick={goBack}
+                className="t-xs"
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: 12, color: 'var(--text3)', padding: 0,
+                  color: 'var(--text3)', padding: 0,
                   transition: 'color 0.14s',
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
@@ -663,7 +662,7 @@ export default function GuestPortal() {
         </div>
 
         {/* Footer */}
-        <div style={{ textAlign: 'center', marginTop: 20, fontSize: 11, color: 'var(--text3)' }}>
+        <div className="t-xs" style={{ textAlign: 'center', marginTop: 20, color: 'var(--text3)' }}>
           Secure self check-in powered by{' '}
           <span style={{ color: 'var(--gold)', fontWeight: 600 }}>Quantum Vorvex</span>
         </div>

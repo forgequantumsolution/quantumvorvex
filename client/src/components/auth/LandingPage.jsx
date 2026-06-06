@@ -214,7 +214,6 @@ export default function LandingPage({ onLogin }) {
 
   return (
     <div style={{
-      fontFamily: "'DM Sans', sans-serif",
       background: CREAM,
       color: INK,
       width: '100%',
@@ -237,7 +236,6 @@ export default function LandingPage({ onLogin }) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         }}>
           <div style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
             fontSize: 'clamp(15px,2vw,18px)', fontWeight: 700, fontStyle: 'italic',
             color: INK, letterSpacing: '-0.01em', whiteSpace: 'nowrap',
           }}>
@@ -296,22 +294,22 @@ export default function LandingPage({ onLogin }) {
             padding: '16px clamp(16px,5vw,40px) 20px',
           }}>
             {NAV_LINKS.map(l => (
-              <div key={l} onClick={() => setMenuOpen(false)} style={{
+              <div key={l} onClick={() => setMenuOpen(false)} className="t-body" style={{
                 padding: '13px 0', borderBottom: '1px solid rgba(0,0,0,0.05)',
-                fontSize: 14, fontWeight: 500, color: '#3a3530', cursor: 'pointer',
+                color: '#3a3530', cursor: 'pointer',
                 letterSpacing: '0.04em', textTransform: 'uppercase',
               }}>{l}</div>
             ))}
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-              <button onClick={() => { setMenuOpen(false); onLogin() }} style={{
+              <button onClick={() => { setMenuOpen(false); onLogin() }} className="t-title" style={{
                 flex: 1, padding: '11px', borderRadius: 6,
                 border: '1px solid rgba(0,0,0,0.15)', background: 'transparent',
-                cursor: 'pointer', fontSize: 13, fontWeight: 600, color: INK,
+                cursor: 'pointer', color: INK,
               }}>SIGN IN</button>
-              <button onClick={() => { setMenuOpen(false); onLogin() }} style={{
+              <button onClick={() => { setMenuOpen(false); onLogin() }} className="t-title" style={{
                 flex: 1, padding: '11px', borderRadius: 6,
                 border: 'none', background: INK,
-                cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#fff',
+                cursor: 'pointer', color: '#fff',
               }}>GET STARTED</button>
             </div>
           </div>
@@ -337,25 +335,22 @@ export default function LandingPage({ onLogin }) {
               borderRadius: 100, padding: '5px 14px', marginBottom: 26,
             }}>
               <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, display: 'block' }} />
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', color: GOLD }}>
+              <span className="t-label" style={{ letterSpacing: '0.16em', color: GOLD }}>
                 HOTEL MANAGEMENT PLATFORM
               </span>
             </div>
 
             <h1 style={{
-              fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: 'clamp(34px, 5.5vw, 72px)',
               fontWeight: 900, color: INK,
               margin: '0 0 2px', lineHeight: 1.04, letterSpacing: '-0.02em',
             }}>Seamless</h1>
             <h1 style={{
-              fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: 'clamp(34px, 5.5vw, 72px)',
               fontWeight: 900, color: INK,
               margin: '0 0 4px', lineHeight: 1.04, letterSpacing: '-0.02em',
             }}>Operations.</h1>
             <h2 style={{
-              fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: 'clamp(24px, 4vw, 52px)',
               fontWeight: 700, fontStyle: 'italic', color: GOLD,
               margin: '0 0 22px', lineHeight: 1.1,
@@ -416,10 +411,9 @@ export default function LandingPage({ onLogin }) {
                   fontSize: 16, marginBottom: 12,
                 }}>{card.icon}</div>
                 <div style={{
-                  fontFamily: "'Playfair Display', serif",
                   fontSize: 'clamp(22px,3vw,30px)', fontWeight: 900, color: INK, lineHeight: 1,
                 }}>{card.value}</div>
-                <div style={{ fontSize: 11, color: '#888', marginTop: 5, fontWeight: 500 }}>{card.label}</div>
+                <div className="t-label" style={{ color: '#888', marginTop: 5 }}>{card.label}</div>
               </div>
             ))}
           </div>
@@ -440,7 +434,6 @@ export default function LandingPage({ onLogin }) {
           {STATS.map(s => (
             <div key={s.label} style={{ textAlign: 'center' }}>
               <div style={{
-                fontFamily: "'Playfair Display', serif",
                 fontSize: 'clamp(28px,4vw,44px)',
                 fontWeight: 900, color: GOLD, lineHeight: 1,
               }}>{s.value}</div>
@@ -460,16 +453,15 @@ export default function LandingPage({ onLogin }) {
         padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,5vh,52px)' }}>
-          <div style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
-            textTransform: 'uppercase', color: GOLD, marginBottom: 12,
+          <div className="t-label" style={{
+            letterSpacing: '0.16em',
+            color: GOLD, marginBottom: 12,
           }}>WHY QUANTUM VORVEX</div>
           <h2 style={{
-            fontFamily: "'Playfair Display', serif",
             fontSize: 'clamp(26px,3.5vw,42px)',
             fontWeight: 900, color: INK, margin: '0 0 14px', lineHeight: 1.1,
           }}>Designed for the way<br />Indian hotels actually work.</h2>
-          <p style={{ fontSize: 14, color: '#6b6055', lineHeight: 1.75, maxWidth: 520, margin: '0 auto' }}>
+          <p className="t-body" style={{ color: '#6b6055', lineHeight: 1.75, maxWidth: 520, margin: '0 auto' }}>
             Not a generic SaaS from abroad. Every detail — from GST slabs to Aadhaar ID capture — is built for the Indian hospitality context.
           </p>
         </div>
@@ -496,11 +488,10 @@ export default function LandingPage({ onLogin }) {
               }}
             >
               <div style={{ fontSize: 28, marginBottom: 14 }}>{w.icon}</div>
-              <div style={{
-                fontFamily: "'Playfair Display', sans-serif",
-                fontSize: 15, fontWeight: 700, color: INK, marginBottom: 10,
+              <div className="t-h3" style={{
+                color: INK, marginBottom: 10,
               }}>{w.title}</div>
-              <div style={{ fontSize: 13, color: '#6b6055', lineHeight: 1.75 }}>{w.desc}</div>
+              <div className="t-sm" style={{ color: '#6b6055', lineHeight: 1.75 }}>{w.desc}</div>
             </div>
           ))}
         </div>
@@ -519,17 +510,16 @@ export default function LandingPage({ onLogin }) {
             alignItems: 'start',
           }}>
             <div>
-              <div style={{
-                fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
-                textTransform: 'uppercase', color: GOLD, marginBottom: 14,
+              <div className="t-label" style={{
+                letterSpacing: '0.16em',
+                color: GOLD, marginBottom: 14,
               }}>PLATFORM MODULES</div>
               <h2 style={{
-                fontFamily: "'Playfair Display', serif",
                 fontSize: 'clamp(26px,3.5vw,42px)',
                 fontWeight: 900, color: INK, lineHeight: 1.1,
                 margin: '0 0 16px', letterSpacing: '-0.01em',
               }}>One platform.<br />Every module.</h2>
-              <p style={{ fontSize: 14, color: '#6b6055', lineHeight: 1.75, margin: 0, maxWidth: 320 }}>
+              <p className="t-body" style={{ color: '#6b6055', lineHeight: 1.75, margin: 0, maxWidth: 320 }}>
                 From front desk to back office — Quantum Vorvex covers every workflow your hotel needs.
               </p>
               <button onClick={onLogin} style={{
@@ -568,7 +558,7 @@ export default function LandingPage({ onLogin }) {
                 >
                   <span style={{ fontSize: 18, display: 'block', marginBottom: 8 }}>{mod.icon}</span>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: INK, marginBottom: 3 }}>{mod.label}</div>
-                  <div style={{ fontSize: 11, color: '#888', lineHeight: 1.5 }}>{mod.desc}</div>
+                  <div className="t-xs" style={{ color: '#888', lineHeight: 1.5 }}>{mod.desc}</div>
                 </div>
               ))}
             </div>
@@ -582,12 +572,11 @@ export default function LandingPage({ onLogin }) {
         padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,5vh,52px)' }}>
-          <div style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
-            textTransform: 'uppercase', color: GOLD, marginBottom: 12,
+          <div className="t-label" style={{
+            letterSpacing: '0.16em',
+            color: GOLD, marginBottom: 12,
           }}>KEY FEATURES</div>
           <h2 style={{
-            fontFamily: "'Playfair Display', serif",
             fontSize: 'clamp(26px,3.5vw,42px)',
             fontWeight: 900, color: INK, margin: 0, lineHeight: 1.1,
           }}>Every detail.<br />Thought through.</h2>
@@ -614,11 +603,10 @@ export default function LandingPage({ onLogin }) {
                   marginBottom: 16,
                 }}>{f.badge}</div>
                 <h3 style={{
-                  fontFamily: "'Playfair Display', serif",
                   fontSize: 'clamp(20px,2.5vw,28px)',
                   fontWeight: 900, color: INK, margin: '0 0 14px', lineHeight: 1.2,
                 }}>{f.title}</h3>
-                <p style={{ fontSize: 14, color: '#6b6055', lineHeight: 1.8, margin: '0 0 20px' }}>{f.desc}</p>
+                <p className="t-body" style={{ color: '#6b6055', lineHeight: 1.8, margin: '0 0 20px' }}>{f.desc}</p>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                   {f.points.map(p => (
                     <li key={p} style={{
@@ -658,12 +646,11 @@ export default function LandingPage({ onLogin }) {
       }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,5vh,52px)' }}>
-            <div style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
-              textTransform: 'uppercase', color: GOLD, marginBottom: 12,
+            <div className="t-label" style={{
+              letterSpacing: '0.16em',
+              color: GOLD, marginBottom: 12,
             }}>HOW IT WORKS</div>
             <h2 style={{
-              fontFamily: "'Playfair Display', serif",
               fontSize: 'clamp(26px,3.5vw,42px)',
               fontWeight: 900, color: '#fff', margin: 0, lineHeight: 1.1,
             }}>Up and running<br />in minutes.</h2>
@@ -688,13 +675,11 @@ export default function LandingPage({ onLogin }) {
                   }}>→</div>
                 )}
                 <div style={{
-                  fontFamily: "'Playfair Display', serif",
                   fontSize: 'clamp(40px,5vw,64px)', fontWeight: 900,
                   color: GOLD, lineHeight: 1, marginBottom: 16, opacity: 0.7,
                 }}>{s.step}</div>
-                <div style={{
-                  fontFamily: "'Playfair Display', sans-serif",
-                  fontSize: 17, fontWeight: 700, color: '#fff', marginBottom: 10,
+                <div className="t-h2" style={{
+                  color: '#fff', marginBottom: 10,
                 }}>{s.title}</div>
                 <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', lineHeight: 1.75 }}>{s.desc}</div>
               </div>
@@ -702,10 +687,10 @@ export default function LandingPage({ onLogin }) {
           </div>
 
           <div style={{ textAlign: 'center', marginTop: 40 }}>
-            <button onClick={onLogin} style={{
+            <button onClick={onLogin} className="t-title" style={{
               padding: '13px 36px', borderRadius: 8, border: 'none',
               background: GOLD, color: '#000',
-              fontSize: 13, fontWeight: 700, letterSpacing: '0.08em',
+              letterSpacing: '0.08em',
               cursor: 'pointer', transition: 'background 0.15s',
             }}
               onMouseEnter={e => e.currentTarget.style.background = '#d4b55a'}
@@ -721,12 +706,11 @@ export default function LandingPage({ onLogin }) {
         padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,4vh,48px)' }}>
-          <div style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
-            textTransform: 'uppercase', color: GOLD, marginBottom: 12,
+          <div className="t-label" style={{
+            letterSpacing: '0.16em',
+            color: GOLD, marginBottom: 12,
           }}>ROLE-BASED ACCESS</div>
           <h2 style={{
-            fontFamily: "'Playfair Display', serif",
             fontSize: 'clamp(26px,3.5vw,40px)',
             fontWeight: 900, color: INK, margin: 0, lineHeight: 1.1,
           }}>Right access.<br />Right people.</h2>
@@ -744,11 +728,10 @@ export default function LandingPage({ onLogin }) {
               borderRadius: 10, padding: 'clamp(20px,3vw,26px)',
             }}>
               <div style={{ fontSize: 24, marginBottom: 12 }}>{r.icon}</div>
-              <div style={{
-                fontFamily: "'Playfair Display', sans-serif",
-                fontSize: 16, fontWeight: 700, color: INK, marginBottom: 10,
+              <div className="t-h3" style={{
+                color: INK, marginBottom: 10,
               }}>{r.role}</div>
-              <div style={{ fontSize: 13, color: '#6b6055', lineHeight: 1.7 }}>{r.desc}</div>
+              <div className="t-sm" style={{ color: '#6b6055', lineHeight: 1.7 }}>{r.desc}</div>
             </div>
           ))}
         </div>
@@ -761,12 +744,11 @@ export default function LandingPage({ onLogin }) {
       }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,5vh,52px)' }}>
-            <div style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
-              textTransform: 'uppercase', color: GOLD, marginBottom: 12,
+            <div className="t-label" style={{
+              letterSpacing: '0.16em',
+              color: GOLD, marginBottom: 12,
             }}>WHAT HOTELIERS SAY</div>
             <h2 style={{
-              fontFamily: "'Playfair Display', serif",
               fontSize: 'clamp(26px,3.5vw,42px)',
               fontWeight: 900, color: INK, margin: 0, lineHeight: 1.1,
             }}>Trusted by hotel owners<br />across India.</h2>
@@ -786,11 +768,11 @@ export default function LandingPage({ onLogin }) {
                 display: 'flex', flexDirection: 'column', gap: 20,
               }}>
                 <div style={{
-                  fontSize: 36, color: t.color, lineHeight: 1, fontFamily: 'Georgia, serif',
+                  fontSize: 36, color: t.color, lineHeight: 1,
                   opacity: 0.5,
                 }}>"</div>
-                <p style={{
-                  fontSize: 14, color: '#3a3530', lineHeight: 1.8,
+                <p className="t-body" style={{
+                  color: '#3a3530', lineHeight: 1.8,
                   margin: 0, flex: 1, fontStyle: 'italic',
                 }}>{t.quote}</p>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -801,7 +783,7 @@ export default function LandingPage({ onLogin }) {
                     fontSize: 15, fontWeight: 700, color: '#fff', flexShrink: 0,
                   }}>{t.initial}</div>
                   <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: INK }}>{t.name}</div>
+                    <div className="t-title" style={{ color: INK }}>{t.name}</div>
                     <div style={{ fontSize: 11.5, color: '#888', marginTop: 2 }}>{t.title}</div>
                   </div>
                 </div>
@@ -817,16 +799,15 @@ export default function LandingPage({ onLogin }) {
         padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
       }}>
         <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,5vh,52px)' }}>
-          <div style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
-            textTransform: 'uppercase', color: GOLD, marginBottom: 12,
+          <div className="t-label" style={{
+            letterSpacing: '0.16em',
+            color: GOLD, marginBottom: 12,
           }}>PRICING</div>
           <h2 style={{
-            fontFamily: "'Playfair Display', serif",
             fontSize: 'clamp(26px,3.5vw,42px)',
             fontWeight: 900, color: INK, margin: '0 0 14px', lineHeight: 1.1,
           }}>Simple, transparent pricing.</h2>
-          <p style={{ fontSize: 14, color: '#6b6055', lineHeight: 1.75 }}>
+          <p className="t-body" style={{ color: '#6b6055', lineHeight: 1.75 }}>
             No hidden fees. No per-user charges. Cancel anytime.
           </p>
         </div>
@@ -854,31 +835,29 @@ export default function LandingPage({ onLogin }) {
                   padding: '4px 14px', borderRadius: 100,
                 }}>MOST POPULAR</div>
               )}
-              <div style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.1em',
-                textTransform: 'uppercase',
+              <div className="t-label" style={{
+                letterSpacing: '0.1em',
                 color: plan.highlight ? 'rgba(255,255,255,0.45)' : '#888',
                 marginBottom: 10,
               }}>{plan.name}</div>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 8 }}>
                 <span style={{
-                  fontFamily: "'Playfair Display', serif",
                   fontSize: 'clamp(28px,3.5vw,38px)', fontWeight: 900,
                   color: plan.highlight ? GOLD : INK,
                 }}>{plan.price}</span>
                 {plan.period && (
-                  <span style={{ fontSize: 13, color: plan.highlight ? 'rgba(255,255,255,0.35)' : '#888' }}>{plan.period}</span>
+                  <span className="t-sm" style={{ color: plan.highlight ? 'rgba(255,255,255,0.35)' : '#888' }}>{plan.period}</span>
                 )}
               </div>
-              <p style={{
-                fontSize: 13, lineHeight: 1.65, margin: '0 0 22px',
+              <p className="t-sm" style={{
+                lineHeight: 1.65, margin: '0 0 22px',
                 color: plan.highlight ? 'rgba(255,255,255,0.5)' : '#6b6055',
               }}>{plan.desc}</p>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px', display: 'flex', flexDirection: 'column', gap: 9 }}>
                 {plan.features.map(f => (
-                  <li key={f} style={{
+                  <li key={f} className="t-sm" style={{
                     display: 'flex', alignItems: 'center', gap: 9,
-                    fontSize: 13, color: plan.highlight ? 'rgba(255,255,255,0.75)' : '#3a3530',
+                    color: plan.highlight ? 'rgba(255,255,255,0.75)' : '#3a3530',
                   }}>
                     <span style={{ color: GOLD, fontWeight: 700, fontSize: 12 }}>✓</span>
                     {f}
@@ -915,12 +894,11 @@ export default function LandingPage({ onLogin }) {
       }}>
         <div style={{ maxWidth: 760, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,5vh,52px)' }}>
-            <div style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: '0.16em',
-              textTransform: 'uppercase', color: GOLD, marginBottom: 12,
+            <div className="t-label" style={{
+              letterSpacing: '0.16em',
+              color: GOLD, marginBottom: 12,
             }}>FAQ</div>
             <h2 style={{
-              fontFamily: "'Playfair Display', serif",
               fontSize: 'clamp(26px,3.5vw,42px)',
               fontWeight: 900, color: INK, margin: 0, lineHeight: 1.1,
             }}>Common questions,<br />honest answers.</h2>
@@ -971,11 +949,11 @@ export default function LandingPage({ onLogin }) {
         <div className="lp-contact-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'clamp(32px,5vw,72px)', alignItems: 'start' }}>
           {/* Left copy */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: GOLD, marginBottom: 14 }}>CONTACT US</div>
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 'clamp(26px,3.5vw,42px)', fontWeight: 900, color: INK, margin: '0 0 16px', lineHeight: 1.1 }}>
+            <div className="t-label" style={{ letterSpacing: '0.16em', color: GOLD, marginBottom: 14 }}>CONTACT US</div>
+            <h2 style={{ fontSize: 'clamp(26px,3.5vw,42px)', fontWeight: 900, color: INK, margin: '0 0 16px', lineHeight: 1.1 }}>
               Let's get your hotel<br />set up today.
             </h2>
-            <p style={{ fontSize: 14, color: '#6b6055', lineHeight: 1.8, margin: '0 0 28px' }}>
+            <p className="t-body" style={{ color: '#6b6055', lineHeight: 1.8, margin: '0 0 28px' }}>
               Have questions about pricing, onboarding, or a custom integration? Our team responds within one business day.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1000,14 +978,14 @@ export default function LandingPage({ onLogin }) {
             {contactSent ? (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <div style={{ fontSize: 48, marginBottom: 14 }}>✅</div>
-                <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 900, color: INK, margin: '0 0 10px' }}>Message received!</h3>
-                <p style={{ fontSize: 14, color: '#6b6055', lineHeight: 1.8 }}>We'll get back to you at <strong>{contactForm.email}</strong> within one business day.</p>
+                <h3 className="t-h1" style={{ color: INK, margin: '0 0 10px' }}>Message received!</h3>
+                <p className="t-body" style={{ color: '#6b6055', lineHeight: 1.8 }}>We'll get back to you at <strong>{contactForm.email}</strong> within one business day.</p>
                 <button onClick={() => setContactSent(false)} style={{ marginTop: 20, padding: '10px 24px', borderRadius: 7, border: '1px solid rgba(0,0,0,0.15)', background: 'transparent', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: INK }}>Send another message</button>
               </div>
             ) : (
               <form onSubmit={handleContactSubmit}>
                 <div style={{ marginBottom: 16 }}>
-                  <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: 20, fontWeight: 900, color: INK, margin: '0 0 4px' }}>Get in touch</h3>
+                  <h3 className="t-h1" style={{ color: INK, margin: '0 0 4px' }}>Get in touch</h3>
                   <p style={{ fontSize: 12.5, color: '#888', margin: 0 }}>We'll respond within one business day.</p>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
@@ -1026,12 +1004,13 @@ export default function LandingPage({ onLogin }) {
                         placeholder={field.placeholder}
                         onFocus={() => setContactFocus(f => ({ ...f, [field.key]: true }))}
                         onBlur={() => setContactFocus(f => ({ ...f, [field.key]: false }))}
+                        className="t-sm"
                         style={{
                           width: '100%', boxSizing: 'border-box',
                           padding: '9px 12px',
                           background: contactFocus[field.key] ? '#fff' : '#f9f8f5',
                           border: `1px solid ${contactFocus[field.key] ? GOLD : 'rgba(0,0,0,0.12)'}`,
-                          borderRadius: 7, fontSize: 13, color: INK, outline: 'none',
+                          borderRadius: 7, color: INK, outline: 'none',
                           transition: 'all 0.15s',
                           boxShadow: contactFocus[field.key] ? '0 0 0 3px rgba(201,168,76,0.12)' : 'none',
                         }}
@@ -1046,11 +1025,11 @@ export default function LandingPage({ onLogin }) {
                     onChange={e => setContact('message', e.target.value)}
                     placeholder="Tell us about your property and what you're looking for..."
                     rows={4}
+                    className="t-sm"
                     style={{
                       width: '100%', boxSizing: 'border-box', padding: '9px 12px', resize: 'vertical',
                       background: '#f9f8f5', border: '1px solid rgba(0,0,0,0.12)',
-                      borderRadius: 7, fontSize: 13, color: INK, outline: 'none',
-                      fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
+                      borderRadius: 7, color: INK, outline: 'none', transition: 'all 0.15s',
                     }}
                     onFocus={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = GOLD; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.12)' }}
                     onBlur={e => { e.currentTarget.style.background = '#f9f8f5'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)'; e.currentTarget.style.boxShadow = 'none' }}
@@ -1080,7 +1059,6 @@ export default function LandingPage({ onLogin }) {
       }}>
         <div style={{ maxWidth: 580, margin: '0 auto' }}>
           <h2 style={{
-            fontFamily: "'Playfair Display', serif",
             fontSize: 'clamp(26px,4vw,46px)',
             fontWeight: 900, color: '#fff', lineHeight: 1.1, margin: '0 0 14px',
           }}>Ready to modernise<br />your hotel?</h2>
@@ -1089,20 +1067,20 @@ export default function LandingPage({ onLogin }) {
             system with real-looking mock data — instantly.
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-            <button onClick={onLogin} style={{
+            <button onClick={onLogin} className="t-title" style={{
               padding: '13px clamp(24px,4vw,36px)', borderRadius: 8, border: 'none',
               background: GOLD, color: '#000',
-              fontSize: 13, fontWeight: 700, letterSpacing: '0.08em',
+              letterSpacing: '0.08em',
               cursor: 'pointer', transition: 'background 0.15s',
             }}
               onMouseEnter={e => e.currentTarget.style.background = '#d4b55a'}
               onMouseLeave={e => e.currentTarget.style.background = GOLD}
             >SIGN IN TO PLATFORM →</button>
-            <button onClick={onLogin} style={{
+            <button onClick={onLogin} className="t-title" style={{
               padding: '13px clamp(24px,4vw,36px)', borderRadius: 8,
               border: '1px solid rgba(255,255,255,0.2)',
               background: 'transparent', color: '#fff',
-              fontSize: 13, fontWeight: 600, letterSpacing: '0.08em',
+              letterSpacing: '0.08em',
               cursor: 'pointer', transition: 'border-color 0.15s',
             }}
               onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)'}
@@ -1126,9 +1104,8 @@ export default function LandingPage({ onLogin }) {
           }}>
             {/* Brand column */}
             <div>
-              <div style={{
-                fontFamily: "'Playfair Display', serif",
-                fontSize: 18, fontStyle: 'italic', fontWeight: 700, color: GOLD, marginBottom: 12,
+              <div className="t-h2" style={{
+                fontStyle: 'italic', color: GOLD, marginBottom: 12,
               }}>Quantum Vorvex</div>
               <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.35)', lineHeight: 1.8, margin: '0 0 20px' }}>
                 Hotel management software built for the Indian hospitality industry.
@@ -1152,15 +1129,15 @@ export default function LandingPage({ onLogin }) {
             {/* Link columns */}
             {Object.entries(FOOTER_LINKS).map(([category, links]) => (
               <div key={category}>
-                <div style={{
-                  fontSize: 10, fontWeight: 700, letterSpacing: '0.12em',
-                  textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)',
+                <div className="t-label" style={{
+                  letterSpacing: '0.12em',
+                  color: 'rgba(255,255,255,0.4)',
                   marginBottom: 16,
                 }}>{category}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {links.map(l => (
-                    <span key={l} style={{
-                      fontSize: 13, color: 'rgba(255,255,255,0.45)',
+                    <span key={l} className="t-sm" style={{
+                      color: 'rgba(255,255,255,0.45)',
                       cursor: 'pointer', transition: 'color 0.15s',
                     }}
                       onMouseEnter={e => e.currentTarget.style.color = '#fff'}

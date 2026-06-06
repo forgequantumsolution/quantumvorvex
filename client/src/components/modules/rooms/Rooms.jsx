@@ -54,14 +54,14 @@ function KanbanColumn({ title, rooms, badgeType, onSelect }) {
         alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        <span style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
+        <span className="t-title" style={{ color: 'var(--text)' }}>
           {title}
         </span>
         <Badge type={badgeType}>{rooms.length}</Badge>
       </div>
       <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {rooms.length === 0 && (
-          <p style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center', padding: '16px 0', margin: 0 }}>
+          <p className="t-xs" style={{ color: 'var(--text3)', textAlign: 'center', padding: '16px 0', margin: 0 }}>
             No rooms
           </p>
         )}
@@ -73,16 +73,16 @@ function KanbanColumn({ title, rooms, badgeType, onSelect }) {
             style={{ padding: '10px 13px' }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-              <span style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: 15, fontWeight: 800, color: 'var(--text)' }}>
+              <span className="t-h3" style={{ color: 'var(--text)' }}>
                 {room.number}
               </span>
-              <span style={{ fontSize: 10, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span className="t-label" style={{ color: 'var(--text3)' }}>
                 Floor {room.floor}
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: 11, color: 'var(--text3)' }}>{room.type}</p>
+            <p className="t-label" style={{ margin: 0, color: 'var(--text3)' }}>{room.type}</p>
             {room.guest && (
-              <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text2)' }}>
+              <p className="t-xs" style={{ margin: '4px 0 0', color: 'var(--text2)' }}>
                 {room.guest.name}
               </p>
             )}
@@ -122,11 +122,11 @@ function RoomDetail({ room, onClose, onStatusChange }) {
             borderRadius: 8,
             padding: '10px 14px',
           }}>
-            <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <p className="t-label" style={{ margin: 0, color: 'var(--text3)' }}>
               {label}
             </p>
             {value ? (
-              <p style={{ margin: '4px 0 0', fontSize: 14, fontWeight: 600, color: 'var(--text)', fontFamily: "'Playfair Display', sans-serif" }}>
+              <p className="t-title" style={{ margin: '4px 0 0', color: 'var(--text)' }}>
                 {value}
               </p>
             ) : (
@@ -147,21 +147,20 @@ function RoomDetail({ room, onClose, onStatusChange }) {
           padding: '13px 16px',
           marginBottom: 18,
         }}>
-          <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 700, color: 'var(--red-text)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          <p className="t-label" style={{ margin: '0 0 8px', color: 'var(--red-text)' }}>
             Current Occupant
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
+            <div className="t-title" style={{
               width: 36, height: 36, borderRadius: '50%',
               background: 'var(--red-text)', color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: "'Playfair Display', sans-serif", fontSize: 13, fontWeight: 800, flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}>
               {room.guest.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
             <div>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{room.guest.name}</p>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text2)' }}>{room.guest.phone}</p>
+              <p className="t-title" style={{ margin: 0, color: 'var(--text)' }}>{room.guest.name}</p>
+              <p className="t-xs" style={{ margin: '2px 0 0', color: 'var(--text2)' }}>{room.guest.phone}</p>
             </div>
           </div>
         </div>
@@ -169,7 +168,7 @@ function RoomDetail({ room, onClose, onStatusChange }) {
 
       {/* Quick actions */}
       <div>
-        <p style={{ margin: '0 0 10px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+        <p className="t-label" style={{ margin: '0 0 10px', color: 'var(--text3)' }}>
           Quick Actions
         </p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -322,7 +321,6 @@ export default function Rooms() {
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 22, gap: 16, flexWrap: 'wrap' }}>
         <div>
           <h1 style={{
-            fontFamily: "'Playfair Display', sans-serif",
             fontSize: 26,
             fontWeight: 800,
             margin: 0,
@@ -331,7 +329,7 @@ export default function Rooms() {
           }}>
             Rooms
           </h1>
-          <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--text3)' }}>
+          <p className="t-sm" style={{ margin: '3px 0 0', color: 'var(--text3)' }}>
             Manage room inventory
           </p>
         </div>
@@ -342,7 +340,7 @@ export default function Rooms() {
       </div>
 
       {error && (
-        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
           {error}
         </div>
       )}
@@ -363,8 +361,8 @@ export default function Rooms() {
             padding: '12px 16px',
             borderBottom: `3px solid ${s.color}`,
           }}>
-            <p style={{ margin: 0, fontSize: 22, fontWeight: 800, fontFamily: "'Playfair Display', sans-serif", color: s.tc }}>{s.count}</p>
-            <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>{s.label}</p>
+            <p className="t-h1" style={{ margin: 0, color: s.tc }}>{s.count}</p>
+            <p className="t-label" style={{ margin: '2px 0 0', color: 'var(--text3)' }}>{s.label}</p>
           </div>
         ))}
       </div>
@@ -395,7 +393,6 @@ export default function Rooms() {
                   border: active ? '1px solid var(--gold)' : '1px solid var(--border)',
                   color: active ? 'var(--gold)' : 'var(--text2)',
                   transition: 'all 0.13s',
-                  fontFamily: "'DM Sans', sans-serif",
                 }}
               >
                 {f}
@@ -409,9 +406,9 @@ export default function Rooms() {
 
         {/* Search */}
         <div style={{ position: 'relative', flexShrink: 0 }}>
-          <span style={{
+          <span className="t-sm" style={{
             position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
-            fontSize: 13, color: 'var(--text3)', pointerEvents: 'none',
+            color: 'var(--text3)', pointerEvents: 'none',
           }}>
             ⌕
           </span>
@@ -442,10 +439,10 @@ export default function Rooms() {
               <button
                 key={key}
                 title={title}
+                className="t-body"
                 onClick={() => setView(key)}
                 style={{
                   padding: '6px 11px',
-                  fontSize: 14,
                   cursor: 'pointer',
                   background: active ? 'var(--gold-bg)' : 'var(--surface)',
                   color: active ? 'var(--gold)' : 'var(--text3)',
@@ -463,7 +460,7 @@ export default function Rooms() {
 
       {/* ── Results count ──────────────────────────────────────────────────── */}
       {(filter !== 'All' || search) && (
-        <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
+        <p className="t-xs" style={{ color: 'var(--text3)', marginBottom: 12 }}>
           Showing {filtered.length} of {rooms.length} rooms
         </p>
       )}
@@ -473,9 +470,9 @@ export default function Rooms() {
         <>
           {filtered.length === 0 ? (
             <div className="empty-state">
-              <p style={{ fontSize: 32, margin: '0 0 8px' }}>🏨</p>
+              <p className="t-display" style={{ margin: '0 0 8px' }}>🏨</p>
               <p style={{ margin: 0, fontWeight: 600, color: 'var(--text2)' }}>No rooms found</p>
-              <p style={{ margin: '4px 0 0', fontSize: 12 }}>Try adjusting your filters</p>
+              <p className="t-xs" style={{ margin: '4px 0 0' }}>Try adjusting your filters</p>
             </div>
           ) : (
             <div style={{
@@ -559,11 +556,8 @@ function RoomCard({ room, onClick }) {
       title={`Room ${room.number} — ${STATUS_LABEL[room.status]}`}
     >
       {/* Room number */}
-      <p style={{
+      <p className="t-h1" style={{
         margin: '0 0 2px',
-        fontFamily: "'Playfair Display', sans-serif",
-        fontSize: 20,
-        fontWeight: 800,
         color: 'var(--text)',
         lineHeight: 1.1,
       }}>
@@ -571,7 +565,7 @@ function RoomCard({ room, onClick }) {
       </p>
 
       {/* Type */}
-      <p style={{ margin: '0 0 8px', fontSize: 11, color: 'var(--text3)' }}>
+      <p className="t-label" style={{ margin: '0 0 8px', color: 'var(--text3)' }}>
         {room.type} · Fl {room.floor}
       </p>
 
@@ -588,7 +582,7 @@ function RoomCard({ room, onClick }) {
       )}
 
       {/* Rate */}
-      <p style={{ margin: '4px 0 0', fontSize: 10, color: 'var(--text3)' }}>
+      <p className="t-label" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>
         ₹{room.dailyRate}/day
       </p>
     </div>

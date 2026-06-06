@@ -148,7 +148,7 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
           {logoPreview ? (
             <img src={logoPreview} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--gold)', fontFamily: "'Playfair Display', sans-serif" }}>
+            <span className="t-h1" style={{ color: 'var(--gold)' }}>
               {initials}
             </span>
           )}
@@ -301,7 +301,8 @@ function RoomConfigTab({ settings, setSettings, addToast }) {
                       </span>
                     ) : (
                       <button
-                        style={{ fontSize: 13, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                        className="t-sm"
+                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
                         onClick={() => setConfirmDelete(row.id)}
                         title="Delete room type"
                       >
@@ -360,6 +361,7 @@ function FacilitiesTab({ addToast }) {
             {facilities.map(f => (
               <span
                 key={f}
+                className="t-xs"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -369,16 +371,15 @@ function FacilitiesTab({ addToast }) {
                   background: 'var(--gold-bg, #3a2e0a)',
                   border: '1px solid var(--gold)',
                   color: 'var(--gold)',
-                  fontSize: 12,
-                  fontWeight: 600,
                 }}
               >
                 {f}
                 <button
                   onClick={() => removeFacility(f)}
+                  className="t-body"
                   style={{
                     background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--gold)', fontSize: 14, lineHeight: 1, padding: 0, marginLeft: 2,
+                    color: 'var(--gold)', lineHeight: 1, padding: 0, marginLeft: 2,
                   }}
                   title={`Remove ${f}`}
                 >
@@ -441,7 +442,8 @@ function FacilitiesTab({ addToast }) {
                   <td style={{ padding: '7px 12px', textAlign: 'center' }}>
                     <button
                       onClick={() => removeAmenity(row.id)}
-                      style={{ fontSize: 13, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                      className="t-sm"
+                      style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
                     >
                       ×
                     </button>
@@ -519,7 +521,8 @@ function FoodPlansTab({ addToast }) {
                   <td style={{ padding: '7px 12px', textAlign: 'center' }}>
                     <button
                       onClick={() => removePlan(row.id)}
-                      style={{ fontSize: 13, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                      className="t-sm"
+                      style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
                     >
                       ×
                     </button>
@@ -600,10 +603,10 @@ function TaxPricingTab({ settings, setSettings, addToast }) {
               onChange={e => setSettings(s => ({ ...s, seasonalPricing: e.target.checked }))}
               style={{ width: 16, height: 16, accentColor: 'var(--gold)' }}
             />
-            <span style={{ fontSize: 14 }}>Enable seasonal / peak pricing for room types</span>
+            <span className="t-body">Enable seasonal / peak pricing for room types</span>
           </label>
           {settings.seasonalPricing && (
-            <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--text3)' }}>
+            <p className="t-xs" style={{ margin: '10px 0 0', color: 'var(--text3)' }}>
               Peak rates defined per room type will be applied during marked peak periods.
             </p>
           )}
@@ -648,7 +651,7 @@ function DocumentsTab({ settings, setSettings, addToast }) {
                     onChange={e => toggleDoc(doc.id, 'enabled', e.target.checked)}
                     style={{ width: 15, height: 15, accentColor: 'var(--gold)' }}
                   />
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{doc.label}</span>
+                  <span className="t-title">{doc.label}</span>
                 </label>
                 <span style={{
                   fontSize: 11,
@@ -660,7 +663,7 @@ function DocumentsTab({ settings, setSettings, addToast }) {
                 }}>
                   {doc.required ? 'Required' : 'Optional'}
                 </span>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text3)', marginLeft: 'auto' }}>
+                <label className="t-xs" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text3)', marginLeft: 'auto' }}>
                   Max
                   <input
                     type="number"
@@ -700,7 +703,7 @@ function DocumentsTab({ settings, setSettings, addToast }) {
               onChange={e => setSettings(s => ({ ...s, expiryReminderDays: Number(e.target.value) }))}
             />
           </Field>
-          <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text3)' }}>
+          <p className="t-xs" style={{ margin: '8px 0 0', color: 'var(--text3)' }}>
             System will send alerts when guest KYC documents are about to expire within this window.
           </p>
         </div>
@@ -878,7 +881,7 @@ function PricingRulesTab({ addToast }) {
                     </td>
                     {/* Adjustment */}
                     <td style={{ padding: '7px 10px' }}>
-                      <span style={{ fontSize: 12, color: adjColor, fontWeight: 700, marginRight: 2 }}>
+                      <span className="t-xs" style={{ color: adjColor, marginRight: 2 }}>
                         {adjPrefix}
                       </span>
                       <input
@@ -905,7 +908,8 @@ function PricingRulesTab({ addToast }) {
                     <td style={{ padding: '7px 10px' }}>
                       <button
                         onClick={() => deleteRule(row.id)}
-                        style={{ fontSize: 13, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                        className="t-sm"
+                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
                         title="Delete rule"
                       >
                         ×
@@ -987,16 +991,17 @@ function PricingRulesTab({ addToast }) {
                         }}
                       />
                     </td>
-                    <td style={{ padding: '7px 10px', fontSize: 13, color: 'var(--text3)' }}>
+                    <td className="t-sm" style={{ padding: '7px 10px', color: 'var(--text3)' }}>
                       ₹{yourRate}
                     </td>
-                    <td style={{ padding: '7px 10px', fontSize: 13, fontWeight: 700, color: deltaColor }}>
+                    <td className="t-title" style={{ padding: '7px 10px', color: deltaColor }}>
                       {deltaPrefix}{delta}%
                     </td>
                     <td style={{ padding: '7px 10px' }}>
                       <button
                         onClick={() => deleteComp(row.id)}
-                        style={{ fontSize: 13, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                        className="t-sm"
+                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
                       >
                         ×
                       </button>
@@ -1141,7 +1146,7 @@ function NotificationsTab({ addToast }) {
               {templates.map(tpl => (
                 <tr key={tpl.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td style={{ padding: '10px 12px' }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{tpl.label}</span>
+                    <span className="t-title" style={{ color: 'var(--text)' }}>{tpl.label}</span>
                   </td>
                   <td style={{ padding: '10px 12px' }}>
                     <span style={{
@@ -1207,7 +1212,7 @@ function NotificationsTab({ addToast }) {
                 borderRadius: 6,
                 color: 'var(--text)',
                 resize: 'vertical',
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
                 boxSizing: 'border-box',
               }}
             />
@@ -1226,7 +1231,7 @@ function NotificationsTab({ addToast }) {
                     fontSize: 11,
                     fontWeight: 700,
                     cursor: 'pointer',
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                   }}
                   title={`Insert ${v}`}
                 >
@@ -1282,7 +1287,7 @@ function PropertiesTab({ settings, setSettings, addToast }) {
           {!editingMain ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 18, fontWeight: 800, fontFamily: "'Playfair Display', sans-serif", color: 'var(--text)' }}>
+                <span className="t-h2" style={{ color: 'var(--text)' }}>
                   {settings.hotelName}
                 </span>
                 <span style={{
@@ -1293,8 +1298,8 @@ function PropertiesTab({ settings, setSettings, addToast }) {
                   Active
                 </span>
               </div>
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--text3)' }}>{settings.address}</p>
-              <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 13 }}>
+              <p className="t-sm" style={{ margin: 0, color: 'var(--text3)' }}>{settings.address}</p>
+              <div className="t-sm" style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
                 <span><span style={{ color: 'var(--text3)' }}>GSTIN:</span> {settings.gstin}</span>
                 <span><span style={{ color: 'var(--text3)' }}>Rooms:</span> {settings.totalRooms}</span>
               </div>
@@ -1356,7 +1361,7 @@ function PropertiesTab({ settings, setSettings, addToast }) {
         </div>
         <div className="card-body">
           {/* Info banner */}
-          <div style={{
+          <div className="t-sm" style={{
             display: 'flex',
             alignItems: 'center',
             gap: 10,
@@ -1365,10 +1370,9 @@ function PropertiesTab({ settings, setSettings, addToast }) {
             background: 'rgba(201,168,76,0.08)',
             border: '1px solid rgba(201,168,76,0.3)',
             marginBottom: 16,
-            fontSize: 13,
             color: 'var(--text3)',
           }}>
-            <span style={{ fontSize: 16 }}>🔒</span>
+            <span className="t-h3">🔒</span>
             Upgrade to Multi-Property plan to manage multiple hotels from one account.
           </div>
 
@@ -1384,14 +1388,14 @@ function PropertiesTab({ settings, setSettings, addToast }) {
               </thead>
               <tbody>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                  <td className="t-title" style={{ padding: '10px 12px', color: 'var(--text)' }}>
                     Quantum Vorvex — Branch
                   </td>
-                  <td style={{ padding: '10px 12px', fontSize: 13, color: 'var(--text3)' }}>
+                  <td className="t-sm" style={{ padding: '10px 12px', color: 'var(--text3)' }}>
                     456, MG Road, Bangalore
                   </td>
-                  <td style={{ padding: '10px 12px', fontSize: 13, color: 'var(--text3)' }}>24</td>
-                  <td style={{ padding: '10px 12px', fontSize: 13, color: 'var(--text3)' }}>Priya Sharma</td>
+                  <td className="t-sm" style={{ padding: '10px 12px', color: 'var(--text3)' }}>24</td>
+                  <td className="t-sm" style={{ padding: '10px 12px', color: 'var(--text3)' }}>Priya Sharma</td>
                   <td style={{ padding: '10px 12px' }}>
                     <span style={{
                       padding: '2px 10px', borderRadius: 20,
@@ -1490,8 +1494,7 @@ function UsersAccessTab({ addToast }) {
     width: '100%', boxSizing: 'border-box',
     padding: '9px 11px',
     background: 'var(--surface2)', border: '1px solid var(--border)',
-    borderRadius: 7, color: 'var(--text)', fontSize: 13,
-    fontFamily: "'DM Sans', sans-serif", outline: 'none',
+    borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none',
   }
   const labelStyle = { fontSize: 11.5, fontWeight: 600, color: 'var(--text3)', letterSpacing: '0.04em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }
 
@@ -1499,7 +1502,7 @@ function UsersAccessTab({ addToast }) {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <div>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Users & Access</h3>
+          <h3 className="t-h3" style={{ margin: 0, color: 'var(--text)' }}>Users & Access</h3>
           <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--text3)' }}>
             Manage login accounts and their roles
           </p>
@@ -1523,9 +1526,8 @@ function UsersAccessTab({ addToast }) {
             flex: '1 1 180px', minWidth: 160,
           }}>
             <div style={{ marginTop: 1 }}>
-              <span style={{
-                display: 'inline-block', fontSize: 10, fontWeight: 700,
-                letterSpacing: '0.06em', textTransform: 'uppercase',
+              <span className="t-label" style={{
+                display: 'inline-block',
                 color: ROLE_COLORS[role], background: ROLE_COLORS[role] + '1a',
                 padding: '2px 7px', borderRadius: 4,
               }}>
@@ -1569,8 +1571,8 @@ function UsersAccessTab({ addToast }) {
                       )}
                     </div>
                   </td>
-                  <td style={{ padding: '11px 14px', color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{u.email}</td>
-                  <td style={{ padding: '11px 14px', color: 'var(--text3)', fontSize: 12 }}>{u.phone || '—'}</td>
+                  <td style={{ padding: '11px 14px', color: 'var(--text2)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>{u.email}</td>
+                  <td className="t-xs" style={{ padding: '11px 14px', color: 'var(--text3)' }}>{u.phone || '—'}</td>
                   <td style={{ padding: '11px 14px' }}>
                     <span style={{
                       fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em',
@@ -1666,7 +1668,8 @@ function UsersAccessTab({ addToast }) {
                   placeholder={modal === 'edit' ? '(unchanged)' : 'Min 6 characters'}
                 />
                 <button type="button" onClick={() => setShowPass(!showPass)}
-                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13 }}>
+                  className="t-sm"
+                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)' }}>
                   {showPass ? '🙈' : '👁'}
                 </button>
               </div>
@@ -1690,14 +1693,14 @@ function UsersAccessTab({ addToast }) {
           footer={
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
               <button className="btn btn-outline btn-sm" onClick={() => setModal(null)}>Cancel</button>
-              <button className="btn btn-sm" onClick={handleDelete} disabled={saving}
-                style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, padding: '6px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+              <button className="btn btn-sm t-title" onClick={handleDelete} disabled={saving}
+                style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, padding: '6px 16px', cursor: 'pointer' }}>
                 {saving ? 'Deleting…' : 'Yes, Delete'}
               </button>
             </div>
           }
         >
-          <p style={{ margin: 0, color: 'var(--text)', fontSize: 14 }}>
+          <p className="t-body" style={{ margin: 0, color: 'var(--text)' }}>
             Are you sure you want to delete <strong>{target?.name}</strong>? This cannot be undone.
           </p>
         </Modal>
@@ -1737,7 +1740,7 @@ function ToggleRow({ label, hint, checked, onChange }) {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
       <div>
         <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{label}</div>
-        {hint && <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{hint}</div>}
+        {hint && <div className="t-xs" style={{ color: 'var(--text3)', marginTop: 2 }}>{hint}</div>}
       </div>
       <button
         onClick={() => onChange(!checked)}
@@ -1785,7 +1788,7 @@ function AppearanceTab({ addToast }) {
             onChange={setTheme}
             options={[{ value: 'light', label: '☀ Light' }, { value: 'dark', label: '☾ Dark' }]}
           />
-          <p style={{ fontSize: 12, color: 'var(--text3)', margin: '4px 0 0' }}>
+          <p className="t-xs" style={{ color: 'var(--text3)', margin: '4px 0 0' }}>
             Light keeps the pure white &amp; gold look; dark switches to a warm charcoal palette.
           </p>
         </div>
@@ -1909,7 +1912,7 @@ function BrandingTab({ settings, setSettings, addToast }) {
           >
             {branding.logoUrl
               ? <img src={branding.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-              : <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 800, color: 'var(--gold)' }}>{initials}</span>}
+              : <span className="t-display" style={{ color: 'var(--gold)' }}>{initials}</span>}
           </div>
           <div>
             <button className="btn btn-outline" style={{ fontSize: 12 }} onClick={() => fileRef.current?.click()}>Upload Logo</button>
@@ -2080,17 +2083,14 @@ export default function Settings({ onRunSetup }) {
       {/* Header */}
       <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{
+          <h1 className="t-h1" style={{
             margin: 0,
-            fontFamily: "'Playfair Display', sans-serif",
-            fontSize: 22,
-            fontWeight: 800,
             color: 'var(--text)',
             letterSpacing: '-0.02em',
           }}>
             Settings
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text3)' }}>
+          <p className="t-sm" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>
             Configure hotel profile, room types, pricing, and system preferences
           </p>
         </div>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200..700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,6 +6,12 @@
 
 @layer base {
   :root {
+    /* ── Typography — SINGLE SOURCE OF TRUTH ──────────────────────────────────
+       To change the app's font everywhere, edit these two variables and the
+       <link>/@import URL for the font. Nothing else references font names. */
+    --font-sans: 'Readex Pro', system-ui, -apple-system, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
     /* ── Pure white + gold theme ─────────────────────────────────────────── */
     --sb-bg: #14110a;            /* deep espresso-black sidebar — luxe backdrop for gold */
     --main-bg: #ffffff;          /* pure white page */
@@ -60,7 +66,7 @@
   * { box-sizing: border-box; }
 
   body {
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--font-sans);
     background: var(--main-bg);
     color: var(--text);
     font-size: 14px;
@@ -72,9 +78,9 @@
     text-rendering: optimizeLegibility;
   }
 
-  /* Headings default to the Playfair Display serif for a luxury feel */
+  /* Headings use Readex Pro like the rest of the UI (single-typeface theme) */
   h1, h2, h3, h4, .font-display {
-    font-family: 'Playfair Display', serif;
+    font-family: var(--font-sans);
   }
 
   #root {
@@ -96,6 +102,23 @@
 }
 
 @layer components {
+  /* ── Typography scale ──────────────────────────────────────────────────────
+     Semantic classes for headings and text. All inherit var(--font-sans) from
+     body; .t-mono is the only family override. Use these instead of inline
+     fontSize/fontWeight so type stays consistent and is tunable in one place. */
+  .t-display { font-family: var(--font-sans); font-size: 30px; font-weight: 800; line-height: 1.1;  letter-spacing: -0.02em;  color: var(--text); }
+  .t-h1      { font-family: var(--font-sans); font-size: 22px; font-weight: 700; line-height: 1.2;  letter-spacing: -0.02em;  color: var(--text); }
+  .t-h2      { font-family: var(--font-sans); font-size: 18px; font-weight: 700; line-height: 1.25; letter-spacing: -0.015em; color: var(--text); }
+  .t-h3      { font-family: var(--font-sans); font-size: 15px; font-weight: 600; line-height: 1.3;  letter-spacing: -0.01em;  color: var(--text); }
+  .t-title   { font-family: var(--font-sans); font-size: 13.5px; font-weight: 700; letter-spacing: -0.01em; color: var(--text); }
+  .t-body    { font-family: var(--font-sans); font-size: 14px; font-weight: 400; line-height: 1.55; color: var(--text); }
+  .t-sm      { font-family: var(--font-sans); font-size: 13px; font-weight: 400; line-height: 1.5;  color: var(--text); }
+  .t-xs      { font-family: var(--font-sans); font-size: 12px; font-weight: 400; line-height: 1.45; color: var(--text2); }
+  .t-label   { font-family: var(--font-sans); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text3); }
+  .t-mono    { font-family: var(--font-mono); }
+  .t-muted   { color: var(--text2); }
+  .t-faint   { color: var(--text3); }
+
   /* Buttons */
   .btn {
     display: inline-flex;
@@ -104,7 +127,7 @@
     padding: 8px 15px;
     border-radius: 6px;
     font-size: 13px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--font-sans);
     font-weight: 500;
     cursor: pointer;
     border: none;
@@ -160,7 +183,7 @@
     flex-wrap: wrap;
   }
   .card-title {
-    font-family: 'Playfair Display', sans-serif;
+    font-family: var(--font-sans);
     font-size: 13.5px;
     font-weight: 700;
     color: var(--text);
@@ -198,7 +221,7 @@
     color: var(--text);
     padding: 8px 12px;
     border-radius: 6px;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--font-sans);
     font-size: 13px;
     transition: border-color 0.14s;
     outline: none;
@@ -242,7 +265,7 @@
     background: none;
     white-space: nowrap;
     transition: all 0.14s;
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--font-sans);
   }
   .tab-btn:hover { color: var(--text); }
   .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); font-weight: 600; }
@@ -328,7 +351,7 @@
   .gtag-corp { background: var(--purple-bg); color: var(--purple-text); }
   .gtag-long { background: var(--blue-bg); color: var(--blue-text); }
 
-  .kbd { display: inline-flex; align-items: center; padding: 1px 5px; border-radius: 3px; background: var(--surface2); border: 1px solid var(--border2); font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text3); }
+  .kbd { display: inline-flex; align-items: center; padding: 1px 5px; border-radius: 3px; background: var(--surface2); border: 1px solid var(--border2); font-family: var(--font-mono); font-size: 10px; color: var(--text3); }
 
   .empty-state { text-align: center; padding: 44px 20px; color: var(--text3); }
 }

@@ -40,6 +40,7 @@ export default function OfflineBanner() {
     <div
       role="status"
       aria-live="polite"
+      className="t-title"
       style={{
         position:        'sticky',
         top:             0,
@@ -48,14 +49,11 @@ export default function OfflineBanner() {
         borderBottom:    '1px solid #b45309',
         padding:         '9px 20px',
         textAlign:       'center',
-        fontSize:        13,
-        fontWeight:      600,
         color:           '#fef3c7',
         letterSpacing:   '0.01em',
         transition:      'opacity 0.6s ease',
         opacity:         fading ? 0 : 1,
         pointerEvents:   fading ? 'none' : 'auto',
-        fontFamily:      "'DM Sans', sans-serif",
       }}
     >
       {isOnline

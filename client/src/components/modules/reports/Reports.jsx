@@ -11,7 +11,7 @@ import { formatCurrency, formatCurrencyCompact } from '../../../utils/format'
 function DarkTooltip({ active, payload, label, prefix = '' }) {
   if (!active || !payload?.length) return null
   return (
-    <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 6, padding: '8px 12px', fontSize: 12, color: '#fff', minWidth: 120 }}>
+    <div className="t-xs" style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 6, padding: '8px 12px', color: '#fff', minWidth: 120 }}>
       <div style={{ color: '#888', marginBottom: 4 }}>{label}</div>
       {payload.map((p) => (
         <div key={p.dataKey} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
@@ -28,8 +28,8 @@ function DarkTooltip({ active, payload, label, prefix = '' }) {
 function MiniStat({ label, value, accent = '#c9a84c' }) {
   return (
     <div className="stat-card" style={{ borderTop: `3px solid ${accent}` }}>
-      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', fontFamily: "'Playfair Display', sans-serif" }}>{value}</div>
+      <div className="t-xs" style={{ color: 'var(--text3)', marginBottom: 6 }}>{label}</div>
+      <div className="t-h1" style={{ color: 'var(--text)' }}>{value}</div>
     </div>
   )
 }
@@ -50,7 +50,7 @@ function OverviewTab({ dashboard, revenue }) {
         <div className="card-body">
           {byDay.length === 0 ? (
             <div className="empty-state" style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <p style={{ margin: 0, color: 'var(--text3)', fontSize: 13 }}>No paid invoices yet</p>
+              <p className="t-sm" style={{ margin: 0, color: 'var(--text3)' }}>No paid invoices yet</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
@@ -84,7 +84,7 @@ function RevenueTab({ revenue }) {
         <div className="card-body">
           {byDay.length === 0 ? (
             <div className="empty-state" style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <p style={{ margin: 0, color: 'var(--text3)', fontSize: 13 }}>No revenue recorded yet</p>
+              <p className="t-sm" style={{ margin: 0, color: 'var(--text3)' }}>No revenue recorded yet</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
@@ -125,11 +125,11 @@ function OccupancyTab({ rooms }) {
         {byType.length === 0 ? (
           <div className="empty-state">No rooms found</div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <table className="t-sm" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
                 {['Room Type', 'Total Rooms', 'Occupied', 'Rate', 'Occupancy'].map(h => (
-                  <th key={h} style={{ textAlign: h === 'Room Type' ? 'left' : 'center', padding: '8px 12px', borderBottom: '1px solid var(--border)', color: 'var(--text3)', fontWeight: 600, fontSize: 12 }}>{h}</th>
+                  <th key={h} className="t-xs" style={{ textAlign: h === 'Room Type' ? 'left' : 'center', padding: '8px 12px', borderBottom: '1px solid var(--border)', color: 'var(--text3)', fontWeight: 600 }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -176,11 +176,11 @@ function GSTTab({ gst }) {
           {invoices.length === 0 ? (
             <div className="empty-state">No invoices in this period</div>
           ) : (
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <table className="t-sm" style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
                   {['Invoice #', 'Guest', 'Period', 'Taxable ₹', 'CGST ₹', 'SGST ₹', 'Total ₹'].map(h => (
-                    <th key={h} style={{ padding: '8px 12px', textAlign: h === 'Invoice #' || h === 'Guest' || h === 'Period' ? 'left' : 'right', borderBottom: '1px solid var(--border)', color: 'var(--text3)', fontWeight: 600, fontSize: 12 }}>{h}</th>
+                    <th key={h} className="t-xs" style={{ padding: '8px 12px', textAlign: h === 'Invoice #' || h === 'Guest' || h === 'Period' ? 'left' : 'right', borderBottom: '1px solid var(--border)', color: 'var(--text3)', fontWeight: 600 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -205,7 +205,7 @@ function GSTTab({ gst }) {
           )}
         </div>
       </div>
-      <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>GST split as CGST + SGST (half each).</p>
+      <p className="t-xs" style={{ color: 'var(--text3)', margin: 0 }}>GST split as CGST + SGST (half each).</p>
     </div>
   )
 }
@@ -245,12 +245,12 @@ function ExportTab({ addToast }) {
         <div key={exp.type} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>{exp.label}</div>
-              <div style={{ fontSize: 12, color: 'var(--text3)' }}>{exp.desc}</div>
+              <div className="t-title" style={{ marginBottom: 4 }}>{exp.label}</div>
+              <div className="t-xs" style={{ color: 'var(--text3)' }}>{exp.desc}</div>
             </div>
             <button
-              className="btn btn-primary"
-              style={{ alignSelf: 'flex-start', fontSize: 12, padding: '6px 16px' }}
+              className="btn btn-primary t-xs"
+              style={{ alignSelf: 'flex-start', padding: '6px 16px' }}
               disabled={busy === exp.type}
               onClick={() => download(exp.type)}
             >
@@ -308,10 +308,10 @@ export default function Reports() {
     <div style={{ padding: '24px', maxWidth: 1100, margin: '0 auto' }}>
       <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+          <h1 className="t-h1" style={{ margin: 0, color: 'var(--text)', letterSpacing: '-0.02em' }}>
             Reports &amp; Analytics
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text3)' }}>
+          <p className="t-sm" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>
             Financial insights, occupancy data, and GST summaries
           </p>
         </div>
@@ -319,7 +319,7 @@ export default function Reports() {
       </div>
 
       {error && (
-        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
           {error}
         </div>
       )}

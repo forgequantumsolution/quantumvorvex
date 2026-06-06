@@ -72,13 +72,12 @@ function Message({ msg, onAction }) {
       justifyContent: isUser ? 'flex-end' : 'flex-start',
       padding: '4px 14px',
     }}>
-      <div style={{
+      <div className="t-sm" style={{
         maxWidth: '85%',
         background: isUser ? 'var(--gold-bg)' : 'var(--surface2)',
         border: `1px solid ${isUser ? 'var(--gold-border)' : 'var(--border)'}`,
         borderRadius: isUser ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
         padding: '9px 13px',
-        fontSize: 13,
         color: 'var(--text)',
         lineHeight: 1.5,
         whiteSpace: 'pre-wrap',
@@ -87,13 +86,12 @@ function Message({ msg, onAction }) {
         {action && (
           <button
             onClick={() => onAction(action)}
+            className="t-xs"
             style={{
               display: 'block', marginTop: 8,
               padding: '5px 12px', borderRadius: 6,
               background: 'var(--gold)', color: '#000',
               border: 'none', cursor: 'pointer',
-              fontSize: 12, fontWeight: 600,
-              fontFamily: 'Inter, sans-serif',
             }}
           >
             → Open {PANEL_LABELS[action] || action}
@@ -243,15 +241,15 @@ export default function AIAssistant() {
       <button
         onClick={() => setOpen(true)}
         title="Quantum Assistant (Shift+A)"
+        className="t-h1"
         style={{
           position: 'fixed', bottom: 24, right: 24,
           width: 52, height: 52, borderRadius: '50%',
           background: 'var(--gold)', color: '#000',
           border: 'none', cursor: 'pointer',
-          fontSize: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 4px 20px rgba(201,168,76,0.4)',
           zIndex: 1500, transition: 'all 0.2s',
-          fontFamily: 'Inter, sans-serif',
         }}
         onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(201,168,76,0.55)' }}
         onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(201,168,76,0.4)' }}
@@ -300,8 +298,8 @@ export default function AIAssistant() {
           flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 16, color: 'var(--gold)' }}>✦</span>
-            <span style={{ fontFamily: 'Syne, sans-serif', fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+            <span className="t-h3" style={{ color: 'var(--gold)' }}>✦</span>
+            <span className="t-title" style={{ color: 'var(--text)' }}>
               Quantum Assistant
             </span>
           </div>
@@ -309,16 +307,19 @@ export default function AIAssistant() {
             <button
               onClick={() => setMessages([])}
               title="Clear chat"
-              style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 11, padding: '3px 7px', borderRadius: 4 }}
+              className="t-label"
+              style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: '3px 7px', borderRadius: 4 }}
             >Clear</button>
             <button
               onClick={() => setShowKeyInput(k => !k)}
               title="Configure API key"
-              style={{ background: 'none', border: '1px solid var(--border2)', color: 'var(--text3)', cursor: 'pointer', fontSize: 12, padding: '3px 8px', borderRadius: 4 }}
+              className="t-xs"
+              style={{ background: 'none', border: '1px solid var(--border2)', color: 'var(--text3)', cursor: 'pointer', padding: '3px 8px', borderRadius: 4 }}
             >⚙</button>
             <button
               onClick={() => setOpen(false)}
-              style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 2px' }}
+              className="t-h2"
+              style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', lineHeight: 1, padding: '0 2px' }}
             >×</button>
           </div>
         </div>
@@ -326,7 +327,7 @@ export default function AIAssistant() {
         {/* API Key input (collapsible) */}
         {showKeyInput && (
           <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface2)', flexShrink: 0 }}>
-            <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 6 }}>
               Anthropic API Key
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
@@ -335,11 +336,11 @@ export default function AIAssistant() {
                 value={apiKey}
                 onChange={e => setApiKey(e.target.value)}
                 placeholder="sk-ant-..."
-                style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 12, fontFamily: 'JetBrains Mono, monospace', outline: 'none' }}
+                style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 12, fontFamily: 'var(--font-mono)', outline: 'none' }}
               />
               <button onClick={saveApiKey} className="btn btn-primary btn-xs">Save</button>
             </div>
-            <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 5 }}>
+            <div className="t-xs" style={{ color: 'var(--text3)', marginTop: 5 }}>
               Key stored locally in your browser. Never sent to our servers.
             </div>
           </div>
@@ -355,10 +356,10 @@ export default function AIAssistant() {
             borderRadius: 8,
             flexShrink: 0,
           }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>
+            <div className="t-label" style={{ color: 'var(--gold)', marginBottom: 5 }}>
               ✦ Today's Insight
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>{dailyInsight}</div>
+            <div className="t-xs" style={{ color: 'var(--text2)', lineHeight: 1.5 }}>{dailyInsight}</div>
           </div>
         )}
 
@@ -366,7 +367,7 @@ export default function AIAssistant() {
         <div style={{ flex: 1, overflowY: 'auto', padding: '12px 0' }}>
           {messages.length === 0 && (
             <div style={{ padding: '8px 14px' }}>
-              <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+              <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 10 }}>
                 Suggested questions
               </div>
               {SUGGESTED_PROMPTS.map((p, i) => (
@@ -378,7 +379,7 @@ export default function AIAssistant() {
                     padding: '8px 12px', marginBottom: 6,
                     background: 'var(--surface2)', border: '1px solid var(--border)',
                     borderRadius: 8, color: 'var(--text2)', cursor: 'pointer',
-                    fontSize: 12.5, fontFamily: 'Inter, sans-serif',
+                    fontSize: 12.5,
                     transition: 'all 0.12s',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold)' }}
@@ -425,12 +426,12 @@ export default function AIAssistant() {
             onKeyDown={handleKeyDown}
             placeholder="Ask anything... (Enter to send)"
             rows={1}
+            className="t-sm"
             style={{
               flex: 1, resize: 'none', overflow: 'hidden',
               padding: '8px 10px', borderRadius: 8,
               border: '1px solid var(--border)',
               background: 'var(--surface2)', color: 'var(--text)',
-              fontSize: 13, fontFamily: 'Inter, sans-serif',
               outline: 'none', lineHeight: 1.4,
               transition: 'border-color 0.14s',
             }}
@@ -440,13 +441,14 @@ export default function AIAssistant() {
           <button
             onClick={() => sendMessage(input)}
             disabled={!input.trim() || loading}
+            className="t-h3"
             style={{
               padding: '8px 14px', borderRadius: 8,
               background: input.trim() && !loading ? 'var(--gold)' : 'var(--surface2)',
               color: input.trim() && !loading ? '#000' : 'var(--text3)',
               border: '1px solid var(--border2)',
               cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
-              fontSize: 16, fontWeight: 700, flexShrink: 0,
+              flexShrink: 0,
               transition: 'all 0.14s',
             }}
           >↑</button>

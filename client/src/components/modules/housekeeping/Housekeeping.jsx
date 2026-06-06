@@ -149,11 +149,8 @@ function BoardTab({ rooms, onRoomClick }) {
         const floorRooms = rooms.filter(r => r.floor === floor)
         return (
           <div key={floor} style={{ marginBottom: 24 }}>
-            <p style={{
+            <p className="t-title" style={{
               margin: '0 0 10px',
-              fontFamily: "'Playfair Display', sans-serif",
-              fontSize: 13,
-              fontWeight: 700,
               color: 'var(--text)',
               letterSpacing: '-0.01em',
               textTransform: 'uppercase',
@@ -191,7 +188,7 @@ function BoardTab({ rooms, onRoomClick }) {
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   >
-                    <p style={{ margin: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: st.text }}>{room.number}</p>
+                    <p style={{ margin: 0, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: st.text }}>{room.number}</p>
                     <p style={{ margin: '2px 0 0', fontSize: 9.5, fontWeight: 500, color: st.text, opacity: 0.75 }}>
                       {st.label.slice(0, 4)}
                     </p>
@@ -281,7 +278,7 @@ function DailyListTab({ rooms, onUpdateRoom }) {
 
       {filtered.length === 0 ? (
         <div className="empty-state">
-          <p style={{ fontSize: 30, margin: '0 0 6px' }}>🔍</p>
+          <p className="t-display" style={{ margin: '0 0 6px' }}>🔍</p>
           <p style={{ margin: 0, fontWeight: 600, color: 'var(--text2)' }}>No rooms match filters</p>
         </div>
       ) : (
@@ -304,10 +301,10 @@ function DailyListTab({ rooms, onUpdateRoom }) {
                 return (
                   <tr key={room.id}>
                     <td>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 12.5, color: 'var(--text)' }}>
+                      <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12.5, color: 'var(--text)' }}>
                         {room.number}
                       </span>
-                      <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 5 }}>F{room.floor}</span>
+                      <span className="t-label" style={{ color: 'var(--text3)', marginLeft: 5 }}>F{room.floor}</span>
                     </td>
                     <td>
                       <Badge type={statusBadgeType(room.status)}>{st.label}</Badge>
@@ -323,10 +320,10 @@ function DailyListTab({ rooms, onUpdateRoom }) {
                         {HK_STAFF.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
-                    <td style={{ fontSize: 12, color: 'var(--text3)' }}>
+                    <td className="t-xs" style={{ color: 'var(--text3)' }}>
                       {room.startedAt ? timeAgo(room.startedAt) : '—'}
                     </td>
-                    <td style={{ fontSize: 12, color: 'var(--text3)' }}>
+                    <td className="t-xs" style={{ color: 'var(--text3)' }}>
                       {room.completedAt ? timeAgo(room.completedAt) : '—'}
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>
@@ -377,11 +374,11 @@ function LinenTrackerTab({ rooms, linenByRoom, onMarkChanged }) {
             return (
               <tr key={room.id}>
                 <td>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 12.5, color: 'var(--text)' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12.5, color: 'var(--text)' }}>
                     {room.number}
                   </span>
                 </td>
-                <td style={{ fontSize: 12, color: 'var(--text3)' }}>{rec ? formatDate(rec.lastChanged) : '—'}</td>
+                <td className="t-xs" style={{ color: 'var(--text3)' }}>{rec ? formatDate(rec.lastChanged) : '—'}</td>
                 <td style={{ fontSize: 12.5, fontWeight: 600, color: linenDueColor(nextDue) }}>
                   {nextDue ? formatDate(nextDue) : '—'}
                 </td>
@@ -488,17 +485,18 @@ function InspectionTab({ rooms, onSubmit }) {
                   borderBottom: '1px solid var(--border)',
                   gap: 10,
                 }}>
-                  <span style={{ fontSize: 13, color: 'var(--text2)' }}>{item}</span>
+                  <span className="t-sm" style={{ color: 'var(--text2)' }}>{item}</span>
                   <div style={{ display: 'flex', gap: 5 }}>
                     <button
                       type="button"
+                      className="t-title"
                       onClick={() => toggleItem(item, 'pass')}
                       style={{
                         width: 28, height: 28, borderRadius: 6, border: 'none',
                         background: val === 'pass' ? 'var(--green-bg)' : 'var(--surface2)',
                         color: val === 'pass' ? 'var(--green-text)' : 'var(--text3)',
-                        cursor: 'pointer', fontSize: 14,
-                        fontWeight: 700, transition: 'all 0.13s',
+                        cursor: 'pointer',
+                        transition: 'all 0.13s',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         outline: val === 'pass' ? '2px solid var(--green)' : 'none',
                       }}
@@ -506,13 +504,14 @@ function InspectionTab({ rooms, onSubmit }) {
                     >✓</button>
                     <button
                       type="button"
+                      className="t-title"
                       onClick={() => toggleItem(item, 'fail')}
                       style={{
                         width: 28, height: 28, borderRadius: 6, border: 'none',
                         background: val === 'fail' ? 'var(--red-bg)' : 'var(--surface2)',
                         color: val === 'fail' ? 'var(--red-text)' : 'var(--text3)',
-                        cursor: 'pointer', fontSize: 14,
-                        fontWeight: 700, transition: 'all 0.13s',
+                        cursor: 'pointer',
+                        transition: 'all 0.13s',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         outline: val === 'fail' ? '2px solid var(--red)' : 'none',
                       }}
@@ -526,7 +525,7 @@ function InspectionTab({ rooms, onSubmit }) {
 
           {/* Score preview */}
           <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
+            <div className="t-xs" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ color: 'var(--green-text)', fontWeight: 600 }}>Pass: {passCount}</span>
               <span style={{ color: 'var(--red-text)', fontWeight: 600 }}>Fail: {failCount}</span>
               <span style={{ color: 'var(--text3)' }}>Unchecked: {CHECKLIST_ITEMS.length - passCount - failCount}</span>
@@ -552,7 +551,7 @@ function InspectionTab({ rooms, onSubmit }) {
               Submit Inspection
             </button>
             {!allChecked && (
-              <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text3)', textAlign: 'center' }}>
+              <p className="t-xs" style={{ margin: '6px 0 0', color: 'var(--text3)', textAlign: 'center' }}>
                 Check all items before submitting
               </p>
             )}
@@ -562,12 +561,12 @@ function InspectionTab({ rooms, onSubmit }) {
 
       {/* Right: History (this session) */}
       <div>
-        <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <p className="t-label" style={{ margin: '0 0 10px', color: 'var(--text3)' }}>
           Inspection History — Room {selectedRoom?.number}
         </p>
         {roomHistory.length === 0 ? (
           <div className="empty-state">
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text3)' }}>No inspections submitted this session.</p>
+            <p className="t-sm" style={{ margin: 0, color: 'var(--text3)' }}>No inspections submitted this session.</p>
           </div>
         ) : (
           <div className="card" style={{ overflow: 'hidden' }}>
@@ -586,8 +585,8 @@ function InspectionTab({ rooms, onSubmit }) {
                   const score = Math.round((h.pass / h.total) * 100)
                   return (
                     <tr key={h.id}>
-                      <td style={{ fontSize: 12 }}>{formatDate(h.date)}</td>
-                      <td style={{ fontSize: 12 }}>{h.staff}</td>
+                      <td className="t-xs">{formatDate(h.date)}</td>
+                      <td className="t-xs">{h.staff}</td>
                       <td>
                         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--green-text)' }}>{h.pass}</span>
                       </td>
@@ -724,10 +723,10 @@ export default function Housekeeping() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 12, flexWrap: 'wrap' }}>
         <div>
-          <h1 style={{ margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>
+          <h1 className="t-h1" style={{ margin: 0, color: 'var(--text)', letterSpacing: '-0.03em' }}>
             🧹 Housekeeping
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text3)' }}>
+          <p className="t-sm" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>
             Manage room status, staff assignments, and inspections
           </p>
         </div>
@@ -743,7 +742,7 @@ export default function Housekeeping() {
       </div>
 
       {error && (
-        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
           {error}
         </div>
       )}
@@ -751,19 +750,19 @@ export default function Housekeeping() {
       {/* Stat Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
         <div className="stat-card stat-bar-green">
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Clean Available</p>
-          <p style={{ margin: '6px 0 0', fontFamily: "'Playfair Display', sans-serif", fontSize: 28, fontWeight: 800, color: 'var(--green-text)', letterSpacing: '-0.03em' }}>{cleanCount}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text3)' }}>Ready for check-in</p>
+          <p className="t-label" style={{ margin: 0, color: 'var(--text3)' }}>Clean Available</p>
+          <p className="t-display" style={{ margin: '6px 0 0', color: 'var(--green-text)', letterSpacing: '-0.03em' }}>{cleanCount}</p>
+          <p className="t-xs" style={{ margin: '2px 0 0', color: 'var(--text3)' }}>Ready for check-in</p>
         </div>
         <div className="stat-card stat-bar-amber">
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dirty / Needs Cleaning</p>
-          <p style={{ margin: '6px 0 0', fontFamily: "'Playfair Display', sans-serif", fontSize: 28, fontWeight: 800, color: 'var(--amber-text)', letterSpacing: '-0.03em' }}>{dirtyCount}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text3)' }}>Dirty + checkout pending</p>
+          <p className="t-label" style={{ margin: 0, color: 'var(--text3)' }}>Dirty / Needs Cleaning</p>
+          <p className="t-display" style={{ margin: '6px 0 0', color: 'var(--amber-text)', letterSpacing: '-0.03em' }}>{dirtyCount}</p>
+          <p className="t-xs" style={{ margin: '2px 0 0', color: 'var(--text3)' }}>Dirty + checkout pending</p>
         </div>
         <div className="stat-card stat-bar-blue">
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cleaning In Progress</p>
-          <p style={{ margin: '6px 0 0', fontFamily: "'Playfair Display', sans-serif", fontSize: 28, fontWeight: 800, color: 'var(--blue-text)', letterSpacing: '-0.03em' }}>{cleaningCount}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text3)' }}>Currently being cleaned</p>
+          <p className="t-label" style={{ margin: 0, color: 'var(--text3)' }}>Cleaning In Progress</p>
+          <p className="t-display" style={{ margin: '6px 0 0', color: 'var(--blue-text)', letterSpacing: '-0.03em' }}>{cleaningCount}</p>
+          <p className="t-xs" style={{ margin: '2px 0 0', color: 'var(--text3)' }}>Currently being cleaned</p>
         </div>
       </div>
 

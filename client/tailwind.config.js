@@ -28,14 +28,16 @@ export default {
         violet: { DEFAULT: 'var(--purple)', bg: 'var(--purple-bg)', text: 'var(--purple-text)' },
       },
       fontFamily: {
-        // Luxury serif for headings/titles, clean sans for body — gold/white theme
-        display: ['"Playfair Display"', 'Georgia', 'serif'],
-        serif:   ['"Playfair Display"', 'Georgia', 'serif'],
-        sans:    ['"DM Sans"', 'system-ui', 'sans-serif'],
-        mono:    ['"JetBrains Mono"', 'monospace'],
-        // Back-compat aliases so any stray utility keeps resolving to the new pair
-        syne:    ['"Playfair Display"', 'serif'],
-        inter:   ['"DM Sans"', 'sans-serif'],
+        // All families resolve to the CSS variables defined in index.css :root,
+        // which are the single source of truth. Swap the font there (one place).
+        // display/serif collapse to the sans var; mono stays fixed-width.
+        display: ['var(--font-sans)'],
+        serif:   ['var(--font-sans)'],
+        sans:    ['var(--font-sans)'],
+        mono:    ['var(--font-mono)'],
+        // Back-compat aliases so any stray utility keeps resolving correctly
+        syne:    ['var(--font-sans)'],
+        inter:   ['var(--font-sans)'],
       },
       boxShadow: {
         soft: '0 1px 3px rgba(0,0,0,0.07), 0 4px 14px rgba(0,0,0,0.05)',

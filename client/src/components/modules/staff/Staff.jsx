@@ -83,8 +83,7 @@ function Avatar({ name, role, size = 34 }) {
     <div style={{
       width: size, height: size, borderRadius: '50%',
       background: ROLE_AVATAR_COLORS[role] || '#6b7280',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontFamily: "'Playfair Display', sans-serif", fontWeight: 700,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700,
       fontSize: size * 0.35, color: '#fff', flexShrink: 0,
       letterSpacing: '0.02em',
     }}>
@@ -155,7 +154,7 @@ function StaffModal({ isOpen, onClose, staff, onSave }) {
                   className="form-input"
                   readOnly
                   value={generatedPwd || '••••••••••'}
-                  style={{ fontFamily: 'monospace', flex: 1 }}
+                  style={{ fontFamily: 'var(--font-mono)', flex: 1 }}
                 />
                 {isEdit && (
                   <button className="btn btn-outline btn-sm" onClick={handleResetPassword} type="button">
@@ -232,7 +231,7 @@ function AllStaffTab({ staff, onAdd, onEdit, onForceLogout, onToggleStatus }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <Avatar name={member.name} role={member.role} />
                     <div>
-                      <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13 }}>
+                      <div className="t-title">
                         {member.name}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>
@@ -241,7 +240,7 @@ function AllStaffTab({ staff, onAdd, onEdit, onForceLogout, onToggleStatus }) {
                     </div>
                   </div>
                 </td>
-                <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{member.phone}</td>
+                <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{member.phone}</td>
                 <td>
                   <Badge type={ROLE_META[member.role]?.badgeType || 'grey'}>
                     {ROLE_META[member.role]?.label || member.role}
@@ -252,10 +251,10 @@ function AllStaffTab({ staff, onAdd, onEdit, onForceLogout, onToggleStatus }) {
                     {member.status === 'active' ? 'Active' : 'Inactive'}
                   </Badge>
                 </td>
-                <td style={{ fontSize: 12, color: 'var(--text2)' }}>
+                <td className="t-xs">
                   {timeAgo(member.lastLogin)}
                 </td>
-                <td style={{ fontFamily: 'monospace', fontSize: 12, textAlign: 'center' }}>
+                <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, textAlign: 'center' }}>
                   <span style={{
                     background: member.sessions > 0 ? 'var(--green-bg)' : 'var(--surface2)',
                     color: member.sessions > 0 ? 'var(--green-text)' : 'var(--text3)',
@@ -398,18 +397,18 @@ function ActivityLogTab({ logs, staffList }) {
             <tbody>
               {filtered.map(log => (
                 <tr key={log.id}>
-                  <td style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                  <td className="t-xs" style={{ whiteSpace: 'nowrap' }}>
                     {formatDateTime(log.createdAt)}
                   </td>
-                  <td style={{ fontWeight: 600, fontSize: 13 }}>{log.staff}</td>
-                  <td style={{ fontSize: 13 }}>{log.action}</td>
+                  <td className="t-title">{log.staff}</td>
+                  <td className="t-sm">{log.action}</td>
                   <td>
                     <Badge type={MODULE_BADGE_COLORS[log.module] || 'grey'}>
                       {log.module}
                     </Badge>
                   </td>
-                  <td style={{ fontSize: 12 }}>{log.record}</td>
-                  <td style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text3)' }}>
+                  <td className="t-xs">{log.record}</td>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text3)' }}>
                     {log.ip}
                   </td>
                 </tr>
@@ -468,7 +467,7 @@ function PermissionsTab() {
 
   return (
     <div>
-      <p style={{ margin: '0 0 16px', color: 'var(--text2)', fontSize: 13 }}>
+      <p className="t-sm" style={{ margin: '0 0 16px', color: 'var(--text2)' }}>
         Configure what each role can access across all modules.
       </p>
 
@@ -489,12 +488,12 @@ function PermissionsTab() {
           <tbody>
             {MODULES_LIST.map(mod => (
               <tr key={mod}>
-                <td style={{ fontWeight: 600, fontSize: 13 }}>{mod}</td>
+                <td className="t-title">{mod}</td>
                 {roles.map(role => (
                   <td key={role} style={{ textAlign: 'center', padding: '6px 8px' }}>
                     <select
-                      className="form-select"
-                      style={{ fontSize: 12, padding: '4px 6px', minWidth: 80, textAlign: 'center' }}
+                      className="form-select t-xs"
+                      style={{ padding: '4px 6px', minWidth: 80, textAlign: 'center' }}
                       value={perms[role]?.[mod] || '—'}
                       onChange={e => handleChange(role, mod, e.target.value)}
                     >
@@ -621,13 +620,12 @@ export default function Staff() {
         marginBottom: 20, gap: 12, flexWrap: 'wrap',
       }}>
         <div>
-          <h1 style={{
-            margin: 0, fontFamily: "'Playfair Display', sans-serif", fontSize: 22,
-            fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em',
+          <h1 className="t-h1" style={{
+            margin: 0, letterSpacing: '-0.02em',
           }}>
             👤 Staff Management
           </h1>
-          <p style={{ margin: '3px 0 0', color: 'var(--text3)', fontSize: 13 }}>
+          <p className="t-sm" style={{ margin: '3px 0 0', color: 'var(--text3)' }}>
             Team accounts &amp; permissions
           </p>
         </div>
@@ -637,12 +635,12 @@ export default function Staff() {
       </div>
 
       {error && (
-        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
           {error}
         </div>
       )}
       {loading && staffList.length === 0 && !error && (
-        <p style={{ color: 'var(--text3)', fontSize: 13, marginBottom: 12 }}>Loading staff…</p>
+        <p className="t-sm" style={{ color: 'var(--text3)', marginBottom: 12 }}>Loading staff…</p>
       )}
 
       {/* Tabs */}

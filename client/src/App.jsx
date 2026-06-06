@@ -73,11 +73,11 @@ function PanelSkeleton() {
 function AccessDenied({ panel }) {
   return (
     <div style={{ padding: 48, textAlign: 'center' }}>
-      <div style={{ fontSize: 40, marginBottom: 16 }}>🔒</div>
-      <h2 style={{ margin: '0 0 8px', color: 'var(--text)', fontFamily: "'Playfair Display', sans-serif" }}>
+      <div className="t-display" style={{ marginBottom: 16 }}>🔒</div>
+      <h2 style={{ margin: '0 0 8px', color: 'var(--text)' }}>
         Access Restricted
       </h2>
-      <p style={{ color: 'var(--text3)', fontSize: 14 }}>
+      <p className="t-body" style={{ color: 'var(--text3)' }}>
         Your role doesn't have permission to access <strong>{panel}</strong>.
       </p>
     </div>

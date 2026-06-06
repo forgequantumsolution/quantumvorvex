@@ -140,12 +140,11 @@ function BookingDetailModal({ booking, room, onClose, onDelete }) {
         </>
       }
     >
-      <div style={{
+      <div className="t-label" style={{
         display: 'inline-flex', alignItems: 'center', gap: 6,
         background: colors.bg, border: `1px solid ${colors.border}`,
         borderRadius: 6, padding: '4px 10px', marginBottom: 16,
-        fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
-        color: colors.text, textTransform: 'uppercase',
+        color: colors.text,
       }}>
         {booking.status}
       </div>
@@ -160,7 +159,7 @@ function BookingDetailModal({ booking, room, onClose, onDelete }) {
         ].map(([label, val]) => (
           <div key={label}>
             <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{label}</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{val}</div>
+            <div className="t-title">{val}</div>
           </div>
         ))}
       </div>
@@ -277,8 +276,8 @@ export default function Calendar() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>Room Calendar</h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--text3)', fontSize: 13 }}>Visual booking timeline — click a cell to book or view details</p>
+          <h1 className="t-h1" style={{ margin: 0, letterSpacing: '-0.03em' }}>Room Calendar</h1>
+          <p className="t-sm" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>Visual booking timeline — click a cell to book or view details</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setNewPreRoom(''); setNewPreDate(todayYMD); setShowNew(true) }}>
           + New Booking
@@ -292,7 +291,7 @@ export default function Calendar() {
           <button className="btn btn-outline btn-sm" onClick={prev}>‹ Prev</button>
           <button className="btn btn-outline btn-sm" onClick={goToday}>Today</button>
           <button className="btn btn-outline btn-sm" onClick={next}>Next ›</button>
-          <span style={{ fontSize: 13, color: 'var(--text2)', fontWeight: 500, marginLeft: 4 }}>{rangeLabel}</span>
+          <span className="t-sm" style={{ color: 'var(--text2)', fontWeight: 500, marginLeft: 4 }}>{rangeLabel}</span>
         </div>
         <div style={{ flex: 1 }} />
         {/* View span */}
@@ -361,7 +360,7 @@ export default function Calendar() {
                 padding: '0 12px', borderRight: '1px solid var(--border)',
                 position: 'sticky', left: 0, background: 'var(--surface)', zIndex: 5,
               }}>
-                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: 'var(--gold)' }}>{room.number}</div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: 'var(--gold)' }}>{room.number}</div>
                 <div style={{ fontSize: 9.5, color: 'var(--text3)', marginTop: 1 }}>{room.type}</div>
               </div>
 
@@ -430,7 +429,7 @@ export default function Calendar() {
         ].map(s => (
           <div key={s.label} className="stat-card">
             <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{s.label}</div>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 24, fontWeight: 700, color: s.color }}>{s.value}</div>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 24, fontWeight: 700, color: s.color }}>{s.value}</div>
           </div>
         ))}
       </div>

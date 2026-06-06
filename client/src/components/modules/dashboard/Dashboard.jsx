@@ -177,10 +177,8 @@ export default function Dashboard() {
       >
         <div>
           <h1
+            className="t-h1"
             style={{
-              fontFamily: "'Playfair Display', sans-serif",
-              fontSize: 21,
-              fontWeight: 800,
               color: 'var(--text)',
               letterSpacing: '-0.03em',
               margin: 0,
@@ -190,8 +188,8 @@ export default function Dashboard() {
             Dashboard
           </h1>
           <p
+            className="t-sm"
             style={{
-              fontSize: 13,
               color: 'var(--text3)',
               margin: '3px 0 0',
             }}
@@ -281,13 +279,13 @@ export default function Dashboard() {
                 >
                   <XAxis
                     dataKey="month"
-                    tick={{ fontSize: 11, fill: 'var(--text3)', fontFamily: 'DM Sans' }}
+                    tick={{ fontSize: 11, fill: 'var(--text3)' }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
                     tickFormatter={(v) => formatCurrencyCompact(v)}
-                    tick={{ fontSize: 10, fill: 'var(--text3)', fontFamily: 'DM Sans' }}
+                    tick={{ fontSize: 10, fill: 'var(--text3)' }}
                     axisLine={false}
                     tickLine={false}
                     width={52}
@@ -318,14 +316,14 @@ export default function Dashboard() {
                 >
                   <XAxis
                     dataKey="month"
-                    tick={{ fontSize: 11, fill: 'var(--text3)', fontFamily: 'DM Sans' }}
+                    tick={{ fontSize: 11, fill: 'var(--text3)' }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
                     domain={[0, 100]}
                     tickFormatter={(v) => `${v}%`}
-                    tick={{ fontSize: 10, fill: 'var(--text3)', fontFamily: 'DM Sans' }}
+                    tick={{ fontSize: 10, fill: 'var(--text3)' }}
                     axisLine={false}
                     tickLine={false}
                     width={36}
@@ -492,10 +490,9 @@ export default function Dashboard() {
                   <tr key={g.id}>
                     <td>
                       <div
+                        className="t-sm"
                         style={{
-                          fontWeight: 500,
                           color: 'var(--text)',
-                          fontSize: 13,
                           whiteSpace: 'nowrap',
                         }}
                       >
@@ -508,7 +505,7 @@ export default function Dashboard() {
                     <td>
                       <span
                         style={{
-                          fontFamily: "'JetBrains Mono', monospace",
+                          fontFamily: 'var(--font-mono)',
                           fontSize: 12.5,
                           fontWeight: 500,
                           color: 'var(--text)',
@@ -577,7 +574,8 @@ export default function Dashboard() {
                   <tr key={i}>
                     <td>
                       <span
-                        style={{ fontWeight: 500, color: 'var(--text)', fontSize: 13 }}
+                        className="t-sm"
+                        style={{ color: 'var(--text)' }}
                       >
                         {c.name}
                       </span>
@@ -585,7 +583,7 @@ export default function Dashboard() {
                     <td>
                       <span
                         style={{
-                          fontFamily: "'JetBrains Mono', monospace",
+                          fontFamily: 'var(--font-mono)',
                           fontSize: 12.5,
                           fontWeight: 500,
                           color: 'var(--text)',
@@ -648,7 +646,7 @@ export default function Dashboard() {
             return (
               <div key={i} style={{ display: 'flex', gap: 14, marginBottom: 12, alignItems: 'flex-start', position: 'relative' }}>
                 {/* Time */}
-                <div style={{ width: 34, flexShrink: 0, textAlign: 'right', fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', fontFamily: "'JetBrains Mono', monospace", paddingTop: 6 }}>
+                <div style={{ width: 34, flexShrink: 0, textAlign: 'right', fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', fontFamily: 'var(--font-mono)', paddingTop: 6 }}>
                   {item.time}
                 </div>
                 {/* Dot */}
@@ -667,7 +665,7 @@ export default function Dashboard() {
                   transition: 'all 0.15s',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{ fontSize: 13 }}>{item.icon}</span>
+                    <span className="t-sm">{item.icon}</span>
                     <span style={{
                       fontSize: 12.5, fontWeight: item.done ? 400 : 600,
                       color: item.done ? 'var(--text3)' : colors.text,

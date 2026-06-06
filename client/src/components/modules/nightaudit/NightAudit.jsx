@@ -111,12 +111,12 @@ export default function NightAudit() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <h1 style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>Night Audit</h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--text3)', fontSize: 13 }}>End-of-day close — {formatDate(TODAY)}</p>
+          <h1 className="t-h1" style={{ margin: 0, letterSpacing: '-0.03em' }}>Night Audit</h1>
+          <p className="t-sm" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>End-of-day close — {formatDate(TODAY)}</p>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {locked && (
-            <span style={{ padding: '6px 14px', borderRadius: 20, background: 'var(--green-bg)', color: 'var(--green-text)', fontSize: 12, fontWeight: 700 }}>
+            <span className="t-xs" style={{ padding: '6px 14px', borderRadius: 20, background: 'var(--green-bg)', color: 'var(--green-text)' }}>
               🔒 DAY LOCKED
             </span>
           )}
@@ -141,7 +141,7 @@ export default function NightAudit() {
         ].map(s => (
           <div key={s.label} className={`stat-card ${s.bar}`}>
             <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{s.label}</div>
-            <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 22, fontWeight: 700, color: s.color }}>{s.value}</div>
+            <div className="t-h1" style={{ fontFamily: 'var(--font-mono)', color: s.color }}>{s.value}</div>
           </div>
         ))}
       </div>
@@ -151,7 +151,7 @@ export default function NightAudit() {
 
         {/* Revenue Breakdown */}
         <div className="card">
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14 }}>Revenue Breakdown</div>
+          <div className="t-title" style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>Revenue Breakdown</div>
           <div style={{ padding: '14px 18px' }}>
             {[
               ['Room Rent',    REVENUE_TODAY.roomRent,  'var(--text)'],
@@ -162,13 +162,13 @@ export default function NightAudit() {
               ['GST Collected', REVENUE_TODAY.gst,       'var(--text3)'],
             ].map(([label, val, color]) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ fontSize: 13, color: 'var(--text2)' }}>{label}</span>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 600, color }}>{val < 0 ? `−${formatCurrency(-val)}` : formatCurrency(val)}</span>
+                <span className="t-sm" style={{ color: 'var(--text2)' }}>{label}</span>
+                <span className="t-title" style={{ fontFamily: 'var(--font-mono)', color }}>{val < 0 ? `−${formatCurrency(-val)}` : formatCurrency(val)}</span>
               </div>
             ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', fontWeight: 700, fontSize: 15 }}>
+            <div className="t-h3" style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0' }}>
               <span style={{ color: 'var(--text)' }}>Net Total</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--gold)' }}>{formatCurrency(REVENUE_TODAY.total)}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>{formatCurrency(REVENUE_TODAY.total)}</span>
             </div>
           </div>
         </div>
@@ -176,7 +176,7 @@ export default function NightAudit() {
         {/* Checklist */}
         <div className="card">
           <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14 }}>Audit Checklist</span>
+            <span className="t-title">Audit Checklist</span>
             <span style={{ fontSize: 11.5, color: 'var(--text3)', fontWeight: 600 }}>{completedCount}/{checklist.length} done</span>
           </div>
           {/* Progress bar */}
@@ -187,8 +187,8 @@ export default function NightAudit() {
             {checklist.map(task => (
               <label key={task.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: locked ? 'default' : 'pointer', borderBottom: '1px solid var(--border)' }}>
                 <input type="checkbox" checked={task.done} onChange={() => toggleTask(task.id)} style={{ width: 14, height: 14, accentColor: 'var(--gold)' }} />
-                <span style={{ fontSize: 13, color: task.done ? 'var(--text3)' : 'var(--text)', textDecoration: task.done ? 'line-through' : 'none', flex: 1 }}>{task.task}</span>
-                {task.done && <span style={{ fontSize: 12, color: 'var(--green-text)' }}>✓</span>}
+                <span className="t-sm" style={{ color: task.done ? 'var(--text3)' : 'var(--text)', textDecoration: task.done ? 'line-through' : 'none', flex: 1 }}>{task.task}</span>
+                {task.done && <span className="t-xs" style={{ color: 'var(--green-text)' }}>✓</span>}
               </label>
             ))}
           </div>
@@ -200,7 +200,7 @@ export default function NightAudit() {
 
         {/* Pending Checkouts */}
         <div className="card">
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14 }}>
+          <div className="t-title" style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
             Pending Checkouts
             {PENDING_CHECKOUTS.length > 0 && (
               <span style={{ marginLeft: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>{PENDING_CHECKOUTS.length}</span>
@@ -208,14 +208,14 @@ export default function NightAudit() {
           </div>
           <div style={{ padding: '10px 18px' }}>
             {PENDING_CHECKOUTS.length === 0 ? (
-              <div style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>All clear ✓</div>
+              <div className="t-sm" style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text3)' }}>All clear ✓</div>
             ) : PENDING_CHECKOUTS.map(c => (
               <div key={c.room} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{c.guest}</div>
+                  <div className="t-title" style={{ color: 'var(--text)' }}>{c.guest}</div>
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Room {c.room} · {c.stayType}</div>
                 </div>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12.5, fontWeight: 700, color: 'var(--red-text)' }}>{formatCurrency(c.balance)}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 700, color: 'var(--red-text)' }}>{formatCurrency(c.balance)}</span>
               </div>
             ))}
           </div>
@@ -223,12 +223,12 @@ export default function NightAudit() {
 
         {/* Today's Check-Ins */}
         <div className="card">
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14 }}>Today's Check-Ins</div>
+          <div className="t-title" style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>Today's Check-Ins</div>
           <div style={{ padding: '10px 18px' }}>
             {TODAYS_CHECKINS.map(c => (
               <div key={c.room} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{c.guest}</div>
+                  <div className="t-title" style={{ color: 'var(--text)' }}>{c.guest}</div>
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Room {c.room} · {c.source}</div>
                 </div>
                 <Badge type="green">Checked In</Badge>
@@ -239,7 +239,7 @@ export default function NightAudit() {
 
         {/* Cash Register Summary */}
         <div className="card">
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14 }}>Cash Register</div>
+          <div className="t-title" style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>Cash Register</div>
           <div style={{ padding: '10px 18px' }}>
             {CASH_REGISTER.slice(0, 4).map((t, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
@@ -247,14 +247,14 @@ export default function NightAudit() {
                   <div style={{ fontSize: 11.5, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.desc}</div>
                   <div style={{ fontSize: 10, color: 'var(--text3)' }}>{t.time}</div>
                 </div>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: t.type === 'in' ? 'var(--green-text)' : 'var(--red-text)', marginLeft: 8, flexShrink: 0 }}>
+                <span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: t.type === 'in' ? 'var(--green-text)' : 'var(--red-text)', marginLeft: 8, flexShrink: 0 }}>
                   {t.type === 'in' ? '+' : '−'}{formatCurrency(t.amount)}
                 </span>
               </div>
             ))}
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', fontWeight: 700, borderTop: '1px solid var(--border)', marginTop: 4 }}>
-              <span style={{ fontSize: 12, color: 'var(--text2)' }}>Net Cash</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--gold)' }}>{formatCurrency(cashIn - cashOut)}</span>
+              <span className="t-xs" style={{ color: 'var(--text2)' }}>Net Cash</span>
+              <span className="t-sm" style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>{formatCurrency(cashIn - cashOut)}</span>
             </div>
           </div>
         </div>
@@ -262,7 +262,7 @@ export default function NightAudit() {
 
       {/* Housekeeping Status */}
       <div className="card" style={{ marginBottom: 20 }}>
-        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', fontFamily: "'Playfair Display', sans-serif", fontWeight: 700, fontSize: 14 }}>Housekeeping Status</div>
+        <div className="t-title" style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>Housekeeping Status</div>
         <div style={{ padding: '14px 18px', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
           {HOUSEKEEPING_STATUS.map(r => (
             <div key={r.room} style={{
@@ -270,7 +270,7 @@ export default function NightAudit() {
               background: 'var(--surface2)', border: '1px solid var(--border)',
               textAlign: 'center',
             }}>
-              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 14, fontWeight: 700, color: 'var(--gold)', marginBottom: 4 }}>{r.room}</div>
+              <div className="t-title" style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)', marginBottom: 4 }}>{r.room}</div>
               <HKBadge status={r.status} />
               <div style={{ fontSize: 10.5, color: 'var(--text3)', marginTop: 4 }}>{r.assignee}</div>
             </div>
@@ -297,8 +297,8 @@ export default function NightAudit() {
           This will lock the current day's transactions and mark the audit as complete. The date will be closed for further edits.
         </p>
         <div style={{ marginTop: 16, padding: '12px 14px', background: 'var(--gold-bg)', borderRadius: 8, display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--gold)' }}>Net Revenue Today</span>
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: 'var(--gold)' }}>{formatCurrency(REVENUE_TODAY.total)}</span>
+          <span className="t-title" style={{ color: 'var(--gold)' }}>Net Revenue Today</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--gold)' }}>{formatCurrency(REVENUE_TODAY.total)}</span>
         </div>
       </Modal>
     </div>

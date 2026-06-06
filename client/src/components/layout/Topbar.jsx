@@ -94,9 +94,7 @@ export default function Topbar() {
 
       {/* Page title + today's date */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontFamily: "'Playfair Display', serif",
-          fontSize: 18, fontWeight: 700,
+        <div className="t-h2" style={{
           color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1.15,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>{pageTitle}</div>
@@ -151,9 +149,9 @@ export default function Topbar() {
               borderBottom: '1px solid var(--border)',
             }}>
               <div>
-                <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Notifications</span>
+                <span className="t-title" style={{ color: 'var(--text)' }}>Notifications</span>
                 {unreadCount > 0 && (
-                  <span style={{ marginLeft: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10 }}>{unreadCount} new</span>
+                  <span className="t-label" style={{ marginLeft: 8, background: 'var(--red-bg)', color: 'var(--red-text)', padding: '2px 7px', borderRadius: 10 }}>{unreadCount} new</span>
                 )}
               </div>
               {unreadCount > 0 && (
@@ -165,7 +163,7 @@ export default function Topbar() {
 
             <div style={{ maxHeight: 360, overflowY: 'auto' }}>
               {notifs.length === 0 ? (
-                <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>All caught up ✓</div>
+                <div className="t-sm" style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text3)' }}>All caught up ✓</div>
               ) : notifs.map(n => {
                 const colors = NOTIF_COLORS[n.type] || NOTIF_COLORS.info
                 return (
@@ -175,11 +173,11 @@ export default function Topbar() {
                     background: n.read ? 'transparent' : 'var(--surface2)',
                     display: 'flex', gap: 10, alignItems: 'flex-start',
                   }}>
-                    <div style={{
+                    <div className="t-xs" style={{
                       width: 28, height: 28, borderRadius: '50%',
                       background: colors.bg, color: colors.text,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 12, fontWeight: 700, flexShrink: 0,
+                      fontWeight: 700, flexShrink: 0,
                     }}>{n.icon}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12.5, fontWeight: n.read ? 500 : 700, color: 'var(--text)', marginBottom: 2 }}>{n.title}</div>
@@ -188,7 +186,8 @@ export default function Topbar() {
                     </div>
                     <button
                       onClick={() => dismissNotif(n.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 14, padding: 0, flexShrink: 0, lineHeight: 1 }}
+                      className="t-body"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 0, flexShrink: 0, lineHeight: 1 }}
                     >×</button>
                   </div>
                 )
@@ -197,7 +196,8 @@ export default function Topbar() {
 
             <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
               <button onClick={() => { setNotifOpen(false); setActivePanel('today') }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--gold)', fontWeight: 600 }}>
+                className="t-xs"
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gold)', fontWeight: 600 }}>
                 View all activity →
               </button>
             </div>

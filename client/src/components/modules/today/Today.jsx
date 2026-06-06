@@ -79,10 +79,10 @@ export default function Today() {
               <k.Icon size={21} />
             </div>
             <div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', lineHeight: 1, fontFamily: "'Playfair Display', serif" }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>
                 {loading ? '—' : k.value}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 3, fontWeight: 500 }}>{k.label}</div>
+              <div className="t-xs" style={{ color: 'var(--text3)', marginTop: 3 }}>{k.label}</div>
             </div>
           </button>
         ))}
@@ -153,7 +153,7 @@ export default function Today() {
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: PRIORITY_COLOR[String(t.priority).toLowerCase()] || 'var(--text3)', flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>Room {t.roomNumber} · {t.priority}</div>
+                  <div className="t-label" style={{ color: 'var(--text3)' }}>Room {t.roomNumber} · {t.priority}</div>
                 </div>
               </div>
             ))}
@@ -171,7 +171,7 @@ function Column({ title, Icon, count, children, onView, viewLabel, accent }) {
         <span className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Icon size={16} style={{ color: 'var(--gold)' }} />
           {title}
-          <span style={{ background: 'var(--gold-bg)', color: 'var(--gold)', fontSize: 11, fontWeight: 700, padding: '1px 8px', borderRadius: 10 }}>{count}</span>
+          <span className="t-label" style={{ background: 'var(--gold-bg)', color: 'var(--gold)', padding: '1px 8px', borderRadius: 10 }}>{count}</span>
         </span>
         {onView && (
           <button onClick={onView} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gold)', fontSize: 11.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -193,7 +193,7 @@ function Row({ name, meta, right, action }) {
         <LuBedDouble size={15} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
+        <div className="t-title" style={{ color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
         <div style={{ fontSize: 11.5, color: 'var(--text3)' }}>{meta}</div>
       </div>
       {right}
@@ -226,8 +226,8 @@ function AttentionRow({ Icon, tone, label, value, onClick }) {
       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
     >
       <Icon size={16} style={{ color, flexShrink: 0 }} />
-      <span style={{ flex: 1, fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{label}</span>
-      <span style={{ fontSize: 14, fontWeight: 800, color: value > 0 ? color : 'var(--text3)', fontFamily: "'Playfair Display', serif" }}>{value}</span>
+      <span className="t-sm" style={{ flex: 1, color: 'var(--text)' }}>{label}</span>
+      <span className="t-title" style={{ color: value > 0 ? color : 'var(--text3)' }}>{value}</span>
       <LuArrowRight size={13} style={{ color: 'var(--text3)' }} />
     </div>
   )

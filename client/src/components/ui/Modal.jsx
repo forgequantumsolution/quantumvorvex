@@ -65,10 +65,8 @@ export default function Modal({
           }}
         >
           <span
+            className="t-h3"
             style={{
-              fontFamily: "'Playfair Display', sans-serif",
-              fontSize: '16px',
-              fontWeight: 700,
               color: 'var(--text)',
               letterSpacing: '-0.02em',
             }}
@@ -77,6 +75,7 @@ export default function Modal({
           </span>
           <button
             onClick={onClose}
+            className="t-h3"
             style={{
               width: '27px',
               height: '27px',
@@ -87,7 +86,6 @@ export default function Modal({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: '15px',
               color: 'var(--text2)',
               transition: 'all 0.14s',
               flexShrink: 0,

@@ -151,9 +151,7 @@ export default function Sidebar() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
               {!collapsed && (
                 <div style={{ minWidth: 0 }}>
-                  <div style={{
-                    fontFamily: "'Playfair Display', sans-serif",
-                    fontSize: 17, fontWeight: 700,
+                  <div className="t-h2" style={{
                     color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2,
                   }}>
                     {head && <span>{head} </span>}
@@ -185,7 +183,7 @@ export default function Sidebar() {
                 <div style={{
                   fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
                   textTransform: 'uppercase', color: '#3a3a3a',
-                  padding: '10px 18px 4px', fontFamily: "'DM Sans', sans-serif",
+                  padding: '10px 18px 4px',
                 }}>
                   {section.label}
                 </div>
@@ -222,7 +220,6 @@ export default function Sidebar() {
                 color: '#000',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 11.5, fontWeight: 700, flexShrink: 0,
-                fontFamily: "'DM Sans', sans-serif",
               }}
             >
               {userInitials}
@@ -231,7 +228,6 @@ export default function Sidebar() {
               <div style={{ overflow: 'hidden', flex: 1 }}>
                 <div style={{
                   color: '#fff', fontSize: 12.5, fontWeight: 600,
-                  fontFamily: "'DM Sans', sans-serif",
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 }}>
                   {userName}
@@ -242,7 +238,6 @@ export default function Sidebar() {
                     textTransform: 'uppercase', color: roleColor,
                     background: roleColor + '1a',
                     padding: '1px 5px', borderRadius: 3,
-                    fontFamily: "'DM Sans', sans-serif",
                   }}>
                     {roleLabel}
                   </span>
@@ -264,9 +259,9 @@ export default function Sidebar() {
               borderRadius: 6, padding: collapsed ? '8px 0' : '7px 10px',
               display: 'flex', alignItems: 'center',
               justifyContent: collapsed ? 'center' : 'flex-start', gap: 7,
-              cursor: 'pointer', color: '#dc5555', fontSize: 12,
-              fontFamily: "'DM Sans', sans-serif", transition: 'all 0.14s',
+              cursor: 'pointer', color: '#dc5555', transition: 'all 0.14s',
             }}
+            className="t-xs"
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220,53,69,0.16)'; e.currentTarget.style.borderColor = 'rgba(220,53,69,0.4)' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(220,53,69,0.08)'; e.currentTarget.style.borderColor = 'rgba(220,53,69,0.2)' }}
           >
@@ -326,7 +321,6 @@ function NavItem({ item, isActive, collapsed, onClick }) {
           ? 'rgba(201,168,76,0.08)'
           : hovered ? 'rgba(255,255,255,0.04)' : 'transparent',
         transition: 'all 0.12s', userSelect: 'none',
-        fontFamily: "'DM Sans', sans-serif",
         fontWeight: isActive ? 500 : 400,
       }}
     >

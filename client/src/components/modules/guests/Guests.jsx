@@ -130,7 +130,7 @@ function InfoRow({ label, value }) {
   return (
     <div>
       <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 3 }}>{label}</div>
-      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{value || '—'}</div>
+      <div className="t-sm" style={{ color: 'var(--text)' }}>{value || '—'}</div>
     </div>
   )
 }
@@ -149,16 +149,16 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
       onClose={onClose}
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{
+          <div className="t-title" style={{
             width: 36, height: 36, borderRadius: '50%', background: 'var(--gold)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 14, fontWeight: 700, color: '#000', flexShrink: 0,
+            color: '#000', flexShrink: 0,
           }}>
             {guest.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div>
-            <div style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: 15, fontWeight: 700 }}>{guest.name}</div>
-            <div style={{ fontSize: 11, color: 'var(--gold)', fontFamily: "'JetBrains Mono', monospace", fontWeight: 400 }}>{guest.docId}</div>
+            <div className="t-h3">{guest.name}</div>
+            <div style={{ fontSize: 11, color: 'var(--gold)', fontFamily: 'var(--font-mono)', fontWeight: 400 }}>{guest.docId}</div>
           </div>
         </div>
       }
@@ -185,10 +185,10 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
             background: 'var(--surface2)', borderRadius: 8, padding: '10px 12px',
             border: '1px solid var(--border)',
           }}>
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{item.label}</div>
-            <div style={{
-              fontSize: 14, fontWeight: 700, color: 'var(--text)',
-              fontFamily: item.mono ? "'JetBrains Mono', monospace" : undefined,
+            <div className="t-label" style={{ marginBottom: 4 }}>{item.label}</div>
+            <div className="t-title" style={{
+              color: 'var(--text)',
+              fontFamily: item.mono ? 'var(--font-mono)' : undefined,
             }}>{item.value}</div>
           </div>
         ))}
@@ -250,7 +250,7 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
         {tab === 'billing' && (
           <div>
             {guest.billingHistory.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text3)', fontSize: 13 }}>No billing records</div>
+              <div className="t-sm" style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text3)' }}>No billing records</div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -263,22 +263,22 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
                 <tbody>
                   {guest.billingHistory.map(b => (
                     <tr key={b.invoiceNo} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '9px 12px', fontFamily: "'JetBrains Mono', monospace", fontSize: 12, color: 'var(--gold)' }}>{b.invoiceNo}</td>
+                      <td className="t-xs" style={{ padding: '9px 12px', fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>{b.invoiceNo}</td>
                       <td style={{ padding: '9px 12px', fontSize: 12.5, color: 'var(--text2)' }}>{b.period}</td>
-                      <td style={{ padding: '9px 12px', fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{formatCurrency(b.total)}</td>
+                      <td className="t-title" style={{ padding: '9px 12px', fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>{formatCurrency(b.total)}</td>
                       <td style={{ padding: '9px 12px' }}>
                         <Badge type={b.status === 'Paid' ? 'green' : b.status === 'Overdue' ? 'red' : 'amber'}>{b.status}</Badge>
                       </td>
-                      <td style={{ padding: '9px 12px', fontSize: 12, color: 'var(--text3)' }}>{b.paidOn ? formatDate(b.paidOn) : '—'}</td>
-                      <td style={{ padding: '9px 12px', fontSize: 12, color: 'var(--text2)' }}>{b.method || '—'}</td>
+                      <td className="t-xs" style={{ padding: '9px 12px', color: 'var(--text3)' }}>{b.paidOn ? formatDate(b.paidOn) : '—'}</td>
+                      <td className="t-xs" style={{ padding: '9px 12px', color: 'var(--text2)' }}>{b.method || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             )}
             <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--gold-bg)', borderRadius: 8, display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--gold)' }}>Total Lifetime Spend</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: 'var(--gold)' }}>{formatCurrency(totalSpend)}</span>
+              <span className="t-title" style={{ color: 'var(--gold)' }}>Total Lifetime Spend</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--gold)' }}>{formatCurrency(totalSpend)}</span>
             </div>
           </div>
         )}
@@ -293,24 +293,24 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
                   padding: '12px 14px', background: 'var(--surface2)',
                   borderRadius: 8, border: '1px solid var(--border)',
                 }}>
-                  <div style={{
+                  <div className="t-body" style={{
                     width: 32, height: 32, borderRadius: '50%',
                     background: c.type === 'WhatsApp' ? '#dcfce7' : c.type === 'SMS' ? '#dbeafe' : 'var(--gold-bg)',
                     color: c.type === 'WhatsApp' ? '#16a34a' : c.type === 'SMS' ? '#2563eb' : 'var(--gold)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 14, flexShrink: 0,
+                    flexShrink: 0,
                   }}>
                     {c.type === 'WhatsApp' ? '💬' : c.type === 'SMS' ? '📱' : '📄'}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{c.type}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 4 }}>{c.msg}</div>
+                    <div className="t-xs" style={{ color: 'var(--text2)', marginBottom: 4 }}>{c.msg}</div>
                     <div style={{ fontSize: 11, color: 'var(--text3)' }}>{c.time}</div>
                   </div>
                 </div>
               ))}
               {guest.commLog.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text3)', fontSize: 13 }}>No communication log</div>
+                <div className="t-sm" style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text3)' }}>No communication log</div>
               )}
             </div>
             <button className="btn btn-outline btn-sm" style={{ marginTop: 14 }}
@@ -333,7 +333,7 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   }}>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                      <div className="t-title" style={{ color: 'var(--text)' }}>
                         Stay #{guest.stayCount - i} {isLatest && <span style={{ fontSize: 10.5, color: 'var(--gold)', marginLeft: 6 }}>CURRENT</span>}
                       </div>
                       <div style={{ fontSize: 11.5, color: 'var(--text3)', marginTop: 3 }}>
@@ -419,11 +419,11 @@ function CheckoutModal({ guest, onClose, onConfirm }) {
           {/* Room + period */}
           <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: '12px 14px', marginBottom: 14, border: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: 12, color: 'var(--text3)' }}>Room</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 600 }}>{guest.room}</span>
+              <span className="t-xs" style={{ color: 'var(--text3)' }}>Room</span>
+              <span className="t-title" style={{ fontFamily: 'var(--font-mono)' }}>{guest.room}</span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 12, color: 'var(--text3)' }}>Stay Period</span>
+              <span className="t-xs" style={{ color: 'var(--text3)' }}>Stay Period</span>
               <span style={{ fontSize: 12.5, fontWeight: 500 }}>{formatDate(guest.checkInDate)} → {formatDate(dueDate)}</span>
             </div>
           </div>
@@ -432,24 +432,24 @@ function CheckoutModal({ guest, onClose, onConfirm }) {
           <div style={{ marginBottom: 14 }}>
             {[['Room Rent', rent], ['Food Plan', food], ['Amenities', amenities], ['GST (12%)', gst]].map(([k, v]) => v > 0 && (
               <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
-                <span style={{ fontSize: 13, color: 'var(--text2)' }}>{k}</span>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13 }}>{formatCurrency(v)}</span>
+                <span className="t-sm" style={{ color: 'var(--text2)' }}>{k}</span>
+                <span className="t-sm" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(v)}</span>
               </div>
             ))}
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
-              <span style={{ fontSize: 13, color: 'var(--text2)' }}>Advance Paid</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: 'var(--green-text)' }}>−{formatCurrency(guest.advance)}</span>
+              <span className="t-sm" style={{ color: 'var(--text2)' }}>Advance Paid</span>
+              <span className="t-sm" style={{ fontFamily: 'var(--font-mono)', color: 'var(--green-text)' }}>−{formatCurrency(guest.advance)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', fontWeight: 700, fontSize: 15 }}>
+            <div className="t-h3" style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0' }}>
               <span>Balance Due</span>
-              <span style={{ fontFamily: "'JetBrains Mono', monospace", color: balance > 0 ? 'var(--red-text)' : 'var(--green-text)' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', color: balance > 0 ? 'var(--red-text)' : 'var(--green-text)' }}>
                 {formatCurrency(Math.abs(balance))} {balance <= 0 ? '(refund)' : ''}
               </span>
             </div>
           </div>
 
           {/* Checklist */}
-          <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 10 }}>
+          <div className="t-xs" style={{ color: 'var(--text3)', marginTop: 10 }}>
             Room will be marked as <strong>Dirty</strong> and queued for housekeeping automatically.
           </div>
         </>
@@ -459,7 +459,7 @@ function CheckoutModal({ guest, onClose, onConfirm }) {
         <>
           <div style={{ background: 'var(--gold-bg)', borderRadius: 8, padding: '12px 14px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontWeight: 600, color: 'var(--gold)' }}>Amount to Collect</span>
-            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 16, color: 'var(--gold)' }}>{formatCurrency(Math.max(balance, 0))}</span>
+            <span className="t-h3" style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>{formatCurrency(Math.max(balance, 0))}</span>
           </div>
 
           <div style={{ marginBottom: 12 }}>
@@ -474,7 +474,7 @@ function CheckoutModal({ guest, onClose, onConfirm }) {
             <textarea className="form-textarea" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Key return confirmation, damages, etc." />
           </div>
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', fontSize: 13, color: 'var(--text)' }}>
+          <label className="t-sm" style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', color: 'var(--text)' }}>
             <input type="checkbox" checked={settled} onChange={e => setSettled(e.target.checked)} />
             Payment received & key returned — confirm checkout
           </label>
@@ -646,8 +646,8 @@ export default function Guests() {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div>
-          <h1 style={{ fontFamily: "'Playfair Display', sans-serif", fontSize: '22px', fontWeight: 800, margin: 0, letterSpacing: '-0.03em' }}>All Guests</h1>
-          <p style={{ margin: '4px 0 0', color: 'var(--text3)', fontSize: '13px' }}>Guest registry, stay history & billing</p>
+          <h1 className="t-h1" style={{ margin: 0, letterSpacing: '-0.03em' }}>All Guests</h1>
+          <p className="t-sm" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>Guest registry, stay history & billing</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-outline btn-sm" onClick={load} disabled={loading}>↻ Refresh</button>
@@ -657,7 +657,7 @@ export default function Guests() {
       </div>
 
       {error && (
-        <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 13 }}>
+        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
           {error}
         </div>
       )}
@@ -671,8 +671,8 @@ export default function Guests() {
           { label: 'Total Guests', count: guests.length, type: 'blue', bar: 'stat-bar-blue' },
         ].map(({ label, count, type, bar }) => (
           <div key={label} className={`stat-card ${bar}`}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>{label}</div>
-            <div style={{ fontSize: '26px', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: 'var(--text)' }}>{count}</div>
+            <div className="t-label" style={{ marginBottom: '6px' }}>{label}</div>
+            <div style={{ fontSize: '26px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text)' }}>{count}</div>
           </div>
         ))}
       </div>
@@ -681,7 +681,7 @@ export default function Guests() {
       <div className="card" style={{ marginBottom: '16px' }}>
         <div style={{ padding: '12px 16px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ position: 'relative', flex: '1', minWidth: '200px' }}>
-            <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)', fontSize: '15px' }}>⌕</span>
+            <span className="t-h3" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)' }}>⌕</span>
             <input className="form-input" style={{ paddingLeft: '30px' }} placeholder="Search name, room, DOC ID, phone..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <select className="form-select" style={{ width: '140px' }} value={stayFilter} onChange={e => setStayFilter(e.target.value)}>
@@ -712,17 +712,17 @@ export default function Guests() {
                 const dueDate = getDueDate(guest)
                 return (
                   <tr key={guest.id} style={{ cursor: 'pointer' }} onClick={() => openProfile(guest)}>
-                    <td><span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--gold)', fontSize: '12px', fontWeight: 600 }}>{guest.docId}</span></td>
+                    <td><span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>{guest.docId}</span></td>
                     <td>
                       <div style={{ fontWeight: 600, color: 'var(--text)' }}>{guest.name}</div>
                       <div style={{ fontSize: '11.5px', color: 'var(--text3)', marginTop: '1px' }}>{guest.phone}</div>
                     </td>
-                    <td><span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600 }}>{guest.room || '—'}</span></td>
+                    <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{guest.room || '—'}</span></td>
                     <td><Badge type={guest.stayType === 'monthly' ? 'purple' : 'blue'}>{guest.stayType === 'monthly' ? 'Monthly' : 'Daily'}</Badge></td>
                     <td style={{ whiteSpace: 'nowrap', fontSize: '12.5px' }}>{formatDate(guest.checkInDate)}</td>
                     <td style={{ whiteSpace: 'nowrap', fontSize: '12.5px' }}>{formatDate(dueDate)}</td>
-                    <td style={{ fontSize: '12px', color: 'var(--text2)', whiteSpace: 'nowrap' }}>{guest.foodPlan}</td>
-                    <td><span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '13px', fontWeight: 600 }}>{guest.stayCount}</span></td>
+                    <td className="t-xs" style={{ color: 'var(--text2)', whiteSpace: 'nowrap' }}>{guest.foodPlan}</td>
+                    <td><span className="t-title" style={{ fontFamily: 'var(--font-mono)' }}>{guest.stayCount}</span></td>
                     <td><div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>{guest.tags.map(t => <span key={t} className={getTagClass(t)}>{t}</span>)}</div></td>
                     <td><Badge type={statusColor(guest.status).replace('badge-', '')}>{guest.status}</Badge></td>
                     <td onClick={e => e.stopPropagation()}>
