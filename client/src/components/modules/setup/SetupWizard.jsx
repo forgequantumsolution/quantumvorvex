@@ -52,32 +52,24 @@ function genPassword() {
 
 function StepProgressBar({ current, total }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 36 }}>
+    <div className="flex items-center justify-center gap-0 mb-9">
       {Array.from({ length: total }, (_, i) => {
         const stepNum = i + 1
         const isCompleted = stepNum < current
         const isActive = stepNum === current
         const isFuture = stepNum > current
         return (
-          <div key={stepNum} style={{ display: 'flex', alignItems: 'center' }}>
+          <div key={stepNum} className="flex items-center">
             {/* Circle */}
             <div
-              className="t-title"
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                transition: 'all 0.2s',
-                ...(isCompleted
+              className="t-title w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all duration-200"
+              style={
+                isCompleted
                   ? { background: 'var(--green)', color: '#fff', border: '2px solid var(--green)' }
                   : isActive
                   ? { background: 'var(--gold)', color: '#000', border: '2px solid var(--gold)', boxShadow: '0 0 0 4px var(--gold-bg)' }
-                  : { background: 'transparent', color: 'var(--text3)', border: '2px solid var(--border2)' }),
-              }}
+                  : { background: 'transparent', color: 'var(--text3)', border: '2px solid var(--border2)' }
+              }
               title={STEP_LABELS[i]}
             >
               {isCompleted ? '✓' : stepNum}
@@ -85,12 +77,8 @@ function StepProgressBar({ current, total }) {
             {/* Connector */}
             {stepNum < total && (
               <div
-                style={{
-                  width: 40,
-                  height: 2,
-                  background: isCompleted ? 'var(--green)' : 'var(--border2)',
-                  transition: 'background 0.2s',
-                }}
+                className="w-10 h-0.5 transition-[background] duration-200"
+                style={{ background: isCompleted ? 'var(--green)' : 'var(--border2)' }}
               />
             )}
           </div>
@@ -104,9 +92,9 @@ function StepProgressBar({ current, total }) {
 
 function Field({ label, required, children, fullWidth, style }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: fullWidth ? '1 / -1' : undefined, ...style }}>
+    <div className="flex flex-col gap-[5px]" style={{ gridColumn: fullWidth ? '1 / -1' : undefined, ...style }}>
       <label className="t-label">
-        {label}{required && <span style={{ color: 'var(--red)', marginLeft: 2 }}>*</span>}
+        {label}{required && <span className="text-danger ml-0.5">*</span>}
       </label>
       {children}
     </div>
@@ -140,45 +128,36 @@ function Step1Profile({ data, onChange }) {
     .slice(0, 2)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+    <div className="flex flex-col gap-[22px]">
       {/* Logo upload */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+      <div className="flex items-center gap-5">
         {/* Preview circle */}
         <div
-          className="t-h1"
-          style={{
-            width: 80, height: 80, borderRadius: '50%',
-            border: '2px solid var(--border2)',
-            overflow: 'hidden', flexShrink: 0,
-            background: 'var(--gold-bg)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: 'var(--gold)',
-          }}
+          className="t-h1 w-20 h-20 rounded-full border-2 border-line2 overflow-hidden shrink-0 bg-[var(--gold-bg)] flex items-center justify-center text-gold"
         >
           {data.logoUrl
-            ? <img src={data.logoUrl} alt="logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <img src={data.logoUrl} alt="logo" className="w-full h-full object-cover" />
             : initials}
         </div>
         {/* Drop zone */}
         <div
-          className={`upload-zone${drag ? ' dragover' : ''}`}
-          style={{ flex: 1, cursor: 'pointer' }}
+          className={`upload-zone flex-1 cursor-pointer${drag ? ' dragover' : ''}`}
           onClick={() => fileRef.current.click()}
           onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
           onDragLeave={() => setDrag(false)}
           onDrop={(e) => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]) }}
         >
-          <div className="t-h1" style={{ marginBottom: 4 }}>📷</div>
-          <div className="t-sm" style={{ color: 'var(--text2)' }}>
+          <div className="t-h1 mb-1">📷</div>
+          <div className="t-sm text-ink2">
             {data.logoUrl ? 'Click to change logo' : 'Drag & drop hotel logo'}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 3 }}>PNG, JPG — max 2MB</div>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleFile(e.target.files[0])} />
+          <div className="text-[11px] text-ink3 mt-[3px]">PNG, JPG — max 2MB</div>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleFile(e.target.files[0])} />
         </div>
       </div>
 
       {/* Fields */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 18px' }}>
+      <div className="grid grid-cols-2 gap-x-[18px] gap-y-[14px]">
         <Field label="Hotel Name" required>
           <input className="form-input" value={data.hotelName} onChange={(e) => set('hotelName', e.target.value)} placeholder="e.g. Quantum Vorvex" />
         </Field>
@@ -243,8 +222,8 @@ function Step2Floors({ data, onChange }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 18px' }}>
+    <div className="flex flex-col gap-[22px]">
+      <div className="grid grid-cols-2 gap-x-[18px] gap-y-[14px]">
         <Field label="Number of Floors" required>
           <input
             className="form-input" type="number" min={1} max={10}
@@ -261,7 +240,7 @@ function Step2Floors({ data, onChange }) {
 
       {/* Format selection */}
       <Field label="Room Number Format" required>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginTop: 4 }}>
+        <div className="grid grid-cols-3 gap-2.5 mt-1">
           {[
             { id: 'floor_seq', label: 'Floor + Sequential', example: '101, 102, 201...' },
             { id: 'seq_only',  label: 'Sequential Only',    example: '1, 2, 3...' },
@@ -272,17 +251,12 @@ function Step2Floors({ data, onChange }) {
               <div
                 key={opt.id}
                 onClick={() => set('format', opt.id)}
-                style={{
-                  padding: '12px 14px', borderRadius: 8, cursor: 'pointer',
-                  border: `2px solid ${isActive ? 'var(--gold)' : 'var(--border)'}`,
-                  background: isActive ? 'var(--gold-bg)' : 'var(--surface2)',
-                  transition: 'all 0.14s',
-                }}
+                className={`px-3.5 py-3 rounded-lg cursor-pointer border-2 transition-all duration-[140ms] ${isActive ? 'border-gold bg-[var(--gold-bg)]' : 'border-line bg-surface2'}`}
               >
-                <div className="t-xs" style={{ color: isActive ? 'var(--gold)' : 'var(--text)', marginBottom: 4 }}>
+                <div className={`t-xs mb-1 ${isActive ? 'text-gold' : 'text-ink'}`}>
                   {opt.label}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text3)', fontFamily: 'var(--font-mono)' }}>
+                <div className="text-[11px] text-ink3" style={{ fontFamily: 'var(--font-mono)' }}>
                   {opt.example}
                 </div>
               </div>
@@ -298,13 +272,13 @@ function Step2Floors({ data, onChange }) {
             value={data.prefix}
             onChange={(e) => set('prefix', e.target.value)}
             placeholder="e.g. A, B, WING-1"
-            style={{ maxWidth: 200 }}
+            className="form-input max-w-[200px]"
           />
         </Field>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span className="t-xs" style={{ color: 'var(--text3)' }}>
+      <div className="flex items-center justify-between">
+        <span className="t-xs text-ink3">
           {totalCount} total rooms ({data.floors} floor{data.floors !== 1 ? 's' : ''} × {data.roomsPerFloor} rooms)
         </span>
         <button className="btn btn-primary btn-sm" onClick={handleGenerate}>
@@ -313,22 +287,18 @@ function Step2Floors({ data, onChange }) {
       </div>
 
       {previewRooms.length > 0 && (
-        <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: '12px 14px' }}>
-          <div className="t-label" style={{ marginBottom: 10 }}>
+        <div className="bg-surface2 rounded-lg px-3.5 py-3">
+          <div className="t-label mb-2.5">
             Room Preview
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div className="flex flex-wrap gap-1.5">
             {display.map((r) => (
-              <span key={r} style={{
-                padding: '3px 9px', borderRadius: 4, fontSize: 11.5,
-                background: 'var(--surface)', border: '1px solid var(--border)',
-                fontFamily: 'var(--font-mono)', color: 'var(--text2)',
-              }}>
+              <span key={r} className="px-[9px] py-[3px] rounded text-[11.5px] bg-surface border border-line text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>
                 {r}
               </span>
             ))}
             {extra > 0 && (
-              <span style={{ padding: '3px 9px', fontSize: 11.5, color: 'var(--text3)', fontStyle: 'italic' }}>
+              <span className="px-[9px] py-[3px] text-[11.5px] text-ink3 italic">
                 ...and {extra} more
               </span>
             )}
@@ -362,34 +332,26 @@ function Step3RoomTypes({ data, onChange }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div className="flex flex-col gap-[18px]">
       {/* Rate reference cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+      <div className="grid grid-cols-4 gap-2.5">
         {ROOM_TYPE_PRESETS.map((p) => (
-          <div key={p.name} style={{
-            background: 'var(--surface2)', border: '1px solid var(--border)',
-            borderRadius: 8, padding: '10px 12px',
-          }}>
-            <div className="t-xs" style={{ color: 'var(--text)', marginBottom: 4 }}>{p.name}</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)' }}>Daily: {formatCurrency(p.dailyRate)}</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)' }}>Monthly: {formatCurrency(p.monthlyRate)}</div>
+          <div key={p.name} className="bg-surface2 border border-line rounded-lg px-3 py-2.5">
+            <div className="t-xs text-ink mb-1">{p.name}</div>
+            <div className="text-[11px] text-ink3">Daily: {formatCurrency(p.dailyRate)}</div>
+            <div className="text-[11px] text-ink3">Monthly: {formatCurrency(p.monthlyRate)}</div>
           </div>
         ))}
       </div>
 
       {/* Bulk assign */}
       {roomTypes.length > 0 && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          background: 'var(--gold-bg)', border: '1px solid var(--gold-border)',
-          borderRadius: 8, padding: '10px 14px',
-        }}>
-          <span className="t-xs" style={{ color: 'var(--text2)', flexShrink: 0 }}>
+        <div className="flex items-center gap-2.5 bg-[var(--gold-bg)] border border-[var(--gold-border)] rounded-lg px-3.5 py-2.5">
+          <span className="t-xs text-ink2 shrink-0">
             Bulk Assign ({bulkSelected.length} selected):
           </span>
           <select
-            className="form-select"
-            style={{ width: 'auto', minWidth: 120 }}
+            className="form-select w-auto min-w-[120px]"
             value={bulkType}
             onChange={(e) => onChange({ ...data, bulkType: e.target.value })}
           >
@@ -411,11 +373,11 @@ function Step3RoomTypes({ data, onChange }) {
       {roomTypes.length === 0 ? (
         <div className="empty-state">No rooms generated yet. Go back to Step 2 and click "Generate Rooms".</div>
       ) : (
-        <div style={{ maxHeight: 320, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 8 }}>
+        <div className="max-h-80 overflow-y-auto border border-line rounded-lg">
           <table>
             <thead>
               <tr>
-                <th style={{ width: 36 }}>
+                <th className="w-9">
                   <input
                     type="checkbox"
                     checked={bulkSelected.length === roomTypes.length && roomTypes.length > 0}
@@ -434,11 +396,10 @@ function Step3RoomTypes({ data, onChange }) {
                   <td>
                     <input type="checkbox" checked={bulkSelected.includes(r.roomNo)} onChange={() => toggleBulk(r.roomNo)} />
                   </td>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--text)' }}>{r.roomNo}</td>
+                  <td className="font-semibold text-ink" style={{ fontFamily: 'var(--font-mono)' }}>{r.roomNo}</td>
                   <td>
                     <select
-                      className="form-select"
-                      style={{ padding: '5px 8px', fontSize: 12 }}
+                      className="form-select px-2 py-[5px] text-[12px]"
                       value={r.type}
                       onChange={(e) => {
                         const preset = ROOM_TYPE_PRESETS.find(p => p.name === e.target.value)
@@ -453,16 +414,14 @@ function Step3RoomTypes({ data, onChange }) {
                   </td>
                   <td>
                     <input
-                      className="form-input" type="number" min={0}
-                      style={{ padding: '5px 8px', fontSize: 12 }}
+                      className="form-input px-2 py-[5px] text-[12px]" type="number" min={0}
                       value={r.dailyRate}
                       onChange={(e) => setField(r.roomNo, 'dailyRate', +e.target.value)}
                     />
                   </td>
                   <td>
                     <input
-                      className="form-input" type="number" min={0}
-                      style={{ padding: '5px 8px', fontSize: 12 }}
+                      className="form-input px-2 py-[5px] text-[12px]" type="number" min={0}
                       value={r.monthlyRate}
                       onChange={(e) => setField(r.roomNo, 'monthlyRate', +e.target.value)}
                     />
@@ -497,36 +456,31 @@ function Step4Facilities({ data, onChange }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+    <div className="flex flex-col gap-[22px]">
       {/* Standard facilities */}
       <div>
-        <div className="t-xs" style={{ color: 'var(--text)', marginBottom: 12 }}>
+        <div className="t-xs text-ink mb-3">
           Standard Facilities
-          <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: 'var(--text3)' }}>
+          <span className="ml-2 text-[11px] font-normal text-ink3">
             ({facilities.length} selected)
           </span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+        <div className="grid grid-cols-3 gap-2">
           {ALL_FACILITIES.map((f) => {
             const checked = facilities.includes(f)
             return (
               <label
                 key={f}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 9,
-                  padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
-                  border: `1.5px solid ${checked ? 'var(--gold)' : 'var(--border)'}`,
-                  background: checked ? 'var(--gold-bg)' : 'var(--surface2)',
-                  transition: 'all 0.14s', userSelect: 'none',
-                }}
+                className={`flex items-center gap-[9px] px-3 py-2.5 rounded-lg cursor-pointer border-[1.5px] transition-all duration-[140ms] select-none ${checked ? 'border-gold bg-[var(--gold-bg)]' : 'border-line bg-surface2'}`}
               >
                 <input
                   type="checkbox"
                   checked={checked}
                   onChange={() => toggleFacility(f)}
-                  style={{ accentColor: 'var(--gold)', width: 14, height: 14 }}
+                  className="w-3.5 h-3.5"
+                  style={{ accentColor: 'var(--gold)' }}
                 />
-                <span style={{ fontSize: 13, color: checked ? 'var(--gold)' : 'var(--text2)', fontWeight: checked ? 600 : 400 }}>
+                <span className={`text-[13px] ${checked ? 'text-gold font-semibold' : 'text-ink2 font-normal'}`}>
                   {f}
                 </span>
               </label>
@@ -537,37 +491,34 @@ function Step4Facilities({ data, onChange }) {
 
       {/* Chargeable amenities */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-          <div className="t-xs" style={{ color: 'var(--text)' }}>Chargeable Amenities</div>
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="t-xs text-ink">Chargeable Amenities</div>
           <button className="btn btn-outline btn-sm" onClick={addAmenity}>+ Add</button>
         </div>
-        <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+        <div className="border border-line rounded-lg overflow-hidden">
           <table>
             <thead>
               <tr>
                 <th>Amenity Name</th>
                 <th>Daily ₹</th>
                 <th>Monthly ₹</th>
-                <th style={{ width: 40 }}></th>
+                <th className="w-10"></th>
               </tr>
             </thead>
             <tbody>
               {amenities.map((a) => (
                 <tr key={a.id}>
                   <td>
-                    <input className="form-input" value={a.name} placeholder="e.g. Mini Fridge"
-                      onChange={(e) => setAmenity(a.id, 'name', e.target.value)}
-                      style={{ padding: '5px 8px', fontSize: 12 }} />
+                    <input className="form-input px-2 py-[5px] text-[12px]" value={a.name} placeholder="e.g. Mini Fridge"
+                      onChange={(e) => setAmenity(a.id, 'name', e.target.value)} />
                   </td>
                   <td>
-                    <input className="form-input" type="number" value={a.daily}
-                      onChange={(e) => setAmenity(a.id, 'daily', +e.target.value)}
-                      style={{ padding: '5px 8px', fontSize: 12 }} />
+                    <input className="form-input px-2 py-[5px] text-[12px]" type="number" value={a.daily}
+                      onChange={(e) => setAmenity(a.id, 'daily', +e.target.value)} />
                   </td>
                   <td>
-                    <input className="form-input" type="number" value={a.monthly}
-                      onChange={(e) => setAmenity(a.id, 'monthly', +e.target.value)}
-                      style={{ padding: '5px 8px', fontSize: 12 }} />
+                    <input className="form-input px-2 py-[5px] text-[12px]" type="number" value={a.monthly}
+                      onChange={(e) => setAmenity(a.id, 'monthly', +e.target.value)} />
                   </td>
                   <td>
                     <button className="btn btn-danger btn-xs" onClick={() => removeAmenity(a.id)}>✕</button>
@@ -575,7 +526,7 @@ function Step4Facilities({ data, onChange }) {
                 </tr>
               ))}
               {amenities.length === 0 && (
-                <tr><td colSpan={4} className="t-xs" style={{ textAlign: 'center', color: 'var(--text3)' }}>No amenities added.</td></tr>
+                <tr><td colSpan={4} className="t-xs text-center text-ink3">No amenities added.</td></tr>
               )}
             </tbody>
           </table>
@@ -598,11 +549,11 @@ function Step5Food({ data, onChange }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div className="t-sm" style={{ color: 'var(--text2)' }}>Define meal plans and pricing for guests.</div>
+      <div className="flex items-center justify-between mb-3.5">
+        <div className="t-sm text-ink2">Define meal plans and pricing for guests.</div>
         <button className="btn btn-outline btn-sm" onClick={addPlan}>+ Add</button>
       </div>
-      <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+      <div className="border border-line rounded-lg overflow-hidden">
         <table>
           <thead>
             <tr>
@@ -610,31 +561,27 @@ function Step5Food({ data, onChange }) {
               <th>One-time ₹</th>
               <th>Weekly ₹</th>
               <th>Monthly ₹</th>
-              <th style={{ width: 40 }}></th>
+              <th className="w-10"></th>
             </tr>
           </thead>
           <tbody>
             {foodPlans.map((p) => (
               <tr key={p.id}>
                 <td>
-                  <input className="form-input" value={p.name} placeholder="e.g. Breakfast Only"
-                    onChange={(e) => setPlan(p.id, 'name', e.target.value)}
-                    style={{ padding: '5px 8px', fontSize: 12 }} />
+                  <input className="form-input px-2 py-[5px] text-[12px]" value={p.name} placeholder="e.g. Breakfast Only"
+                    onChange={(e) => setPlan(p.id, 'name', e.target.value)} />
                 </td>
                 <td>
-                  <input className="form-input" type="number" value={p.oneTime}
-                    onChange={(e) => setPlan(p.id, 'oneTime', +e.target.value)}
-                    style={{ padding: '5px 8px', fontSize: 12 }} />
+                  <input className="form-input px-2 py-[5px] text-[12px]" type="number" value={p.oneTime}
+                    onChange={(e) => setPlan(p.id, 'oneTime', +e.target.value)} />
                 </td>
                 <td>
-                  <input className="form-input" type="number" value={p.weekly}
-                    onChange={(e) => setPlan(p.id, 'weekly', +e.target.value)}
-                    style={{ padding: '5px 8px', fontSize: 12 }} />
+                  <input className="form-input px-2 py-[5px] text-[12px]" type="number" value={p.weekly}
+                    onChange={(e) => setPlan(p.id, 'weekly', +e.target.value)} />
                 </td>
                 <td>
-                  <input className="form-input" type="number" value={p.monthly}
-                    onChange={(e) => setPlan(p.id, 'monthly', +e.target.value)}
-                    style={{ padding: '5px 8px', fontSize: 12 }} />
+                  <input className="form-input px-2 py-[5px] text-[12px]" type="number" value={p.monthly}
+                    onChange={(e) => setPlan(p.id, 'monthly', +e.target.value)} />
                 </td>
                 <td>
                   <button className="btn btn-danger btn-xs" onClick={() => removePlan(p.id)}>✕</button>
@@ -642,7 +589,7 @@ function Step5Food({ data, onChange }) {
               </tr>
             ))}
             {foodPlans.length === 0 && (
-              <tr><td colSpan={5} className="t-xs" style={{ textAlign: 'center', color: 'var(--text3)' }}>No food plans added.</td></tr>
+              <tr><td colSpan={5} className="t-xs text-center text-ink3">No food plans added.</td></tr>
             )}
           </tbody>
         </table>
@@ -670,9 +617,9 @@ function Step6Staff({ data, onChange }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div className="t-sm" style={{ color: 'var(--text2)' }}>Create login accounts for your team.</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <div className="flex items-center justify-between mb-3.5">
+        <div className="t-sm text-ink2">Create login accounts for your team.</div>
+        <div className="flex gap-2">
           <button className="btn btn-outline btn-sm" onClick={copyAll} title="Copy all credentials">
             Copy All Passwords
           </button>
@@ -681,16 +628,12 @@ function Step6Staff({ data, onChange }) {
       </div>
 
       {!hasAdmin && (
-        <div className="t-xs" style={{
-          background: 'var(--amber-bg)', border: '1px solid var(--amber)',
-          borderRadius: 8, padding: '10px 14px', marginBottom: 14,
-          color: 'var(--amber-text)', display: 'flex', alignItems: 'center', gap: 8,
-        }}>
+        <div className="t-xs bg-warning-bg border border-warning rounded-lg px-3.5 py-2.5 mb-3.5 text-warning-text flex items-center gap-2">
           ⚠ At least one Super Admin or Manager account is required.
         </div>
       )}
 
-      <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+      <div className="border border-line rounded-lg overflow-hidden">
         <table>
           <thead>
             <tr>
@@ -698,35 +641,28 @@ function Step6Staff({ data, onChange }) {
               <th>Email</th>
               <th>Role</th>
               <th>Password</th>
-              <th style={{ width: 40 }}></th>
+              <th className="w-10"></th>
             </tr>
           </thead>
           <tbody>
             {staff.map((s) => (
               <tr key={s.id}>
                 <td>
-                  <input className="form-input" value={s.name} placeholder="Full name"
-                    onChange={(e) => setStaff(s.id, 'name', e.target.value)}
-                    style={{ padding: '5px 8px', fontSize: 12 }} />
+                  <input className="form-input px-2 py-[5px] text-[12px]" value={s.name} placeholder="Full name"
+                    onChange={(e) => setStaff(s.id, 'name', e.target.value)} />
                 </td>
                 <td>
-                  <input className="form-input" type="email" value={s.email} placeholder="email@hotel.com"
-                    onChange={(e) => setStaff(s.id, 'email', e.target.value)}
-                    style={{ padding: '5px 8px', fontSize: 12 }} />
+                  <input className="form-input px-2 py-[5px] text-[12px]" type="email" value={s.email} placeholder="email@hotel.com"
+                    onChange={(e) => setStaff(s.id, 'email', e.target.value)} />
                 </td>
                 <td>
-                  <select className="form-select" value={s.role} onChange={(e) => setStaff(s.id, 'role', e.target.value)}
-                    style={{ padding: '5px 8px', fontSize: 12 }}>
+                  <select className="form-select px-2 py-[5px] text-[12px]" value={s.role} onChange={(e) => setStaff(s.id, 'role', e.target.value)}>
                     {ROLES.map((r) => <option key={r} value={r}>{r.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>)}
                   </select>
                 </td>
                 <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <code style={{
-                      fontFamily: 'var(--font-mono)', fontSize: 11,
-                      background: 'var(--surface2)', border: '1px solid var(--border)',
-                      padding: '3px 7px', borderRadius: 4, color: 'var(--text2)',
-                    }}>
+                  <div className="flex items-center gap-1.5">
+                    <code className="text-[11px] bg-surface2 border border-line px-[7px] py-[3px] rounded text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>
                       {s.password}
                     </code>
                     <button
@@ -742,7 +678,7 @@ function Step6Staff({ data, onChange }) {
               </tr>
             ))}
             {staff.length === 0 && (
-              <tr><td colSpan={5} className="t-xs" style={{ textAlign: 'center', color: 'var(--text3)' }}>No staff added.</td></tr>
+              <tr><td colSpan={5} className="t-xs text-center text-ink3">No staff added.</td></tr>
             )}
           </tbody>
         </table>
@@ -801,46 +737,34 @@ function Step7Preview({ wizardData, onLaunch }) {
   ]
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       {/* Warnings */}
       {warnings.length > 0 && (
-        <div style={{
-          background: 'var(--amber-bg)', border: '1px solid var(--amber)',
-          borderRadius: 8, padding: '12px 16px',
-        }}>
-          <div className="t-xs" style={{ color: 'var(--amber-text)', marginBottom: 6 }}>
+        <div className="bg-warning-bg border border-warning rounded-lg px-4 py-3">
+          <div className="t-xs text-warning-text mb-1.5">
             ⚠ Setup Warnings
           </div>
           {warnings.map((w, i) => (
-            <div key={i} className="t-xs" style={{ color: 'var(--amber-text)', marginTop: 3 }}>• {w}</div>
+            <div key={i} className="t-xs text-warning-text mt-[3px]">• {w}</div>
           ))}
         </div>
       )}
 
       {/* Summary grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+      <div className="grid grid-cols-3 gap-3">
         {summaryCards.map((card) => (
-          <div key={card.title} style={{
-            background: 'var(--surface2)', border: '1px solid var(--border)',
-            borderRadius: 10, padding: '14px 16px',
-            borderLeft: `3px solid ${card.color}`,
-          }}>
-            <div className="t-h1" style={{ marginBottom: 6 }}>{card.icon}</div>
-            <div className="t-title" style={{ color: 'var(--text)', marginBottom: 3 }}>{card.title}</div>
-            <div style={{ fontSize: 11, color: 'var(--text3)' }}>{card.sub}</div>
+          <div key={card.title} className="bg-surface2 border border-line rounded-[10px] px-4 py-3.5 border-l-[3px]" style={{ borderLeftColor: card.color }}>
+            <div className="t-h1 mb-1.5">{card.icon}</div>
+            <div className="t-title text-ink mb-[3px]">{card.title}</div>
+            <div className="text-[11px] text-ink3">{card.sub}</div>
           </div>
         ))}
       </div>
 
       {/* Launch button */}
       <button
-        className="btn btn-primary t-h3"
+        className="btn btn-primary t-h3 w-full justify-center p-3.5 rounded-[10px] tracking-[-0.01em]"
         onClick={onLaunch}
-        style={{
-          width: '100%', justifyContent: 'center',
-          padding: '14px',
-          borderRadius: 10, letterSpacing: '-0.01em',
-        }}
       >
         🚀 Go Live
       </button>
@@ -968,34 +892,21 @@ export default function SetupWizard({ onComplete }) {
 
   return (
     <div
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'var(--main-bg)',
-        zIndex: 2000,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        overflowY: 'auto',
-        padding: '32px 20px 60px',
-      }}
+      className="fixed inset-0 bg-canvas z-[2000] flex flex-col items-center overflow-y-auto pt-8 px-5 pb-[60px]"
     >
       {/* Inner content */}
-      <div style={{ width: '100%', maxWidth: 700 }}>
+      <div className="w-full max-w-[700px]">
         {/* Logo + title */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: 52, height: 52, borderRadius: '50%',
-            background: 'var(--gold)', marginBottom: 12,
-          }}>
-            <span className="t-h1" style={{ color: '#000' }}>
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-[52px] h-[52px] rounded-full bg-gold mb-3">
+            <span className="t-h1 text-black">
               QV
             </span>
           </div>
-          <div className="t-h1" style={{ color: 'var(--text)', letterSpacing: '-0.03em' }}>
+          <div className="t-h1 text-ink tracking-[-0.03em]">
             Quantum Vorvex Setup
           </div>
-          <div className="t-sm" style={{ color: 'var(--text3)', marginTop: 4 }}>
+          <div className="t-sm text-ink3 mt-1">
             Let's configure your property in a few quick steps
           </div>
         </div>
@@ -1005,22 +916,14 @@ export default function SetupWizard({ onComplete }) {
 
         {/* Step card */}
         <div
-          style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 12,
-            padding: '28px 32px',
-            boxShadow: 'var(--shadow-md)',
-          }}
+          className="bg-surface border border-line rounded-xl px-8 py-7 shadow-[var(--shadow-md)]"
         >
           {/* Step heading */}
-          <div style={{ marginBottom: 22 }}>
-            <div className="t-h2" style={{
-              color: 'var(--text)', letterSpacing: '-0.02em',
-            }}>
+          <div className="mb-[22px]">
+            <div className="t-h2 text-ink tracking-[-0.02em]">
               Step {step}: {STEP_LABELS[step - 1]}
             </div>
-            <div style={{ width: 32, height: 2, background: 'var(--gold)', marginTop: 6, borderRadius: 2 }} />
+            <div className="w-8 h-0.5 bg-gold mt-1.5 rounded-sm" />
           </div>
 
           {/* Step body */}
@@ -1028,15 +931,15 @@ export default function SetupWizard({ onComplete }) {
 
           {/* Navigation */}
           {step < 7 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 28, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div className="flex justify-between items-center mt-7 pt-5 border-t border-line">
+              <div className="flex gap-3 items-center">
                 {step > 1 && (
                   <button className="btn btn-outline" onClick={handlePrev}>
                     ← Back
                   </button>
                 )}
                 <button
-                  style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--text3)', cursor: 'pointer', padding: 0 }}
+                  className="bg-transparent border-none text-[12px] text-ink3 cursor-pointer p-0"
                   onClick={() => addToast('Progress saved locally', 'info')}
                 >
                   Save & Resume Later
@@ -1050,11 +953,10 @@ export default function SetupWizard({ onComplete }) {
 
           {/* Back button for step 7 */}
           {step === 7 && (
-            <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div className="mt-5 pt-4 border-t border-line flex items-center gap-4">
               <button className="btn btn-outline" onClick={handlePrev}>← Back</button>
               <button
-                className="t-xs"
-                style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: 0 }}
+                className="t-xs bg-transparent border-none text-ink3 cursor-pointer p-0"
                 onClick={() => addToast('Progress saved locally', 'info')}
               >
                 Save & Resume Later
@@ -1064,18 +966,12 @@ export default function SetupWizard({ onComplete }) {
         </div>
 
         {/* Step label legend */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginTop: 18, flexWrap: 'wrap' }}>
+        <div className="flex justify-center gap-1.5 mt-[18px] flex-wrap">
           {STEP_LABELS.map((label, i) => (
             <button
               key={label}
               onClick={() => setStep(i + 1)}
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 11, padding: '2px 6px', borderRadius: 4,
-                color: step === i + 1 ? 'var(--gold)' : 'var(--text3)',
-                fontWeight: step === i + 1 ? 700 : 400,
-                transition: 'color 0.14s',
-              }}
+              className={`bg-transparent border-none cursor-pointer text-[11px] px-1.5 py-0.5 rounded transition-[color] duration-[140ms] ${step === i + 1 ? 'text-gold font-bold' : 'text-ink3 font-normal'}`}
             >
               {i + 1}. {label}
             </button>

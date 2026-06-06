@@ -15,14 +15,7 @@ export default function Tabs({ tabs = [], active, onChange, children }) {
   return (
     <div>
       {/* Tab button row */}
-      <div
-        style={{
-          display: 'flex',
-          overflowX: 'auto',
-          borderBottom: '1px solid var(--border)',
-          scrollbarWidth: 'none',
-        }}
-      >
+      <div className="flex overflow-x-auto border-b border-line [scrollbar-width:none]">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -37,7 +30,7 @@ export default function Tabs({ tabs = [], active, onChange, children }) {
 
       {/* Active panel */}
       {activePanel && (
-        <div style={{ paddingTop: '16px' }}>{activePanel}</div>
+        <div className="pt-4">{activePanel}</div>
       )}
     </div>
   )

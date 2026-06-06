@@ -213,63 +213,38 @@ export default function LandingPage({ onLogin }) {
   }
 
   return (
-    <div style={{
+    <div className="w-full h-[100dvh] overflow-y-auto overflow-x-hidden" style={{
       background: CREAM,
       color: INK,
-      width: '100%',
-      height: '100dvh',
-      overflowY: 'auto',
-      overflowX: 'hidden',
     }}>
 
       {/* ── Navbar ───────────────────────────────────────────────────────── */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(250,248,243,0.94)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(0,0,0,0.07)',
-      }}>
-        <div style={{
-          maxWidth: 1200, margin: '0 auto',
-          padding: '0 clamp(16px,5vw,40px)',
-          height: 60,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div style={{
-            fontSize: 'clamp(15px,2vw,18px)', fontWeight: 700, fontStyle: 'italic',
-            color: INK, letterSpacing: '-0.01em', whiteSpace: 'nowrap',
+      <nav className="sticky top-0 z-[100] bg-[rgba(250,248,243,0.94)] backdrop-blur-[12px] border-b border-b-[rgba(0,0,0,0.07)]">
+        <div className="max-w-[1200px] mx-auto px-[clamp(16px,5vw,40px)] h-[60px] flex items-center justify-between">
+          <div className="text-[clamp(15px,2vw,18px)] font-bold italic tracking-[-0.01em] whitespace-nowrap" style={{
+            color: INK,
           }}>
             Quantum <span style={{ color: GOLD }}>Vorvex</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 28 }} className="desktop-only">
+          <div className="desktop-only flex items-center gap-7">
             {NAV_LINKS.map(l => (
-              <span key={l} style={{
-                fontSize: 12.5, fontWeight: 500, letterSpacing: '0.06em',
-                textTransform: 'uppercase', color: '#5a5550', cursor: 'pointer',
-                transition: 'color 0.15s',
-              }}
+              <span key={l} className="text-[12.5px] font-medium tracking-[0.06em] uppercase text-[#5a5550] cursor-pointer transition-colors duration-150"
                 onMouseEnter={e => e.currentTarget.style.color = GOLD}
                 onMouseLeave={e => e.currentTarget.style.color = '#5a5550'}
               >{l}</span>
             ))}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }} className="desktop-only">
-            <button onClick={onLogin} style={{
-              padding: '8px 18px', borderRadius: 6, border: '1px solid rgba(0,0,0,0.15)',
-              background: 'transparent', cursor: 'pointer',
-              fontSize: 12.5, fontWeight: 600, letterSpacing: '0.06em', color: INK,
-              transition: 'all 0.15s',
+          <div className="desktop-only flex items-center gap-2.5">
+            <button onClick={onLogin} className="px-[18px] py-2 rounded-md border border-[rgba(0,0,0,0.15)] bg-transparent cursor-pointer text-[12.5px] font-semibold tracking-[0.06em] transition-all duration-150" style={{
+              color: INK,
             }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = GOLD; e.currentTarget.style.color = GOLD }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'; e.currentTarget.style.color = INK }}
             >SIGN IN</button>
-            <button onClick={onLogin} style={{
-              padding: '8px 18px', borderRadius: 6, border: 'none',
-              background: INK, cursor: 'pointer',
-              fontSize: 12.5, fontWeight: 600, letterSpacing: '0.06em', color: '#fff',
-              transition: 'background 0.15s',
+            <button onClick={onLogin} className="px-[18px] py-2 rounded-md border-none cursor-pointer text-[12.5px] font-semibold tracking-[0.06em] text-white transition-[background] duration-150" style={{
+              background: INK,
             }}
               onMouseEnter={e => e.currentTarget.style.background = '#2a2a28'}
               onMouseLeave={e => e.currentTarget.style.background = INK}
@@ -277,39 +252,27 @@ export default function LandingPage({ onLogin }) {
           </div>
 
           <button
-            className="mobile-only"
+            className="mobile-only bg-none border border-[rgba(0,0,0,0.12)] rounded-md w-9 h-9 items-center justify-center cursor-pointer text-[18px]"
             onClick={() => setMenuOpen(o => !o)}
             style={{
-              background: 'none', border: '1px solid rgba(0,0,0,0.12)',
-              borderRadius: 6, width: 36, height: 36,
-              alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', fontSize: 18, color: INK,
+              color: INK,
             }}
           >{menuOpen ? '✕' : '☰'}</button>
         </div>
 
         {menuOpen && (
-          <div style={{
-            background: CREAM, borderTop: '1px solid rgba(0,0,0,0.07)',
-            padding: '16px clamp(16px,5vw,40px) 20px',
+          <div className="border-t border-t-[rgba(0,0,0,0.07)] pt-4 px-[clamp(16px,5vw,40px)] pb-5" style={{
+            background: CREAM,
           }}>
             {NAV_LINKS.map(l => (
-              <div key={l} onClick={() => setMenuOpen(false)} className="t-body" style={{
-                padding: '13px 0', borderBottom: '1px solid rgba(0,0,0,0.05)',
-                color: '#3a3530', cursor: 'pointer',
-                letterSpacing: '0.04em', textTransform: 'uppercase',
-              }}>{l}</div>
+              <div key={l} onClick={() => setMenuOpen(false)} className="t-body py-[13px] border-b border-b-[rgba(0,0,0,0.05)] text-[#3a3530] cursor-pointer tracking-[0.04em] uppercase">{l}</div>
             ))}
-            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-              <button onClick={() => { setMenuOpen(false); onLogin() }} className="t-title" style={{
-                flex: 1, padding: '11px', borderRadius: 6,
-                border: '1px solid rgba(0,0,0,0.15)', background: 'transparent',
-                cursor: 'pointer', color: INK,
+            <div className="flex gap-2.5 mt-4">
+              <button onClick={() => { setMenuOpen(false); onLogin() }} className="t-title flex-1 p-[11px] rounded-md border border-[rgba(0,0,0,0.15)] bg-transparent cursor-pointer" style={{
+                color: INK,
               }}>SIGN IN</button>
-              <button onClick={() => { setMenuOpen(false); onLogin() }} className="t-title" style={{
-                flex: 1, padding: '11px', borderRadius: 6,
-                border: 'none', background: INK,
-                cursor: 'pointer', color: '#fff',
+              <button onClick={() => { setMenuOpen(false); onLogin() }} className="t-title flex-1 p-[11px] rounded-md border-none cursor-pointer text-white" style={{
+                background: INK,
               }}>GET STARTED</button>
             </div>
           </div>
@@ -317,72 +280,41 @@ export default function LandingPage({ onLogin }) {
       </nav>
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section style={{
-        maxWidth: 1200, margin: '0 auto',
-        padding: 'clamp(40px,7vh,88px) clamp(16px,5vw,40px) clamp(36px,6vh,72px)',
-      }}>
-        <div className="lp-hero-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 'clamp(32px,5vw,72px)',
-          alignItems: 'center',
-        }}>
+      <section className="max-w-[1200px] mx-auto pt-[clamp(40px,7vh,88px)] px-[clamp(16px,5vw,40px)] pb-[clamp(36px,6vh,72px)]">
+        <div className="lp-hero-grid grid grid-cols-2 gap-[clamp(32px,5vw,72px)] items-center">
           <div>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 7,
-              background: 'rgba(201,168,76,0.1)',
-              border: '1px solid rgba(201,168,76,0.3)',
-              borderRadius: 100, padding: '5px 14px', marginBottom: 26,
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, display: 'block' }} />
-              <span className="t-label" style={{ letterSpacing: '0.16em', color: GOLD }}>
+            <div className="inline-flex items-center gap-[7px] bg-[rgba(201,168,76,0.1)] border border-[rgba(201,168,76,0.3)] rounded-[100px] px-[14px] py-[5px] mb-[26px]">
+              <span className="w-1.5 h-1.5 rounded-full block" style={{ background: GOLD }} />
+              <span className="t-label tracking-[0.16em]" style={{ color: GOLD }}>
                 HOTEL MANAGEMENT PLATFORM
               </span>
             </div>
 
-            <h1 style={{
-              fontSize: 'clamp(34px, 5.5vw, 72px)',
-              fontWeight: 900, color: INK,
-              margin: '0 0 2px', lineHeight: 1.04, letterSpacing: '-0.02em',
+            <h1 className="text-[clamp(34px,5.5vw,72px)] font-black mt-0 mx-0 mb-0.5 leading-[1.04] tracking-[-0.02em]" style={{
+              color: INK,
             }}>Seamless</h1>
-            <h1 style={{
-              fontSize: 'clamp(34px, 5.5vw, 72px)',
-              fontWeight: 900, color: INK,
-              margin: '0 0 4px', lineHeight: 1.04, letterSpacing: '-0.02em',
+            <h1 className="text-[clamp(34px,5.5vw,72px)] font-black mt-0 mx-0 mb-1 leading-[1.04] tracking-[-0.02em]" style={{
+              color: INK,
             }}>Operations.</h1>
-            <h2 style={{
-              fontSize: 'clamp(24px, 4vw, 52px)',
-              fontWeight: 700, fontStyle: 'italic', color: GOLD,
-              margin: '0 0 22px', lineHeight: 1.1,
+            <h2 className="text-[clamp(24px,4vw,52px)] font-bold italic mt-0 mx-0 mb-[22px] leading-[1.1]" style={{
+              color: GOLD,
             }}>Intelligent Management.</h2>
 
-            <p style={{
-              fontSize: 'clamp(14px, 1.6vw, 16px)',
-              color: '#6b6055', lineHeight: 1.8,
-              maxWidth: 480, margin: '0 0 32px',
-            }}>
+            <p className="text-[clamp(14px,1.6vw,16px)] text-[#6b6055] leading-[1.8] max-w-[480px] mt-0 mx-0 mb-8">
               One unified platform for Indian hospitality. GST-compliant billing, smart
               check-in, real-time room tracking, and intelligent analytics — built for
               property owners who mean business.
             </p>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-              <button onClick={onLogin} style={{
-                padding: 'clamp(11px,1.5vw,13px) clamp(22px,2.5vw,30px)',
-                borderRadius: 8, border: 'none',
-                background: INK, color: '#fff',
-                fontSize: 'clamp(12px,1.3vw,13px)', fontWeight: 700,
-                letterSpacing: '0.06em', cursor: 'pointer', transition: 'background 0.15s',
+            <div className="flex flex-wrap gap-3">
+              <button onClick={onLogin} className="px-[clamp(22px,2.5vw,30px)] py-[clamp(11px,1.5vw,13px)] rounded-lg border-none text-white text-[clamp(12px,1.3vw,13px)] font-bold tracking-[0.06em] cursor-pointer transition-[background] duration-150" style={{
+                background: INK,
               }}
                 onMouseEnter={e => e.currentTarget.style.background = '#2a2a28'}
                 onMouseLeave={e => e.currentTarget.style.background = INK}
               >START FREE DEMO →</button>
-              <button style={{
-                padding: 'clamp(11px,1.5vw,13px) clamp(22px,2.5vw,30px)',
-                borderRadius: 8, border: '1.5px solid rgba(0,0,0,0.15)',
-                background: 'transparent', color: INK,
-                fontSize: 'clamp(12px,1.3vw,13px)', fontWeight: 600,
-                letterSpacing: '0.06em', cursor: 'pointer', transition: 'all 0.15s',
+              <button className="px-[clamp(22px,2.5vw,30px)] py-[clamp(11px,1.5vw,13px)] rounded-lg border-[1.5px] border-[rgba(0,0,0,0.15)] bg-transparent text-[clamp(12px,1.3vw,13px)] font-semibold tracking-[0.06em] cursor-pointer transition-all duration-150" style={{
+                color: INK,
               }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = GOLD; e.currentTarget.style.color = GOLD }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(0,0,0,0.15)'; e.currentTarget.style.color = INK }}
@@ -391,29 +323,21 @@ export default function LandingPage({ onLogin }) {
           </div>
 
           {/* Right — stat cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+          <div className="grid grid-cols-2 gap-[14px]">
             {[
               { label: 'Occupancy', value: '87%',  icon: '◉', color: '#16a34a', bg: '#dcfce7' },
               { label: 'Revenue',   value: '₹2.4L', icon: '◑', color: '#c9a84c', bg: 'rgba(201,168,76,0.1)' },
               { label: 'Check-Ins', value: '6',     icon: '↗', color: '#2563eb', bg: '#dbeafe' },
               { label: 'Pending',   value: '3',     icon: '◷', color: '#d97706', bg: '#fef3c7' },
             ].map(card => (
-              <div key={card.label} style={{
-                background: '#fff',
-                border: '1px solid rgba(0,0,0,0.07)',
-                borderRadius: 14, padding: 'clamp(16px,2vw,22px)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-              }}>
-                <div style={{
-                  width: 34, height: 34, borderRadius: 9,
+              <div key={card.label} className="bg-white border border-[rgba(0,0,0,0.07)] rounded-[14px] p-[clamp(16px,2vw,22px)] shadow-[0_4px_20px_rgba(0,0,0,0.06)]">
+                <div className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center text-[16px] mb-3" style={{
                   background: card.bg, color: card.color,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 16, marginBottom: 12,
                 }}>{card.icon}</div>
-                <div style={{
-                  fontSize: 'clamp(22px,3vw,30px)', fontWeight: 900, color: INK, lineHeight: 1,
+                <div className="text-[clamp(22px,3vw,30px)] font-black leading-none" style={{
+                  color: INK,
                 }}>{card.value}</div>
-                <div className="t-label" style={{ color: '#888', marginTop: 5 }}>{card.label}</div>
+                <div className="t-label text-[#888] mt-[5px]">{card.label}</div>
               </div>
             ))}
           </div>
@@ -421,63 +345,38 @@ export default function LandingPage({ onLogin }) {
       </section>
 
       {/* ── Stats bar ────────────────────────────────────────────────────── */}
-      <section style={{
+      <section className="py-[clamp(28px,5vh,44px)] px-[clamp(16px,5vw,40px)]" style={{
         background: INK,
-        padding: 'clamp(28px,5vh,44px) clamp(16px,5vw,40px)',
       }}>
-        <div style={{
-          maxWidth: 1200, margin: '0 auto',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-          gap: 'clamp(16px,3vw,40px)',
-        }}>
+        <div className="max-w-[1200px] mx-auto grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-[clamp(16px,3vw,40px)]">
           {STATS.map(s => (
-            <div key={s.label} style={{ textAlign: 'center' }}>
-              <div style={{
-                fontSize: 'clamp(28px,4vw,44px)',
-                fontWeight: 900, color: GOLD, lineHeight: 1,
+            <div key={s.label} className="text-center">
+              <div className="text-[clamp(28px,4vw,44px)] font-black leading-none" style={{
+                color: GOLD,
               }}>{s.value}</div>
-              <div style={{
-                fontSize: 10.5, fontWeight: 600, letterSpacing: '0.1em',
-                textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)',
-                marginTop: 6,
-              }}>{s.label}</div>
+              <div className="text-[10.5px] font-semibold tracking-[0.1em] uppercase text-[rgba(255,255,255,0.4)] mt-1.5">{s.label}</div>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── Why Quantum Vorvex ───────────────────────────────────────────── */}
-      <section style={{
-        maxWidth: 1200, margin: '0 auto',
-        padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,5vh,52px)' }}>
-          <div className="t-label" style={{
-            letterSpacing: '0.16em',
-            color: GOLD, marginBottom: 12,
+      <section className="max-w-[1200px] mx-auto py-[clamp(44px,7vh,80px)] px-[clamp(16px,5vw,40px)]">
+        <div className="text-center mb-[clamp(28px,5vh,52px)]">
+          <div className="t-label tracking-[0.16em] mb-3" style={{
+            color: GOLD,
           }}>WHY QUANTUM VORVEX</div>
-          <h2 style={{
-            fontSize: 'clamp(26px,3.5vw,42px)',
-            fontWeight: 900, color: INK, margin: '0 0 14px', lineHeight: 1.1,
+          <h2 className="text-[clamp(26px,3.5vw,42px)] font-black mt-0 mx-0 mb-[14px] leading-[1.1]" style={{
+            color: INK,
           }}>Designed for the way<br />Indian hotels actually work.</h2>
-          <p className="t-body" style={{ color: '#6b6055', lineHeight: 1.75, maxWidth: 520, margin: '0 auto' }}>
+          <p className="t-body text-[#6b6055] leading-[1.75] max-w-[520px] mx-auto">
             Not a generic SaaS from abroad. Every detail — from GST slabs to Aadhaar ID capture — is built for the Indian hospitality context.
           </p>
         </div>
 
-        <div className="lp-why-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4,1fr)',
-          gap: 16,
-        }}>
+        <div className="lp-why-grid grid grid-cols-4 gap-4">
           {WHY.map(w => (
-            <div key={w.title} style={{
-              background: '#fff',
-              border: '1px solid rgba(0,0,0,0.07)',
-              borderRadius: 12, padding: 'clamp(20px,2.5vw,28px)',
-              transition: 'all 0.15s',
-            }}
+            <div key={w.title} className="bg-white border border-[rgba(0,0,0,0.07)] rounded-xl p-[clamp(20px,2.5vw,28px)] transition-all duration-150"
               onMouseEnter={e => {
                 e.currentTarget.style.boxShadow = '0 6px 24px rgba(0,0,0,0.09)'
                 e.currentTarget.style.transform = 'translateY(-3px)'
@@ -487,64 +386,41 @@ export default function LandingPage({ onLogin }) {
                 e.currentTarget.style.transform = 'none'
               }}
             >
-              <div style={{ fontSize: 28, marginBottom: 14 }}>{w.icon}</div>
-              <div className="t-h3" style={{
-                color: INK, marginBottom: 10,
+              <div className="text-[28px] mb-[14px]">{w.icon}</div>
+              <div className="t-h3 mb-2.5" style={{
+                color: INK,
               }}>{w.title}</div>
-              <div className="t-sm" style={{ color: '#6b6055', lineHeight: 1.75 }}>{w.desc}</div>
+              <div className="t-sm text-[#6b6055] leading-[1.75]">{w.desc}</div>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── Modules ──────────────────────────────────────────────────────── */}
-      <section style={{
-        background: '#f0ede6',
-        padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
-      }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div className="lp-modules-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: '280px 1fr',
-            gap: 'clamp(24px,4vw,60px)',
-            alignItems: 'start',
-          }}>
+      <section className="bg-[#f0ede6] py-[clamp(44px,7vh,80px)] px-[clamp(16px,5vw,40px)]">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="lp-modules-grid grid grid-cols-[280px_1fr] gap-[clamp(24px,4vw,60px)] items-start">
             <div>
-              <div className="t-label" style={{
-                letterSpacing: '0.16em',
-                color: GOLD, marginBottom: 14,
+              <div className="t-label tracking-[0.16em] mb-[14px]" style={{
+                color: GOLD,
               }}>PLATFORM MODULES</div>
-              <h2 style={{
-                fontSize: 'clamp(26px,3.5vw,42px)',
-                fontWeight: 900, color: INK, lineHeight: 1.1,
-                margin: '0 0 16px', letterSpacing: '-0.01em',
+              <h2 className="text-[clamp(26px,3.5vw,42px)] font-black leading-[1.1] mt-0 mx-0 mb-4 tracking-[-0.01em]" style={{
+                color: INK,
               }}>One platform.<br />Every module.</h2>
-              <p className="t-body" style={{ color: '#6b6055', lineHeight: 1.75, margin: 0, maxWidth: 320 }}>
+              <p className="t-body text-[#6b6055] leading-[1.75] m-0 max-w-[320px]">
                 From front desk to back office — Quantum Vorvex covers every workflow your hotel needs.
               </p>
-              <button onClick={onLogin} style={{
-                marginTop: 26,
-                padding: '11px 24px', borderRadius: 7,
-                border: 'none', background: GOLD, color: '#000',
-                fontSize: 12.5, fontWeight: 700, letterSpacing: '0.06em',
-                cursor: 'pointer', transition: 'background 0.15s', display: 'inline-block',
+              <button onClick={onLogin} className="mt-[26px] px-6 py-[11px] rounded-[7px] border-none text-black text-[12.5px] font-bold tracking-[0.06em] cursor-pointer transition-[background] duration-150 inline-block" style={{
+                background: GOLD,
               }}
                 onMouseEnter={e => e.currentTarget.style.background = '#d4b55a'}
                 onMouseLeave={e => e.currentTarget.style.background = GOLD}
               >SIGN IN TO PLATFORM</button>
             </div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
-              gap: 10,
-            }}>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5">
               {MODULES.map(mod => (
-                <div key={mod.label} style={{
-                  background: '#fff', border: '1px solid rgba(0,0,0,0.07)',
-                  borderRadius: 10, padding: '15px',
-                  transition: 'all 0.15s', cursor: 'default',
-                }}
+                <div key={mod.label} className="bg-white border border-[rgba(0,0,0,0.07)] rounded-[10px] p-[15px] transition-all duration-150 cursor-default"
                   onMouseEnter={e => {
                     e.currentTarget.style.borderColor = 'rgba(201,168,76,0.5)'
                     e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'
@@ -556,9 +432,9 @@ export default function LandingPage({ onLogin }) {
                     e.currentTarget.style.transform = 'none'
                   }}
                 >
-                  <span style={{ fontSize: 18, display: 'block', marginBottom: 8 }}>{mod.icon}</span>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: INK, marginBottom: 3 }}>{mod.label}</div>
-                  <div className="t-xs" style={{ color: '#888', lineHeight: 1.5 }}>{mod.desc}</div>
+                  <span className="text-[18px] block mb-2">{mod.icon}</span>
+                  <div className="text-[12.5px] font-semibold mb-[3px]" style={{ color: INK }}>{mod.label}</div>
+                  <div className="t-xs text-[#888] leading-[1.5]">{mod.desc}</div>
                 </div>
               ))}
             </div>
@@ -567,57 +443,35 @@ export default function LandingPage({ onLogin }) {
       </section>
 
       {/* ── Feature deep-dive ────────────────────────────────────────────── */}
-      <section style={{
-        maxWidth: 1200, margin: '0 auto',
-        padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,5vh,52px)' }}>
-          <div className="t-label" style={{
-            letterSpacing: '0.16em',
-            color: GOLD, marginBottom: 12,
+      <section className="max-w-[1200px] mx-auto py-[clamp(44px,7vh,80px)] px-[clamp(16px,5vw,40px)]">
+        <div className="text-center mb-[clamp(28px,5vh,52px)]">
+          <div className="t-label tracking-[0.16em] mb-3" style={{
+            color: GOLD,
           }}>KEY FEATURES</div>
-          <h2 style={{
-            fontSize: 'clamp(26px,3.5vw,42px)',
-            fontWeight: 900, color: INK, margin: 0, lineHeight: 1.1,
+          <h2 className="text-[clamp(26px,3.5vw,42px)] font-black m-0 leading-[1.1]" style={{
+            color: INK,
           }}>Every detail.<br />Thought through.</h2>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        <div className="flex flex-col gap-5">
           {FEATURES.map((f, i) => (
-            <div key={f.badge} className="lp-feature-card" style={{
-              display: 'grid',
+            <div key={f.badge} className="lp-feature-card grid gap-[clamp(24px,4vw,60px)] items-center bg-white border border-[rgba(0,0,0,0.07)] rounded-2xl p-[clamp(28px,4vw,44px)] shadow-[0_4px_24px_rgba(0,0,0,0.05)]" style={{
               gridTemplateColumns: i % 2 === 0 ? '1fr 420px' : '420px 1fr',
-              gap: 'clamp(24px,4vw,60px)',
-              alignItems: 'center',
-              background: '#fff',
-              border: '1px solid rgba(0,0,0,0.07)',
-              borderRadius: 16, padding: 'clamp(28px,4vw,44px)',
-              boxShadow: '0 4px 24px rgba(0,0,0,0.05)',
             }}>
               {/* Text */}
               <div style={{ order: i % 2 === 0 ? 0 : 1 }}>
-                <div style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  background: f.bg, borderRadius: 100, padding: '4px 12px',
-                  fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', color: f.color,
-                  marginBottom: 16,
+                <div className="inline-flex items-center gap-1.5 rounded-[100px] px-3 py-1 text-[9.5px] font-bold tracking-[0.12em] mb-4" style={{
+                  background: f.bg, color: f.color,
                 }}>{f.badge}</div>
-                <h3 style={{
-                  fontSize: 'clamp(20px,2.5vw,28px)',
-                  fontWeight: 900, color: INK, margin: '0 0 14px', lineHeight: 1.2,
+                <h3 className="text-[clamp(20px,2.5vw,28px)] font-black mt-0 mx-0 mb-[14px] leading-[1.2]" style={{
+                  color: INK,
                 }}>{f.title}</h3>
-                <p className="t-body" style={{ color: '#6b6055', lineHeight: 1.8, margin: '0 0 20px' }}>{f.desc}</p>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                <p className="t-body text-[#6b6055] leading-[1.8] mt-0 mx-0 mb-5">{f.desc}</p>
+                <ul className="list-none p-0 m-0">
                   {f.points.map(p => (
-                    <li key={p} style={{
-                      display: 'flex', alignItems: 'flex-start', gap: 9,
-                      fontSize: 13.5, color: '#3a3530', marginBottom: 9, lineHeight: 1.5,
-                    }}>
-                      <span style={{
-                        width: 16, height: 16, borderRadius: '50%',
+                    <li key={p} className="flex items-start gap-[9px] text-[13.5px] text-[#3a3530] mb-[9px] leading-[1.5]">
+                      <span className="w-4 h-4 rounded-full inline-flex items-center justify-center text-[9px] font-bold shrink-0 mt-px" style={{
                         background: f.bg, color: f.color,
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 9, fontWeight: 700, flexShrink: 0, marginTop: 1,
                       }}>✓</span>
                       {p}
                     </li>
@@ -626,13 +480,9 @@ export default function LandingPage({ onLogin }) {
               </div>
 
               {/* Visual */}
-              <div style={{
+              <div className="rounded-xl h-[clamp(180px,22vw,260px)] flex items-center justify-center text-[clamp(56px,8vw,96px)]" style={{
                 order: i % 2 === 0 ? 1 : 0,
                 background: f.bg,
-                borderRadius: 12,
-                height: 'clamp(180px,22vw,260px)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 'clamp(56px,8vw,96px)',
               }}>{f.icon}</div>
             </div>
           ))}
@@ -640,58 +490,35 @@ export default function LandingPage({ onLogin }) {
       </section>
 
       {/* ── How It Works ─────────────────────────────────────────────────── */}
-      <section style={{
+      <section className="py-[clamp(48px,8vh,80px)] px-[clamp(16px,5vw,40px)]" style={{
         background: INK,
-        padding: 'clamp(48px,8vh,80px) clamp(16px,5vw,40px)',
       }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,5vh,52px)' }}>
-            <div className="t-label" style={{
-              letterSpacing: '0.16em',
-              color: GOLD, marginBottom: 12,
+        <div className="max-w-[1200px] mx-auto">
+          <div className="text-center mb-[clamp(28px,5vh,52px)]">
+            <div className="t-label tracking-[0.16em] mb-3" style={{
+              color: GOLD,
             }}>HOW IT WORKS</div>
-            <h2 style={{
-              fontSize: 'clamp(26px,3.5vw,42px)',
-              fontWeight: 900, color: '#fff', margin: 0, lineHeight: 1.1,
-            }}>Up and running<br />in minutes.</h2>
+            <h2 className="text-[clamp(26px,3.5vw,42px)] font-black text-white m-0 leading-[1.1]">Up and running<br />in minutes.</h2>
           </div>
 
-          <div className="lp-steps-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 'clamp(16px,3vw,32px)',
-          }}>
+          <div className="lp-steps-grid grid grid-cols-3 gap-[clamp(16px,3vw,32px)]">
             {HOW_STEPS.map((s, i) => (
-              <div key={s.step} style={{
-                position: 'relative',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 14, padding: 'clamp(24px,3vw,32px)',
-              }}>
+              <div key={s.step} className="relative bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] rounded-[14px] p-[clamp(24px,3vw,32px)]">
                 {i < HOW_STEPS.length - 1 && (
-                  <div className="desktop-only" style={{
-                    position: 'absolute', right: -16, top: '38%',
-                    fontSize: 20, color: 'rgba(255,255,255,0.15)', zIndex: 1,
-                  }}>→</div>
+                  <div className="desktop-only absolute -right-4 top-[38%] text-[20px] text-[rgba(255,255,255,0.15)] z-[1]">→</div>
                 )}
-                <div style={{
-                  fontSize: 'clamp(40px,5vw,64px)', fontWeight: 900,
-                  color: GOLD, lineHeight: 1, marginBottom: 16, opacity: 0.7,
+                <div className="text-[clamp(40px,5vw,64px)] font-black leading-none mb-4 opacity-70" style={{
+                  color: GOLD,
                 }}>{s.step}</div>
-                <div className="t-h2" style={{
-                  color: '#fff', marginBottom: 10,
-                }}>{s.title}</div>
-                <div style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.5)', lineHeight: 1.75 }}>{s.desc}</div>
+                <div className="t-h2 text-white mb-2.5">{s.title}</div>
+                <div className="text-[13.5px] text-[rgba(255,255,255,0.5)] leading-[1.75]">{s.desc}</div>
               </div>
             ))}
           </div>
 
-          <div style={{ textAlign: 'center', marginTop: 40 }}>
-            <button onClick={onLogin} className="t-title" style={{
-              padding: '13px 36px', borderRadius: 8, border: 'none',
-              background: GOLD, color: '#000',
-              letterSpacing: '0.08em',
-              cursor: 'pointer', transition: 'background 0.15s',
+          <div className="text-center mt-10">
+            <button onClick={onLogin} className="t-title px-9 py-[13px] rounded-lg border-none text-black tracking-[0.08em] cursor-pointer transition-[background] duration-150" style={{
+              background: GOLD,
             }}
               onMouseEnter={e => e.currentTarget.style.background = '#d4b55a'}
               onMouseLeave={e => e.currentTarget.style.background = GOLD}
@@ -701,90 +528,56 @@ export default function LandingPage({ onLogin }) {
       </section>
 
       {/* ── Roles ────────────────────────────────────────────────────────── */}
-      <section style={{
-        maxWidth: 1200, margin: '0 auto',
-        padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,4vh,48px)' }}>
-          <div className="t-label" style={{
-            letterSpacing: '0.16em',
-            color: GOLD, marginBottom: 12,
+      <section className="max-w-[1200px] mx-auto py-[clamp(44px,7vh,80px)] px-[clamp(16px,5vw,40px)]">
+        <div className="text-center mb-[clamp(28px,4vh,48px)]">
+          <div className="t-label tracking-[0.16em] mb-3" style={{
+            color: GOLD,
           }}>ROLE-BASED ACCESS</div>
-          <h2 style={{
-            fontSize: 'clamp(26px,3.5vw,40px)',
-            fontWeight: 900, color: INK, margin: 0, lineHeight: 1.1,
+          <h2 className="text-[clamp(26px,3.5vw,40px)] font-black m-0 leading-[1.1]" style={{
+            color: INK,
           }}>Right access.<br />Right people.</h2>
         </div>
-        <div className="lp-roles-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3,1fr)',
-          gap: 16,
-        }}>
+        <div className="lp-roles-grid grid grid-cols-3 gap-4">
           {ROLES.map(r => (
-            <div key={r.role} style={{
-              background: '#fff',
-              border: '1px solid rgba(0,0,0,0.07)',
+            <div key={r.role} className="bg-white border border-[rgba(0,0,0,0.07)] rounded-[10px] p-[clamp(20px,3vw,26px)]" style={{
               borderTop: `3px solid ${r.color}`,
-              borderRadius: 10, padding: 'clamp(20px,3vw,26px)',
             }}>
-              <div style={{ fontSize: 24, marginBottom: 12 }}>{r.icon}</div>
-              <div className="t-h3" style={{
-                color: INK, marginBottom: 10,
+              <div className="text-[24px] mb-3">{r.icon}</div>
+              <div className="t-h3 mb-2.5" style={{
+                color: INK,
               }}>{r.role}</div>
-              <div className="t-sm" style={{ color: '#6b6055', lineHeight: 1.7 }}>{r.desc}</div>
+              <div className="t-sm text-[#6b6055] leading-[1.7]">{r.desc}</div>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── Testimonials ─────────────────────────────────────────────────── */}
-      <section style={{
-        background: '#f0ede6',
-        padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
-      }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,5vh,52px)' }}>
-            <div className="t-label" style={{
-              letterSpacing: '0.16em',
-              color: GOLD, marginBottom: 12,
+      <section className="bg-[#f0ede6] py-[clamp(44px,7vh,80px)] px-[clamp(16px,5vw,40px)]">
+        <div className="max-w-[1200px] mx-auto">
+          <div className="text-center mb-[clamp(28px,5vh,52px)]">
+            <div className="t-label tracking-[0.16em] mb-3" style={{
+              color: GOLD,
             }}>WHAT HOTELIERS SAY</div>
-            <h2 style={{
-              fontSize: 'clamp(26px,3.5vw,42px)',
-              fontWeight: 900, color: INK, margin: 0, lineHeight: 1.1,
+            <h2 className="text-[clamp(26px,3.5vw,42px)] font-black m-0 leading-[1.1]" style={{
+              color: INK,
             }}>Trusted by hotel owners<br />across India.</h2>
           </div>
 
-          <div className="lp-testimonials-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 20,
-          }}>
+          <div className="lp-testimonials-grid grid grid-cols-3 gap-5">
             {TESTIMONIALS.map(t => (
-              <div key={t.name} style={{
-                background: '#fff',
-                border: '1px solid rgba(0,0,0,0.07)',
-                borderRadius: 14, padding: 'clamp(22px,3vw,32px)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-                display: 'flex', flexDirection: 'column', gap: 20,
-              }}>
-                <div style={{
-                  fontSize: 36, color: t.color, lineHeight: 1,
-                  opacity: 0.5,
+              <div key={t.name} className="bg-white border border-[rgba(0,0,0,0.07)] rounded-[14px] p-[clamp(22px,3vw,32px)] shadow-[0_4px_20px_rgba(0,0,0,0.05)] flex flex-col gap-5">
+                <div className="text-[36px] leading-none opacity-50" style={{
+                  color: t.color,
                 }}>"</div>
-                <p className="t-body" style={{
-                  color: '#3a3530', lineHeight: 1.8,
-                  margin: 0, flex: 1, fontStyle: 'italic',
-                }}>{t.quote}</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: '50%',
+                <p className="t-body text-[#3a3530] leading-[1.8] m-0 flex-1 italic">{t.quote}</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-[15px] font-bold text-white shrink-0" style={{
                     background: t.color,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 15, fontWeight: 700, color: '#fff', flexShrink: 0,
                   }}>{t.initial}</div>
                   <div>
                     <div className="t-title" style={{ color: INK }}>{t.name}</div>
-                    <div style={{ fontSize: 11.5, color: '#888', marginTop: 2 }}>{t.title}</div>
+                    <div className="text-[11.5px] text-[#888] mt-0.5">{t.title}</div>
                   </div>
                 </div>
               </div>
@@ -794,84 +587,59 @@ export default function LandingPage({ onLogin }) {
       </section>
 
       {/* ── Pricing ──────────────────────────────────────────────────────── */}
-      <section style={{
-        maxWidth: 1200, margin: '0 auto',
-        padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,5vh,52px)' }}>
-          <div className="t-label" style={{
-            letterSpacing: '0.16em',
-            color: GOLD, marginBottom: 12,
+      <section className="max-w-[1200px] mx-auto py-[clamp(44px,7vh,80px)] px-[clamp(16px,5vw,40px)]">
+        <div className="text-center mb-[clamp(28px,5vh,52px)]">
+          <div className="t-label tracking-[0.16em] mb-3" style={{
+            color: GOLD,
           }}>PRICING</div>
-          <h2 style={{
-            fontSize: 'clamp(26px,3.5vw,42px)',
-            fontWeight: 900, color: INK, margin: '0 0 14px', lineHeight: 1.1,
+          <h2 className="text-[clamp(26px,3.5vw,42px)] font-black mt-0 mx-0 mb-[14px] leading-[1.1]" style={{
+            color: INK,
           }}>Simple, transparent pricing.</h2>
-          <p className="t-body" style={{ color: '#6b6055', lineHeight: 1.75 }}>
+          <p className="t-body text-[#6b6055] leading-[1.75]">
             No hidden fees. No per-user charges. Cancel anytime.
           </p>
         </div>
 
-        <div className="lp-pricing-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: 20,
-          alignItems: 'start',
-        }}>
+        <div className="lp-pricing-grid grid grid-cols-3 gap-5 items-start">
           {PLANS.map(plan => (
-            <div key={plan.name} style={{
+            <div key={plan.name} className="rounded-[14px] p-[clamp(24px,3vw,36px)] relative" style={{
               background: plan.highlight ? INK : '#fff',
               border: plan.highlight ? `2px solid ${GOLD}` : '1px solid rgba(0,0,0,0.09)',
-              borderRadius: 14,
-              padding: 'clamp(24px,3vw,36px)',
-              position: 'relative',
               boxShadow: plan.highlight ? '0 12px 48px rgba(0,0,0,0.18)' : '0 4px 20px rgba(0,0,0,0.05)',
             }}>
               {plan.highlight && (
-                <div style={{
-                  position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)',
-                  background: GOLD, color: '#000',
-                  fontSize: 9.5, fontWeight: 800, letterSpacing: '0.12em',
-                  padding: '4px 14px', borderRadius: 100,
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-black text-[9.5px] font-extrabold tracking-[0.12em] px-[14px] py-1 rounded-[100px]" style={{
+                  background: GOLD,
                 }}>MOST POPULAR</div>
               )}
-              <div className="t-label" style={{
-                letterSpacing: '0.1em',
+              <div className="t-label tracking-[0.1em] mb-2.5" style={{
                 color: plan.highlight ? 'rgba(255,255,255,0.45)' : '#888',
-                marginBottom: 10,
               }}>{plan.name}</div>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 8 }}>
-                <span style={{
-                  fontSize: 'clamp(28px,3.5vw,38px)', fontWeight: 900,
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-[clamp(28px,3.5vw,38px)] font-black" style={{
                   color: plan.highlight ? GOLD : INK,
                 }}>{plan.price}</span>
                 {plan.period && (
                   <span className="t-sm" style={{ color: plan.highlight ? 'rgba(255,255,255,0.35)' : '#888' }}>{plan.period}</span>
                 )}
               </div>
-              <p className="t-sm" style={{
-                lineHeight: 1.65, margin: '0 0 22px',
+              <p className="t-sm leading-[1.65] mt-0 mx-0 mb-[22px]" style={{
                 color: plan.highlight ? 'rgba(255,255,255,0.5)' : '#6b6055',
               }}>{plan.desc}</p>
-              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 28px', display: 'flex', flexDirection: 'column', gap: 9 }}>
+              <ul className="list-none p-0 mt-0 mx-0 mb-7 flex flex-col gap-[9px]">
                 {plan.features.map(f => (
-                  <li key={f} className="t-sm" style={{
-                    display: 'flex', alignItems: 'center', gap: 9,
+                  <li key={f} className="t-sm flex items-center gap-[9px]" style={{
                     color: plan.highlight ? 'rgba(255,255,255,0.75)' : '#3a3530',
                   }}>
-                    <span style={{ color: GOLD, fontWeight: 700, fontSize: 12 }}>✓</span>
+                    <span className="font-bold text-[12px]" style={{ color: GOLD }}>✓</span>
                     {f}
                   </li>
                 ))}
               </ul>
-              <button onClick={onLogin} style={{
-                width: '100%', padding: '12px',
-                borderRadius: 8,
+              <button onClick={onLogin} className="w-full p-3 rounded-lg text-[12.5px] font-bold tracking-[0.07em] cursor-pointer transition-all duration-150" style={{
                 border: plan.highlight ? 'none' : `1.5px solid ${plan.color === GOLD ? GOLD : 'rgba(0,0,0,0.15)'}`,
                 background: plan.highlight ? GOLD : 'transparent',
                 color: plan.highlight ? '#000' : plan.color,
-                fontSize: 12.5, fontWeight: 700, letterSpacing: '0.07em',
-                cursor: 'pointer', transition: 'all 0.15s',
               }}
                 onMouseEnter={e => {
                   if (plan.highlight) { e.currentTarget.style.background = '#d4b55a' }
@@ -888,52 +656,29 @@ export default function LandingPage({ onLogin }) {
       </section>
 
       {/* ── FAQ ──────────────────────────────────────────────────────────── */}
-      <section style={{
-        background: '#f0ede6',
-        padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
-      }}>
-        <div style={{ maxWidth: 760, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 'clamp(28px,5vh,52px)' }}>
-            <div className="t-label" style={{
-              letterSpacing: '0.16em',
-              color: GOLD, marginBottom: 12,
+      <section className="bg-[#f0ede6] py-[clamp(44px,7vh,80px)] px-[clamp(16px,5vw,40px)]">
+        <div className="max-w-[760px] mx-auto">
+          <div className="text-center mb-[clamp(28px,5vh,52px)]">
+            <div className="t-label tracking-[0.16em] mb-3" style={{
+              color: GOLD,
             }}>FAQ</div>
-            <h2 style={{
-              fontSize: 'clamp(26px,3.5vw,42px)',
-              fontWeight: 900, color: INK, margin: 0, lineHeight: 1.1,
+            <h2 className="text-[clamp(26px,3.5vw,42px)] font-black m-0 leading-[1.1]" style={{
+              color: INK,
             }}>Common questions,<br />honest answers.</h2>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div className="flex flex-col gap-2.5">
             {FAQS.map((faq, i) => (
-              <div key={i} style={{
-                background: '#fff',
-                border: '1px solid rgba(0,0,0,0.07)',
-                borderRadius: 10, overflow: 'hidden',
-                transition: 'box-shadow 0.15s',
-                boxShadow: openFaq === i ? '0 4px 20px rgba(0,0,0,0.07)' : 'none',
-              }}>
+              <div key={i} className={`bg-white border border-[rgba(0,0,0,0.07)] rounded-[10px] overflow-hidden transition-shadow duration-150 ${openFaq === i ? 'shadow-[0_4px_20px_rgba(0,0,0,0.07)]' : 'shadow-none'}`}>
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  style={{
-                    width: '100%', textAlign: 'left',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    padding: 'clamp(14px,2vw,20px) clamp(16px,2.5vw,24px)',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16,
-                  }}
+                  className="w-full text-left bg-none border-none cursor-pointer px-[clamp(16px,2.5vw,24px)] py-[clamp(14px,2vw,20px)] flex justify-between items-center gap-4"
                 >
-                  <span style={{ fontSize: 14.5, fontWeight: 600, color: INK, lineHeight: 1.4 }}>{faq.q}</span>
-                  <span style={{
-                    fontSize: 18, color: GOLD, flexShrink: 0,
-                    transition: 'transform 0.2s',
-                    transform: openFaq === i ? 'rotate(45deg)' : 'none',
-                  }}>+</span>
+                  <span className="text-[14.5px] font-semibold leading-[1.4]" style={{ color: INK }}>{faq.q}</span>
+                  <span className={`text-[18px] shrink-0 transition-transform duration-200 ${openFaq === i ? 'rotate-45' : 'rotate-0'}`} style={{ color: GOLD }}>+</span>
                 </button>
                 {openFaq === i && (
-                  <div style={{
-                    padding: '0 clamp(16px,2.5vw,24px) clamp(14px,2vw,20px)',
-                    fontSize: 13.5, color: '#6b6055', lineHeight: 1.8,
-                  }}>{faq.a}</div>
+                  <div className="pt-0 px-[clamp(16px,2.5vw,24px)] pb-[clamp(14px,2vw,20px)] text-[13.5px] text-[#6b6055] leading-[1.8]">{faq.a}</div>
                 )}
               </div>
             ))}
@@ -942,31 +687,28 @@ export default function LandingPage({ onLogin }) {
       </section>
 
       {/* ── Contact Us ───────────────────────────────────────────────────── */}
-      <section style={{
-        maxWidth: 1200, margin: '0 auto',
-        padding: 'clamp(44px,7vh,80px) clamp(16px,5vw,40px)',
-      }}>
-        <div className="lp-contact-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'clamp(32px,5vw,72px)', alignItems: 'start' }}>
+      <section className="max-w-[1200px] mx-auto py-[clamp(44px,7vh,80px)] px-[clamp(16px,5vw,40px)]">
+        <div className="lp-contact-grid grid grid-cols-2 gap-[clamp(32px,5vw,72px)] items-start">
           {/* Left copy */}
           <div>
-            <div className="t-label" style={{ letterSpacing: '0.16em', color: GOLD, marginBottom: 14 }}>CONTACT US</div>
-            <h2 style={{ fontSize: 'clamp(26px,3.5vw,42px)', fontWeight: 900, color: INK, margin: '0 0 16px', lineHeight: 1.1 }}>
+            <div className="t-label tracking-[0.16em] mb-[14px]" style={{ color: GOLD }}>CONTACT US</div>
+            <h2 className="text-[clamp(26px,3.5vw,42px)] font-black mt-0 mx-0 mb-4 leading-[1.1]" style={{ color: INK }}>
               Let's get your hotel<br />set up today.
             </h2>
-            <p className="t-body" style={{ color: '#6b6055', lineHeight: 1.8, margin: '0 0 28px' }}>
+            <p className="t-body text-[#6b6055] leading-[1.8] mt-0 mx-0 mb-7">
               Have questions about pricing, onboarding, or a custom integration? Our team responds within one business day.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div className="flex flex-col gap-[14px]">
               {[
                 { icon: '📧', label: 'Email', value: 'contact@quantumvorvex.com' },
                 { icon: '📱', label: 'Phone', value: '+91 98765 00000' },
                 { icon: '📍', label: 'Office', value: 'MG Road, Bengaluru 560001' },
               ].map(item => (
-                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 9, background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{item.icon}</div>
+                <div key={item.label} className="flex items-center gap-3">
+                  <div className="w-[38px] h-[38px] rounded-[9px] bg-[rgba(201,168,76,0.1)] border border-[rgba(201,168,76,0.2)] flex items-center justify-center text-[16px] shrink-0">{item.icon}</div>
                   <div>
-                    <div style={{ fontSize: 10.5, fontWeight: 700, color: '#888', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 1 }}>{item.label}</div>
-                    <div style={{ fontSize: 13.5, color: INK, fontWeight: 500 }}>{item.value}</div>
+                    <div className="text-[10.5px] font-bold text-[#888] tracking-[0.06em] uppercase mb-px">{item.label}</div>
+                    <div className="text-[13.5px] font-medium" style={{ color: INK }}>{item.value}</div>
                   </div>
                 </div>
               ))}
@@ -974,21 +716,21 @@ export default function LandingPage({ onLogin }) {
           </div>
 
           {/* Right form */}
-          <div style={{ background: '#fff', border: '1px solid rgba(0,0,0,0.09)', borderRadius: 16, padding: 'clamp(24px,3vw,36px)', boxShadow: '0 8px 32px rgba(0,0,0,0.06)' }}>
+          <div className="bg-white border border-[rgba(0,0,0,0.09)] rounded-2xl p-[clamp(24px,3vw,36px)] shadow-[0_8px_32px_rgba(0,0,0,0.06)]">
             {contactSent ? (
-              <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <div style={{ fontSize: 48, marginBottom: 14 }}>✅</div>
-                <h3 className="t-h1" style={{ color: INK, margin: '0 0 10px' }}>Message received!</h3>
-                <p className="t-body" style={{ color: '#6b6055', lineHeight: 1.8 }}>We'll get back to you at <strong>{contactForm.email}</strong> within one business day.</p>
-                <button onClick={() => setContactSent(false)} style={{ marginTop: 20, padding: '10px 24px', borderRadius: 7, border: '1px solid rgba(0,0,0,0.15)', background: 'transparent', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: INK }}>Send another message</button>
+              <div className="text-center py-5">
+                <div className="text-[48px] mb-[14px]">✅</div>
+                <h3 className="t-h1 mt-0 mx-0 mb-2.5" style={{ color: INK }}>Message received!</h3>
+                <p className="t-body text-[#6b6055] leading-[1.8]">We'll get back to you at <strong>{contactForm.email}</strong> within one business day.</p>
+                <button onClick={() => setContactSent(false)} className="mt-5 px-6 py-2.5 rounded-[7px] border border-[rgba(0,0,0,0.15)] bg-transparent cursor-pointer text-[12.5px] font-semibold" style={{ color: INK }}>Send another message</button>
               </div>
             ) : (
               <form onSubmit={handleContactSubmit}>
-                <div style={{ marginBottom: 16 }}>
-                  <h3 className="t-h1" style={{ color: INK, margin: '0 0 4px' }}>Get in touch</h3>
-                  <p style={{ fontSize: 12.5, color: '#888', margin: 0 }}>We'll respond within one business day.</p>
+                <div className="mb-4">
+                  <h3 className="t-h1 mt-0 mx-0 mb-1" style={{ color: INK }}>Get in touch</h3>
+                  <p className="text-[12.5px] text-[#888] m-0">We'll respond within one business day.</p>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div className="grid grid-cols-2 gap-3 mb-3">
                   {[
                     { key: 'name',     label: 'Your Name',        placeholder: 'Ramesh Gupta',         type: 'text'  },
                     { key: 'email',    label: 'Email Address',     placeholder: 'you@hotel.com',         type: 'email' },
@@ -996,7 +738,7 @@ export default function LandingPage({ onLogin }) {
                     { key: 'phone',    label: 'Phone (optional)',   placeholder: '+91 98765 00000',       type: 'tel'   },
                   ].map(field => (
                     <div key={field.key}>
-                      <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#888', textTransform: 'uppercase', marginBottom: 6 }}>{field.label}</label>
+                      <label className="block text-[10.5px] font-bold tracking-[0.08em] text-[#888] uppercase mb-1.5">{field.label}</label>
                       <input
                         type={field.type}
                         value={contactForm[field.key] || ''}
@@ -1004,44 +746,35 @@ export default function LandingPage({ onLogin }) {
                         placeholder={field.placeholder}
                         onFocus={() => setContactFocus(f => ({ ...f, [field.key]: true }))}
                         onBlur={() => setContactFocus(f => ({ ...f, [field.key]: false }))}
-                        className="t-sm"
+                        className="t-sm w-full box-border px-3 py-[9px] rounded-[7px] outline-none transition-all duration-150"
                         style={{
-                          width: '100%', boxSizing: 'border-box',
-                          padding: '9px 12px',
                           background: contactFocus[field.key] ? '#fff' : '#f9f8f5',
                           border: `1px solid ${contactFocus[field.key] ? GOLD : 'rgba(0,0,0,0.12)'}`,
-                          borderRadius: 7, color: INK, outline: 'none',
-                          transition: 'all 0.15s',
+                          color: INK,
                           boxShadow: contactFocus[field.key] ? '0 0 0 3px rgba(201,168,76,0.12)' : 'none',
                         }}
                       />
                     </div>
                   ))}
                 </div>
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', fontSize: 10.5, fontWeight: 700, letterSpacing: '0.08em', color: '#888', textTransform: 'uppercase', marginBottom: 6 }}>Message</label>
+                <div className="mb-4">
+                  <label className="block text-[10.5px] font-bold tracking-[0.08em] text-[#888] uppercase mb-1.5">Message</label>
                   <textarea
                     value={contactForm.message}
                     onChange={e => setContact('message', e.target.value)}
                     placeholder="Tell us about your property and what you're looking for..."
                     rows={4}
-                    className="t-sm"
+                    className="t-sm w-full box-border px-3 py-[9px] resize-y bg-[#f9f8f5] border border-[rgba(0,0,0,0.12)] rounded-[7px] outline-none transition-all duration-150"
                     style={{
-                      width: '100%', boxSizing: 'border-box', padding: '9px 12px', resize: 'vertical',
-                      background: '#f9f8f5', border: '1px solid rgba(0,0,0,0.12)',
-                      borderRadius: 7, color: INK, outline: 'none', transition: 'all 0.15s',
+                      color: INK,
                     }}
                     onFocus={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = GOLD; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(201,168,76,0.12)' }}
                     onBlur={e => { e.currentTarget.style.background = '#f9f8f5'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)'; e.currentTarget.style.boxShadow = 'none' }}
                   />
                 </div>
-                <button type="submit" disabled={contactLoading || !contactForm.name || !contactForm.email} style={{
-                  width: '100%', padding: '12px',
+                <button type="submit" disabled={contactLoading || !contactForm.name || !contactForm.email} className="w-full p-3 text-white border-none rounded-lg text-[12px] font-bold tracking-[0.1em] transition-[background] duration-150" style={{
                   background: contactLoading || !contactForm.name || !contactForm.email ? '#888' : INK,
-                  color: '#fff', border: 'none', borderRadius: 8,
-                  fontSize: 12, fontWeight: 700, letterSpacing: '0.1em',
                   cursor: contactLoading || !contactForm.name || !contactForm.email ? 'not-allowed' : 'pointer',
-                  transition: 'background 0.15s',
                 }}>
                   {contactLoading ? 'SENDING…' : 'SEND MESSAGE →'}
                 </button>
@@ -1052,37 +785,23 @@ export default function LandingPage({ onLogin }) {
       </section>
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
-      <section style={{
+      <section className="py-[clamp(48px,8vh,80px)] px-[clamp(16px,5vw,40px)] text-center" style={{
         background: INK,
-        padding: 'clamp(48px,8vh,80px) clamp(16px,5vw,40px)',
-        textAlign: 'center',
       }}>
-        <div style={{ maxWidth: 580, margin: '0 auto' }}>
-          <h2 style={{
-            fontSize: 'clamp(26px,4vw,46px)',
-            fontWeight: 900, color: '#fff', lineHeight: 1.1, margin: '0 0 14px',
-          }}>Ready to modernise<br />your hotel?</h2>
-          <p style={{ color: 'rgba(255,255,255,0.48)', fontSize: 15, lineHeight: 1.75, marginBottom: 32 }}>
+        <div className="max-w-[580px] mx-auto">
+          <h2 className="text-[clamp(26px,4vw,46px)] font-black text-white leading-[1.1] mt-0 mx-0 mb-[14px]">Ready to modernise<br />your hotel?</h2>
+          <p className="text-[rgba(255,255,255,0.48)] text-[15px] leading-[1.75] mb-8">
             No installation. No backend required for demo. Sign in and explore the full
             system with real-looking mock data — instantly.
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
-            <button onClick={onLogin} className="t-title" style={{
-              padding: '13px clamp(24px,4vw,36px)', borderRadius: 8, border: 'none',
-              background: GOLD, color: '#000',
-              letterSpacing: '0.08em',
-              cursor: 'pointer', transition: 'background 0.15s',
+          <div className="flex flex-wrap gap-3 justify-center">
+            <button onClick={onLogin} className="t-title px-[clamp(24px,4vw,36px)] py-[13px] rounded-lg border-none text-black tracking-[0.08em] cursor-pointer transition-[background] duration-150" style={{
+              background: GOLD,
             }}
               onMouseEnter={e => e.currentTarget.style.background = '#d4b55a'}
               onMouseLeave={e => e.currentTarget.style.background = GOLD}
             >SIGN IN TO PLATFORM →</button>
-            <button onClick={onLogin} className="t-title" style={{
-              padding: '13px clamp(24px,4vw,36px)', borderRadius: 8,
-              border: '1px solid rgba(255,255,255,0.2)',
-              background: 'transparent', color: '#fff',
-              letterSpacing: '0.08em',
-              cursor: 'pointer', transition: 'border-color 0.15s',
-            }}
+            <button onClick={onLogin} className="t-title px-[clamp(24px,4vw,36px)] py-[13px] rounded-lg border border-[rgba(255,255,255,0.2)] bg-transparent text-white tracking-[0.08em] cursor-pointer transition-[border-color] duration-150"
               onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)'}
               onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
             >SIGN IN</button>
@@ -1091,34 +810,21 @@ export default function LandingPage({ onLogin }) {
       </section>
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
-      <footer style={{ background: '#060604' }}>
+      <footer className="bg-[#060604]">
         {/* Main footer grid */}
-        <div style={{
-          maxWidth: 1200, margin: '0 auto',
-          padding: 'clamp(40px,6vh,64px) clamp(16px,5vw,40px) clamp(28px,4vh,48px)',
-        }}>
-          <div className="lp-footer-grid" style={{
-            display: 'grid',
-            gridTemplateColumns: '240px repeat(4, 1fr)',
-            gap: 'clamp(24px,3vw,48px)',
-          }}>
+        <div className="max-w-[1200px] mx-auto pt-[clamp(40px,6vh,64px)] px-[clamp(16px,5vw,40px)] pb-[clamp(28px,4vh,48px)]">
+          <div className="lp-footer-grid grid grid-cols-[240px_repeat(4,1fr)] gap-[clamp(24px,3vw,48px)]">
             {/* Brand column */}
             <div>
-              <div className="t-h2" style={{
-                fontStyle: 'italic', color: GOLD, marginBottom: 12,
+              <div className="t-h2 italic mb-3" style={{
+                color: GOLD,
               }}>Quantum Vorvex</div>
-              <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.35)', lineHeight: 1.8, margin: '0 0 20px' }}>
+              <p className="text-[12.5px] text-[rgba(255,255,255,0.35)] leading-[1.8] mt-0 mx-0 mb-5">
                 Hotel management software built for the Indian hospitality industry.
               </p>
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div className="flex gap-2.5">
                 {['𝕏', 'in', 'f', '▶'].map(s => (
-                  <div key={s} style={{
-                    width: 32, height: 32, borderRadius: 7,
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 13, color: 'rgba(255,255,255,0.35)',
-                    cursor: 'pointer', transition: 'all 0.15s',
-                  }}
+                  <div key={s} className="w-8 h-8 rounded-[7px] border border-[rgba(255,255,255,0.1)] flex items-center justify-center text-[13px] text-[rgba(255,255,255,0.35)] cursor-pointer transition-all duration-150"
                     onMouseEnter={e => { e.currentTarget.style.borderColor = GOLD; e.currentTarget.style.color = GOLD }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)' }}
                   >{s}</div>
@@ -1129,17 +835,10 @@ export default function LandingPage({ onLogin }) {
             {/* Link columns */}
             {Object.entries(FOOTER_LINKS).map(([category, links]) => (
               <div key={category}>
-                <div className="t-label" style={{
-                  letterSpacing: '0.12em',
-                  color: 'rgba(255,255,255,0.4)',
-                  marginBottom: 16,
-                }}>{category}</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div className="t-label tracking-[0.12em] text-[rgba(255,255,255,0.4)] mb-4">{category}</div>
+                <div className="flex flex-col gap-2.5">
                   {links.map(l => (
-                    <span key={l} className="t-sm" style={{
-                      color: 'rgba(255,255,255,0.45)',
-                      cursor: 'pointer', transition: 'color 0.15s',
-                    }}
+                    <span key={l} className="t-sm text-[rgba(255,255,255,0.45)] cursor-pointer transition-colors duration-150"
                       onMouseEnter={e => e.currentTarget.style.color = '#fff'}
                       onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
                     >{l}</span>
@@ -1151,21 +850,13 @@ export default function LandingPage({ onLogin }) {
         </div>
 
         {/* Footer bottom bar */}
-        <div style={{
-          borderTop: '1px solid rgba(255,255,255,0.06)',
-          padding: 'clamp(14px,2vh,20px) clamp(16px,5vw,40px)',
-          display: 'flex', flexWrap: 'wrap', gap: 12,
-          alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <div style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.22)' }}>
+        <div className="border-t border-t-[rgba(255,255,255,0.06)] py-[clamp(14px,2vh,20px)] px-[clamp(16px,5vw,40px)] flex flex-wrap gap-3 items-center justify-between">
+          <div className="text-[11.5px] text-[rgba(255,255,255,0.22)]">
             © 2026 Forge Quantum Solutions Pvt. Ltd. · GST-ready · Made for India 🇮🇳
           </div>
-          <div style={{ display: 'flex', gap: 20 }}>
+          <div className="flex gap-5">
             {['Privacy', 'Terms', 'Cookies'].map(l => (
-              <span key={l} style={{
-                fontSize: 11.5, color: 'rgba(255,255,255,0.22)',
-                cursor: 'pointer', transition: 'color 0.15s',
-              }}
+              <span key={l} className="text-[11.5px] text-[rgba(255,255,255,0.22)] cursor-pointer transition-colors duration-150"
                 onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.55)'}
                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.22)'}
               >{l}</span>

@@ -93,28 +93,28 @@ function NewBookingModal({ isOpen, onClose, onSave, preRoom, preDate }) {
         </>
       }
     >
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <div style={{ gridColumn: '1/-1' }}>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Guest Name</label>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-full">
+          <label className="form-label block mb-[5px]">Guest Name</label>
           <input className="form-input" placeholder="Full name" value={form.guestName} onChange={e => set('guestName', e.target.value)} />
         </div>
-        <div style={{ gridColumn: '1/-1' }}>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Room</label>
+        <div className="col-span-full">
+          <label className="form-label block mb-[5px]">Room</label>
           <select className="form-select" value={form.roomId} onChange={e => set('roomId', e.target.value)}>
             <option value="">Select room</option>
             {ROOMS.map(r => <option key={r.id} value={r.id}>{r.number} — {r.type}</option>)}
           </select>
         </div>
         <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Check-In</label>
+          <label className="form-label block mb-[5px]">Check-In</label>
           <input type="date" className="form-input" value={form.checkIn} onChange={e => set('checkIn', e.target.value)} />
         </div>
         <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Check-Out</label>
+          <label className="form-label block mb-[5px]">Check-Out</label>
           <input type="date" className="form-input" value={form.checkOut} onChange={e => set('checkOut', e.target.value)} />
         </div>
-        <div style={{ gridColumn: '1/-1' }}>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Notes</label>
+        <div className="col-span-full">
+          <label className="form-label block mb-[5px]">Notes</label>
           <input className="form-input" placeholder="Special requests..." value={form.notes} onChange={e => set('notes', e.target.value)} />
         </div>
       </div>
@@ -140,15 +140,13 @@ function BookingDetailModal({ booking, room, onClose, onDelete }) {
         </>
       }
     >
-      <div className="t-label" style={{
-        display: 'inline-flex', alignItems: 'center', gap: 6,
-        background: colors.bg, border: `1px solid ${colors.border}`,
-        borderRadius: 6, padding: '4px 10px', marginBottom: 16,
+      <div className="t-label inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 mb-4 border" style={{
+        background: colors.bg, borderColor: colors.border,
         color: colors.text,
       }}>
         {booking.status}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 20px' }}>
+      <div className="grid grid-cols-2 gap-x-5 gap-y-3">
         {[
           ['Guest', booking.guestName],
           ['Room', room?.number || '—'],
@@ -158,7 +156,7 @@ function BookingDetailModal({ booking, room, onClose, onDelete }) {
           ['Duration', `${nights} night${nights !== 1 ? 's' : ''}`],
         ].map(([label, val]) => (
           <div key={label}>
-            <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{label}</div>
+            <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.06em] mb-[3px]">{label}</div>
             <div className="t-title">{val}</div>
           </div>
         ))}
@@ -272,12 +270,12 @@ export default function Calendar() {
   ]
 
   return (
-    <div style={{ padding: 24, maxWidth: 1400 }}>
+    <div className="p-6 max-w-[1400px]">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+      <div className="flex justify-between items-start mb-5 flex-wrap gap-3">
         <div>
-          <h1 className="t-h1" style={{ margin: 0, letterSpacing: '-0.03em' }}>Room Calendar</h1>
-          <p className="t-sm" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>Visual booking timeline — click a cell to book or view details</p>
+          <h1 className="t-h1 m-0 tracking-[-0.03em]">Room Calendar</h1>
+          <p className="t-sm mt-1 mx-0 mb-0 text-ink3">Visual booking timeline — click a cell to book or view details</p>
         </div>
         <button className="btn btn-primary" onClick={() => { setNewPreRoom(''); setNewPreDate(todayYMD); setShowNew(true) }}>
           + New Booking
@@ -285,48 +283,48 @@ export default function Calendar() {
       </div>
 
       {/* Controls */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="flex gap-2.5 mb-4 flex-wrap items-center">
         {/* Navigation */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className="flex items-center gap-1.5">
           <button className="btn btn-outline btn-sm" onClick={prev}>‹ Prev</button>
           <button className="btn btn-outline btn-sm" onClick={goToday}>Today</button>
           <button className="btn btn-outline btn-sm" onClick={next}>Next ›</button>
-          <span className="t-sm" style={{ color: 'var(--text2)', fontWeight: 500, marginLeft: 4 }}>{rangeLabel}</span>
+          <span className="t-sm text-ink2 font-medium ml-1">{rangeLabel}</span>
         </div>
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
         {/* View span */}
-        <select className="form-select" style={{ width: 100 }} value={viewDays} onChange={e => setViewDays(Number(e.target.value))}>
+        <select className="form-select w-[100px]" value={viewDays} onChange={e => setViewDays(Number(e.target.value))}>
           <option value={7}>7 days</option>
           <option value={14}>14 days</option>
           <option value={21}>21 days</option>
           <option value={30}>30 days</option>
         </select>
         {/* Filters */}
-        <select className="form-select" style={{ width: 130 }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+        <select className="form-select w-[130px]" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
           {ROOM_TYPES.map(t => <option key={t}>{t}</option>)}
         </select>
-        <select className="form-select" style={{ width: 120 }} value={floorFilter} onChange={e => setFloorFilter(e.target.value)}>
+        <select className="form-select w-[120px]" value={floorFilter} onChange={e => setFloorFilter(e.target.value)}>
           {FLOORS.map(f => <option key={f}>{f}</option>)}
         </select>
       </div>
 
       {/* Legend */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+      <div className="flex gap-3 mb-[14px] flex-wrap">
         {legend.map(l => (
-          <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ width: 14, height: 14, borderRadius: 3, background: l.bg, border: `1px solid ${l.border}` }} />
-            <span style={{ fontSize: 11.5, color: 'var(--text3)' }}>{l.label}</span>
+          <div key={l.label} className="flex items-center gap-1.5">
+            <div className="w-[14px] h-[14px] rounded-[3px] border" style={{ background: l.bg, borderColor: l.border }} />
+            <span className="text-[11.5px] text-ink3">{l.label}</span>
           </div>
         ))}
-        <span style={{ fontSize: 11.5, color: 'var(--text3)', marginLeft: 8 }}>· Click empty cell to book · Click booking to view details</span>
+        <span className="text-[11.5px] text-ink3 ml-2">· Click empty cell to book · Click booking to view details</span>
       </div>
 
       {/* Grid */}
-      <div className="card" style={{ overflowX: 'auto', padding: 0 }}>
+      <div className="card overflow-x-auto p-0">
         <div style={{ minWidth: LABEL_W + COL_W * viewDays + 2 }}>
           {/* Date header row */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 10 }}>
-            <div style={{ width: LABEL_W, minWidth: LABEL_W, padding: '10px 12px', fontSize: 10.5, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', borderRight: '1px solid var(--border)' }}>
+          <div className="flex border-b border-line sticky top-0 bg-surface z-10">
+            <div className="py-2.5 px-3 text-[10.5px] font-bold text-ink3 uppercase tracking-[0.06em] border-r border-line" style={{ width: LABEL_W, minWidth: LABEL_W }}>
               Room
             </div>
             {dates.map(date => {
@@ -334,17 +332,13 @@ export default function Calendar() {
               const isToday = ymd === todayYMD
               const isWeekend = date.getDay() === 0 || date.getDay() === 6
               return (
-                <div key={ymd} style={{
-                  width: COL_W, minWidth: COL_W,
-                  textAlign: 'center', padding: '6px 2px',
-                  fontSize: 10.5, fontWeight: isToday ? 700 : 500,
-                  color: isToday ? 'var(--gold)' : isWeekend ? 'var(--amber-text)' : 'var(--text3)',
-                  background: isToday ? 'var(--gold-bg)' : 'transparent',
-                  borderRight: '1px solid var(--border)',
-                  borderBottom: isToday ? '2px solid var(--gold)' : 'none',
-                }}>
+                <div
+                  key={ymd}
+                  className={`text-center py-1.5 px-0.5 text-[10.5px] border-r border-line ${isToday ? 'font-bold text-gold bg-[var(--gold-bg)] border-b-2 border-b-gold' : `font-medium ${isWeekend ? 'text-warning-text' : 'text-ink3'} bg-transparent`}`}
+                  style={{ width: COL_W, minWidth: COL_W }}
+                >
                   <div>{date.toLocaleDateString('en-IN', { weekday: 'short' })}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700 }}>{date.getDate()}</div>
+                  <div className="text-[12px] font-bold">{date.getDate()}</div>
                 </div>
               )
             })}
@@ -352,16 +346,14 @@ export default function Calendar() {
 
           {/* Room rows */}
           {filteredRooms.map(room => (
-            <div key={room.id} style={{ display: 'flex', borderBottom: '1px solid var(--border)', height: ROW_H, position: 'relative' }}>
+            <div key={room.id} className="flex border-b border-line relative" style={{ height: ROW_H }}>
               {/* Room label */}
-              <div style={{
-                width: LABEL_W, minWidth: LABEL_W,
-                display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                padding: '0 12px', borderRight: '1px solid var(--border)',
-                position: 'sticky', left: 0, background: 'var(--surface)', zIndex: 5,
-              }}>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: 'var(--gold)' }}>{room.number}</div>
-                <div style={{ fontSize: 9.5, color: 'var(--text3)', marginTop: 1 }}>{room.type}</div>
+              <div
+                className="flex flex-col justify-center px-3 border-r border-line sticky left-0 bg-surface z-[5]"
+                style={{ width: LABEL_W, minWidth: LABEL_W }}
+              >
+                <div className="text-[12px] font-bold text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{room.number}</div>
+                <div className="text-[9.5px] text-ink3 mt-px">{room.type}</div>
               </div>
 
               {/* Day cells */}
@@ -378,13 +370,10 @@ export default function Calendar() {
                   <div
                     key={ymd}
                     onClick={() => handleCellClick(room.id, date)}
+                    className={`border-r border-line relative transition-[background] duration-100 ${booking ? 'cursor-pointer' : 'cursor-cell'}`}
                     style={{
                       width: COL_W, minWidth: COL_W, height: ROW_H,
-                      borderRight: '1px solid var(--border)',
                       background: isToday ? 'var(--gold-bg)' : isWeekend ? 'rgba(0,0,0,0.02)' : 'transparent',
-                      cursor: booking ? 'pointer' : 'cell',
-                      position: 'relative',
-                      transition: 'background 0.1s',
                     }}
                     onMouseEnter={e => { if (!booking) e.currentTarget.style.background = 'var(--surface2)' }}
                     onMouseLeave={e => { if (!booking) e.currentTarget.style.background = isToday ? 'var(--gold-bg)' : isWeekend ? 'rgba(0,0,0,0.02)' : 'transparent' }}
@@ -393,20 +382,15 @@ export default function Calendar() {
                     {showBar && (
                       <div
                         onClick={e => { e.stopPropagation(); setDetailBooking(booking) }}
+                        className="absolute left-0.5 top-1.5 rounded z-[3] flex items-center pl-1.5 overflow-hidden cursor-pointer transition-[opacity] duration-100 border"
                         style={{
-                          position: 'absolute', left: 2, top: 6,
                           width: span * COL_W - 4, height: ROW_H - 12,
-                          background: colors.bg, border: `1px solid ${colors.border}`,
-                          borderRadius: 4, zIndex: 3,
-                          display: 'flex', alignItems: 'center',
-                          paddingLeft: 6, overflow: 'hidden',
-                          cursor: 'pointer',
-                          transition: 'opacity 0.1s',
+                          background: colors.bg, borderColor: colors.border,
                         }}
                         onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
                         onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                       >
-                        <span style={{ fontSize: 10.5, fontWeight: 600, color: colors.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span className="text-[10.5px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: colors.text }}>
                           {booking.guestName}
                         </span>
                       </div>
@@ -420,7 +404,7 @@ export default function Calendar() {
       </div>
 
       {/* Summary stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginTop: 16 }}>
+      <div className="grid grid-cols-4 gap-3 mt-4">
         {[
           { label: 'Total Rooms', value: filteredRooms.length, color: 'var(--text)' },
           { label: 'Occupied Today', value: bookings.filter(b => b.checkIn <= todayYMD && b.checkOut > todayYMD && b.status === 'occupied').length, color: 'var(--blue-text)' },
@@ -428,8 +412,8 @@ export default function Calendar() {
           { label: 'Available Today', value: filteredRooms.length - bookings.filter(b => b.checkIn <= todayYMD && b.checkOut > todayYMD).length, color: 'var(--green-text)' },
         ].map(s => (
           <div key={s.label} className="stat-card">
-            <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{s.label}</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 24, fontWeight: 700, color: s.color }}>{s.value}</div>
+            <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.05em] mb-1.5">{s.label}</div>
+            <div className="text-[24px] font-bold" style={{ fontFamily: 'var(--font-mono)', color: s.color }}>{s.value}</div>
           </div>
         ))}
       </div>

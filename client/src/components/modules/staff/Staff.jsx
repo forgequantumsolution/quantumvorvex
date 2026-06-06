@@ -80,13 +80,14 @@ function generatePassword() {
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 function Avatar({ name, role, size = 34 }) {
   return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%',
-      background: ROLE_AVATAR_COLORS[role] || '#6b7280',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700,
-      fontSize: size * 0.35, color: '#fff', flexShrink: 0,
-      letterSpacing: '0.02em',
-    }}>
+    <div
+      className="rounded-full flex items-center justify-center font-bold text-white shrink-0 tracking-[0.02em]"
+      style={{
+        width: size, height: size,
+        background: ROLE_AVATAR_COLORS[role] || '#6b7280',
+        fontSize: size * 0.35,
+      }}
+    >
       {getInitials(name)}
     </div>
   )
@@ -134,9 +135,9 @@ function StaffModal({ isOpen, onClose, staff, onSave }) {
             </>
           }
         >
-          <Form style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Form className="flex flex-col gap-3.5">
             <FormikField name="name" label="Full Name" required placeholder="e.g. Ramesh Gupta" />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid grid-cols-2 gap-3">
               <FormikField name="phone" label="Phone" required placeholder="10-digit mobile" />
               <FormikField name="email" label="Email" type="email" required placeholder="staff@hotel.com" />
             </div>
@@ -149,12 +150,12 @@ function StaffModal({ isOpen, onClose, staff, onSave }) {
             {/* Password section */}
             <div>
               <label className="form-label">{isEdit ? 'Reset Password' : 'Auto-Generated Password'}</label>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div className="flex gap-2 items-center">
                 <input
-                  className="form-input"
+                  className="form-input flex-1"
                   readOnly
                   value={generatedPwd || '••••••••••'}
-                  style={{ fontFamily: 'var(--font-mono)', flex: 1 }}
+                  style={{ fontFamily: 'var(--font-mono)' }}
                 />
                 {isEdit && (
                   <button className="btn btn-outline btn-sm" onClick={handleResetPassword} type="button">
@@ -172,7 +173,7 @@ function StaffModal({ isOpen, onClose, staff, onSave }) {
                 )}
               </div>
               {!isEdit && (
-                <p style={{ margin: '5px 0 0', fontSize: 11, color: 'var(--text3)' }}>
+                <p className="mt-[5px] mb-0 text-[11px] text-ink3">
                   Share this password with the staff member securely. They can change it after first login.
                 </p>
               )}
@@ -198,9 +199,9 @@ function ForceLogoutModal({ isOpen, staff, onClose, onConfirm }) {
         </>
       }
     >
-      <p style={{ margin: 0, color: 'var(--text2)', lineHeight: 1.6 }}>
+      <p className="m-0 text-ink2 leading-[1.6]">
         Are you sure you want to force logout{' '}
-        <strong style={{ color: 'var(--text)' }}>{staff?.name}</strong>?
+        <strong className="text-ink">{staff?.name}</strong>?
         Their active session will be immediately terminated.
       </p>
     </Modal>
@@ -211,7 +212,7 @@ function ForceLogoutModal({ isOpen, staff, onClose, onConfirm }) {
 function AllStaffTab({ staff, onAdd, onEdit, onForceLogout, onToggleStatus }) {
   return (
     <div>
-      <div style={{ overflowX: 'auto' }}>
+      <div className="overflow-x-auto">
         <table>
           <thead>
             <tr>
@@ -228,19 +229,19 @@ function AllStaffTab({ staff, onAdd, onEdit, onForceLogout, onToggleStatus }) {
             {staff.map(member => (
               <tr key={member.id}>
                 <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div className="flex items-center gap-2.5">
                     <Avatar name={member.name} role={member.role} />
                     <div>
                       <div className="t-title">
                         {member.name}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>
+                      <div className="text-[11px] text-ink3 mt-px">
                         {member.email}
                       </div>
                     </div>
                   </div>
                 </td>
-                <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{member.phone}</td>
+                <td className="text-[12px]" style={{ fontFamily: 'var(--font-mono)' }}>{member.phone}</td>
                 <td>
                   <Badge type={ROLE_META[member.role]?.badgeType || 'grey'}>
                     {ROLE_META[member.role]?.label || member.role}
@@ -254,20 +255,19 @@ function AllStaffTab({ staff, onAdd, onEdit, onForceLogout, onToggleStatus }) {
                 <td className="t-xs">
                   {timeAgo(member.lastLogin)}
                 </td>
-                <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, textAlign: 'center' }}>
-                  <span style={{
-                    background: member.sessions > 0 ? 'var(--green-bg)' : 'var(--surface2)',
-                    color: member.sessions > 0 ? 'var(--green-text)' : 'var(--text3)',
-                    padding: '2px 8px',
-                    borderRadius: 4,
-                    fontSize: 11,
-                    fontWeight: 600,
-                  }}>
+                <td className="text-[12px] text-center" style={{ fontFamily: 'var(--font-mono)' }}>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                      member.sessions > 0
+                        ? 'bg-success-bg text-success-text'
+                        : 'bg-surface2 text-ink3'
+                    }`}
+                  >
                     {member.sessions}
                   </span>
                 </td>
                 <td>
-                  <div style={{ display: 'flex', gap: 5, flexWrap: 'nowrap' }}>
+                  <div className="flex gap-[5px] flex-nowrap">
                     <button className="btn btn-xs btn-outline" onClick={() => onEdit(member)}>
                       Edit
                     </button>
@@ -333,11 +333,8 @@ function ActivityLogTab({ logs, staffList }) {
   return (
     <div>
       {/* Filter Row */}
-      <div style={{
-        display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end',
-        marginBottom: 16,
-      }}>
-        <div style={{ flex: '1 1 160px' }}>
+      <div className="flex gap-2.5 flex-wrap items-end mb-4">
+        <div className="flex-[1_1_160px]">
           <label className="form-label">Staff</label>
           <select className="form-select" value={filterStaff} onChange={e => setFilterStaff(e.target.value)}>
             <option value="">All Staff</option>
@@ -346,14 +343,14 @@ function ActivityLogTab({ logs, staffList }) {
             ))}
           </select>
         </div>
-        <div style={{ flex: '1 1 140px' }}>
+        <div className="flex-[1_1_140px]">
           <label className="form-label">Module</label>
           <select className="form-select" value={filterModule} onChange={e => setFilterModule(e.target.value)}>
             <option value="">All Modules</option>
             {uniqueModules.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
         </div>
-        <div style={{ flex: '1 1 130px' }}>
+        <div className="flex-[1_1_130px]">
           <label className="form-label">From</label>
           <input
             type="date"
@@ -362,7 +359,7 @@ function ActivityLogTab({ logs, staffList }) {
             onChange={e => setFilterFrom(e.target.value)}
           />
         </div>
-        <div style={{ flex: '1 1 130px' }}>
+        <div className="flex-[1_1_130px]">
           <label className="form-label">To</label>
           <input
             type="date"
@@ -382,7 +379,7 @@ function ActivityLogTab({ logs, staffList }) {
       {filtered.length === 0 ? (
         <div className="empty-state">No activity logs match the selected filters.</div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <div className="overflow-x-auto">
           <table>
             <thead>
               <tr>
@@ -397,7 +394,7 @@ function ActivityLogTab({ logs, staffList }) {
             <tbody>
               {filtered.map(log => (
                 <tr key={log.id}>
-                  <td className="t-xs" style={{ whiteSpace: 'nowrap' }}>
+                  <td className="t-xs whitespace-nowrap">
                     {formatDateTime(log.createdAt)}
                   </td>
                   <td className="t-title">{log.staff}</td>
@@ -408,7 +405,7 @@ function ActivityLogTab({ logs, staffList }) {
                     </Badge>
                   </td>
                   <td className="t-xs">{log.record}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text3)' }}>
+                  <td className="text-[11px] text-ink3" style={{ fontFamily: 'var(--font-mono)' }}>
                     {log.ip}
                   </td>
                 </tr>
@@ -467,17 +464,17 @@ function PermissionsTab() {
 
   return (
     <div>
-      <p className="t-sm" style={{ margin: '0 0 16px', color: 'var(--text2)' }}>
+      <p className="t-sm mb-4 mt-0 text-ink2">
         Configure what each role can access across all modules.
       </p>
 
-      <div style={{ overflowX: 'auto' }}>
+      <div className="overflow-x-auto">
         <table>
           <thead>
             <tr>
-              <th style={{ minWidth: 140 }}>Module</th>
+              <th className="min-w-[140px]">Module</th>
               {roles.map(role => (
-                <th key={role} style={{ minWidth: 120, textAlign: 'center' }}>
+                <th key={role} className="min-w-[120px] text-center">
                   <Badge type={ROLE_META[role].badgeType}>
                     {ROLE_META[role].label}
                   </Badge>
@@ -490,10 +487,9 @@ function PermissionsTab() {
               <tr key={mod}>
                 <td className="t-title">{mod}</td>
                 {roles.map(role => (
-                  <td key={role} style={{ textAlign: 'center', padding: '6px 8px' }}>
+                  <td key={role} className="text-center px-2 py-1.5">
                     <select
-                      className="form-select t-xs"
-                      style={{ padding: '4px 6px', minWidth: 80, textAlign: 'center' }}
+                      className="form-select t-xs px-1.5 py-1 min-w-[80px] text-center"
                       value={perms[role]?.[mod] || '—'}
                       onChange={e => handleChange(role, mod, e.target.value)}
                     >
@@ -509,7 +505,7 @@ function PermissionsTab() {
         </table>
       </div>
 
-      <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
+      <div className="mt-5 flex justify-end">
         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
           {saving ? 'Saving…' : 'Save Permissions'}
         </button>
@@ -615,17 +611,12 @@ export default function Staff() {
   return (
     <div>
       {/* Page Header */}
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-        marginBottom: 20, gap: 12, flexWrap: 'wrap',
-      }}>
+      <div className="flex items-start justify-between mb-5 gap-3 flex-wrap">
         <div>
-          <h1 className="t-h1" style={{
-            margin: 0, letterSpacing: '-0.02em',
-          }}>
+          <h1 className="t-h1 m-0 tracking-[-0.02em]">
             👤 Staff Management
           </h1>
-          <p className="t-sm" style={{ margin: '3px 0 0', color: 'var(--text3)' }}>
+          <p className="t-sm mt-[3px] mb-0 text-ink3">
             Team accounts &amp; permissions
           </p>
         </div>
@@ -635,12 +626,12 @@ export default function Staff() {
       </div>
 
       {error && (
-        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
+        <div className="t-sm mb-4 px-[14px] py-2.5 rounded-lg bg-danger-bg text-danger-text">
           {error}
         </div>
       )}
       {loading && staffList.length === 0 && !error && (
-        <p className="t-sm" style={{ color: 'var(--text3)', marginBottom: 12 }}>Loading staff…</p>
+        <p className="t-sm text-ink3 mb-3">Loading staff…</p>
       )}
 
       {/* Tabs */}

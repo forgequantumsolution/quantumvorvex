@@ -36,34 +36,29 @@ const Settings      = lazy(() => import('./components/modules/settings/Settings'
 
 function PanelSkeleton() {
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{
-        height: 28, width: 180, borderRadius: 6,
-        background: 'var(--border)', marginBottom: 20,
-        animation: 'pulse 1.5s ease-in-out infinite'
-      }} />
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(165px, 1fr))',
-        gap: 13, marginBottom: 20
-      }}>
+    <div className="p-6">
+      <div
+        className="h-[28px] w-[180px] rounded-md bg-line mb-5"
+        style={{ animation: 'pulse 1.5s ease-in-out infinite' }}
+      />
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(165px,1fr))] gap-[13px] mb-5">
         {[...Array(6)].map((_, i) => (
-          <div key={i} style={{
-            height: 90, borderRadius: 10,
-            background: 'var(--border)',
-            animation: 'pulse 1.5s ease-in-out infinite',
-            animationDelay: `${i * 0.1}s`
-          }} />
+          <div key={i}
+            className="h-[90px] rounded-[10px] bg-line"
+            style={{
+              animation: 'pulse 1.5s ease-in-out infinite',
+              animationDelay: `${i * 0.1}s`
+            }} />
         ))}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
+      <div className="grid grid-cols-2 gap-[15px]">
         {[0, 1].map(i => (
-          <div key={i} style={{
-            height: 200, borderRadius: 10,
-            background: 'var(--border)',
-            animation: 'pulse 1.5s ease-in-out infinite',
-            animationDelay: `${i * 0.15}s`
-          }} />
+          <div key={i}
+            className="h-[200px] rounded-[10px] bg-line"
+            style={{
+              animation: 'pulse 1.5s ease-in-out infinite',
+              animationDelay: `${i * 0.15}s`
+            }} />
         ))}
       </div>
     </div>
@@ -72,12 +67,12 @@ function PanelSkeleton() {
 
 function AccessDenied({ panel }) {
   return (
-    <div style={{ padding: 48, textAlign: 'center' }}>
-      <div className="t-display" style={{ marginBottom: 16 }}>🔒</div>
-      <h2 style={{ margin: '0 0 8px', color: 'var(--text)' }}>
+    <div className="p-12 text-center">
+      <div className="t-display mb-4">🔒</div>
+      <h2 className="m-0 mb-2 text-ink">
         Access Restricted
       </h2>
-      <p className="t-body" style={{ color: 'var(--text3)' }}>
+      <p className="t-body text-ink3">
         Your role doesn't have permission to access <strong>{panel}</strong>.
       </p>
     </div>

@@ -33,11 +33,9 @@ Keep responses concise and helpful. Use Indian currency formatting (₹ with lak
 
 function TypingIndicator() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '10px 14px' }}>
+    <div className="flex items-center gap-1 px-[14px] py-2.5">
       {[0,1,2].map(i => (
-        <div key={i} style={{
-          width: 7, height: 7, borderRadius: '50%',
-          background: 'var(--gold)',
+        <div key={i} className="w-[7px] h-[7px] rounded-full bg-[var(--gold)]" style={{
           animation: 'aiPulse 1.2s ease-in-out infinite',
           animationDelay: `${i * 0.2}s`,
         }} />
@@ -67,32 +65,16 @@ function Message({ msg, onAction }) {
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: isUser ? 'flex-end' : 'flex-start',
-      padding: '4px 14px',
-    }}>
-      <div className="t-sm" style={{
-        maxWidth: '85%',
-        background: isUser ? 'var(--gold-bg)' : 'var(--surface2)',
-        border: `1px solid ${isUser ? 'var(--gold-border)' : 'var(--border)'}`,
-        borderRadius: isUser ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
-        padding: '9px 13px',
-        color: 'var(--text)',
+    <div className={`flex px-[14px] py-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <div className={`t-sm max-w-[85%] border px-[13px] py-[9px] text-ink whitespace-pre-wrap ${isUser ? 'bg-[var(--gold-bg)] border-[var(--gold-border)] rounded-[12px_12px_2px_12px]' : 'bg-surface2 border-line rounded-[12px_12px_12px_2px]'}`} style={{
         lineHeight: 1.5,
-        whiteSpace: 'pre-wrap',
       }}>
         {text}
         {action && (
           <button
             onClick={() => onAction(action)}
-            className="t-xs"
-            style={{
-              display: 'block', marginTop: 8,
-              padding: '5px 12px', borderRadius: 6,
-              background: 'var(--gold)', color: '#000',
-              border: 'none', cursor: 'pointer',
-            }}
+            className="t-xs block mt-2 px-3 py-[5px] rounded-md bg-[var(--gold)] border-none cursor-pointer"
+            style={{ color: '#000' }}
           >
             → Open {PANEL_LABELS[action] || action}
           </button>
@@ -241,16 +223,8 @@ export default function AIAssistant() {
       <button
         onClick={() => setOpen(true)}
         title="Quantum Assistant (Shift+A)"
-        className="t-h1"
-        style={{
-          position: 'fixed', bottom: 24, right: 24,
-          width: 52, height: 52, borderRadius: '50%',
-          background: 'var(--gold)', color: '#000',
-          border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 4px 20px rgba(201,168,76,0.4)',
-          zIndex: 1500, transition: 'all 0.2s',
-        }}
+        className="t-h1 fixed bottom-[24px] right-[24px] w-[52px] h-[52px] rounded-full bg-[var(--gold)] border-none cursor-pointer flex items-center justify-center shadow-[0_4px_20px_rgba(201,168,76,0.4)] z-[1500] transition-all duration-200"
+        style={{ color: '#000' }}
         onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.boxShadow = '0 6px 28px rgba(201,168,76,0.55)' }}
         onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(201,168,76,0.4)' }}
       >✦</button>
@@ -269,78 +243,55 @@ export default function AIAssistant() {
       {/* Backdrop on mobile */}
       <div
         onClick={() => setOpen(false)}
-        style={{
-          display: 'none',
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)',
-          zIndex: 1498,
-        }}
-        className="ai-backdrop"
+        className="ai-backdrop hidden fixed inset-0 bg-[rgba(0,0,0,0.3)] z-[1498]"
       />
 
       {/* Panel */}
-      <div style={{
-        position: 'fixed', bottom: 24, right: 24,
-        width: 360, height: 560,
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 14,
-        boxShadow: '0 8px 40px rgba(0,0,0,0.18)',
-        zIndex: 1500,
-        display: 'flex', flexDirection: 'column',
-        overflow: 'hidden',
-      }}>
+      <div className="fixed bottom-[24px] right-[24px] w-[360px] h-[560px] bg-surface border border-line rounded-[14px] shadow-[0_8px_40px_rgba(0,0,0,0.18)] z-[1500] flex flex-col overflow-hidden">
         {/* Header */}
-        <div style={{
-          padding: '13px 16px',
-          borderBottom: '1px solid var(--border)',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          background: 'var(--surface)',
-          flexShrink: 0,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="t-h3" style={{ color: 'var(--gold)' }}>✦</span>
-            <span className="t-title" style={{ color: 'var(--text)' }}>
+        <div className="px-4 py-[13px] border-b border-line flex items-center justify-between bg-surface shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="t-h3 text-gold">✦</span>
+            <span className="t-title text-ink">
               Quantum Assistant
             </span>
           </div>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <div className="flex gap-1.5 items-center">
             <button
               onClick={() => setMessages([])}
               title="Clear chat"
-              className="t-label"
-              style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', padding: '3px 7px', borderRadius: 4 }}
+              className="t-label bg-none border-none text-ink3 cursor-pointer px-[7px] py-[3px] rounded"
             >Clear</button>
             <button
               onClick={() => setShowKeyInput(k => !k)}
               title="Configure API key"
-              className="t-xs"
-              style={{ background: 'none', border: '1px solid var(--border2)', color: 'var(--text3)', cursor: 'pointer', padding: '3px 8px', borderRadius: 4 }}
+              className="t-xs bg-none border border-line2 text-ink3 cursor-pointer px-2 py-[3px] rounded"
             >⚙</button>
             <button
               onClick={() => setOpen(false)}
-              className="t-h2"
-              style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', lineHeight: 1, padding: '0 2px' }}
+              className="t-h2 bg-none border-none text-ink3 cursor-pointer leading-none px-0.5"
             >×</button>
           </div>
         </div>
 
         {/* API Key input (collapsible) */}
         {showKeyInput && (
-          <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', background: 'var(--surface2)', flexShrink: 0 }}>
-            <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 6 }}>
+          <div className="px-4 py-2.5 border-b border-line bg-surface2 shrink-0">
+            <div className="t-label text-ink3 mb-1.5">
               Anthropic API Key
             </div>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div className="flex gap-1.5">
               <input
                 type="password"
                 value={apiKey}
                 onChange={e => setApiKey(e.target.value)}
                 placeholder="sk-ant-..."
-                style={{ flex: 1, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 12, fontFamily: 'var(--font-mono)', outline: 'none' }}
+                className="flex-1 px-2.5 py-1.5 rounded-md border border-line bg-surface text-ink text-[12px] outline-none"
+                style={{ fontFamily: 'var(--font-mono)' }}
               />
               <button onClick={saveApiKey} className="btn btn-primary btn-xs">Save</button>
             </div>
-            <div className="t-xs" style={{ color: 'var(--text3)', marginTop: 5 }}>
+            <div className="t-xs text-ink3 mt-[5px]">
               Key stored locally in your browser. Never sent to our servers.
             </div>
           </div>
@@ -348,40 +299,26 @@ export default function AIAssistant() {
 
         {/* Daily insight card */}
         {dailyInsight && messages.length === 0 && (
-          <div style={{
-            margin: '12px 14px 0',
-            padding: '10px 13px',
-            background: 'var(--gold-bg)',
-            border: '1px solid var(--gold-border)',
-            borderRadius: 8,
-            flexShrink: 0,
-          }}>
-            <div className="t-label" style={{ color: 'var(--gold)', marginBottom: 5 }}>
+          <div className="mt-3 mx-[14px] px-[13px] py-2.5 bg-[var(--gold-bg)] border border-[var(--gold-border)] rounded-lg shrink-0">
+            <div className="t-label text-gold mb-[5px]">
               ✦ Today's Insight
             </div>
-            <div className="t-xs" style={{ color: 'var(--text2)', lineHeight: 1.5 }}>{dailyInsight}</div>
+            <div className="t-xs text-ink2" style={{ lineHeight: 1.5 }}>{dailyInsight}</div>
           </div>
         )}
 
         {/* Messages */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px 0' }}>
+        <div className="flex-1 overflow-y-auto px-0 py-3">
           {messages.length === 0 && (
-            <div style={{ padding: '8px 14px' }}>
-              <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 10 }}>
+            <div className="px-[14px] py-2">
+              <div className="t-label text-ink3 mb-2.5">
                 Suggested questions
               </div>
               {SUGGESTED_PROMPTS.map((p, i) => (
                 <button
                   key={i}
                   onClick={() => sendMessage(p)}
-                  style={{
-                    display: 'block', width: '100%', textAlign: 'left',
-                    padding: '8px 12px', marginBottom: 6,
-                    background: 'var(--surface2)', border: '1px solid var(--border)',
-                    borderRadius: 8, color: 'var(--text2)', cursor: 'pointer',
-                    fontSize: 12.5,
-                    transition: 'all 0.12s',
-                  }}
+                  className="block w-full text-left px-3 py-2 mb-1.5 bg-surface2 border border-line rounded-lg text-ink2 cursor-pointer text-[12.5px] transition-all duration-[120ms]"
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold)' }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text2)' }}
                 >
@@ -396,11 +333,8 @@ export default function AIAssistant() {
           ))}
 
           {loading && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start', padding: '4px 14px' }}>
-              <div style={{
-                background: 'var(--surface2)', border: '1px solid var(--border)',
-                borderRadius: '12px 12px 12px 2px',
-              }}>
+            <div className="flex justify-start px-[14px] py-1">
+              <div className="bg-surface2 border border-line rounded-[12px_12px_12px_2px]">
                 <TypingIndicator />
               </div>
             </div>
@@ -409,12 +343,7 @@ export default function AIAssistant() {
         </div>
 
         {/* Input */}
-        <div style={{
-          padding: '10px 14px',
-          borderTop: '1px solid var(--border)',
-          display: 'flex', gap: 8, alignItems: 'flex-end',
-          background: 'var(--surface)', flexShrink: 0,
-        }}>
+        <div className="px-[14px] py-2.5 border-t border-line flex gap-2 items-end bg-surface shrink-0">
           <textarea
             ref={textareaRef}
             value={input}
@@ -426,31 +355,15 @@ export default function AIAssistant() {
             onKeyDown={handleKeyDown}
             placeholder="Ask anything... (Enter to send)"
             rows={1}
-            className="t-sm"
-            style={{
-              flex: 1, resize: 'none', overflow: 'hidden',
-              padding: '8px 10px', borderRadius: 8,
-              border: '1px solid var(--border)',
-              background: 'var(--surface2)', color: 'var(--text)',
-              outline: 'none', lineHeight: 1.4,
-              transition: 'border-color 0.14s',
-            }}
+            className="t-sm flex-1 resize-none overflow-hidden px-2.5 py-2 rounded-lg border border-line bg-surface2 text-ink outline-none leading-[1.4] transition-[border-color] duration-[140ms]"
             onFocus={e => { e.target.style.borderColor = 'var(--gold)' }}
             onBlur={e => { e.target.style.borderColor = 'var(--border)' }}
           />
           <button
             onClick={() => sendMessage(input)}
             disabled={!input.trim() || loading}
-            className="t-h3"
-            style={{
-              padding: '8px 14px', borderRadius: 8,
-              background: input.trim() && !loading ? 'var(--gold)' : 'var(--surface2)',
-              color: input.trim() && !loading ? '#000' : 'var(--text3)',
-              border: '1px solid var(--border2)',
-              cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
-              flexShrink: 0,
-              transition: 'all 0.14s',
-            }}
+            className={`t-h3 px-[14px] py-2 rounded-lg border border-line2 shrink-0 transition-all duration-[140ms] ${input.trim() && !loading ? 'bg-[var(--gold)] cursor-pointer' : 'bg-surface2 text-ink3 cursor-not-allowed'}`}
+            style={{ color: input.trim() && !loading ? '#000' : undefined }}
           >↑</button>
         </div>
       </div>

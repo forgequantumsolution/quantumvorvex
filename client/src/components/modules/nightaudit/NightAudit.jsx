@@ -107,24 +107,23 @@ export default function NightAudit() {
   const cashOut = CASH_REGISTER.filter(t => t.type === 'out').reduce((s, t) => s + t.amount, 0)
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200 }}>
+    <div className="p-6 max-w-[1200px]">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+      <div className="flex justify-between items-start mb-6 flex-wrap gap-3">
         <div>
-          <h1 className="t-h1" style={{ margin: 0, letterSpacing: '-0.03em' }}>Night Audit</h1>
-          <p className="t-sm" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>End-of-day close — {formatDate(TODAY)}</p>
+          <h1 className="t-h1 m-0 tracking-[-0.03em]">Night Audit</h1>
+          <p className="t-sm mt-1 mb-0 mx-0 text-ink3">End-of-day close — {formatDate(TODAY)}</p>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="flex gap-2 items-center">
           {locked && (
-            <span className="t-xs" style={{ padding: '6px 14px', borderRadius: 20, background: 'var(--green-bg)', color: 'var(--green-text)' }}>
+            <span className="t-xs px-3.5 py-1.5 rounded-[20px] bg-success-bg text-success-text">
               🔒 DAY LOCKED
             </span>
           )}
           <button
-            className={`btn ${allDone && !locked ? 'btn-primary' : 'btn-outline'} btn-sm`}
+            className={`btn ${allDone && !locked ? 'btn-primary' : 'btn-outline'} btn-sm ${allDone && !locked ? 'bg-gold text-black border-none font-bold' : ''}`}
             disabled={locked || !allDone}
             onClick={() => setShowLockConfirm(true)}
-            style={allDone && !locked ? { background: 'var(--gold)', color: '#000', border: 'none', fontWeight: 700 } : {}}
           >
             🔒 Lock & Close Day
           </button>
@@ -132,7 +131,7 @@ export default function NightAudit() {
       </div>
 
       {/* Summary stat cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+      <div className="grid grid-cols-4 gap-3 mb-6">
         {[
           { label: 'Occupancy',       value: `${Math.round((AUDIT_SUMMARY.occupiedRooms / AUDIT_SUMMARY.totalRooms) * 100)}%`, color: 'var(--blue-text)', bar: 'stat-bar-blue' },
           { label: "Today's Revenue", value: formatCurrency(REVENUE_TODAY.total), color: 'var(--gold)', bar: 'stat-bar-amber' },
@@ -140,19 +139,19 @@ export default function NightAudit() {
           { label: 'Check-Outs',      value: AUDIT_SUMMARY.checkOutsToday, color: 'var(--red-text)',   bar: 'stat-bar-red' },
         ].map(s => (
           <div key={s.label} className={`stat-card ${s.bar}`}>
-            <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{s.label}</div>
+            <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.05em] mb-1.5">{s.label}</div>
             <div className="t-h1" style={{ fontFamily: 'var(--font-mono)', color: s.color }}>{s.value}</div>
           </div>
         ))}
       </div>
 
       {/* Two-column layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+      <div className="grid grid-cols-2 gap-5 mb-5">
 
         {/* Revenue Breakdown */}
         <div className="card">
-          <div className="t-title" style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>Revenue Breakdown</div>
-          <div style={{ padding: '14px 18px' }}>
+          <div className="t-title px-[18px] py-3.5 border-b border-line">Revenue Breakdown</div>
+          <div className="px-[18px] py-3.5">
             {[
               ['Room Rent',    REVENUE_TODAY.roomRent,  'var(--text)'],
               ['Food Orders',  REVENUE_TODAY.foodOrders,'var(--text)'],
@@ -161,34 +160,34 @@ export default function NightAudit() {
               ['Refunds',     -REVENUE_TODAY.refunds,    'var(--red-text)'],
               ['GST Collected', REVENUE_TODAY.gst,       'var(--text3)'],
             ].map(([label, val, color]) => (
-              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
-                <span className="t-sm" style={{ color: 'var(--text2)' }}>{label}</span>
+              <div key={label} className="flex justify-between py-[7px] border-b border-line">
+                <span className="t-sm text-ink2">{label}</span>
                 <span className="t-title" style={{ fontFamily: 'var(--font-mono)', color }}>{val < 0 ? `−${formatCurrency(-val)}` : formatCurrency(val)}</span>
               </div>
             ))}
-            <div className="t-h3" style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0' }}>
-              <span style={{ color: 'var(--text)' }}>Net Total</span>
-              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>{formatCurrency(REVENUE_TODAY.total)}</span>
+            <div className="t-h3 flex justify-between py-2.5">
+              <span className="text-ink">Net Total</span>
+              <span className="text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(REVENUE_TODAY.total)}</span>
             </div>
           </div>
         </div>
 
         {/* Checklist */}
         <div className="card">
-          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="px-[18px] py-3.5 border-b border-line flex justify-between items-center">
             <span className="t-title">Audit Checklist</span>
-            <span style={{ fontSize: 11.5, color: 'var(--text3)', fontWeight: 600 }}>{completedCount}/{checklist.length} done</span>
+            <span className="text-[11.5px] text-ink3 font-semibold">{completedCount}/{checklist.length} done</span>
           </div>
           {/* Progress bar */}
-          <div style={{ height: 3, background: 'var(--border)' }}>
-            <div style={{ height: 3, width: `${progress}%`, background: allDone ? 'var(--green)' : 'var(--gold)', transition: 'width 0.3s ease' }} />
+          <div className="h-[3px] bg-line">
+            <div className={`h-[3px] transition-all duration-300 ${allDone ? 'bg-success' : 'bg-gold'}`} style={{ width: `${progress}%` }} />
           </div>
-          <div style={{ padding: '10px 18px' }}>
+          <div className="px-[18px] py-2.5">
             {checklist.map(task => (
-              <label key={task.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: locked ? 'default' : 'pointer', borderBottom: '1px solid var(--border)' }}>
-                <input type="checkbox" checked={task.done} onChange={() => toggleTask(task.id)} style={{ width: 14, height: 14, accentColor: 'var(--gold)' }} />
-                <span className="t-sm" style={{ color: task.done ? 'var(--text3)' : 'var(--text)', textDecoration: task.done ? 'line-through' : 'none', flex: 1 }}>{task.task}</span>
-                {task.done && <span className="t-xs" style={{ color: 'var(--green-text)' }}>✓</span>}
+              <label key={task.id} className={`flex items-center gap-2.5 py-2 border-b border-line ${locked ? 'cursor-default' : 'cursor-pointer'}`}>
+                <input type="checkbox" checked={task.done} onChange={() => toggleTask(task.id)} className="w-3.5 h-3.5" style={{ accentColor: 'var(--gold)' }} />
+                <span className={`t-sm flex-1 ${task.done ? 'text-ink3 line-through' : 'text-ink'}`}>{task.task}</span>
+                {task.done && <span className="t-xs text-success-text">✓</span>}
               </label>
             ))}
           </div>
@@ -196,26 +195,26 @@ export default function NightAudit() {
       </div>
 
       {/* Three-column second row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20, marginBottom: 20 }}>
+      <div className="grid grid-cols-3 gap-5 mb-5">
 
         {/* Pending Checkouts */}
         <div className="card">
-          <div className="t-title" style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+          <div className="t-title px-[18px] py-3.5 border-b border-line">
             Pending Checkouts
             {PENDING_CHECKOUTS.length > 0 && (
-              <span style={{ marginLeft: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 10 }}>{PENDING_CHECKOUTS.length}</span>
+              <span className="ml-2 bg-danger-bg text-danger-text text-[10.5px] font-bold px-2 py-0.5 rounded-[10px]">{PENDING_CHECKOUTS.length}</span>
             )}
           </div>
-          <div style={{ padding: '10px 18px' }}>
+          <div className="px-[18px] py-2.5">
             {PENDING_CHECKOUTS.length === 0 ? (
-              <div className="t-sm" style={{ padding: '20px 0', textAlign: 'center', color: 'var(--text3)' }}>All clear ✓</div>
+              <div className="t-sm py-5 text-center text-ink3">All clear ✓</div>
             ) : PENDING_CHECKOUTS.map(c => (
-              <div key={c.room} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
+              <div key={c.room} className="flex justify-between items-center py-[9px] border-b border-line">
                 <div>
-                  <div className="t-title" style={{ color: 'var(--text)' }}>{c.guest}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Room {c.room} · {c.stayType}</div>
+                  <div className="t-title">{c.guest}</div>
+                  <div className="text-[11px] text-ink3 mt-0.5">Room {c.room} · {c.stayType}</div>
                 </div>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 700, color: 'var(--red-text)' }}>{formatCurrency(c.balance)}</span>
+                <span className="text-[12.5px] font-bold text-danger-text" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(c.balance)}</span>
               </div>
             ))}
           </div>
@@ -223,13 +222,13 @@ export default function NightAudit() {
 
         {/* Today's Check-Ins */}
         <div className="card">
-          <div className="t-title" style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>Today's Check-Ins</div>
-          <div style={{ padding: '10px 18px' }}>
+          <div className="t-title px-[18px] py-3.5 border-b border-line">Today's Check-Ins</div>
+          <div className="px-[18px] py-2.5">
             {TODAYS_CHECKINS.map(c => (
-              <div key={c.room} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
+              <div key={c.room} className="flex justify-between items-center py-[9px] border-b border-line">
                 <div>
-                  <div className="t-title" style={{ color: 'var(--text)' }}>{c.guest}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Room {c.room} · {c.source}</div>
+                  <div className="t-title">{c.guest}</div>
+                  <div className="text-[11px] text-ink3 mt-0.5">Room {c.room} · {c.source}</div>
                 </div>
                 <Badge type="green">Checked In</Badge>
               </div>
@@ -239,40 +238,36 @@ export default function NightAudit() {
 
         {/* Cash Register Summary */}
         <div className="card">
-          <div className="t-title" style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>Cash Register</div>
-          <div style={{ padding: '10px 18px' }}>
+          <div className="t-title px-[18px] py-3.5 border-b border-line">Cash Register</div>
+          <div className="px-[18px] py-2.5">
             {CASH_REGISTER.slice(0, 4).map((t, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11.5, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.desc}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text3)' }}>{t.time}</div>
+              <div key={i} className="flex justify-between items-center py-[7px] border-b border-line">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11.5px] text-ink overflow-hidden text-ellipsis whitespace-nowrap">{t.desc}</div>
+                  <div className="text-[10px] text-ink3">{t.time}</div>
                 </div>
-                <span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: t.type === 'in' ? 'var(--green-text)' : 'var(--red-text)', marginLeft: 8, flexShrink: 0 }}>
+                <span className="t-xs ml-2 shrink-0" style={{ fontFamily: 'var(--font-mono)', color: t.type === 'in' ? 'var(--green-text)' : 'var(--red-text)' }}>
                   {t.type === 'in' ? '+' : '−'}{formatCurrency(t.amount)}
                 </span>
               </div>
             ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', fontWeight: 700, borderTop: '1px solid var(--border)', marginTop: 4 }}>
-              <span className="t-xs" style={{ color: 'var(--text2)' }}>Net Cash</span>
-              <span className="t-sm" style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>{formatCurrency(cashIn - cashOut)}</span>
+            <div className="flex justify-between py-2.5 font-bold border-t border-line mt-1">
+              <span className="t-xs">Net Cash</span>
+              <span className="t-sm text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(cashIn - cashOut)}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Housekeeping Status */}
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="t-title" style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>Housekeeping Status</div>
-        <div style={{ padding: '14px 18px', display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+      <div className="card mb-5">
+        <div className="t-title px-[18px] py-3.5 border-b border-line">Housekeeping Status</div>
+        <div className="px-[18px] py-3.5 flex flex-wrap gap-2.5">
           {HOUSEKEEPING_STATUS.map(r => (
-            <div key={r.room} style={{
-              padding: '10px 14px', borderRadius: 8, minWidth: 110,
-              background: 'var(--surface2)', border: '1px solid var(--border)',
-              textAlign: 'center',
-            }}>
-              <div className="t-title" style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)', marginBottom: 4 }}>{r.room}</div>
+            <div key={r.room} className="px-3.5 py-2.5 rounded-lg min-w-[110px] bg-surface2 border border-line text-center">
+              <div className="t-title text-gold mb-1" style={{ fontFamily: 'var(--font-mono)' }}>{r.room}</div>
               <HKBadge status={r.status} />
-              <div style={{ fontSize: 10.5, color: 'var(--text3)', marginTop: 4 }}>{r.assignee}</div>
+              <div className="text-[10.5px] text-ink3 mt-1">{r.assignee}</div>
             </div>
           ))}
         </div>
@@ -287,18 +282,18 @@ export default function NightAudit() {
         footer={
           <>
             <button className="btn btn-outline btn-sm" onClick={() => setShowLockConfirm(false)}>Cancel</button>
-            <button className="btn btn-primary btn-sm" style={{ background: 'var(--gold)', color: '#000', border: 'none' }} onClick={handleLock}>
+            <button className="btn btn-primary btn-sm bg-gold text-black border-none" onClick={handleLock}>
               🔒 Confirm Lock
             </button>
           </>
         }
       >
-        <p style={{ fontSize: 13.5, color: 'var(--text2)', lineHeight: 1.8, margin: 0 }}>
+        <p className="text-[13.5px] text-ink2 leading-[1.8] m-0">
           This will lock the current day's transactions and mark the audit as complete. The date will be closed for further edits.
         </p>
-        <div style={{ marginTop: 16, padding: '12px 14px', background: 'var(--gold-bg)', borderRadius: 8, display: 'flex', justifyContent: 'space-between' }}>
-          <span className="t-title" style={{ color: 'var(--gold)' }}>Net Revenue Today</span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--gold)' }}>{formatCurrency(REVENUE_TODAY.total)}</span>
+        <div className="mt-4 px-3.5 py-3 bg-[var(--gold-bg)] rounded-lg flex justify-between">
+          <span className="t-title text-gold">Net Revenue Today</span>
+          <span className="font-bold text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(REVENUE_TODAY.total)}</span>
         </div>
       </Modal>
     </div>

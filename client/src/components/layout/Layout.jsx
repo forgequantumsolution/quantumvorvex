@@ -3,37 +3,18 @@ import Topbar from './Topbar'
 
 export default function Layout({ children }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'row',
-        height: '100vh',
-        overflow: 'hidden',
-        width: '100%',
-      }}
-    >
+    <div className="flex flex-row h-screen overflow-hidden w-full">
       <Sidebar />
 
       <div
         id="main"
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          minWidth: 0,
-        }}
+        className="flex-1 flex flex-col overflow-hidden min-w-0"
       >
         <Topbar />
 
         <div
           id="content"
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            padding: 24,
-            background: 'var(--main-bg)',
-          }}
+          className="flex-1 overflow-y-auto p-6 bg-canvas"
         >
           {children}
         </div>

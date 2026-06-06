@@ -38,41 +38,31 @@ The hotel is not liable for loss of personal belongings. Guests are advised to u
 
 function PortalProgressBar({ current, total }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, marginBottom: 28 }}>
+    <div className="flex items-center justify-center mb-7">
       {Array.from({ length: total }, (_, i) => {
         const stepNum = i + 1
         const isCompleted = stepNum < current
         const isActive = stepNum === current
         return (
-          <div key={stepNum} style={{ display: 'flex', alignItems: 'center' }}>
+          <div key={stepNum} className="flex items-center">
             <div
-              style={{
-                width: 30,
-                height: 30,
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 700,
-                fontSize: 12,
-                flexShrink: 0,
-                transition: 'all 0.2s',
-                ...(isCompleted
+              className="w-[30px] h-[30px] rounded-full flex items-center justify-center font-bold text-[12px] shrink-0 transition-all duration-200"
+              style={
+                isCompleted
                   ? { background: 'var(--green)', color: '#fff', border: '2px solid var(--green)' }
                   : isActive
                   ? { background: 'var(--gold)', color: '#000', border: '2px solid var(--gold)' }
-                  : { background: 'transparent', color: 'var(--text3)', border: '2px solid var(--border2)' }),
-              }}
+                  : { background: 'transparent', color: 'var(--text3)', border: '2px solid var(--border2)' }
+              }
               title={STEP_LABELS[i]}
             >
               {isCompleted ? '✓' : stepNum}
             </div>
             {stepNum < total && (
-              <div style={{
-                width: 32, height: 2,
-                background: isCompleted ? 'var(--green)' : 'var(--border2)',
-                transition: 'background 0.2s',
-              }} />
+              <div
+                className="w-8 h-0.5 transition-[background] duration-200"
+                style={{ background: isCompleted ? 'var(--green)' : 'var(--border2)' }}
+              />
             )}
           </div>
         )
@@ -85,9 +75,9 @@ function PortalProgressBar({ current, total }) {
 
 function Field({ label, required, children }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <label className="t-label" style={{ color: 'var(--text3)' }}>
-        {label}{required && <span style={{ color: 'var(--red)', marginLeft: 2 }}>*</span>}
+    <div className="flex flex-col gap-[5px]">
+      <label className="t-label text-ink3">
+        {label}{required && <span className="text-danger ml-0.5">*</span>}
       </label>
       {children}
     </div>
@@ -99,66 +89,57 @@ function Field({ label, required, children }) {
 function Step1Welcome({ booking, onNext }) {
   const firstName = booking.guestName.split(' ')[0]
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       {/* Welcome message */}
-      <div style={{ textAlign: 'center', padding: '8px 0 4px' }}>
-        <div className="t-display" style={{ marginBottom: 8 }}>👋</div>
-        <h2 className="t-h1" style={{
-          color: 'var(--text)', margin: 0, letterSpacing: '-0.03em',
-        }}>
+      <div className="text-center pt-2 pb-1">
+        <div className="t-display mb-2">👋</div>
+        <h2 className="t-h1 text-ink m-0 tracking-[-0.03em]">
           Welcome, {firstName}!
         </h2>
-        <p className="t-sm" style={{ color: 'var(--text2)', marginTop: 6 }}>
+        <p className="t-sm text-ink2 mt-1.5">
           Complete your self check-in in just a few steps.
         </p>
       </div>
 
       {/* Booking summary card */}
-      <div style={{
-        background: 'var(--surface2)', border: '1px solid var(--border)',
-        borderRadius: 10, overflow: 'hidden',
-      }}>
-        <div style={{
-          background: 'var(--gold)', padding: '10px 16px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
-          <span className="t-title" style={{ color: '#000' }}>
+      <div className="bg-surface2 border border-line rounded-[10px] overflow-hidden">
+        <div className="bg-[var(--gold)] px-4 py-2.5 flex items-center justify-between">
+          <span className="t-title text-[#000]">
             {booking.hotelName}
           </span>
-          <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: '#000', opacity: 0.8 }}>
+          <span className="text-[11px] text-[#000] opacity-80" style={{ fontFamily: 'var(--font-mono)' }}>
             {booking.bookingNo}
           </span>
         </div>
-        <div style={{ padding: '16px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 20px' }}>
+        <div className="p-4">
+          <div className="grid grid-cols-2 gap-y-3 gap-x-5">
             <div>
-              <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 4 }}>Room</div>
-              <div className="t-h3" style={{ color: 'var(--text)' }}>{booking.room}</div>
-              <div className="t-xs" style={{ color: 'var(--text3)' }}>{booking.type}</div>
+              <div className="t-label text-ink3 mb-1">Room</div>
+              <div className="t-h3 text-ink">{booking.room}</div>
+              <div className="t-xs text-ink3">{booking.type}</div>
             </div>
             <div>
-              <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 4 }}>Guest</div>
-              <div className="t-title" style={{ color: 'var(--text)' }}>{booking.guestName}</div>
+              <div className="t-label text-ink3 mb-1">Guest</div>
+              <div className="t-title text-ink">{booking.guestName}</div>
             </div>
             <div>
-              <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 4 }}>Check-In</div>
-              <div className="t-title" style={{ color: 'var(--text)' }}>{formatDate(booking.checkIn)}</div>
+              <div className="t-label text-ink3 mb-1">Check-In</div>
+              <div className="t-title text-ink">{formatDate(booking.checkIn)}</div>
             </div>
             <div>
-              <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 4 }}>Check-Out</div>
-              <div className="t-title" style={{ color: 'var(--text)' }}>{formatDate(booking.checkOut)}</div>
+              <div className="t-label text-ink3 mb-1">Check-Out</div>
+              <div className="t-title text-ink">{formatDate(booking.checkOut)}</div>
             </div>
           </div>
-          <div className="t-xs" style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)', color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div className="t-xs mt-3.5 pt-3 border-t border-line text-ink3 flex items-center gap-1.5">
             📞 {booking.hotelPhone}
           </div>
         </div>
       </div>
 
       <button
-        className="btn btn-primary t-title"
+        className="btn btn-primary t-title w-full justify-center p-[13px] rounded-[9px]"
         onClick={onNext}
-        style={{ width: '100%', justifyContent: 'center', padding: '13px', borderRadius: 9 }}
       >
         Begin Self Check-In →
       </button>
@@ -177,8 +158,8 @@ function Step2Verify({ booking, data, onChange, onNext }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <p className="t-sm" style={{ color: 'var(--text2)', margin: 0 }}>
+    <div className="flex flex-col gap-4">
+      <p className="t-sm text-ink2 m-0">
         Please verify and complete your personal details below.
       </p>
 
@@ -207,7 +188,7 @@ function Step2Verify({ booking, data, onChange, onNext }) {
           onChange={(e) => set('address', e.target.value)} placeholder="Full permanent address..." rows={3} />
       </Field>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 14px' }}>
+      <div className="grid grid-cols-2 gap-y-3 gap-x-3.5">
         <Field label="Emergency Contact Name">
           <input className="form-input" value={data.emergencyName}
             onChange={(e) => set('emergencyName', e.target.value)} placeholder="Name" />
@@ -219,9 +200,8 @@ function Step2Verify({ booking, data, onChange, onNext }) {
       </div>
 
       <button
-        className="btn btn-primary t-title"
+        className="btn btn-primary t-title w-full justify-center p-3 rounded-[9px] mt-1.5"
         onClick={handleSubmit}
-        style={{ width: '100%', justifyContent: 'center', padding: '12px', borderRadius: 9, marginTop: 6 }}
       >
         Confirm Details →
       </button>
@@ -242,24 +222,21 @@ function UploadZone({ label, required, hint, file, onFile }) {
 
   return (
     <div>
-      <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 6 }}>
-        {label}{required && <span style={{ color: 'var(--red)', marginLeft: 2 }}>*</span>}
+      <div className="t-label text-ink3 mb-1.5">
+        {label}{required && <span className="text-danger ml-0.5">*</span>}
       </div>
       {file ? (
-        <div style={{
-          border: '2px solid var(--green)', borderRadius: 8, padding: '12px 14px',
-          background: 'var(--green-bg)', display: 'flex', alignItems: 'center', gap: 10,
-        }}>
+        <div className="border-2 border-success rounded-lg px-3.5 py-3 bg-success-bg flex items-center gap-2.5">
           {file.type?.startsWith('image/') ? (
-            <img src={file.url} alt="preview" style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} />
+            <img src={file.url} alt="preview" className="w-12 h-12 object-cover rounded-md" />
           ) : (
             <div className="t-display">📄</div>
           )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--green-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div className="flex-1 min-w-0">
+            <div className="text-[12px] font-semibold text-success-text whitespace-nowrap overflow-hidden text-ellipsis">
               {file.name}
             </div>
-            <div className="t-label" style={{ color: 'var(--text3)', marginTop: 2 }}>Uploaded successfully ✓</div>
+            <div className="t-label text-ink3 mt-0.5">Uploaded successfully ✓</div>
           </div>
           <button
             className="btn btn-outline btn-xs"
@@ -270,17 +247,16 @@ function UploadZone({ label, required, hint, file, onFile }) {
         </div>
       ) : (
         <div
-          className={`upload-zone${drag ? ' dragover' : ''}`}
-          style={{ cursor: 'pointer' }}
+          className={`upload-zone cursor-pointer${drag ? ' dragover' : ''}`}
           onClick={() => inputRef.current.click()}
           onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
           onDragLeave={() => setDrag(false)}
           onDrop={(e) => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]) }}
         >
-          <div className="t-h1" style={{ marginBottom: 4 }}>📤</div>
-          <div className="t-sm" style={{ color: 'var(--text2)' }}>Tap to upload or drag & drop</div>
-          {hint && <div className="t-xs" style={{ color: 'var(--text3)', marginTop: 3 }}>{hint}</div>}
-          <input ref={inputRef} type="file" accept="image/*,.pdf" style={{ display: 'none' }}
+          <div className="t-h1 mb-1">📤</div>
+          <div className="t-sm text-ink2">Tap to upload or drag & drop</div>
+          {hint && <div className="t-xs text-ink3 mt-[3px]">{hint}</div>}
+          <input ref={inputRef} type="file" accept="image/*,.pdf" className="hidden"
             onChange={(e) => handleFile(e.target.files[0])} capture="environment" />
         </div>
       )}
@@ -303,8 +279,8 @@ function Step3Documents({ data, onChange, onNext }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <p className="t-sm" style={{ color: 'var(--text2)', margin: 0 }}>
+    <div className="flex flex-col gap-[18px]">
+      <p className="t-sm text-ink2 m-0">
         Upload your government ID and a clear photo of yourself.
       </p>
 
@@ -336,18 +312,13 @@ function Step3Documents({ data, onChange, onNext }) {
       />
 
       {/* Camera hint */}
-      <div className="t-xs" style={{
-        background: 'var(--blue-bg)', border: '1px solid var(--blue)',
-        borderRadius: 8, padding: '10px 14px',
-        color: 'var(--blue-text)', display: 'flex', alignItems: 'center', gap: 8,
-      }}>
+      <div className="t-xs bg-info-bg border border-info rounded-lg px-3.5 py-2.5 text-info-text flex items-center gap-2">
         📷 <span>On mobile? Tap the upload zones above to use your device camera directly.</span>
       </div>
 
       <button
-        className="btn btn-primary t-title"
+        className="btn btn-primary t-title w-full justify-center p-3 rounded-[9px]"
         onClick={handleContinue}
-        style={{ width: '100%', justifyContent: 'center', padding: '12px', borderRadius: 9 }}
       >
         Continue →
       </button>
@@ -368,19 +339,16 @@ function Step4Terms({ data, onChange, onNext }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <p className="t-sm" style={{ color: 'var(--text2)', margin: 0 }}>
+    <div className="flex flex-col gap-[18px]">
+      <p className="t-sm text-ink2 m-0">
         Please read and accept our terms and conditions to complete your pre check-in.
       </p>
 
       {/* Terms scroll box */}
-      <div className="t-xs" style={{
-        height: 150, overflowY: 'auto',
-        background: 'var(--surface2)', border: '1px solid var(--border)',
-        borderRadius: 8, padding: '14px 16px',
-        color: 'var(--text2)', lineHeight: 1.7,
-        scrollbarWidth: 'thin',
-      }}>
+      <div
+        className="t-xs h-[150px] overflow-y-auto bg-surface2 border border-line rounded-lg px-4 py-3.5 text-ink2 leading-[1.7]"
+        style={{ scrollbarWidth: 'thin' }}
+      >
         {TERMS_TEXT.split('\n\n').map((para, i) => (
           <p key={i} style={{ margin: i === 0 ? 0 : '12px 0 0' }}>{para}</p>
         ))}
@@ -388,15 +356,14 @@ function Step4Terms({ data, onChange, onNext }) {
 
       {/* Digital signature */}
       <div>
-        <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 6 }}>
-          Digital Signature <span style={{ color: 'var(--red)' }}>*</span>
+        <div className="t-label text-ink3 mb-1.5">
+          Digital Signature <span className="text-danger">*</span>
         </div>
-        <div style={{
-          border: `2px solid ${data.signature.trim() ? 'var(--gold)' : 'var(--border2)'}`,
-          borderRadius: 8, overflow: 'hidden', transition: 'border-color 0.14s',
-          background: 'var(--surface)',
-        }}>
-          <div className="t-label" style={{ color: 'var(--text3)', padding: '6px 12px 0' }}>
+        <div
+          className="rounded-lg overflow-hidden transition-[border-color] duration-[140ms] bg-surface border-2"
+          style={{ borderColor: data.signature.trim() ? 'var(--gold)' : 'var(--border2)' }}
+        >
+          <div className="t-label text-ink3 px-3 pt-1.5">
             TYPE YOUR FULL NAME AS SIGNATURE
           </div>
           <input
@@ -404,42 +371,37 @@ function Step4Terms({ data, onChange, onNext }) {
             value={data.signature}
             onChange={(e) => set('signature', e.target.value)}
             placeholder="Sign here..."
-            style={{
-              width: '100%', border: 'none', outline: 'none',
-              background: 'transparent', padding: '8px 14px 12px',
-              fontSize: 20, fontStyle: 'italic', textDecoration: 'underline',
-              color: 'var(--text)',
-            }}
+            className="w-full border-none outline-none bg-transparent px-3.5 pt-2 pb-3 text-[20px] italic underline text-ink"
           />
         </div>
-        <div className="t-xs" style={{ color: 'var(--text3)', marginTop: 4 }}>
+        <div className="t-xs text-ink3 mt-1">
           This constitutes a legally binding digital signature.
         </div>
       </div>
 
       {/* Agreement checkbox */}
-      <label style={{
-        display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer',
-        padding: '12px 14px', borderRadius: 8,
-        border: `1.5px solid ${data.agreed ? 'var(--gold)' : 'var(--border)'}`,
-        background: data.agreed ? 'var(--gold-bg)' : 'var(--surface2)',
-        transition: 'all 0.14s',
-      }}>
+      <label
+        className="flex items-start gap-2.5 cursor-pointer px-3.5 py-3 rounded-lg border-[1.5px] transition-all duration-[140ms]"
+        style={{
+          borderColor: data.agreed ? 'var(--gold)' : 'var(--border)',
+          background: data.agreed ? 'var(--gold-bg)' : 'var(--surface2)',
+        }}
+      >
         <input
           type="checkbox"
           checked={data.agreed}
           onChange={(e) => set('agreed', e.target.checked)}
-          style={{ accentColor: 'var(--gold)', width: 16, height: 16, flexShrink: 0, marginTop: 1 }}
+          className="w-4 h-4 shrink-0 mt-px"
+          style={{ accentColor: 'var(--gold)' }}
         />
-        <span className="t-sm" style={{ color: 'var(--text2)', lineHeight: 1.5 }}>
-          I agree to the <strong style={{ color: 'var(--text)' }}>Terms and Conditions</strong> of {MOCK_BOOKING.hotelName} and confirm that all information provided is accurate.
+        <span className="t-sm text-ink2 leading-[1.5]">
+          I agree to the <strong className="text-ink">Terms and Conditions</strong> of {MOCK_BOOKING.hotelName} and confirm that all information provided is accurate.
         </span>
       </label>
 
       <button
-        className="btn btn-primary t-title"
+        className="btn btn-primary t-title w-full justify-center p-3 rounded-[9px]"
         onClick={handleSubmit}
-        style={{ width: '100%', justifyContent: 'center', padding: '12px', borderRadius: 9 }}
       >
         Confirm & Submit ✓
       </button>
@@ -464,36 +426,25 @@ function Step5Confirmation({ booking, guestName }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, textAlign: 'center', padding: '8px 0' }}>
+    <div className="flex flex-col items-center gap-5 text-center py-2">
       {/* Green checkmark */}
-      <div className="t-display" style={{
-        width: 72, height: 72, borderRadius: '50%',
-        background: 'var(--green-bg)', border: '3px solid var(--green)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: 'var(--green)',
-      }}>
+      <div className="t-display w-[72px] h-[72px] rounded-full bg-success-bg border-[3px] border-success flex items-center justify-center text-success">
         ✓
       </div>
 
       {/* Title */}
       <div>
-        <h2 className="t-h1" style={{
-          color: 'var(--text)', margin: '0 0 6px', letterSpacing: '-0.03em',
-        }}>
+        <h2 className="t-h1 text-ink mt-0 mx-0 mb-1.5 tracking-[-0.03em]">
           Pre-Check-In Complete!
         </h2>
-        <p className="t-sm" style={{ color: 'var(--text2)', margin: 0 }}>
+        <p className="t-sm text-ink2 m-0">
           Your details have been submitted successfully. Our team will verify everything before your arrival.
         </p>
       </div>
 
       {/* Summary card */}
-      <div style={{
-        width: '100%', background: 'var(--surface2)',
-        border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px',
-        textAlign: 'left',
-      }}>
-        <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 14 }}>
+      <div className="w-full bg-surface2 border border-line rounded-[10px] px-5 py-4 text-left">
+        <div className="t-label text-ink3 mb-3.5">
           Booking Summary
         </div>
         {[
@@ -503,41 +454,30 @@ function Step5Confirmation({ booking, guestName }) {
           { label: 'Check-Out', value: formatDate(booking.checkOut) },
           { label: 'Booking No', value: booking.bookingNo },
         ].map(({ label, value }) => (
-          <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
-            <span className="t-xs" style={{ color: 'var(--text3)' }}>{label}</span>
-            <span className="t-title" style={{ color: 'var(--text)' }}>{value}</span>
+          <div key={label} className="flex justify-between items-center py-[7px] border-b border-line">
+            <span className="t-xs text-ink3">{label}</span>
+            <span className="t-title text-ink">{value}</span>
           </div>
         ))}
       </div>
 
       {/* See you message */}
-      <div className="t-title" style={{
-        background: 'var(--gold-bg)', border: '1px solid var(--gold-border)',
-        borderRadius: 8, padding: '12px 16px', width: '100%',
-        color: 'var(--gold)',
-      }}>
+      <div className="t-title bg-[var(--gold-bg)] border border-[var(--gold-border)] rounded-lg px-4 py-3 w-full text-gold">
         See you on {formatDate(booking.checkIn)}! 🎉
       </div>
 
       {/* Action buttons */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+      <div className="flex flex-col gap-2.5 w-full">
         <button
-          className="btn btn-outline t-sm"
+          className="btn btn-outline t-sm w-full justify-center p-[11px]"
           onClick={handleDownload}
-          style={{ width: '100%', justifyContent: 'center', padding: '11px' }}
         >
           📄 Download Confirmation
         </button>
         <button
-          className="t-title"
+          className="t-title w-full p-[11px] rounded-md border-none cursor-pointer text-[#fff] flex items-center justify-center gap-[7px] transition-opacity duration-[140ms]"
           onClick={handleWhatsApp}
-          style={{
-            width: '100%', padding: '11px',
-            borderRadius: 6, border: 'none', cursor: 'pointer',
-            background: '#25D366', color: '#fff', display: 'flex',
-            alignItems: 'center', justifyContent: 'center', gap: 7,
-            transition: 'opacity 0.14s',
-          }}
+          style={{ background: '#25D366' }}
           onMouseEnter={(e) => e.currentTarget.style.opacity = '0.88'}
           onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
         >
@@ -583,32 +523,17 @@ export default function GuestPortal() {
   const goBack = () => setStep((s) => Math.max(1, s - 1))
 
   return (
-    <div
-      style={{
-        position: 'fixed', inset: 0,
-        background: 'var(--main-bg)',
-        zIndex: 1500,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        overflowY: 'auto',
-        padding: '28px 16px 60px',
-      }}
-    >
-      <div style={{ width: '100%', maxWidth: 480 }}>
+    <div className="fixed inset-0 bg-canvas z-[1500] flex flex-col items-center overflow-y-auto pt-7 px-4 pb-[60px]">
+      <div className="w-full max-w-[480px]">
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: 48, height: 48, borderRadius: '50%',
-            background: 'var(--gold)', marginBottom: 10,
-          }}>
-            <span className="t-h2" style={{ color: '#000' }}>QV</span>
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--gold)] mb-2.5">
+            <span className="t-h2 text-[#000]">QV</span>
           </div>
-          <div className="t-h2" style={{ color: 'var(--text)', letterSpacing: '-0.03em' }}>
+          <div className="t-h2 text-ink tracking-[-0.03em]">
             {MOCK_BOOKING.hotelName}
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+          <div className="text-[12px] text-ink3 mt-0.5 font-semibold uppercase tracking-[0.08em]">
             Self Check-In
           </div>
         </div>
@@ -617,21 +542,13 @@ export default function GuestPortal() {
         <PortalProgressBar current={step} total={5} />
 
         {/* Card */}
-        <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 12,
-          padding: '22px 22px',
-          boxShadow: 'var(--shadow-md)',
-        }}>
+        <div className="bg-surface border border-line rounded-xl p-[22px] shadow-[var(--shadow-md)]">
           {/* Step heading */}
-          <div style={{ marginBottom: 18 }}>
-            <div className="t-h3" style={{
-              color: 'var(--text)', letterSpacing: '-0.02em',
-            }}>
+          <div className="mb-[18px]">
+            <div className="t-h3 text-ink tracking-[-0.02em]">
               {STEP_LABELS[step - 1]}
             </div>
-            <div style={{ width: 28, height: 2, background: 'var(--gold)', marginTop: 5, borderRadius: 2 }} />
+            <div className="w-7 h-0.5 bg-[var(--gold)] mt-[5px] rounded-[2px]" />
           </div>
 
           {/* Step content */}
@@ -643,15 +560,10 @@ export default function GuestPortal() {
 
           {/* Back link (steps 2–4) */}
           {step >= 2 && step <= 4 && (
-            <div style={{ marginTop: 14, textAlign: 'center' }}>
+            <div className="mt-3.5 text-center">
               <button
                 onClick={goBack}
-                className="t-xs"
-                style={{
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--text3)', padding: 0,
-                  transition: 'color 0.14s',
-                }}
+                className="t-xs bg-none border-none cursor-pointer text-ink3 p-0 transition-[color] duration-[140ms]"
                 onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
                 onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text3)'}
               >
@@ -662,9 +574,9 @@ export default function GuestPortal() {
         </div>
 
         {/* Footer */}
-        <div className="t-xs" style={{ textAlign: 'center', marginTop: 20, color: 'var(--text3)' }}>
+        <div className="t-xs text-center mt-5 text-ink3">
           Secure self check-in powered by{' '}
-          <span style={{ color: 'var(--gold)', fontWeight: 600 }}>Quantum Vorvex</span>
+          <span className="text-gold font-semibold">Quantum Vorvex</span>
         </div>
       </div>
     </div>

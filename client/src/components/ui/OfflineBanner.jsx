@@ -40,18 +40,9 @@ export default function OfflineBanner() {
     <div
       role="status"
       aria-live="polite"
-      className="t-title"
+      className="t-title sticky top-0 z-[2000] bg-[#92400e] border-b border-[#b45309] px-5 py-[9px] text-center text-[#fef3c7] transition-opacity duration-[600ms] ease"
       style={{
-        position:        'sticky',
-        top:             0,
-        zIndex:          2000,
-        background:      '#92400e',
-        borderBottom:    '1px solid #b45309',
-        padding:         '9px 20px',
-        textAlign:       'center',
-        color:           '#fef3c7',
         letterSpacing:   '0.01em',
-        transition:      'opacity 0.6s ease',
         opacity:         fading ? 0 : 1,
         pointerEvents:   fading ? 'none' : 'auto',
       }}

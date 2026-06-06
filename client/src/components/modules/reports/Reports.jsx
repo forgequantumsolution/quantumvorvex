@@ -11,12 +11,12 @@ import { formatCurrency, formatCurrencyCompact } from '../../../utils/format'
 function DarkTooltip({ active, payload, label, prefix = '' }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="t-xs" style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: 6, padding: '8px 12px', color: '#fff', minWidth: 120 }}>
-      <div style={{ color: '#888', marginBottom: 4 }}>{label}</div>
+    <div className="t-xs bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-white min-w-[120px]">
+      <div className="text-[#888] mb-1">{label}</div>
       {payload.map((p) => (
-        <div key={p.dataKey} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+        <div key={p.dataKey} className="flex justify-between gap-3">
           <span style={{ color: p.color }}>{p.name ?? p.dataKey}</span>
-          <span style={{ fontWeight: 600 }}>
+          <span className="font-semibold">
             {prefix}{typeof p.value === 'number' ? p.value.toLocaleString('en-IN') : p.value}
           </span>
         </div>
@@ -27,9 +27,9 @@ function DarkTooltip({ active, payload, label, prefix = '' }) {
 
 function MiniStat({ label, value, accent = '#c9a84c' }) {
   return (
-    <div className="stat-card" style={{ borderTop: `3px solid ${accent}` }}>
-      <div className="t-xs" style={{ color: 'var(--text3)', marginBottom: 6 }}>{label}</div>
-      <div className="t-h1" style={{ color: 'var(--text)' }}>{value}</div>
+    <div className="stat-card border-t-[3px]" style={{ borderTopColor: accent }}>
+      <div className="t-xs text-ink3 mb-1.5">{label}</div>
+      <div className="t-h1">{value}</div>
     </div>
   )
 }
@@ -38,8 +38,8 @@ function MiniStat({ label, value, accent = '#c9a84c' }) {
 function OverviewTab({ dashboard, revenue }) {
   const byDay = (revenue?.byDay || []).map((d) => ({ date: d.date, revenue: d.revenue }))
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-3 gap-4">
         <MiniStat label="Revenue (paid invoices)" value={formatCurrencyCompact(dashboard?.revenue || 0)} accent="#c9a84c" />
         <MiniStat label="Occupancy Rate" value={`${dashboard?.occupancyRate ?? 0}%`} accent="#3b82f6" />
         <MiniStat label="Active Guests" value={(dashboard?.recentGuests?.length ?? 0)} accent="#22c55e" />
@@ -49,8 +49,8 @@ function OverviewTab({ dashboard, revenue }) {
         <div className="card-header"><span className="card-title">Revenue by Day (paid invoices)</span></div>
         <div className="card-body">
           {byDay.length === 0 ? (
-            <div className="empty-state" style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <p className="t-sm" style={{ margin: 0, color: 'var(--text3)' }}>No paid invoices yet</p>
+            <div className="empty-state h-[200px] flex items-center justify-center">
+              <p className="t-sm m-0 text-ink3">No paid invoices yet</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
@@ -73,8 +73,8 @@ function OverviewTab({ dashboard, revenue }) {
 function RevenueTab({ revenue }) {
   const byDay = revenue?.byDay || []
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-2 gap-4">
         <MiniStat label="Total Revenue" value={formatCurrencyCompact(revenue?.totalRevenue || 0)} accent="#c9a84c" />
         <MiniStat label="Paid Invoices" value={(revenue?.invoices?.length ?? 0)} accent="#3b82f6" />
       </div>
@@ -83,8 +83,8 @@ function RevenueTab({ revenue }) {
         <div className="card-header"><span className="card-title">Revenue by Day</span></div>
         <div className="card-body">
           {byDay.length === 0 ? (
-            <div className="empty-state" style={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <p className="t-sm" style={{ margin: 0, color: 'var(--text3)' }}>No revenue recorded yet</p>
+            <div className="empty-state h-[200px] flex items-center justify-center">
+              <p className="t-sm m-0 text-ink3">No revenue recorded yet</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={220}>
@@ -121,15 +121,15 @@ function OccupancyTab({ rooms }) {
   return (
     <div className="card">
       <div className="card-header"><span className="card-title">Occupancy by Room Type</span></div>
-      <div className="card-body" style={{ overflowX: 'auto' }}>
+      <div className="card-body overflow-x-auto">
         {byType.length === 0 ? (
           <div className="empty-state">No rooms found</div>
         ) : (
-          <table className="t-sm" style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="t-sm w-full border-collapse">
             <thead>
               <tr>
                 {['Room Type', 'Total Rooms', 'Occupied', 'Rate', 'Occupancy'].map(h => (
-                  <th key={h} className="t-xs" style={{ textAlign: h === 'Room Type' ? 'left' : 'center', padding: '8px 12px', borderBottom: '1px solid var(--border)', color: 'var(--text3)', fontWeight: 600 }}>{h}</th>
+                  <th key={h} className={`t-xs px-3 py-2 border-b border-line text-ink3 font-semibold ${h === 'Room Type' ? 'text-left' : 'text-center'}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -138,14 +138,14 @@ function OccupancyTab({ rooms }) {
                 const rate = row.total ? Math.round((row.occupied / row.total) * 100) : 0
                 const color = rateColor(rate)
                 return (
-                  <tr key={row.type} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '10px 12px', fontWeight: 600 }}>{row.type}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>{row.total}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center' }}>{row.occupied}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color }}>{rate}%</td>
-                    <td style={{ padding: '10px 12px', minWidth: 120 }}>
-                      <div className="prog-bar" style={{ height: 8, borderRadius: 4, background: 'var(--surface2)' }}>
-                        <div className="prog-fill" style={{ height: '100%', borderRadius: 4, width: `${rate}%`, background: color, transition: 'width 0.4s ease' }} />
+                  <tr key={row.type} className="border-b border-line">
+                    <td className="px-3 py-2.5 font-semibold">{row.type}</td>
+                    <td className="px-3 py-2.5 text-center">{row.total}</td>
+                    <td className="px-3 py-2.5 text-center">{row.occupied}</td>
+                    <td className="px-3 py-2.5 text-center font-bold" style={{ color }}>{rate}%</td>
+                    <td className="px-3 py-2.5 min-w-[120px]">
+                      <div className="prog-bar h-2 rounded bg-surface2">
+                        <div className="prog-fill h-full rounded transition-[width] duration-[400ms] ease-[ease]" style={{ width: `${rate}%`, background: color }} />
                       </div>
                     </td>
                   </tr>
@@ -163,8 +163,8 @@ function OccupancyTab({ rooms }) {
 function GSTTab({ gst }) {
   const invoices = gst?.invoices || []
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-3 gap-[14px]">
         <MiniStat label="Total Taxable" value={formatCurrencyCompact(gst?.totalTaxable || 0)} accent="#6366f1" />
         <MiniStat label="Total GST" value={formatCurrencyCompact(gst?.totalGst || 0)} accent="#c9a84c" />
         <MiniStat label="Total Amount" value={formatCurrencyCompact(gst?.totalAmount || 0)} accent="#22c55e" />
@@ -172,15 +172,15 @@ function GSTTab({ gst }) {
 
       <div className="card">
         <div className="card-header"><span className="card-title">GST Invoices</span></div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
+        <div className="card-body overflow-x-auto">
           {invoices.length === 0 ? (
             <div className="empty-state">No invoices in this period</div>
           ) : (
-            <table className="t-sm" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <table className="t-sm w-full border-collapse">
               <thead>
                 <tr>
                   {['Invoice #', 'Guest', 'Period', 'Taxable ₹', 'CGST ₹', 'SGST ₹', 'Total ₹'].map(h => (
-                    <th key={h} className="t-xs" style={{ padding: '8px 12px', textAlign: h === 'Invoice #' || h === 'Guest' || h === 'Period' ? 'left' : 'right', borderBottom: '1px solid var(--border)', color: 'var(--text3)', fontWeight: 600 }}>{h}</th>
+                    <th key={h} className={`t-xs px-3 py-2 border-b border-line text-ink3 font-semibold ${h === 'Invoice #' || h === 'Guest' || h === 'Period' ? 'text-left' : 'text-right'}`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -189,14 +189,14 @@ function GSTTab({ gst }) {
                   const taxable = inv.rent + inv.food + inv.amenities
                   const half = +(inv.gstAmount / 2).toFixed(2)
                   return (
-                    <tr key={inv.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td style={{ padding: '9px 12px', fontWeight: 600, color: 'var(--gold)' }}>{inv.invoiceNo}</td>
-                      <td style={{ padding: '9px 12px' }}>{inv.guest?.name || '—'}</td>
-                      <td style={{ padding: '9px 12px', color: 'var(--text3)' }}>{inv.period}</td>
-                      <td style={{ padding: '9px 12px', textAlign: 'right' }}>{formatCurrency(taxable)}</td>
-                      <td style={{ padding: '9px 12px', textAlign: 'right' }}>{formatCurrency(half)}</td>
-                      <td style={{ padding: '9px 12px', textAlign: 'right' }}>{formatCurrency(half)}</td>
-                      <td style={{ padding: '9px 12px', textAlign: 'right', fontWeight: 700 }}>{formatCurrency(inv.total)}</td>
+                    <tr key={inv.id} className="border-b border-line">
+                      <td className="px-3 py-[9px] font-semibold text-gold">{inv.invoiceNo}</td>
+                      <td className="px-3 py-[9px]">{inv.guest?.name || '—'}</td>
+                      <td className="px-3 py-[9px] text-ink3">{inv.period}</td>
+                      <td className="px-3 py-[9px] text-right">{formatCurrency(taxable)}</td>
+                      <td className="px-3 py-[9px] text-right">{formatCurrency(half)}</td>
+                      <td className="px-3 py-[9px] text-right">{formatCurrency(half)}</td>
+                      <td className="px-3 py-[9px] text-right font-bold">{formatCurrency(inv.total)}</td>
                     </tr>
                   )
                 })}
@@ -205,7 +205,7 @@ function GSTTab({ gst }) {
           )}
         </div>
       </div>
-      <p className="t-xs" style={{ color: 'var(--text3)', margin: 0 }}>GST split as CGST + SGST (half each).</p>
+      <p className="t-xs m-0 text-ink3">GST split as CGST + SGST (half each).</p>
     </div>
   )
 }
@@ -240,17 +240,16 @@ function ExportTab({ addToast }) {
   ]
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}>
+    <div className="grid grid-cols-2 gap-4">
       {exports.map(exp => (
-        <div key={exp.type} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div key={exp.type} className="card flex flex-col gap-[14px]">
+          <div className="card-body flex flex-col gap-2.5">
             <div>
-              <div className="t-title" style={{ marginBottom: 4 }}>{exp.label}</div>
-              <div className="t-xs" style={{ color: 'var(--text3)' }}>{exp.desc}</div>
+              <div className="t-title mb-1">{exp.label}</div>
+              <div className="t-xs text-ink3">{exp.desc}</div>
             </div>
             <button
-              className="btn btn-primary t-xs"
-              style={{ alignSelf: 'flex-start', padding: '6px 16px' }}
+              className="btn btn-primary t-xs self-start px-4 py-1.5"
               disabled={busy === exp.type}
               onClick={() => download(exp.type)}
             >
@@ -305,13 +304,13 @@ export default function Reports() {
   useEffect(() => { load() }, [load])
 
   return (
-    <div style={{ padding: '24px', maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+    <div className="p-6 max-w-[1100px] mx-auto">
+      <div className="mb-5 flex justify-between items-start gap-3 flex-wrap">
         <div>
-          <h1 className="t-h1" style={{ margin: 0, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+          <h1 className="t-h1 m-0 tracking-[-0.02em]">
             Reports &amp; Analytics
           </h1>
-          <p className="t-sm" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>
+          <p className="t-sm mt-1 text-ink3">
             Financial insights, occupancy data, and GST summaries
           </p>
         </div>
@@ -319,7 +318,7 @@ export default function Reports() {
       </div>
 
       {error && (
-        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
+        <div className="t-sm mb-4 px-[14px] py-2.5 rounded-lg bg-danger-bg text-danger-text">
           {error}
         </div>
       )}

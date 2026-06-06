@@ -47,13 +47,10 @@ function getParityStatus(row) {
 function RateTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="t-xs" style={{
-      background: 'var(--surface)', border: '1px solid var(--border)',
-      borderRadius: 8, padding: '10px 14px',
-    }}>
-      <p style={{ margin: '0 0 6px', fontWeight: 700, color: 'var(--text)' }}>{label}</p>
+    <div className="t-xs bg-surface border border-line rounded-lg px-[14px] py-2.5">
+      <p className="mb-1.5 font-bold text-ink">{label}</p>
       {payload.map(p => (
-        <p key={p.name} style={{ margin: '2px 0', color: p.color }}>
+        <p key={p.name} className="my-0.5" style={{ color: p.color }}>
           {p.name}: ₹{p.value.toLocaleString('en-IN')}
         </p>
       ))}
@@ -71,55 +68,49 @@ function OverviewTab({ channels }) {
   return (
     <div>
       {/* Stat Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14, marginBottom: 24 }}>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-[14px] mb-6">
         {[
           { label: 'Total Bookings',     value: totalBookings,               sub: 'This month' },
           { label: 'Total Revenue',      value: formatCurrency(totalRevenue), sub: 'This month' },
           { label: 'Channels Connected', value: connectedCount,              sub: `of ${channels.length} channels` },
         ].map(card => (
-          <div key={card.label} className="stat-card" style={{ padding: '16px 18px' }}>
-            <div className="t-label" style={{ color: 'var(--text3)', letterSpacing: '0.06em', marginBottom: 4 }}>
+          <div key={card.label} className="stat-card py-4 px-[18px]">
+            <div className="t-label text-ink3 tracking-[0.06em] mb-1">
               {card.label}
             </div>
-            <div className="t-h1" style={{
-              color: 'var(--text)', letterSpacing: '-0.02em',
-            }}>
+            <div className="t-h1 text-ink tracking-[-0.02em]">
               {card.value}
             </div>
-            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>{card.sub}</div>
+            <div className="text-[11px] text-ink3 mt-0.5">{card.sub}</div>
           </div>
         ))}
       </div>
 
       {/* Channel Cards Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-[14px]">
         {channels.map(ch => (
-          <div key={ch.id} className="card" style={{
+          <div key={ch.id} className="card p-0 overflow-hidden" style={{
             borderLeft: `4px solid ${ch.color}`,
-            padding: 0,
-            overflow: 'hidden',
           }}>
-            <div style={{ padding: '14px 16px' }}>
+            <div className="py-[14px] px-4">
               {/* Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <span className="t-title" style={{
-                  color: 'var(--text)',
-                }}>
+              <div className="flex items-center justify-between mb-2.5">
+                <span className="t-title text-ink">
                   {ch.name}
                 </span>
                 <Badge type={statusBadge(ch.status)}>{ch.status}</Badge>
               </div>
 
               {/* Stats */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+              <div className="flex flex-col gap-1.5 mb-3">
                 {[
                   { label: 'Bookings', value: ch.bookings },
                   { label: 'Revenue',  value: formatCurrency(ch.revenue) },
                   { label: 'Avg Rate', value: `₹${ch.avgRate.toLocaleString('en-IN')}` },
                 ].map(stat => (
-                  <div key={stat.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: 11, color: 'var(--text3)' }}>{stat.label}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
+                  <div key={stat.label} className="flex justify-between items-center">
+                    <span className="text-[11px] text-ink3">{stat.label}</span>
+                    <span className="text-[12px] font-semibold text-ink" style={{ fontFamily: 'var(--font-mono)' }}>
                       {stat.value}
                     </span>
                   </div>
@@ -127,20 +118,16 @@ function OverviewTab({ channels }) {
               </div>
 
               {/* Footer */}
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+              <div className="border-t border-line pt-2.5">
                 {ch.status === 'Connected' ? (
                   <button
-                    className="btn btn-outline btn-xs"
-                    style={{ width: '100%' }}
+                    className="btn btn-outline btn-xs w-full"
                     onClick={() => addToast({ type: 'info', message: `API configuration for ${ch.name} coming soon.` })}
                   >
                     Configure API
                   </button>
                 ) : (
-                  <label className="t-xs" style={{
-                    display: 'flex', alignItems: 'center', gap: 7,
-                    cursor: 'pointer', color: 'var(--text2)',
-                  }}>
+                  <label className="t-xs flex items-center gap-[7px] cursor-pointer text-ink2">
                     <input
                       type="checkbox"
                       defaultChecked={ch.status === 'Manual'}
@@ -185,12 +172,12 @@ function RateParityTab() {
 
   return (
     <div>
-      <p className="t-sm" style={{ margin: '0 0 16px', color: 'var(--text2)' }}>
+      <p className="t-sm mb-4 text-ink2">
         Compare your rates vs OTA platforms. Click competitor cells to edit inline.
       </p>
 
       {/* Table */}
-      <div style={{ overflowX: 'auto', marginBottom: 28 }}>
+      <div className="overflow-x-auto mb-[28px]">
         <table>
           <thead>
             <tr>
@@ -207,8 +194,8 @@ function RateParityTab() {
               const parity = getParityStatus(row)
               return (
                 <tr key={row.type}>
-                  <td style={{ fontWeight: 600 }}>{row.type}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--gold)' }}>
+                  <td className="font-semibold">{row.type}</td>
+                  <td className="font-bold text-gold" style={{ fontFamily: 'var(--font-mono)' }}>
                     ₹{row.yourRate.toLocaleString('en-IN')}
                   </td>
                   {[
@@ -219,14 +206,14 @@ function RateParityTab() {
                     const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.field === field
                     return (
                       <td key={field} onClick={() => handleCellClick(rowIndex, field)}
-                        style={{ cursor: 'pointer', fontFamily: 'var(--font-mono)' }}>
+                        className="cursor-pointer" style={{ fontFamily: 'var(--font-mono)' }}>
                         {isEditing ? (
                           <input
                             autoFocus
                             type="number"
                             defaultValue={val}
-                            className="form-input"
-                            style={{ width: 90, padding: '3px 7px', fontSize: 12, fontFamily: 'var(--font-mono)' }}
+                            className="form-input w-[90px] py-[3px] px-[7px] text-[12px]"
+                            style={{ fontFamily: 'var(--font-mono)' }}
                             onBlur={e => handleCellBlur(rowIndex, field, e.target.value)}
                             onKeyDown={e => {
                               if (e.key === 'Enter') e.target.blur()
@@ -234,9 +221,8 @@ function RateParityTab() {
                             }}
                           />
                         ) : (
-                          <span style={{
+                          <span className="py-0.5 px-1 rounded" style={{
                             color: val > row.yourRate ? 'var(--text2)' : 'var(--red-text)',
-                            padding: '2px 4px', borderRadius: 4,
                           }}>
                             ₹{val.toLocaleString('en-IN')}
                           </span>
@@ -259,7 +245,7 @@ function RateParityTab() {
         <div className="card-header">
           <span className="card-title">Rate Comparison Chart</span>
         </div>
-        <div className="card-body" style={{ paddingTop: 8 }}>
+        <div className="card-body pt-2">
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={barData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
               <XAxis dataKey="name" tick={{ fontSize: 12 }} />
@@ -332,53 +318,43 @@ function ImportTab() {
   }
 
   return (
-    <div style={{ maxWidth: 700 }}>
+    <div className="max-w-[700px]">
       {/* Upload Zone */}
       <div
         onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        style={{
-          border: `2px dashed ${isDragging ? 'var(--gold)' : 'var(--border)'}`,
-          borderRadius: 10,
-          padding: '40px 20px',
-          textAlign: 'center',
-          background: isDragging ? 'var(--gold-bg)' : 'var(--surface2)',
-          transition: 'all 0.18s',
-          marginBottom: 20,
-          cursor: 'pointer',
-          position: 'relative',
-        }}
+        className={`border-2 border-dashed rounded-[10px] py-10 px-5 text-center transition-all duration-[180ms] mb-5 cursor-pointer relative ${isDragging ? 'border-gold bg-[var(--gold-bg)]' : 'border-line bg-surface2'}`}
         onClick={() => document.getElementById('csv-file-input').click()}
       >
         <input
           id="csv-file-input"
           type="file"
           accept=".csv"
-          style={{ display: 'none' }}
+          className="hidden"
           onChange={handleFileInput}
         />
-        <div style={{ fontSize: 36, marginBottom: 8 }}>☁</div>
-        <p className="t-title" style={{ margin: '0 0 4px', color: 'var(--text)' }}>
+        <div className="text-[36px] mb-2">☁</div>
+        <p className="t-title mb-1 text-ink">
           {fileUploaded ? '✓ File loaded — ready to map columns' : 'Drop your CSV file here, or click to browse'}
         </p>
-        <p className="t-xs" style={{ margin: 0, color: 'var(--text3)' }}>
+        <p className="t-xs m-0 text-ink3">
           Supports .csv files · Max 5 MB
         </p>
       </div>
 
       {/* Download template */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+      <div className="flex items-center gap-3 mb-6">
         <button className="btn btn-outline btn-sm" onClick={handleDownloadTemplate}>
           Download Template CSV
         </button>
-        <span className="t-xs" style={{ color: 'var(--text3)' }}>
+        <span className="t-xs text-ink3">
           Use this template to format your booking data correctly before importing.
         </span>
       </div>
 
       {/* Column Mapping */}
-      <div className="card" style={{ marginBottom: 20 }}>
+      <div className="card mb-5">
         <div className="card-header">
           <span className="card-title">Column Mapping</span>
         </div>
@@ -413,11 +389,11 @@ function ImportTab() {
       </div>
 
       {/* CSV Preview */}
-      <div className="card" style={{ marginBottom: 20 }}>
+      <div className="card mb-5">
         <div className="card-header">
           <span className="card-title">CSV Preview (5 rows)</span>
         </div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
+        <div className="card-body overflow-x-auto">
           <table>
             <thead>
               <tr>
@@ -462,12 +438,9 @@ function RevenueBySourceTab({ channels }) {
     if (!active || !payload?.length) return null
     const d = payload[0]
     return (
-      <div className="t-xs" style={{
-        background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: 8, padding: '9px 13px',
-      }}>
-        <p style={{ margin: 0, fontWeight: 700, color: 'var(--text)' }}>{d.name}</p>
-        <p style={{ margin: '3px 0 0', color: 'var(--text2)' }}>
+      <div className="t-xs bg-surface border border-line rounded-lg py-[9px] px-[13px]">
+        <p className="m-0 font-bold text-ink">{d.name}</p>
+        <p className="mt-[3px] text-ink2">
           {formatCurrency(d.value)} ({((d.value / totalRevenue) * 100).toFixed(1)}%)
         </p>
       </div>
@@ -477,7 +450,7 @@ function RevenueBySourceTab({ channels }) {
   return (
     <div>
       {/* Pie Chart */}
-      <div className="card" style={{ marginBottom: 20 }}>
+      <div className="card mb-5">
         <div className="card-header">
           <span className="card-title">Revenue by Channel</span>
         </div>
@@ -503,21 +476,15 @@ function RevenueBySourceTab({ channels }) {
           </ResponsiveContainer>
 
           {/* Legend */}
-          <div style={{
-            display: 'flex', flexWrap: 'wrap', gap: '8px 18px',
-            justifyContent: 'center', marginTop: 12,
-          }}>
+          <div className="flex flex-wrap gap-x-[18px] gap-y-2 justify-center mt-3">
             {channels.map(ch => (
-              <div key={ch.id} className="t-xs" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{
-                  width: 10, height: 10, borderRadius: '50%',
-                  background: ch.color, flexShrink: 0, display: 'inline-block',
-                }} />
-                <span style={{ color: 'var(--text2)' }}>{ch.name}</span>
-                <span style={{ fontWeight: 600, color: 'var(--text)', fontFamily: 'var(--font-mono)' }}>
+              <div key={ch.id} className="t-xs flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0 inline-block" style={{ background: ch.color }} />
+                <span className="text-ink2">{ch.name}</span>
+                <span className="font-semibold text-ink" style={{ fontFamily: 'var(--font-mono)' }}>
                   {formatCurrency(ch.revenue)}
                 </span>
-                <span style={{ color: 'var(--text3)' }}>
+                <span className="text-ink3">
                   ({((ch.revenue / totalRevenue) * 100).toFixed(1)}%)
                 </span>
               </div>
@@ -527,7 +494,7 @@ function RevenueBySourceTab({ channels }) {
       </div>
 
       {/* Table */}
-      <div style={{ overflowX: 'auto' }}>
+      <div className="overflow-x-auto">
         <table>
           <thead>
             <tr>
@@ -545,35 +512,30 @@ function RevenueBySourceTab({ channels }) {
               .map(ch => (
                 <tr key={ch.id}>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{
-                        width: 10, height: 10, borderRadius: '50%',
-                        background: ch.color, flexShrink: 0, display: 'inline-block',
-                      }} />
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0 inline-block" style={{ background: ch.color }} />
                       <span className="t-title">{ch.name}</span>
                     </div>
                   </td>
                   <td style={{ fontFamily: 'var(--font-mono)' }}>{ch.bookings}</td>
-                  <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                  <td className="font-semibold" style={{ fontFamily: 'var(--font-mono)' }}>
                     {formatCurrency(ch.revenue)}
                   </td>
                   <td style={{ fontFamily: 'var(--font-mono)' }}>
                     {formatCurrency(ch.avgRate)}
                   </td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{
-                        width: 60, height: 6, borderRadius: 3,
-                        background: 'var(--border)', overflow: 'hidden',
-                      }}>
-                        <div style={{
-                          width: `${(ch.revenue / totalRevenue) * 100}%`,
-                          height: '100%',
-                          background: ch.color,
-                          borderRadius: 3,
-                        }} />
+                    <div className="flex items-center gap-2">
+                      <div className="w-[60px] h-1.5 rounded-[3px] bg-line overflow-hidden">
+                        <div
+                          className="h-full rounded-[3px]"
+                          style={{
+                            width: `${(ch.revenue / totalRevenue) * 100}%`,
+                            background: ch.color,
+                          }}
+                        />
                       </div>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>
+                      <span className="text-[12px]" style={{ fontFamily: 'var(--font-mono)' }}>
                         {((ch.revenue / totalRevenue) * 100).toFixed(1)}%
                       </span>
                     </div>
@@ -582,11 +544,11 @@ function RevenueBySourceTab({ channels }) {
               ))}
 
             {/* Totals row */}
-            <tr style={{ borderTop: '2px solid var(--border)', fontWeight: 700 }}>
+            <tr className="border-t-2 border-line font-bold">
               <td>Total</td>
               <td style={{ fontFamily: 'var(--font-mono)' }}>{totalBookings}</td>
               <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(totalRevenue)}</td>
-              <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>—</td>
+              <td className="text-ink3" style={{ fontFamily: 'var(--font-mono)' }}>—</td>
               <td style={{ fontFamily: 'var(--font-mono)' }}>100%</td>
             </tr>
           </tbody>
@@ -610,13 +572,11 @@ export default function Channels() {
   return (
     <div>
       {/* Page Header */}
-      <div style={{ marginBottom: 20 }}>
-        <h1 className="t-h1" style={{
-          margin: 0, color: 'var(--text)', letterSpacing: '-0.02em',
-        }}>
+      <div className="mb-5">
+        <h1 className="t-h1 m-0 text-ink tracking-[-0.02em]">
           🔗 Booking Channels
         </h1>
-        <p className="t-sm" style={{ margin: '3px 0 0', color: 'var(--text3)' }}>
+        <p className="t-sm mt-[3px] text-ink3">
           Manage OTA and direct bookings
         </p>
       </div>

@@ -75,7 +75,7 @@ export default function ResetPasswordPage({ onDone }) {
     return (
       <Shell>
         <div className="login-error">
-          <span style={{ flexShrink: 0, marginTop: 1, display: 'inline-flex' }}><AlertIcon /></span>
+          <span className="shrink-0 mt-px inline-flex"><AlertIcon /></span>
           This reset link is missing its token. Please request a new link from the login page.
         </div>
         <button type="button" className="login-submit" onClick={onDone}>Back to Sign In</button>
@@ -87,7 +87,7 @@ export default function ResetPasswordPage({ onDone }) {
     return (
       <Shell>
         <div className="login-success">
-          <span style={{ flexShrink: 0, marginTop: 1, display: 'inline-flex' }}><CheckIcon /></span>
+          <span className="shrink-0 mt-px inline-flex"><CheckIcon /></span>
           Your password has been updated. You can now sign in with your new password.
         </div>
         <button type="button" className="login-submit" onClick={onDone}>Go to Sign In</button>
@@ -99,7 +99,7 @@ export default function ResetPasswordPage({ onDone }) {
     <Shell>
       {error && (
         <div className="login-error">
-          <span style={{ flexShrink: 0, marginTop: 1, display: 'inline-flex' }}><AlertIcon /></span>
+          <span className="shrink-0 mt-px inline-flex"><AlertIcon /></span>
           {error}
         </div>
       )}
@@ -116,7 +116,7 @@ export default function ResetPasswordPage({ onDone }) {
               <div className="login-field-wrap">
                 <span className="login-field-icon"><LockIcon /></span>
                 <Field type={showPw ? 'text' : 'password'} name="password" placeholder="••••••••"
-                       className="login-input" style={{ paddingRight: 40 }} autoComplete="new-password" autoFocus />
+                       className="login-input pr-10" autoComplete="new-password" autoFocus />
                 <button type="button" className="login-pw-toggle" onClick={() => setShowPw(!showPw)} tabIndex={-1}>
                   {showPw ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
@@ -139,7 +139,7 @@ export default function ResetPasswordPage({ onDone }) {
               {isSubmitting ? 'Updating…' : 'Update Password'}
             </button>
 
-            <div className="login-meta-row" style={{ marginTop: 14, justifyContent: 'center' }}>
+            <div className="login-meta-row mt-[14px] justify-center">
               <button type="button" className="login-link" onClick={onDone}>← Back to Sign In</button>
             </div>
           </Form>

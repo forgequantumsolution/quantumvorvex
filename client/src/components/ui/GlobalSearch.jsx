@@ -91,20 +91,11 @@ export default function GlobalSearch() {
   if (!searchOpen) return null
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-      backdropFilter: 'blur(2px)', zIndex: 2000,
-      display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-      paddingTop: 80
-    }}>
-      <div ref={containerRef} style={{
-        width: '100%', maxWidth: 540, background: 'var(--surface)',
-        border: '1px solid var(--border)', borderRadius: 12,
-        boxShadow: 'var(--shadow-md)', overflow: 'hidden'
-      }}>
+    <div className="fixed inset-0 bg-[rgba(0,0,0,0.4)] backdrop-blur-[2px] z-[2000] flex items-start justify-center pt-20">
+      <div ref={containerRef} className="w-full max-w-[540px] bg-surface border border-line rounded-xl shadow-[var(--shadow-md)] overflow-hidden">
         {/* Input */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderBottom: results.length ? '1px solid var(--border)' : 'none' }}>
-          <span className="t-h3" style={{ color: 'var(--text3)' }}>⌕</span>
+        <div className={`flex items-center gap-2.5 px-4 py-3 ${results.length ? 'border-b border-line' : ''}`}>
+          <span className="t-h3 text-ink3">⌕</span>
           <input
             ref={inputRef}
             value={query}
@@ -112,65 +103,47 @@ export default function GlobalSearch() {
             onKeyDown={handleKeyDown}
             placeholder="Search panels, guests, rooms..."
             autoFocus
-            className="t-h3"
-            style={{
-              flex: 1, background: 'none', border: 'none', outline: 'none',
-              color: 'var(--text)'
-            }}
+            className="t-h3 flex-1 bg-none border-none outline-none text-ink"
           />
-          <kbd style={{
-            padding: '2px 6px', borderRadius: 4, background: 'var(--surface2)',
-            border: '1px solid var(--border2)', fontSize: 10,
-            color: 'var(--text3)', fontFamily: 'var(--font-mono)'
-          }}>ESC</kbd>
+          <kbd
+            className="px-1.5 py-0.5 rounded bg-surface2 border border-line2 text-[10px] text-ink3"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >ESC</kbd>
         </div>
 
         {/* Results */}
         {results.length > 0 && (
-          <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+          <div className="max-h-[320px] overflow-y-auto">
             {results.map((item, i) => (
               <div
                 key={item.id}
                 onClick={() => handleSelect(item)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12,
-                  padding: '10px 16px', cursor: 'pointer',
-                  background: i === selected ? 'var(--surface2)' : 'transparent',
-                  transition: 'background 0.1s'
-                }}
+                className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-all duration-[100ms] ${i === selected ? 'bg-surface2' : 'bg-transparent'}`}
                 onMouseEnter={() => setSelected(i)}
               >
-                <span className="t-body" style={{ width: 20, textAlign: 'center', color: 'var(--text3)' }}>{item.icon}</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="t-sm" style={{ color: 'var(--text)' }}>{item.label}</div>
-                  <div style={{ fontSize: 11.5, color: 'var(--text3)', marginTop: 1 }}>{item.meta}</div>
+                <span className="t-body w-5 text-center text-ink3">{item.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="t-sm text-ink">{item.label}</div>
+                  <div className="text-[11.5px] text-ink3 mt-px">{item.meta}</div>
                 </div>
-                <span className="t-label" style={{
-                  padding: '2px 7px', borderRadius: 10,
-                  background: 'var(--gold-bg)', color: 'var(--gold)',
-                  flexShrink: 0
-                }}>{item.resultType}</span>
+                <span className="t-label px-[7px] py-0.5 rounded-[10px] bg-[var(--gold-bg)] text-gold shrink-0">{item.resultType}</span>
               </div>
             ))}
           </div>
         )}
 
         {query && results.length === 0 && (
-          <div className="t-sm" style={{ padding: '20px 16px', textAlign: 'center', color: 'var(--text3)' }}>
+          <div className="t-sm px-4 py-5 text-center text-ink3">
             No results for "{query}"
           </div>
         )}
 
         {!query && (
-          <div style={{ padding: '12px 16px' }}>
-            <div className="t-label" style={{ color: 'var(--text3)', marginBottom: 8 }}>Quick Navigation</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div className="px-4 py-3">
+            <div className="t-label text-ink3 mb-2">Quick Navigation</div>
+            <div className="flex flex-wrap gap-1.5">
               {PANELS.slice(0, 6).map(p => (
-                <button key={p.id} onClick={() => handleSelect(p)} className="t-xs" style={{
-                  padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border)',
-                  background: 'var(--surface2)', color: 'var(--text2)',
-                  cursor: 'pointer', transition: 'all 0.12s'
-                }}
+                <button key={p.id} onClick={() => handleSelect(p)} className="t-xs px-2.5 py-1 rounded-md border border-line bg-surface2 text-ink2 cursor-pointer transition-all duration-[120ms]"
                   onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold)' }}
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text2)' }}
                 >

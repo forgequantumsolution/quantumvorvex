@@ -53,7 +53,7 @@ function PasswordLoginForm({ onForgot }) {
     <>
       {error && (
         <div className="login-error">
-          <span style={{ flexShrink: 0, marginTop: 1, display: 'inline-flex' }}><AlertIcon /></span>
+          <span className="shrink-0 mt-px inline-flex"><AlertIcon /></span>
           {error}
         </div>
       )}
@@ -77,7 +77,7 @@ function PasswordLoginForm({ onForgot }) {
                 <div className="login-field-wrap">
                   <span className="login-field-icon"><LockIcon /></span>
                   <Field type={showPw ? 'text' : 'password'} name="password" placeholder="••••••••"
-                         className="login-input" style={{ paddingRight: 40 }} autoComplete="current-password" />
+                         className="login-input pr-10" autoComplete="current-password" />
                   <button type="button" className="login-pw-toggle" onClick={() => setShowPw(!showPw)} tabIndex={-1}>
                     {showPw ? <EyeOffIcon /> : <EyeIcon />}
                   </button>

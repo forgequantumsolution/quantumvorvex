@@ -24,18 +24,7 @@ export default function Toast() {
   if (!toasts.length) return null
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: '20px',
-        right: '20px',
-        zIndex: 9999,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        alignItems: 'flex-end',
-      }}
-    >
+    <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 items-end">
       {toasts.map((toast) => {
         const borderColor = BORDER_COLORS[toast.type] || BORDER_COLORS.default
         const icon = ICONS[toast.type]
@@ -47,22 +36,12 @@ export default function Toast() {
             style={{ borderLeftColor: borderColor }}
           >
             {icon && (
-              <span style={{ fontSize: '14px', flexShrink: 0 }}>{icon}</span>
+              <span className="text-[14px] shrink-0">{icon}</span>
             )}
-            <span style={{ flex: 1 }}>{toast.message}</span>
+            <span className="flex-1">{toast.message}</span>
             <button
               onClick={() => removeToast(toast.id)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'rgba(255,255,255,0.6)',
-                cursor: 'pointer',
-                fontSize: '15px',
-                padding: '0 0 0 6px',
-                lineHeight: 1,
-                flexShrink: 0,
-                transition: 'color 0.12s',
-              }}
+              className="bg-none border-none text-[rgba(255,255,255,0.6)] cursor-pointer text-[15px] pl-1.5 leading-none shrink-0 transition-colors duration-[120ms]"
               onMouseEnter={(e) => (e.currentTarget.style.color = '#fff')}
               onMouseLeave={(e) =>
                 (e.currentTarget.style.color = 'rgba(255,255,255,0.6)')

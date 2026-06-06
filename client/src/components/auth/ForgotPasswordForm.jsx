@@ -31,7 +31,7 @@ export default function ForgotPasswordForm({ onBack }) {
     return (
       <>
         <div className="login-success">
-          <span style={{ flexShrink: 0, marginTop: 1, display: 'inline-flex' }}><CheckIcon /></span>
+          <span className="shrink-0 mt-px inline-flex"><CheckIcon /></span>
           If an account exists for that email, a password-reset link is on its way.
           The link expires in 30 minutes.
         </div>
@@ -46,7 +46,7 @@ export default function ForgotPasswordForm({ onBack }) {
     <>
       {error && (
         <div className="login-error">
-          <span style={{ flexShrink: 0, marginTop: 1, display: 'inline-flex' }}><AlertIcon /></span>
+          <span className="shrink-0 mt-px inline-flex"><AlertIcon /></span>
           {error}
         </div>
       )}
@@ -71,7 +71,7 @@ export default function ForgotPasswordForm({ onBack }) {
               {isSubmitting ? 'Sending link…' : 'Send Reset Link'}
             </button>
 
-            <div className="login-meta-row" style={{ marginTop: 14, justifyContent: 'center' }}>
+            <div className="login-meta-row mt-[14px] justify-center">
               <button type="button" className="login-link" onClick={onBack}>
                 ← Back to Sign In
               </button>

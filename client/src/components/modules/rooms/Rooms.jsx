@@ -40,51 +40,30 @@ const EMPTY_FORM = {
 // ─── Kanban Column ────────────────────────────────────────────────────────────
 function KanbanColumn({ title, rooms, badgeType, onSelect }) {
   return (
-    <div style={{
-      background: 'var(--surface)',
-      border: '1px solid var(--border)',
-      borderRadius: 'var(--radius)',
-      minWidth: 0,
-      flex: '1 1 220px',
-    }}>
-      <div style={{
-        padding: '11px 16px',
-        borderBottom: '1px solid var(--border)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-        <span className="t-title" style={{ color: 'var(--text)' }}>
-          {title}
-        </span>
+    <div className="bg-surface border border-line rounded-[var(--radius)] min-w-0 flex-[1_1_220px]">
+      <div className="px-4 py-[11px] border-b border-line flex items-center justify-between">
+        <span className="t-title">{title}</span>
         <Badge type={badgeType}>{rooms.length}</Badge>
       </div>
-      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div className="px-3 py-2.5 flex flex-col gap-2">
         {rooms.length === 0 && (
-          <p className="t-xs" style={{ color: 'var(--text3)', textAlign: 'center', padding: '16px 0', margin: 0 }}>
+          <p className="t-xs text-ink3 text-center py-4 m-0">
             No rooms
           </p>
         )}
         {rooms.map(room => (
           <div
             key={room.id}
-            className={`room-card ${room.status}`}
+            className={`room-card ${room.status} px-[13px] py-2.5`}
             onClick={() => onSelect(room)}
-            style={{ padding: '10px 13px' }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-              <span className="t-h3" style={{ color: 'var(--text)' }}>
-                {room.number}
-              </span>
-              <span className="t-label" style={{ color: 'var(--text3)' }}>
-                Floor {room.floor}
-              </span>
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="t-h3">{room.number}</span>
+              <span className="t-label">Floor {room.floor}</span>
             </div>
-            <p className="t-label" style={{ margin: 0, color: 'var(--text3)' }}>{room.type}</p>
+            <p className="t-label m-0">{room.type}</p>
             {room.guest && (
-              <p className="t-xs" style={{ margin: '4px 0 0', color: 'var(--text2)' }}>
-                {room.guest.name}
-              </p>
+              <p className="t-xs mt-1">{room.guest.name}</p>
             )}
           </div>
         ))}
@@ -102,12 +81,7 @@ function RoomDetail({ room, onClose, onStatusChange }) {
   return (
     <>
       {/* Room header info */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: 14,
-        marginBottom: 18,
-      }}>
+      <div className="grid grid-cols-2 gap-3.5 mb-[18px]">
         {[
           ['Room Number', room.number],
           ['Type',        room.type],
@@ -116,21 +90,12 @@ function RoomDetail({ room, onClose, onStatusChange }) {
           ['Daily Rate',  `₹${room.dailyRate?.toLocaleString()}`],
           ['Monthly Rate',`₹${room.monthlyRate?.toLocaleString()}`],
         ].map(([label, value]) => (
-          <div key={label} style={{
-            background: 'var(--surface2)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '10px 14px',
-          }}>
-            <p className="t-label" style={{ margin: 0, color: 'var(--text3)' }}>
-              {label}
-            </p>
+          <div key={label} className="bg-surface2 border border-line rounded-lg px-[14px] py-2.5">
+            <p className="t-label">{label}</p>
             {value ? (
-              <p className="t-title" style={{ margin: '4px 0 0', color: 'var(--text)' }}>
-                {value}
-              </p>
+              <p className="t-title mt-1">{value}</p>
             ) : (
-              <div style={{ marginTop: 4 }}>
+              <div className="mt-1">
                 <Badge type={badgeType}>{STATUS_LABEL[room.status]}</Badge>
               </div>
             )}
@@ -140,27 +105,17 @@ function RoomDetail({ room, onClose, onStatusChange }) {
 
       {/* Guest info if occupied */}
       {room.status === 'occupied' && room.guest && (
-        <div style={{
-          background: 'var(--red-bg)',
-          border: '1px solid var(--red-bg)',
-          borderRadius: 8,
-          padding: '13px 16px',
-          marginBottom: 18,
-        }}>
-          <p className="t-label" style={{ margin: '0 0 8px', color: 'var(--red-text)' }}>
+        <div className="bg-danger-bg border border-danger-bg rounded-lg px-4 py-[13px] mb-[18px]">
+          <p className="t-label text-danger-text mb-2">
             Current Occupant
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div className="t-title" style={{
-              width: 36, height: 36, borderRadius: '50%',
-              background: 'var(--red-text)', color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-            }}>
+          <div className="flex items-center gap-3">
+            <div className="t-title w-9 h-9 rounded-full bg-danger-text text-white flex items-center justify-center shrink-0">
               {room.guest.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
             <div>
-              <p className="t-title" style={{ margin: 0, color: 'var(--text)' }}>{room.guest.name}</p>
-              <p className="t-xs" style={{ margin: '2px 0 0', color: 'var(--text2)' }}>{room.guest.phone}</p>
+              <p className="t-title m-0">{room.guest.name}</p>
+              <p className="t-xs mt-0.5">{room.guest.phone}</p>
             </div>
           </div>
         </div>
@@ -168,10 +123,10 @@ function RoomDetail({ room, onClose, onStatusChange }) {
 
       {/* Quick actions */}
       <div>
-        <p className="t-label" style={{ margin: '0 0 10px', color: 'var(--text3)' }}>
+        <p className="t-label mb-2.5">
           Quick Actions
         </p>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="flex gap-2 flex-wrap">
           {room.status !== 'available' && (
             <Button variant="success" size="sm" onClick={() => { onStatusChange(room.id, 'available'); onClose() }}>
               Mark Available
@@ -202,7 +157,7 @@ function RoomDetail({ room, onClose, onStatusChange }) {
 function AddRoomForm({ form, onChange }) {
   const field = (label, key, type = 'text', extra = {}) => (
     <div key={key}>
-      <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>{label}</label>
+      <label className="form-label block mb-[5px]">{label}</label>
       <input
         className="form-input"
         type={type}
@@ -214,12 +169,12 @@ function AddRoomForm({ form, onChange }) {
   )
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+    <div className="grid grid-cols-2 gap-3.5">
       {field('Room Number', 'number', 'text', { placeholder: 'e.g. 105' })}
 
       {/* Room Type select */}
       <div>
-        <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Room Type</label>
+        <label className="form-label block mb-[5px]">Room Type</label>
         <select
           className="form-select"
           value={form.type}
@@ -315,38 +270,32 @@ export default function Rooms() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="px-7 py-6 max-w-[1400px] mx-auto">
 
       {/* ── Page Header ────────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 22, gap: 16, flexWrap: 'wrap' }}>
+      <div className="flex items-start justify-between mb-[22px] gap-4 flex-wrap">
         <div>
-          <h1 style={{
-            fontSize: 26,
-            fontWeight: 800,
-            margin: 0,
-            color: 'var(--text)',
-            letterSpacing: '-0.03em',
-          }}>
+          <h1 className="text-[26px] font-extrabold m-0 text-ink tracking-[-0.03em]">
             Rooms
           </h1>
-          <p className="t-sm" style={{ margin: '3px 0 0', color: 'var(--text3)' }}>
+          <p className="t-sm text-ink3 mt-[3px]">
             Manage room inventory
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={load} disabled={loading}>↻ Refresh</Button>
           <Button variant="primary" onClick={() => setShowAddModal(true)}>+ Add Room</Button>
         </div>
       </div>
 
       {error && (
-        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
+        <div className="t-sm mb-4 px-[14px] py-2.5 rounded-lg bg-danger-bg text-danger-text">
           {error}
         </div>
       )}
 
       {/* ── Quick Stats ────────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 20 }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(120px,1fr))] gap-2.5 mb-5">
         {[
           { label: 'Available',   count: counts.available,   color: 'var(--green)',  bg: 'var(--green-bg)',  tc: 'var(--green-text)'  },
           { label: 'Occupied',    count: counts.occupied,    color: 'var(--red)',    bg: 'var(--red-bg)',    tc: 'var(--red-text)'    },
@@ -354,46 +303,32 @@ export default function Rooms() {
           { label: 'Reserved',    count: counts.reserved,    color: 'var(--blue)',   bg: 'var(--blue-bg)',   tc: 'var(--blue-text)'   },
           { label: 'Total',       count: rooms.length,       color: 'var(--gold)',   bg: 'var(--gold-bg)',   tc: 'var(--gold)'        },
         ].map(s => (
-          <div key={s.label} style={{
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)',
-            padding: '12px 16px',
-            borderBottom: `3px solid ${s.color}`,
-          }}>
-            <p className="t-h1" style={{ margin: 0, color: s.tc }}>{s.count}</p>
-            <p className="t-label" style={{ margin: '2px 0 0', color: 'var(--text3)' }}>{s.label}</p>
+          <div
+            key={s.label}
+            className="bg-surface border border-line rounded-[var(--radius)] px-4 py-3 border-b-[3px]"
+            style={{ borderBottomColor: s.color }}
+          >
+            <p className="t-h1 m-0" style={{ color: s.tc }}>{s.count}</p>
+            <p className="t-label mt-0.5">{s.label}</p>
           </div>
         ))}
       </div>
 
       {/* ── Filter / Search / View Toggle ──────────────────────────────────── */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        marginBottom: 16,
-        flexWrap: 'wrap',
-      }}>
+      <div className="flex items-center gap-2.5 mb-4 flex-wrap">
         {/* Filter pills */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div className="flex gap-1.5 flex-wrap">
           {FILTERS.map(f => {
             const active = filter === f
             return (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                style={{
-                  padding: '5px 13px',
-                  borderRadius: 20,
-                  fontSize: 12,
-                  fontWeight: active ? 600 : 500,
-                  cursor: 'pointer',
-                  background: active ? 'var(--gold-bg)' : 'var(--surface)',
-                  border: active ? '1px solid var(--gold)' : '1px solid var(--border)',
-                  color: active ? 'var(--gold)' : 'var(--text2)',
-                  transition: 'all 0.13s',
-                }}
+                className={`px-[13px] py-[5px] rounded-[20px] text-[12px] cursor-pointer border transition-all duration-[130ms] ${
+                  active
+                    ? 'font-semibold bg-[var(--gold-bg)] border-gold text-gold'
+                    : 'font-medium bg-surface border-line text-ink2'
+                }`}
               >
                 {f}
               </button>
@@ -402,34 +337,24 @@ export default function Rooms() {
         </div>
 
         {/* Spacer */}
-        <div style={{ flex: 1, minWidth: 0 }} />
+        <div className="flex-1 min-w-0" />
 
         {/* Search */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <span className="t-sm" style={{
-            position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
-            color: 'var(--text3)', pointerEvents: 'none',
-          }}>
+        <div className="relative shrink-0">
+          <span className="t-sm absolute left-2.5 top-1/2 -translate-y-1/2 text-ink3 pointer-events-none">
             ⌕
           </span>
           <input
-            className="form-input"
+            className="form-input pl-7 w-40 text-[12px]"
             type="text"
             placeholder="Search room..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ paddingLeft: 28, width: 160, fontSize: 12 }}
           />
         </div>
 
         {/* View toggle */}
-        <div style={{
-          display: 'flex',
-          border: '1px solid var(--border)',
-          borderRadius: 6,
-          overflow: 'hidden',
-          flexShrink: 0,
-        }}>
+        <div className="flex border border-line rounded-md overflow-hidden shrink-0 divide-x divide-line">
           {[
             { key: 'grid',   icon: '▦', title: 'Grid view'   },
             { key: 'kanban', icon: '☰', title: 'Kanban view' },
@@ -439,17 +364,10 @@ export default function Rooms() {
               <button
                 key={key}
                 title={title}
-                className="t-body"
                 onClick={() => setView(key)}
-                style={{
-                  padding: '6px 11px',
-                  cursor: 'pointer',
-                  background: active ? 'var(--gold-bg)' : 'var(--surface)',
-                  color: active ? 'var(--gold)' : 'var(--text3)',
-                  border: 'none',
-                  borderRight: key === 'grid' ? '1px solid var(--border)' : 'none',
-                  transition: 'all 0.13s',
-                }}
+                className={`t-body px-[11px] py-1.5 cursor-pointer border-0 transition-all duration-[130ms] ${
+                  active ? 'bg-[var(--gold-bg)] text-gold' : 'bg-surface text-ink3'
+                }`}
               >
                 {icon}
               </button>
@@ -460,7 +378,7 @@ export default function Rooms() {
 
       {/* ── Results count ──────────────────────────────────────────────────── */}
       {(filter !== 'All' || search) && (
-        <p className="t-xs" style={{ color: 'var(--text3)', marginBottom: 12 }}>
+        <p className="t-xs text-ink3 mb-3">
           Showing {filtered.length} of {rooms.length} rooms
         </p>
       )}
@@ -470,16 +388,12 @@ export default function Rooms() {
         <>
           {filtered.length === 0 ? (
             <div className="empty-state">
-              <p className="t-display" style={{ margin: '0 0 8px' }}>🏨</p>
-              <p style={{ margin: 0, fontWeight: 600, color: 'var(--text2)' }}>No rooms found</p>
-              <p className="t-xs" style={{ margin: '4px 0 0' }}>Try adjusting your filters</p>
+              <p className="t-display mb-2">🏨</p>
+              <p className="m-0 font-semibold text-ink2">No rooms found</p>
+              <p className="t-xs mt-1">Try adjusting your filters</p>
             </div>
           ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(145px, 1fr))',
-              gap: 10,
-            }}>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(145px,1fr))] gap-2.5">
               {filtered.map(room => (
                 <RoomCard
                   key={room.id}
@@ -494,7 +408,7 @@ export default function Rooms() {
 
       {/* ── Kanban View ────────────────────────────────────────────────────── */}
       {view === 'kanban' && (
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div className="flex gap-3 flex-wrap items-start">
           {[
             { status: 'available',   label: 'Available',   badge: 'green'  },
             { status: 'occupied',    label: 'Occupied',    badge: 'red'    },
@@ -556,16 +470,12 @@ function RoomCard({ room, onClick }) {
       title={`Room ${room.number} — ${STATUS_LABEL[room.status]}`}
     >
       {/* Room number */}
-      <p className="t-h1" style={{
-        margin: '0 0 2px',
-        color: 'var(--text)',
-        lineHeight: 1.1,
-      }}>
+      <p className="t-h1 mb-0.5 leading-[1.1]">
         {room.number}
       </p>
 
       {/* Type */}
-      <p className="t-label" style={{ margin: '0 0 8px', color: 'var(--text3)' }}>
+      <p className="t-label mb-2">
         {room.type} · Fl {room.floor}
       </p>
 
@@ -576,13 +486,13 @@ function RoomCard({ room, onClick }) {
 
       {/* Guest name if occupied */}
       {room.status === 'occupied' && room.guest && (
-        <p style={{ margin: '6px 0 0', fontSize: 10.5, color: 'var(--text2)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <p className="mt-1.5 text-[10.5px] text-ink2 font-medium overflow-hidden text-ellipsis whitespace-nowrap">
           {room.guest.name}
         </p>
       )}
 
       {/* Rate */}
-      <p className="t-label" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>
+      <p className="t-label mt-1">
         ₹{room.dailyRate}/day
       </p>
     </div>

@@ -74,13 +74,13 @@ export default function OtpLoginForm() {
     <>
       {error && (
         <div className="login-error">
-          <span style={{ flexShrink: 0, marginTop: 1, display: 'inline-flex' }}><AlertIcon /></span>
+          <span className="shrink-0 mt-px inline-flex"><AlertIcon /></span>
           {error}
         </div>
       )}
       {info && !error && (
         <div className="login-success">
-          <span style={{ flexShrink: 0, marginTop: 1, display: 'inline-flex' }}><CheckIcon /></span>
+          <span className="shrink-0 mt-px inline-flex"><CheckIcon /></span>
           {info}
         </div>
       )}
@@ -126,7 +126,7 @@ export default function OtpLoginForm() {
                 {isSubmitting ? 'Verifying…' : 'Verify & Sign In'}
               </button>
 
-              <div className="login-meta-row between" style={{ marginTop: 14 }}>
+              <div className="login-meta-row between mt-[14px]">
                 <button type="button" className="login-link"
                         onClick={() => { setStep('email'); setError(''); setInfo('') }}>
                   ← Use a different email

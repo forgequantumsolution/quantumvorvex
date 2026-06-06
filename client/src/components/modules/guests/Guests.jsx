@@ -129,8 +129,8 @@ function exportGuestCSV(guests) {
 function InfoRow({ label, value }) {
   return (
     <div>
-      <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 3 }}>{label}</div>
-      <div className="t-sm" style={{ color: 'var(--text)' }}>{value || '—'}</div>
+      <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.07em] mb-[3px]">{label}</div>
+      <div className="t-sm">{value || '—'}</div>
     </div>
   )
 }
@@ -148,17 +148,13 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
       isOpen={!!guest}
       onClose={onClose}
       title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="t-title" style={{
-            width: 36, height: 36, borderRadius: '50%', background: 'var(--gold)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#000', flexShrink: 0,
-          }}>
+        <div className="flex items-center gap-2.5">
+          <div className="t-title w-9 h-9 rounded-full bg-gold flex items-center justify-center text-black shrink-0">
             {guest.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
           </div>
           <div>
             <div className="t-h3">{guest.name}</div>
-            <div style={{ fontSize: 11, color: 'var(--gold)', fontFamily: 'var(--font-mono)', fontWeight: 400 }}>{guest.docId}</div>
+            <div className="text-[11px] text-gold font-normal" style={{ fontFamily: 'var(--font-mono)' }}>{guest.docId}</div>
           </div>
         </div>
       }
@@ -174,20 +170,16 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
       }
     >
       {/* Summary bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 18 }}>
+      <div className="grid grid-cols-4 gap-2.5 mb-[18px]">
         {[
           { label: 'Room', value: guest.room, mono: true },
           { label: 'Stay Type', value: guest.stayType === 'monthly' ? 'Monthly' : 'Daily' },
           { label: 'Total Stays', value: guest.stayCount },
           { label: 'Lifetime Spend', value: formatCurrency(totalSpend), mono: true },
         ].map(item => (
-          <div key={item.label} style={{
-            background: 'var(--surface2)', borderRadius: 8, padding: '10px 12px',
-            border: '1px solid var(--border)',
-          }}>
-            <div className="t-label" style={{ marginBottom: 4 }}>{item.label}</div>
+          <div key={item.label} className="bg-surface2 rounded-lg px-3 py-2.5 border border-line">
+            <div className="t-label mb-1">{item.label}</div>
             <div className="t-title" style={{
-              color: 'var(--text)',
               fontFamily: item.mono ? 'var(--font-mono)' : undefined,
             }}>{item.value}</div>
           </div>
@@ -195,18 +187,18 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
       </div>
 
       {/* Status + tags row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+      <div className="flex items-center gap-2 mb-[18px] flex-wrap">
         <Badge type={statusColor(guest.status).replace('badge-', '')}>{guest.status}</Badge>
         {guest.tags.map(t => <span key={t} className={getTagClass(t)}>{t}</span>)}
       </div>
 
       <Tabs tabs={PROFILE_TABS} active={tab} onChange={setTab} />
 
-      <div style={{ marginTop: 16 }}>
+      <div className="mt-4">
         {/* ── Profile Tab ── */}
         {tab === 'info' && (
           <div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 24px', marginBottom: 16 }}>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3.5 mb-4">
               <InfoRow label="Phone" value={guest.phone} />
               <InfoRow label="Email" value={guest.email} />
               <InfoRow label="Nationality" value={guest.nationality} />
@@ -220,25 +212,25 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
             </div>
 
             {guest.facilities.length > 0 && (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7 }}>Facilities</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <div className="mb-3.5">
+                <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.07em] mb-[7px]">Facilities</div>
+                <div className="flex gap-1.5 flex-wrap">
                   {guest.facilities.map(f => <span key={f} className="badge badge-grey">{f}</span>)}
                 </div>
               </div>
             )}
 
             {guest.amenities.length > 0 && (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7 }}>Extra Amenities</div>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <div className="mb-3.5">
+                <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.07em] mb-[7px]">Extra Amenities</div>
+                <div className="flex gap-1.5 flex-wrap">
                   {guest.amenities.map(a => <span key={a} className="badge badge-blue">{a}</span>)}
                 </div>
               </div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Documents</div>
+            <div className="flex items-center gap-2.5">
+              <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.07em]">Documents</div>
               <Badge type={guest.documents >= 4 ? 'green' : guest.documents >= 2 ? 'amber' : 'red'}>
                 {guest.documents} / 4 uploaded
               </Badge>
@@ -250,35 +242,35 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
         {tab === 'billing' && (
           <div>
             {guest.billingHistory.length === 0 ? (
-              <div className="t-sm" style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text3)' }}>No billing records</div>
+              <div className="t-sm text-center py-8 text-ink3">No billing records</div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <table className="w-full border-collapse">
                 <thead>
-                  <tr style={{ background: 'var(--surface2)' }}>
+                  <tr className="bg-surface2">
                     {['Invoice', 'Period', 'Total', 'Status', 'Paid On', 'Method'].map(h => (
-                      <th key={h} style={{ textAlign: 'left', padding: '8px 12px', fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                      <th key={h} className="text-left px-3 py-2 text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.05em]">{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {guest.billingHistory.map(b => (
-                    <tr key={b.invoiceNo} style={{ borderBottom: '1px solid var(--border)' }}>
-                      <td className="t-xs" style={{ padding: '9px 12px', fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>{b.invoiceNo}</td>
-                      <td style={{ padding: '9px 12px', fontSize: 12.5, color: 'var(--text2)' }}>{b.period}</td>
-                      <td className="t-title" style={{ padding: '9px 12px', fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>{formatCurrency(b.total)}</td>
-                      <td style={{ padding: '9px 12px' }}>
+                    <tr key={b.invoiceNo} className="border-b border-line">
+                      <td className="t-xs px-3 py-[9px] text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{b.invoiceNo}</td>
+                      <td className="px-3 py-[9px] text-[12.5px] text-ink2">{b.period}</td>
+                      <td className="t-title px-3 py-[9px]" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(b.total)}</td>
+                      <td className="px-3 py-[9px]">
                         <Badge type={b.status === 'Paid' ? 'green' : b.status === 'Overdue' ? 'red' : 'amber'}>{b.status}</Badge>
                       </td>
-                      <td className="t-xs" style={{ padding: '9px 12px', color: 'var(--text3)' }}>{b.paidOn ? formatDate(b.paidOn) : '—'}</td>
-                      <td className="t-xs" style={{ padding: '9px 12px', color: 'var(--text2)' }}>{b.method || '—'}</td>
+                      <td className="t-xs px-3 py-[9px] text-ink3">{b.paidOn ? formatDate(b.paidOn) : '—'}</td>
+                      <td className="t-xs px-3 py-[9px] text-ink2">{b.method || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             )}
-            <div style={{ marginTop: 14, padding: '10px 14px', background: 'var(--gold-bg)', borderRadius: 8, display: 'flex', justifyContent: 'space-between' }}>
-              <span className="t-title" style={{ color: 'var(--gold)' }}>Total Lifetime Spend</span>
-              <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--gold)' }}>{formatCurrency(totalSpend)}</span>
+            <div className="mt-3.5 px-3.5 py-2.5 bg-[var(--gold-bg)] rounded-lg flex justify-between">
+              <span className="t-title text-gold">Total Lifetime Spend</span>
+              <span className="font-bold text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(totalSpend)}</span>
             </div>
           </div>
         )}
@@ -286,34 +278,27 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
         {/* ── Communications Tab ── */}
         {tab === 'comms' && (
           <div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="flex flex-col gap-2.5">
               {guest.commLog.map((c, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 12,
-                  padding: '12px 14px', background: 'var(--surface2)',
-                  borderRadius: 8, border: '1px solid var(--border)',
-                }}>
-                  <div className="t-body" style={{
-                    width: 32, height: 32, borderRadius: '50%',
+                <div key={i} className="flex items-start gap-3 px-3.5 py-3 bg-surface2 rounded-lg border border-line">
+                  <div className="t-body w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{
                     background: c.type === 'WhatsApp' ? '#dcfce7' : c.type === 'SMS' ? '#dbeafe' : 'var(--gold-bg)',
                     color: c.type === 'WhatsApp' ? '#16a34a' : c.type === 'SMS' ? '#2563eb' : 'var(--gold)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
                   }}>
                     {c.type === 'WhatsApp' ? '💬' : c.type === 'SMS' ? '📱' : '📄'}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>{c.type}</div>
-                    <div className="t-xs" style={{ color: 'var(--text2)', marginBottom: 4 }}>{c.msg}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>{c.time}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12.5px] font-semibold text-ink mb-0.5">{c.type}</div>
+                    <div className="t-xs mb-1">{c.msg}</div>
+                    <div className="text-[11px] text-ink3">{c.time}</div>
                   </div>
                 </div>
               ))}
               {guest.commLog.length === 0 && (
-                <div className="t-sm" style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text3)' }}>No communication log</div>
+                <div className="t-sm text-center py-8 text-ink3">No communication log</div>
               )}
             </div>
-            <button className="btn btn-outline btn-sm" style={{ marginTop: 14 }}
+            <button className="btn btn-outline btn-sm mt-3.5"
               onClick={() => {}}>
               + Log Communication
             </button>
@@ -323,20 +308,16 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
         {/* ── Stay History Tab ── */}
         {tab === 'history' && (
           <div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div className="flex flex-col gap-2">
               {Array.from({ length: guest.stayCount }, (_, i) => {
                 const isLatest = i === 0
                 return (
-                  <div key={i} style={{
-                    padding: '12px 14px', background: 'var(--surface2)',
-                    borderRadius: 8, border: `1px solid ${isLatest ? 'var(--gold)' : 'var(--border)'}`,
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  }}>
+                  <div key={i} className={`px-3.5 py-3 bg-surface2 rounded-lg border flex justify-between items-center ${isLatest ? 'border-gold' : 'border-line'}`}>
                     <div>
-                      <div className="t-title" style={{ color: 'var(--text)' }}>
-                        Stay #{guest.stayCount - i} {isLatest && <span style={{ fontSize: 10.5, color: 'var(--gold)', marginLeft: 6 }}>CURRENT</span>}
+                      <div className="t-title">
+                        Stay #{guest.stayCount - i} {isLatest && <span className="text-[10.5px] text-gold ml-1.5">CURRENT</span>}
                       </div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text3)', marginTop: 3 }}>
+                      <div className="text-[11.5px] text-ink3 mt-[3px]">
                         {isLatest ? `Check-in: ${formatDate(guest.checkInDate)}` : `~${2 + i * 3} months ago`}
                       </div>
                     </div>
@@ -347,11 +328,8 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
                 )
               })}
             </div>
-            <div style={{
-              marginTop: 14, padding: '10px 14px', background: 'var(--surface2)',
-              borderRadius: 8, display: 'flex', justifyContent: 'space-between',
-            }}>
-              <span style={{ fontSize: 12.5, color: 'var(--text2)' }}>
+            <div className="mt-3.5 px-3.5 py-2.5 bg-surface2 rounded-lg flex justify-between">
+              <span className="text-[12.5px] text-ink2">
                 Returning guest · {guest.stayCount} visit{guest.stayCount !== 1 ? 's' : ''} · {guest.stayCount >= 5 ? '🥇 Gold Loyalty' : guest.stayCount >= 3 ? '🥈 Silver Loyalty' : '🥉 Bronze Loyalty'}
               </span>
             </div>
@@ -402,14 +380,11 @@ function CheckoutModal({ guest, onClose, onConfirm }) {
       }
     >
       {/* Step indicator */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+      <div className="flex gap-1.5 mb-5">
         {['Bill Summary', 'Confirm & Pay'].map((s, i) => (
-          <div key={s} style={{ flex: 1, textAlign: 'center' }}>
-            <div style={{
-              height: 3, borderRadius: 2, marginBottom: 5,
-              background: step > i ? 'var(--gold)' : 'var(--border)',
-            }} />
-            <span style={{ fontSize: 10.5, color: step > i ? 'var(--gold)' : 'var(--text3)', fontWeight: 600 }}>{s}</span>
+          <div key={s} className="flex-1 text-center">
+            <div className={`h-[3px] rounded-sm mb-[5px] ${step > i ? 'bg-gold' : 'bg-line'}`} />
+            <span className={`text-[10.5px] font-semibold ${step > i ? 'text-gold' : 'text-ink3'}`}>{s}</span>
           </div>
         ))}
       </div>
@@ -417,30 +392,30 @@ function CheckoutModal({ guest, onClose, onConfirm }) {
       {step === 1 && (
         <>
           {/* Room + period */}
-          <div style={{ background: 'var(--surface2)', borderRadius: 8, padding: '12px 14px', marginBottom: 14, border: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span className="t-xs" style={{ color: 'var(--text3)' }}>Room</span>
+          <div className="bg-surface2 rounded-lg px-3.5 py-3 mb-3.5 border border-line">
+            <div className="flex justify-between mb-1.5">
+              <span className="t-xs text-ink3">Room</span>
               <span className="t-title" style={{ fontFamily: 'var(--font-mono)' }}>{guest.room}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span className="t-xs" style={{ color: 'var(--text3)' }}>Stay Period</span>
-              <span style={{ fontSize: 12.5, fontWeight: 500 }}>{formatDate(guest.checkInDate)} → {formatDate(dueDate)}</span>
+            <div className="flex justify-between">
+              <span className="t-xs text-ink3">Stay Period</span>
+              <span className="text-[12.5px] font-medium">{formatDate(guest.checkInDate)} → {formatDate(dueDate)}</span>
             </div>
           </div>
 
           {/* Bill breakdown */}
-          <div style={{ marginBottom: 14 }}>
+          <div className="mb-3.5">
             {[['Room Rent', rent], ['Food Plan', food], ['Amenities', amenities], ['GST (12%)', gst]].map(([k, v]) => v > 0 && (
-              <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--border)' }}>
-                <span className="t-sm" style={{ color: 'var(--text2)' }}>{k}</span>
+              <div key={k} className="flex justify-between py-[7px] border-b border-line">
+                <span className="t-sm text-ink2">{k}</span>
                 <span className="t-sm" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(v)}</span>
               </div>
             ))}
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
-              <span className="t-sm" style={{ color: 'var(--text2)' }}>Advance Paid</span>
-              <span className="t-sm" style={{ fontFamily: 'var(--font-mono)', color: 'var(--green-text)' }}>−{formatCurrency(guest.advance)}</span>
+            <div className="flex justify-between py-[9px] border-b border-line">
+              <span className="t-sm text-ink2">Advance Paid</span>
+              <span className="t-sm text-success-text" style={{ fontFamily: 'var(--font-mono)' }}>−{formatCurrency(guest.advance)}</span>
             </div>
-            <div className="t-h3" style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0' }}>
+            <div className="t-h3 flex justify-between py-[11px]">
               <span>Balance Due</span>
               <span style={{ fontFamily: 'var(--font-mono)', color: balance > 0 ? 'var(--red-text)' : 'var(--green-text)' }}>
                 {formatCurrency(Math.abs(balance))} {balance <= 0 ? '(refund)' : ''}
@@ -449,7 +424,7 @@ function CheckoutModal({ guest, onClose, onConfirm }) {
           </div>
 
           {/* Checklist */}
-          <div className="t-xs" style={{ color: 'var(--text3)', marginTop: 10 }}>
+          <div className="t-xs text-ink3 mt-2.5">
             Room will be marked as <strong>Dirty</strong> and queued for housekeeping automatically.
           </div>
         </>
@@ -457,24 +432,24 @@ function CheckoutModal({ guest, onClose, onConfirm }) {
 
       {step === 2 && (
         <>
-          <div style={{ background: 'var(--gold-bg)', borderRadius: 8, padding: '12px 14px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontWeight: 600, color: 'var(--gold)' }}>Amount to Collect</span>
-            <span className="t-h3" style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>{formatCurrency(Math.max(balance, 0))}</span>
+          <div className="bg-[var(--gold-bg)] rounded-lg px-3.5 py-3 mb-4 flex justify-between items-center">
+            <span className="font-semibold text-gold">Amount to Collect</span>
+            <span className="t-h3 text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(Math.max(balance, 0))}</span>
           </div>
 
-          <div style={{ marginBottom: 12 }}>
-            <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Payment Method</label>
+          <div className="mb-3">
+            <label className="form-label block mb-[5px]">Payment Method</label>
             <select className="form-select" value={payMethod} onChange={e => setPayMethod(e.target.value)}>
               {['Cash', 'UPI', 'Card', 'Bank Transfer', 'Cheque'].map(m => <option key={m}>{m}</option>)}
             </select>
           </div>
 
-          <div style={{ marginBottom: 14 }}>
-            <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Remarks (optional)</label>
+          <div className="mb-3.5">
+            <label className="form-label block mb-[5px]">Remarks (optional)</label>
             <textarea className="form-textarea" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Key return confirmation, damages, etc." />
           </div>
 
-          <label className="t-sm" style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer', color: 'var(--text)' }}>
+          <label className="t-sm flex items-center gap-[9px] cursor-pointer">
             <input type="checkbox" checked={settled} onChange={e => setSettled(e.target.checked)} />
             Payment received & key returned — confirm checkout
           </label>
@@ -524,7 +499,7 @@ function EditGuestModal({ guest, onClose, onSave }) {
               </>
             }
           >
-            <Form style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <Form className="grid grid-cols-2 gap-3">
               <FormikField name="name" label="Name" required />
               <FormikField name="phone" label="Phone" required />
               <FormikField name="email" label="Email" type="email" />
@@ -544,13 +519,13 @@ function EditGuestModal({ guest, onClose, onSave }) {
                 {['Active', 'Due', 'Checked Out'].map(s => <option key={s}>{s}</option>)}
               </FormikField>
             </Form>
-            <div style={{ marginTop: 14 }}>
-              <label className="form-label" style={{ display: 'block', marginBottom: 7 }}>Tags</label>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div className="mt-3.5">
+              <label className="form-label block mb-[7px]">Tags</label>
+              <div className="flex gap-2 flex-wrap">
                 {GUEST_TAGS.map(tag => (
                   <button key={tag} type="button" onClick={() => toggleTag(tag)}
-                    className={getTagClass(tag)}
-                    style={{ cursor: 'pointer', opacity: values.tags?.includes(tag) ? 1 : 0.4, border: values.tags?.includes(tag) ? undefined : '1px dashed var(--border2)' }}>
+                    className={`${getTagClass(tag)} cursor-pointer`}
+                    style={{ opacity: values.tags?.includes(tag) ? 1 : 0.4, border: values.tags?.includes(tag) ? undefined : '1px dashed var(--border2)' }}>
                     {tag}
                   </button>
                 ))}
@@ -642,14 +617,14 @@ export default function Guests() {
   const openEdit     = (guest) => { setProfileGuest(null); setEditGuest(guest) }
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1300px' }}>
+    <div className="p-6 max-w-[1300px]">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+      <div className="flex justify-between items-start mb-5">
         <div>
-          <h1 className="t-h1" style={{ margin: 0, letterSpacing: '-0.03em' }}>All Guests</h1>
-          <p className="t-sm" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>Guest registry, stay history & billing</p>
+          <h1 className="t-h1 m-0 tracking-[-0.03em]">All Guests</h1>
+          <p className="t-sm mt-1 mb-0 text-ink3">Guest registry, stay history & billing</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="flex gap-2">
           <button className="btn btn-outline btn-sm" onClick={load} disabled={loading}>↻ Refresh</button>
           <button className="btn btn-outline btn-sm" onClick={() => exportGuestCSV(filtered)}>↓ Export CSV</button>
           <button className="btn btn-primary" onClick={() => setActivePanel('checkin')}>+ Check-In</button>
@@ -657,13 +632,13 @@ export default function Guests() {
       </div>
 
       {error && (
-        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
+        <div className="t-sm mb-4 px-3.5 py-2.5 rounded-lg bg-danger-bg text-danger-text">
           {error}
         </div>
       )}
 
       {/* Summary Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '18px' }}>
+      <div className="grid grid-cols-4 gap-3 mb-[18px]">
         {[
           { label: 'Active', count: activeCount, type: 'green', bar: 'stat-bar-green' },
           { label: 'Due / Overdue', count: dueCount, type: 'amber', bar: 'stat-bar-amber' },
@@ -671,23 +646,23 @@ export default function Guests() {
           { label: 'Total Guests', count: guests.length, type: 'blue', bar: 'stat-bar-blue' },
         ].map(({ label, count, type, bar }) => (
           <div key={label} className={`stat-card ${bar}`}>
-            <div className="t-label" style={{ marginBottom: '6px' }}>{label}</div>
-            <div style={{ fontSize: '26px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--text)' }}>{count}</div>
+            <div className="t-label mb-1.5">{label}</div>
+            <div className="text-[26px] font-bold text-ink" style={{ fontFamily: 'var(--font-mono)' }}>{count}</div>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="card" style={{ marginBottom: '16px' }}>
-        <div style={{ padding: '12px 16px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <div style={{ position: 'relative', flex: '1', minWidth: '200px' }}>
-            <span className="t-h3" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text3)' }}>⌕</span>
-            <input className="form-input" style={{ paddingLeft: '30px' }} placeholder="Search name, room, DOC ID, phone..." value={search} onChange={e => setSearch(e.target.value)} />
+      <div className="card mb-4">
+        <div className="px-4 py-3 flex gap-2.5 flex-wrap items-center">
+          <div className="relative flex-1 min-w-[200px]">
+            <span className="t-h3 absolute left-2.5 top-1/2 -translate-y-1/2 text-ink3">⌕</span>
+            <input className="form-input pl-[30px]" placeholder="Search name, room, DOC ID, phone..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <select className="form-select" style={{ width: '140px' }} value={stayFilter} onChange={e => setStayFilter(e.target.value)}>
+          <select className="form-select w-[140px]" value={stayFilter} onChange={e => setStayFilter(e.target.value)}>
             <option>All</option><option>Daily</option><option>Monthly</option>
           </select>
-          <select className="form-select" style={{ width: '150px' }} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+          <select className="form-select w-[150px]" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
             <option>All</option><option>Active</option><option>Due</option><option>Checked Out</option>
           </select>
         </div>
@@ -695,7 +670,7 @@ export default function Guests() {
 
       {/* Table */}
       <div className="card">
-        <div style={{ overflowX: 'auto' }}>
+        <div className="overflow-x-auto">
           <table>
             <thead>
               <tr>
@@ -711,28 +686,28 @@ export default function Guests() {
               {filtered.map(guest => {
                 const dueDate = getDueDate(guest)
                 return (
-                  <tr key={guest.id} style={{ cursor: 'pointer' }} onClick={() => openProfile(guest)}>
-                    <td><span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>{guest.docId}</span></td>
+                  <tr key={guest.id} className="cursor-pointer" onClick={() => openProfile(guest)}>
+                    <td><span className="t-xs text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{guest.docId}</span></td>
                     <td>
-                      <div style={{ fontWeight: 600, color: 'var(--text)' }}>{guest.name}</div>
-                      <div style={{ fontSize: '11.5px', color: 'var(--text3)', marginTop: '1px' }}>{guest.phone}</div>
+                      <div className="font-semibold text-ink">{guest.name}</div>
+                      <div className="text-[11.5px] text-ink3 mt-px">{guest.phone}</div>
                     </td>
-                    <td><span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{guest.room || '—'}</span></td>
+                    <td><span className="font-semibold" style={{ fontFamily: 'var(--font-mono)' }}>{guest.room || '—'}</span></td>
                     <td><Badge type={guest.stayType === 'monthly' ? 'purple' : 'blue'}>{guest.stayType === 'monthly' ? 'Monthly' : 'Daily'}</Badge></td>
-                    <td style={{ whiteSpace: 'nowrap', fontSize: '12.5px' }}>{formatDate(guest.checkInDate)}</td>
-                    <td style={{ whiteSpace: 'nowrap', fontSize: '12.5px' }}>{formatDate(dueDate)}</td>
-                    <td className="t-xs" style={{ color: 'var(--text2)', whiteSpace: 'nowrap' }}>{guest.foodPlan}</td>
+                    <td className="whitespace-nowrap text-[12.5px]">{formatDate(guest.checkInDate)}</td>
+                    <td className="whitespace-nowrap text-[12.5px]">{formatDate(dueDate)}</td>
+                    <td className="t-xs whitespace-nowrap">{guest.foodPlan}</td>
                     <td><span className="t-title" style={{ fontFamily: 'var(--font-mono)' }}>{guest.stayCount}</span></td>
-                    <td><div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>{guest.tags.map(t => <span key={t} className={getTagClass(t)}>{t}</span>)}</div></td>
+                    <td><div className="flex gap-1 flex-wrap">{guest.tags.map(t => <span key={t} className={getTagClass(t)}>{t}</span>)}</div></td>
                     <td><Badge type={statusColor(guest.status).replace('badge-', '')}>{guest.status}</Badge></td>
                     <td onClick={e => e.stopPropagation()}>
-                      <div style={{ display: 'flex', gap: '5px' }}>
+                      <div className="flex gap-[5px]">
                         <button className="btn btn-outline btn-xs" onClick={() => openProfile(guest)}>View</button>
                         {(guest.status === 'Active' || guest.status === 'Due') && (
                           <button className="btn btn-danger btn-xs" onClick={() => setCheckoutGuest(guest)}>Checkout</button>
                         )}
                         {guest.status === 'Due' && (
-                          <button className="btn btn-xs" style={{ background: 'var(--green-bg)', color: 'var(--green-text)' }}
+                          <button className="btn btn-xs bg-success-bg text-success-text"
                             onClick={() => addToast(`Renewed stay for ${guest.name}`, 'success')}>Renew</button>
                         )}
                       </div>

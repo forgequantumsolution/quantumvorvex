@@ -83,28 +83,25 @@ function MealCatalog({ plans, onCreate, onToggle, onDelete }) {
   return (
     <div>
       {/* Header row */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+      <div className="flex justify-end mb-4">
         <button className="btn btn-primary btn-sm" onClick={() => setShowAddModal(true)}>
           + Add Meal Plan
         </button>
       </div>
 
       {/* Plan cards grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 13 }}>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-[13px]">
         {plans.map(plan => {
           const sel = billingSelect[plan.id] || 'monthly'
           return (
             <div
               key={plan.id}
-              className="card"
-              style={{
-                opacity: plan.active ? 1 : 0.6,
-                position: 'relative',
-              }}
+              className="card relative"
+              style={{ opacity: plan.active ? 1 : 0.6 }}
             >
               {/* Active toggle top-right */}
               <div
-                style={{ position: 'absolute', top: 11, right: 11, cursor: 'pointer' }}
+                className="absolute top-[11px] right-[11px] cursor-pointer"
                 onClick={() => handleToggleActive(plan)}
                 title={plan.active ? 'Click to deactivate' : 'Click to activate'}
               >
@@ -113,41 +110,33 @@ function MealCatalog({ plans, onCreate, onToggle, onDelete }) {
                 </Badge>
               </div>
 
-              <div className="card-body" style={{ paddingTop: 14 }}>
+              <div className="card-body pt-[14px]">
                 {/* Plan name */}
-                <p className="t-title" style={{
-                  margin: '0 0 4px',
-                  color: 'var(--text)',
-                  paddingRight: 60,
-                }}>
+                <p className="t-title m-0 mb-1 pr-[60px]">
                   {plan.name}
                 </p>
 
                 {/* Description */}
-                <p className="t-xs" style={{
-                  margin: '0 0 12px',
-                  color: 'var(--text3)',
-                  lineHeight: 1.5,
-                  minHeight: 34,
-                }}>
+                <p className="t-xs m-0 mb-3 text-ink3 leading-[1.5] min-h-[34px]">
                   {plan.desc}
                 </p>
 
                 {/* Pricing rows */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 5, marginBottom: 12 }}>
+                <div className="flex flex-col gap-[5px] mb-3">
                   {[
                     ['One-time', plan.oneTime],
                     ['Weekly',   plan.weekly],
                     ['Monthly',  plan.monthly],
                   ].map(([label, val]) => (
-                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span className="t-xs" style={{ color: 'var(--text3)' }}>{label}</span>
-                      <span style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 12,
-                        color: val > 0 ? 'var(--text)' : 'var(--text3)',
-                        fontWeight: 500,
-                      }}>
+                    <div key={label} className="flex justify-between items-center">
+                      <span className="t-xs text-ink3">{label}</span>
+                      <span
+                        className="text-[12px] font-medium"
+                        style={{
+                          fontFamily: 'var(--font-mono)',
+                          color: val > 0 ? 'var(--text)' : 'var(--text3)',
+                        }}
+                      >
                         {val > 0 ? formatCurrency(val) : '—'}
                       </span>
                     </div>
@@ -155,7 +144,7 @@ function MealCatalog({ plans, onCreate, onToggle, onDelete }) {
                 </div>
 
                 {/* Billing type toggle */}
-                <div style={{ display: 'flex', gap: 5, marginBottom: 13, flexWrap: 'wrap' }}>
+                <div className="flex gap-[5px] mb-[13px] flex-wrap">
                   {['one-time', 'weekly', 'monthly'].map(type => (
                     <button
                       key={type}
@@ -168,10 +157,9 @@ function MealCatalog({ plans, onCreate, onToggle, onDelete }) {
                 </div>
 
                 {/* Action buttons */}
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div className="flex gap-1.5">
                   <button
-                    className="btn btn-danger btn-xs"
-                    style={{ flex: 1 }}
+                    className="btn btn-danger btn-xs flex-1"
                     onClick={() => handleDelete(plan.id, plan.name)}
                   >
                     Delete
@@ -199,35 +187,33 @@ function MealCatalog({ plans, onCreate, onToggle, onDelete }) {
           </>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="flex flex-col gap-3.5">
           <div>
-            <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Plan Name</label>
+            <label className="form-label block mb-[5px]">Plan Name</label>
             <input
-              className="form-input"
-              style={{ width: '100%' }}
+              className="form-input w-full"
               placeholder="e.g. Breakfast Only"
               value={form.name}
               onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
             />
           </div>
           <div>
-            <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Description</label>
+            <label className="form-label block mb-[5px]">Description</label>
             <textarea
-              className="form-textarea"
-              style={{ width: '100%', minHeight: 72, resize: 'vertical' }}
+              className="form-textarea w-full min-h-[72px] resize-y"
               placeholder="Brief description of meals included"
               value={form.desc}
               onChange={e => setForm(p => ({ ...p, desc: e.target.value }))}
             />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <div className="grid grid-cols-3 gap-3">
             {[
               ['One-time ₹', 'oneTime'],
               ['Weekly ₹',   'weekly'],
               ['Monthly ₹',  'monthly'],
             ].map(([label, key]) => (
               <div key={key}>
-                <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>{label}</label>
+                <label className="form-label block mb-[5px]">{label}</label>
                 <input
                   className="form-input"
                   type="number"
@@ -250,48 +236,48 @@ function ActiveOrders({ orders }) {
   const addToast = useToast()
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div className="overflow-x-auto">
       {orders.length === 0 ? (
         <div className="empty-state">
-          <p style={{ margin: 0, fontWeight: 600, color: 'var(--text2)' }}>No active orders</p>
+          <p className="m-0 font-semibold text-ink2">No active orders</p>
         </div>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table className="w-full border-collapse">
           <thead>
             <tr>
               {['Room', 'Guest', 'Meal Plan', 'Billing', 'Amount', 'Status', 'Action'].map(h => (
-                <th key={h} style={{ textAlign: 'left', padding: '9px 12px', whiteSpace: 'nowrap' }}>{h}</th>
+                <th key={h} className="text-left px-3 py-[9px] whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {orders.map(order => (
               <tr key={order.id}>
-                <td style={{ padding: '10px 12px' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, fontWeight: 600, color: 'var(--gold)' }}>
+                <td className="px-3 py-2.5">
+                  <span className="text-[13px] font-semibold text-gold" style={{ fontFamily: 'var(--font-mono)' }}>
                     {order.room}
                   </span>
                 </td>
-                <td className="t-sm" style={{ padding: '10px 12px', color: 'var(--text)', fontWeight: 500 }}>
+                <td className="t-sm px-3 py-2.5 font-medium">
                   {order.guest}
                 </td>
-                <td className="t-title" style={{ padding: '10px 12px', color: 'var(--text)' }}>
+                <td className="t-title px-3 py-2.5">
                   {order.plan}
                 </td>
-                <td style={{ padding: '10px 12px' }}>
+                <td className="px-3 py-2.5">
                   <Badge type={BILLING_BADGE[order.billing] || 'grey'}>
                     {BILLING_LABEL[order.billing] || order.billing}
                   </Badge>
                 </td>
-                <td style={{ padding: '10px 12px' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}>
+                <td className="px-3 py-2.5">
+                  <span className="text-[13px]" style={{ fontFamily: 'var(--font-mono)' }}>
                     {order.amount > 0 ? formatCurrency(order.amount) : '—'}
                   </span>
                 </td>
-                <td style={{ padding: '10px 12px' }}>
+                <td className="px-3 py-2.5">
                   <Badge type="green">{order.status}</Badge>
                 </td>
-                <td style={{ padding: '10px 12px' }}>
+                <td className="px-3 py-2.5">
                   <button
                     className="btn btn-outline btn-xs"
                     onClick={() => addToast(`Reminder sent to ${order.guest}`, 'success')}
@@ -331,16 +317,9 @@ function Revenue({ orders, plans }) {
   const CustomTooltip = ({ active, payload }) => {
     if (!active || !payload?.length) return null
     return (
-      <div className="t-xs" style={{
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 6,
-        padding: '8px 12px',
-        color: 'var(--text)',
-        boxShadow: 'var(--shadow)',
-      }}>
-        <p style={{ margin: 0, fontWeight: 600 }}>{payload[0]?.payload?.fullName}</p>
-        <p style={{ margin: '3px 0 0', fontFamily: 'var(--font-mono)' }}>
+      <div className="t-xs bg-surface border border-line rounded-md px-3 py-2 text-ink shadow-[var(--shadow)]">
+        <p className="m-0 font-semibold">{payload[0]?.payload?.fullName}</p>
+        <p className="m-0 mt-[3px]" style={{ fontFamily: 'var(--font-mono)' }}>
           {formatCurrency(payload[0]?.value)}
         </p>
       </div>
@@ -350,53 +329,47 @@ function Revenue({ orders, plans }) {
   return (
     <div>
       {/* Stat summary row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3 mb-6">
         <div className="stat-card stat-bar-gold">
-          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
+          <p className="t-label m-0 mb-1">
             Total Food Revenue
           </p>
-          <p className="t-h1" style={{ margin: 0, color: 'var(--gold)' }}>
+          <p className="t-h1 m-0 text-gold">
             {formatCurrency(totalRevenue)}
           </p>
-          <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>This month</p>
+          <p className="m-0 mt-[3px] text-[11px] text-ink3">This month</p>
         </div>
 
         <div className="stat-card stat-bar-blue">
-          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
+          <p className="t-label m-0 mb-1">
             Active Subscribers
           </p>
-          <p className="t-h1" style={{ margin: 0, color: 'var(--blue)' }}>
+          <p className="t-h1 m-0 text-info">
             {activeCount}
           </p>
-          <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>Guests on meal plan</p>
+          <p className="m-0 mt-[3px] text-[11px] text-ink3">Guests on meal plan</p>
         </div>
 
         <div className="stat-card stat-bar-purple">
-          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
+          <p className="t-label m-0 mb-1">
             Avg per Guest
           </p>
-          <p className="t-h1" style={{ margin: 0, color: 'var(--purple)' }}>
+          <p className="t-h1 m-0 text-violet">
             {formatCurrency(avgPerGuest)}
           </p>
-          <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>Per active subscriber</p>
+          <p className="m-0 mt-[3px] text-[11px] text-ink3">Per active subscriber</p>
         </div>
       </div>
 
       {/* Bar chart */}
-      <div
-        className="card"
-        style={{ padding: '18px 20px' }}
-      >
-        <p className="t-title" style={{
-          margin: '0 0 16px',
-          color: 'var(--text)',
-        }}>
+      <div className="card px-5 py-[18px]">
+        <p className="t-title m-0 mb-4">
           Revenue by Meal Plan
         </p>
 
         {revenueByPlan.length === 0 ? (
-          <div className="empty-state" style={{ height: 220, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p className="t-sm" style={{ margin: 0, color: 'var(--text3)' }}>No revenue data available</p>
+          <div className="empty-state h-[220px] flex items-center justify-center">
+            <p className="t-sm m-0 text-ink3">No revenue data available</p>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={220}>
@@ -489,20 +462,14 @@ export default function Food() {
   }
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="px-7 py-6 max-w-[1400px] mx-auto">
       {/* Page header */}
-      <div style={{ marginBottom: 22, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+      <div className="mb-[22px] flex justify-between items-start gap-3 flex-wrap">
         <div>
-          <h1 style={{
-            fontSize: 26,
-            fontWeight: 800,
-            margin: 0,
-            color: 'var(--text)',
-            letterSpacing: '-0.03em',
-          }}>
+          <h1 className="text-[26px] font-extrabold m-0 text-ink tracking-[-0.03em]">
             Food Options
           </h1>
-          <p className="t-sm" style={{ margin: '3px 0 0', color: 'var(--text3)' }}>
+          <p className="t-sm mt-[3px] text-ink3">
             Meal plans, active orders, and food revenue
           </p>
         </div>
@@ -510,7 +477,7 @@ export default function Food() {
       </div>
 
       {error && (
-        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
+        <div className="t-sm mb-4 px-[14px] py-2.5 rounded-lg bg-danger-bg text-danger-text">
           {error}
         </div>
       )}

@@ -63,33 +63,31 @@ export default function Today() {
   return (
     <div>
       {/* KPI strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 22 }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-[14px] mb-[22px]">
         {kpis.map(k => (
           <button
             key={k.label}
             onClick={() => setActivePanel(k.panel)}
-            className="stat-card"
-            style={{ textAlign: 'left', cursor: 'pointer', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14 }}
+            className="stat-card text-left cursor-pointer border border-line flex items-center gap-[14px]"
           >
-            <div style={{
-              width: 44, height: 44, borderRadius: 12, flexShrink: 0,
-              background: 'var(--gold-bg)', color: k.color,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
+            <div
+              className="w-11 h-11 rounded-[12px] shrink-0 bg-[var(--gold-bg)] flex items-center justify-center"
+              style={{ color: k.color }}
+            >
               <k.Icon size={21} />
             </div>
             <div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>
+              <div className="text-[26px] font-extrabold text-ink leading-none">
                 {loading ? '—' : k.value}
               </div>
-              <div className="t-xs" style={{ color: 'var(--text3)', marginTop: 3 }}>{k.label}</div>
+              <div className="t-xs text-ink3 mt-[3px]">{k.label}</div>
             </div>
           </button>
         ))}
       </div>
 
       {/* Three action columns */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 16, alignItems: 'start' }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))] gap-4 items-start">
 
         {/* Arrivals */}
         <Column title="Expected Arrivals" Icon={LuLogIn} count={arrivals.length} onView={() => setActivePanel('checkin')} viewLabel="Check-In desk">
@@ -138,8 +136,8 @@ export default function Today() {
             value={cancellations.length}
             onClick={() => setActivePanel('cancellations')}
           />
-          <div style={{ borderTop: '1px solid var(--border)', margin: '6px 0 2px' }} />
-          <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)', padding: '6px 0 4px' }}>
+          <div className="border-t border-line mt-1.5 mb-0.5" />
+          <div className="text-[10.5px] font-bold tracking-[0.06em] uppercase text-ink3 pt-1.5 pb-1">
             Open maintenance ({openTickets.length})
           </div>
           {openTickets.length === 0
@@ -148,12 +146,15 @@ export default function Today() {
               <div
                 key={t.id}
                 onClick={() => setActivePanel('maintenance')}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
+                className="flex items-center gap-2.5 py-2 cursor-pointer border-b border-line"
               >
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: PRIORITY_COLOR[String(t.priority).toLowerCase()] || 'var(--text3)', flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
-                  <div className="t-label" style={{ color: 'var(--text3)' }}>Room {t.roomNumber} · {t.priority}</div>
+                <span
+                  className="w-[7px] h-[7px] rounded-full shrink-0"
+                  style={{ background: PRIORITY_COLOR[String(t.priority).toLowerCase()] || 'var(--text3)' }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12.5px] font-semibold text-ink whitespace-nowrap overflow-hidden text-ellipsis">{t.title}</div>
+                  <div className="t-label">Room {t.roomNumber} · {t.priority}</div>
                 </div>
               </div>
             ))}
@@ -166,20 +167,20 @@ export default function Today() {
 // ── Building blocks ───────────────────────────────────────────────────────────
 function Column({ title, Icon, count, children, onView, viewLabel, accent }) {
   return (
-    <div className="card" style={accent ? { borderColor: 'var(--gold-border)' } : undefined}>
+    <div className={`card ${accent ? 'border-[var(--gold-border)]' : ''}`}>
       <div className="card-header">
-        <span className="card-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Icon size={16} style={{ color: 'var(--gold)' }} />
+        <span className="card-title flex items-center gap-2">
+          <Icon size={16} className="text-gold" />
           {title}
-          <span className="t-label" style={{ background: 'var(--gold-bg)', color: 'var(--gold)', padding: '1px 8px', borderRadius: 10 }}>{count}</span>
+          <span className="t-label bg-[var(--gold-bg)] text-gold px-2 py-px rounded-[10px]">{count}</span>
         </span>
         {onView && (
-          <button onClick={onView} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gold)', fontSize: 11.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
+          <button onClick={onView} className="bg-none border-0 cursor-pointer text-gold text-[11.5px] font-semibold flex items-center gap-[3px]">
             {viewLabel} <LuArrowRight size={12} />
           </button>
         )}
       </div>
-      <div className="card-body" style={{ paddingTop: 4, paddingBottom: 8 }}>
+      <div className="card-body pt-1 pb-2">
         {children}
       </div>
     </div>
@@ -188,17 +189,17 @@ function Column({ title, Icon, count, children, onView, viewLabel, accent }) {
 
 function Row({ name, meta, right, action }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: '1px solid var(--border)' }}>
-      <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--surface2)', color: 'var(--text3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+    <div className="flex items-center gap-2.5 py-[9px] border-b border-line">
+      <div className="w-[30px] h-[30px] rounded-lg bg-surface2 text-ink3 flex items-center justify-center shrink-0">
         <LuBedDouble size={15} />
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div className="t-title" style={{ color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</div>
-        <div style={{ fontSize: 11.5, color: 'var(--text3)' }}>{meta}</div>
+      <div className="flex-1 min-w-0">
+        <div className="t-title whitespace-nowrap overflow-hidden text-ellipsis">{name}</div>
+        <div className="text-[11.5px] text-ink3">{meta}</div>
       </div>
       {right}
       {action && (
-        <button onClick={action.onClick} className="btn btn-outline btn-xs" style={{ flexShrink: 0 }}>{action.label}</button>
+        <button onClick={action.onClick} className="btn btn-outline btn-xs shrink-0">{action.label}</button>
       )}
     </div>
   )
@@ -213,7 +214,10 @@ function DateChip({ label, tone }) {
   }
   const t = tones[tone] || tones.grey
   return (
-    <span style={{ background: t.bg, color: t.fg, fontSize: 10.5, fontWeight: 700, padding: '2px 8px', borderRadius: 10, whiteSpace: 'nowrap', flexShrink: 0 }}>{label}</span>
+    <span
+      className="text-[10.5px] font-bold px-2 py-0.5 rounded-[10px] whitespace-nowrap shrink-0"
+      style={{ background: t.bg, color: t.fg }}
+    >{label}</span>
   )
 }
 
@@ -223,16 +227,16 @@ function AttentionRow({ Icon, tone, label, value, onClick }) {
   return (
     <div
       onClick={onClick}
-      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', cursor: 'pointer', borderBottom: '1px solid var(--border)' }}
+      className="flex items-center gap-2.5 py-[9px] cursor-pointer border-b border-line"
     >
-      <Icon size={16} style={{ color, flexShrink: 0 }} />
-      <span className="t-sm" style={{ flex: 1, color: 'var(--text)' }}>{label}</span>
+      <Icon size={16} className="shrink-0" style={{ color }} />
+      <span className="t-sm flex-1">{label}</span>
       <span className="t-title" style={{ color: value > 0 ? color : 'var(--text3)' }}>{value}</span>
-      <LuArrowRight size={13} style={{ color: 'var(--text3)' }} />
+      <LuArrowRight size={13} className="text-ink3" />
     </div>
   )
 }
 
 function Empty({ text }) {
-  return <div style={{ padding: '18px 0', textAlign: 'center', color: 'var(--text3)', fontSize: 12.5 }}>{text}</div>
+  return <div className="py-[18px] text-center text-ink3 text-[12.5px]">{text}</div>
 }

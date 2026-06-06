@@ -64,8 +64,8 @@ const initKycDocs = [
 // ─── Reusable field components ────────────────────────────────────────────────
 function Field({ label, children, fullWidth }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: fullWidth ? '1 / -1' : undefined }}>
-      <label className="form-label" style={{ fontSize: 12, fontWeight: 600 }}>{label}</label>
+    <div className={`flex flex-col gap-[5px] ${fullWidth ? 'col-[1/-1]' : ''}`}>
+      <label className="form-label text-[12px] font-semibold">{label}</label>
       {children}
     </div>
   )
@@ -78,23 +78,15 @@ function InlineInput({ value, onChange, type = 'text', min, style }) {
       value={value}
       onChange={e => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
       min={min}
-      style={{
-        width: 80,
-        padding: '3px 6px',
-        fontSize: 12,
-        background: 'var(--surface2)',
-        border: '1px solid var(--border)',
-        borderRadius: 4,
-        color: 'var(--text)',
-        ...style,
-      }}
+      className="w-20 px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
+      style={style}
     />
   )
 }
 
 function SaveButton({ onClick }) {
   return (
-    <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', marginTop: 8 }}>
+    <div className="pt-4 border-t border-line mt-2">
       <button className="btn btn-primary" onClick={onClick}>
         Save Changes
       </button>
@@ -125,45 +117,34 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
     : 'HM'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="flex flex-col gap-6">
       {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div className="flex items-center gap-4">
         <div
           onClick={() => fileRef.current?.click()}
-          style={{
-            width: 80,
-            height: 80,
-            borderRadius: '50%',
-            background: logoPreview ? 'transparent' : 'var(--gold-bg, #3a2e0a)',
-            border: '2px solid var(--gold)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            overflow: 'hidden',
-            flexShrink: 0,
-          }}
+          className="w-20 h-20 rounded-full border-2 border-gold flex items-center justify-center cursor-pointer overflow-hidden shrink-0"
+          style={{ background: logoPreview ? 'transparent' : 'var(--gold-bg, #3a2e0a)' }}
           title="Click to upload logo"
         >
           {logoPreview ? (
-            <img src={logoPreview} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
           ) : (
-            <span className="t-h1" style={{ color: 'var(--gold)' }}>
+            <span className="t-h1 text-gold">
               {initials}
             </span>
           )}
         </div>
         <div>
-          <button className="btn btn-outline" style={{ fontSize: 12 }} onClick={() => fileRef.current?.click()}>
+          <button className="btn btn-outline text-[12px]" onClick={() => fileRef.current?.click()}>
             Upload Logo
           </button>
-          <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text3)' }}>PNG, JPG up to 2MB</p>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoChange} />
+          <p className="mt-1 mb-0 text-[11px] text-ink3">PNG, JPG up to 2MB</p>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
         </div>
       </div>
 
       {/* Form grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="grid grid-cols-2 gap-4">
         <Field label="Hotel Name">
           <input className="form-input" value={settings.hotelName}
             onChange={e => setSettings(s => ({ ...s, hotelName: e.target.value }))} />
@@ -189,9 +170,8 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
             onChange={e => setSettings(s => ({ ...s, licenseNo: e.target.value }))} />
         </Field>
         <Field label="Address" fullWidth>
-          <textarea className="form-textarea" rows={3} value={settings.address}
-            onChange={e => setSettings(s => ({ ...s, address: e.target.value }))}
-            style={{ resize: 'vertical' }} />
+          <textarea className="form-textarea resize-y" rows={3} value={settings.address}
+            onChange={e => setSettings(s => ({ ...s, address: e.target.value }))} />
         </Field>
       </div>
 
@@ -232,19 +212,19 @@ function RoomConfigTab({ settings, setSettings, addToast }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       {/* Capacity row */}
       <div className="card">
         <div className="card-header"><span className="card-title">Hotel Capacity</span></div>
         <div className="card-body">
-          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+          <div className="flex gap-6 flex-wrap">
             <Field label="Total Rooms">
-              <input className="form-input" type="number" min={1} style={{ width: 100 }}
+              <input className="form-input w-[100px]" type="number" min={1}
                 value={settings.totalRooms}
                 onChange={e => setSettings(s => ({ ...s, totalRooms: Number(e.target.value) }))} />
             </Field>
             <Field label="Number of Floors">
-              <input className="form-input" type="number" min={1} style={{ width: 100 }}
+              <input className="form-input w-[100px]" type="number" min={1}
                 value={settings.floors}
                 onChange={e => setSettings(s => ({ ...s, floors: Number(e.target.value) }))} />
             </Field>
@@ -254,14 +234,14 @@ function RoomConfigTab({ settings, setSettings, addToast }) {
 
       {/* Room types table */}
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Room Types</span>
-          <button className="btn btn-primary" style={{ fontSize: 12, padding: '5px 14px' }} onClick={addRoom}>
+          <button className="btn btn-primary text-[12px] px-[14px] py-[5px]" onClick={addRoom}>
             + Add Room Type
           </button>
         </div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="card-body overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
                 {['Name', 'Daily ₹', 'Monthly ₹', 'Peak Daily ₹', 'Peak Monthly ₹', 'Count', 'Max Occ.', ''].map(h => (
@@ -271,7 +251,7 @@ function RoomConfigTab({ settings, setSettings, addToast }) {
             </thead>
             <tbody>
               {roomTypes.map(row => (
-                <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                <tr key={row.id} className="border-b border-line">
                   {[
                     { field: 'name',         val: row.name,         type: 'text',   w: 100 },
                     { field: 'dailyRate',     val: row.dailyRate,     type: 'number', w: 75 },
@@ -281,7 +261,7 @@ function RoomConfigTab({ settings, setSettings, addToast }) {
                     { field: 'count',         val: row.count,         type: 'number', w: 60 },
                     { field: 'maxOccupancy',  val: row.maxOccupancy,  type: 'number', w: 60 },
                   ].map(({ field, val, type, w }) => (
-                    <td key={field} style={{ padding: '7px 10px' }}>
+                    <td key={field} className="px-2.5 py-[7px]">
                       <InlineInput
                         value={val}
                         type={type}
@@ -291,18 +271,17 @@ function RoomConfigTab({ settings, setSettings, addToast }) {
                       />
                     </td>
                   ))}
-                  <td style={{ padding: '7px 10px' }}>
+                  <td className="px-2.5 py-[7px]">
                     {confirmDelete === row.id ? (
-                      <span style={{ display: 'flex', gap: 6 }}>
-                        <button style={{ fontSize: 11, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}
+                      <span className="flex gap-1.5">
+                        <button className="text-[11px] text-[#ef4444] bg-none border-none cursor-pointer"
                           onClick={() => deleteRoom(row.id)}>Confirm</button>
-                        <button style={{ fontSize: 11, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer' }}
+                        <button className="text-[11px] text-ink3 bg-none border-none cursor-pointer"
                           onClick={() => setConfirmDelete(null)}>Cancel</button>
                       </span>
                     ) : (
                       <button
-                        className="t-sm"
-                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                        className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
                         onClick={() => setConfirmDelete(row.id)}
                         title="Delete room type"
                       >
@@ -352,35 +331,21 @@ function FacilitiesTab({ addToast }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="flex flex-col gap-6">
       {/* Standard facilities */}
       <div className="card">
         <div className="card-header"><span className="card-title">Standard Facilities</span></div>
         <div className="card-body">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+          <div className="flex flex-wrap gap-2 mb-[14px]">
             {facilities.map(f => (
               <span
                 key={f}
-                className="t-xs"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '4px 10px',
-                  borderRadius: 20,
-                  background: 'var(--gold-bg, #3a2e0a)',
-                  border: '1px solid var(--gold)',
-                  color: 'var(--gold)',
-                }}
+                className="t-xs inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[20px] bg-[var(--gold-bg,#3a2e0a)] border border-gold text-gold"
               >
                 {f}
                 <button
                   onClick={() => removeFacility(f)}
-                  className="t-body"
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--gold)', lineHeight: 1, padding: 0, marginLeft: 2,
-                  }}
+                  className="t-body bg-none border-none cursor-pointer text-gold leading-[1] p-0 ml-0.5"
                   title={`Remove ${f}`}
                 >
                   ×
@@ -388,16 +353,15 @@ function FacilitiesTab({ addToast }) {
               </span>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="flex gap-2">
             <input
-              className="form-input"
+              className="form-input max-w-[200px]"
               placeholder="Add facility..."
               value={newFacility}
               onChange={e => setNewFacility(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && addFacility()}
-              style={{ maxWidth: 200 }}
             />
-            <button className="btn btn-outline" style={{ fontSize: 12 }} onClick={addFacility}>
+            <button className="btn btn-outline text-[12px]" onClick={addFacility}>
               + Add
             </button>
           </div>
@@ -406,22 +370,18 @@ function FacilitiesTab({ addToast }) {
 
       {/* Chargeable amenities */}
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Chargeable Amenities</span>
-          <button className="btn btn-primary" style={{ fontSize: 12, padding: '5px 14px' }} onClick={addAmenity}>
+          <button className="btn btn-primary text-[12px] px-[14px] py-[5px]" onClick={addAmenity}>
             + Add Amenity
           </button>
         </div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="card-body overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
                 {['Amenity', 'Daily Rate ₹', 'Monthly Rate ₹', ''].map(h => (
-                  <th key={h} style={{
-                    padding: '8px 12px', borderBottom: '1px solid var(--border)',
-                    color: 'var(--text3)', fontWeight: 600, fontSize: 11,
-                    textAlign: h === 'Amenity' ? 'left' : 'center',
-                  }}>
+                  <th key={h} className={`px-3 py-2 border-b border-line text-ink3 font-semibold text-[11px] ${h === 'Amenity' ? 'text-left' : 'text-center'}`}>
                     {h}
                   </th>
                 ))}
@@ -429,21 +389,20 @@ function FacilitiesTab({ addToast }) {
             </thead>
             <tbody>
               {amenities.map(row => (
-                <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '7px 12px' }}>
+                <tr key={row.id} className="border-b border-line">
+                  <td className="px-3 py-[7px]">
                     <InlineInput value={row.name} type="text" style={{ width: 160 }} onChange={v => updateAmenity(row.id, 'name', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
+                  <td className="px-3 py-[7px] text-center">
                     <InlineInput value={row.daily} type="number" min={0} onChange={v => updateAmenity(row.id, 'daily', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
+                  <td className="px-3 py-[7px] text-center">
                     <InlineInput value={row.monthly} type="number" min={0} onChange={v => updateAmenity(row.id, 'monthly', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
+                  <td className="px-3 py-[7px] text-center">
                     <button
                       onClick={() => removeAmenity(row.id)}
-                      className="t-sm"
-                      style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                      className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
                     >
                       ×
                     </button>
@@ -477,24 +436,20 @@ function FoodPlansTab({ addToast }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Food / Meal Plans</span>
-          <button className="btn btn-primary" style={{ fontSize: 12, padding: '5px 14px' }} onClick={addPlan}>
+          <button className="btn btn-primary text-[12px] px-[14px] py-[5px]" onClick={addPlan}>
             + Add Meal Plan
           </button>
         </div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="card-body overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
                 {['Meal Name', 'One-time ₹', 'Weekly ₹', 'Monthly ₹', 'Description', ''].map(h => (
-                  <th key={h} style={{
-                    padding: '8px 12px', borderBottom: '1px solid var(--border)',
-                    color: 'var(--text3)', fontWeight: 600, fontSize: 11,
-                    textAlign: h === 'Meal Name' || h === 'Description' ? 'left' : 'center',
-                  }}>
+                  <th key={h} className={`px-3 py-2 border-b border-line text-ink3 font-semibold text-[11px] ${h === 'Meal Name' || h === 'Description' ? 'text-left' : 'text-center'}`}>
                     {h}
                   </th>
                 ))}
@@ -502,27 +457,26 @@ function FoodPlansTab({ addToast }) {
             </thead>
             <tbody>
               {plans.map(row => (
-                <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '7px 12px' }}>
+                <tr key={row.id} className="border-b border-line">
+                  <td className="px-3 py-[7px]">
                     <InlineInput value={row.name} type="text" style={{ width: 130 }} onChange={v => updatePlan(row.id, 'name', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
+                  <td className="px-3 py-[7px] text-center">
                     <InlineInput value={row.oneTime} type="number" min={0} onChange={v => updatePlan(row.id, 'oneTime', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
+                  <td className="px-3 py-[7px] text-center">
                     <InlineInput value={row.weekly} type="number" min={0} onChange={v => updatePlan(row.id, 'weekly', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
+                  <td className="px-3 py-[7px] text-center">
                     <InlineInput value={row.monthly} type="number" min={0} onChange={v => updatePlan(row.id, 'monthly', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px' }}>
+                  <td className="px-3 py-[7px]">
                     <InlineInput value={row.desc} type="text" style={{ width: 140 }} onChange={v => updatePlan(row.id, 'desc', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
+                  <td className="px-3 py-[7px] text-center">
                     <button
                       onClick={() => removePlan(row.id)}
-                      className="t-sm"
-                      style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                      className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
                     >
                       ×
                     </button>
@@ -542,13 +496,13 @@ function FoodPlansTab({ addToast }) {
 // ─── Tab 5: Tax & Pricing ─────────────────────────────────────────────────────
 function TaxPricingTab({ settings, setSettings, addToast }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       <div className="card">
         <div className="card-header"><span className="card-title">GST Settings</span></div>
         <div className="card-body">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="grid grid-cols-2 gap-4">
             <Field label="GST Rate %">
-              <input className="form-input" type="number" min={0} max={28} style={{ maxWidth: 120 }}
+              <input className="form-input max-w-[120px]" type="number" min={0} max={28}
                 value={settings.gstRate}
                 onChange={e => setSettings(s => ({ ...s, gstRate: Number(e.target.value) }))} />
             </Field>
@@ -578,14 +532,14 @@ function TaxPricingTab({ settings, setSettings, addToast }) {
       <div className="card">
         <div className="card-header"><span className="card-title">Late Fee & Grace Period</span></div>
         <div className="card-body">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="grid grid-cols-2 gap-4">
             <Field label="Late Fee Rate %">
-              <input className="form-input" type="number" min={0} style={{ maxWidth: 120 }}
+              <input className="form-input max-w-[120px]" type="number" min={0}
                 value={settings.lateFeeRate}
                 onChange={e => setSettings(s => ({ ...s, lateFeeRate: Number(e.target.value) }))} />
             </Field>
             <Field label="Grace Period (days)">
-              <input className="form-input" type="number" min={0} style={{ maxWidth: 120 }}
+              <input className="form-input max-w-[120px]" type="number" min={0}
                 value={settings.gracePeriod}
                 onChange={e => setSettings(s => ({ ...s, gracePeriod: Number(e.target.value) }))} />
             </Field>
@@ -596,17 +550,17 @@ function TaxPricingTab({ settings, setSettings, addToast }) {
       <div className="card">
         <div className="card-header"><span className="card-title">Seasonal Pricing</span></div>
         <div className="card-body">
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={settings.seasonalPricing}
               onChange={e => setSettings(s => ({ ...s, seasonalPricing: e.target.checked }))}
-              style={{ width: 16, height: 16, accentColor: 'var(--gold)' }}
+              className="w-4 h-4 accent-[var(--gold)]"
             />
             <span className="t-body">Enable seasonal / peak pricing for room types</span>
           </label>
           {settings.seasonalPricing && (
-            <p className="t-xs" style={{ margin: '10px 0 0', color: 'var(--text3)' }}>
+            <p className="t-xs mt-2.5 mb-0 text-ink3">
               Peak rates defined per room type will be applied during marked peak periods.
             </p>
           )}
@@ -627,43 +581,33 @@ function DocumentsTab({ settings, setSettings, addToast }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       {/* KYC checklist */}
       <div className="card">
         <div className="card-header"><span className="card-title">Required KYC Documents</span></div>
         <div className="card-body">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="flex flex-col gap-[14px]">
             {kycDocs.map(doc => (
-              <div key={doc.id} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                padding: '10px 14px',
-                background: 'var(--surface2)',
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                flexWrap: 'wrap',
-              }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1, minWidth: 160 }}>
+              <div key={doc.id} className="flex items-center gap-[14px] px-[14px] py-2.5 bg-surface2 rounded-lg border border-line flex-wrap">
+                <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-[160px]">
                   <input
                     type="checkbox"
                     checked={doc.enabled}
                     onChange={e => toggleDoc(doc.id, 'enabled', e.target.checked)}
-                    style={{ width: 15, height: 15, accentColor: 'var(--gold)' }}
+                    className="w-[15px] h-[15px] accent-[var(--gold)]"
                   />
                   <span className="t-title">{doc.label}</span>
                 </label>
-                <span style={{
-                  fontSize: 11,
-                  padding: '2px 8px',
-                  borderRadius: 10,
-                  background: doc.required ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.2)',
-                  color: doc.required ? '#ef4444' : 'var(--text3)',
-                  fontWeight: 600,
-                }}>
+                <span
+                  className="text-[11px] px-2 py-0.5 rounded-[10px] font-semibold"
+                  style={{
+                    background: doc.required ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.2)',
+                    color: doc.required ? '#ef4444' : 'var(--text3)',
+                  }}
+                >
                   {doc.required ? 'Required' : 'Optional'}
                 </span>
-                <label className="t-xs" style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text3)', marginLeft: 'auto' }}>
+                <label className="t-xs flex items-center gap-1.5 text-ink3 ml-auto">
                   Max
                   <input
                     type="number"
@@ -671,15 +615,7 @@ function DocumentsTab({ settings, setSettings, addToast }) {
                     max={50}
                     value={doc.maxMB}
                     onChange={e => toggleDoc(doc.id, 'maxMB', Number(e.target.value))}
-                    style={{
-                      width: 52,
-                      padding: '2px 6px',
-                      fontSize: 12,
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 4,
-                      color: 'var(--text)',
-                    }}
+                    className="w-[52px] px-1.5 py-0.5 text-[12px] bg-surface border border-line rounded text-ink"
                   />
                   MB
                 </label>
@@ -695,15 +631,14 @@ function DocumentsTab({ settings, setSettings, addToast }) {
         <div className="card-body">
           <Field label="Remind before expiry (days)">
             <input
-              className="form-input"
+              className="form-input max-w-[120px]"
               type="number"
               min={1}
-              style={{ maxWidth: 120 }}
               value={settings.expiryReminderDays}
               onChange={e => setSettings(s => ({ ...s, expiryReminderDays: Number(e.target.value) }))}
             />
           </Field>
-          <p className="t-xs" style={{ margin: '8px 0 0', color: 'var(--text3)' }}>
+          <p className="t-xs mt-2 mb-0 text-ink3">
             System will send alerts when guest KYC documents are about to expire within this window.
           </p>
         </div>
@@ -814,14 +749,14 @@ function PricingRulesTab({ addToast }) {
   })
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="flex flex-col gap-6">
       {/* Dynamic Pricing Rules */}
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Revenue Engine — Dynamic Pricing Rules</span>
         </div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="card-body overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
                 {['Rule Name', 'Trigger', 'Threshold', 'Adjustment %', 'Active', ''].map(h => (
@@ -835,30 +770,22 @@ function PricingRulesTab({ addToast }) {
                 const adjColor = isPositive ? '#ef4444' : '#22c55e'
                 const adjPrefix = isPositive ? '+' : ''
                 return (
-                  <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <tr key={row.id} className="border-b border-line">
                     {/* Name */}
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <input
                         type="text"
                         value={row.name}
                         onChange={e => updateRule(row.id, 'name', e.target.value)}
-                        style={{
-                          width: 200, padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: 'var(--text)',
-                        }}
+                        className="w-[200px] px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       />
                     </td>
                     {/* Trigger type */}
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <select
                         value={row.triggerType}
                         onChange={e => updateRule(row.id, 'triggerType', e.target.value)}
-                        style={{
-                          padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: 'var(--text)',
-                        }}
+                        className="px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       >
                         <option value="occupancy">Occupancy ≥ %</option>
                         <option value="stay_length">Stay ≥ days</option>
@@ -866,50 +793,42 @@ function PricingRulesTab({ addToast }) {
                       </select>
                     </td>
                     {/* Threshold */}
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <input
                         type="number"
                         value={row.threshold}
                         min={0}
                         onChange={e => updateRule(row.id, 'threshold', Number(e.target.value))}
-                        style={{
-                          width: 70, padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: 'var(--text)',
-                        }}
+                        className="w-[70px] px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       />
                     </td>
                     {/* Adjustment */}
-                    <td style={{ padding: '7px 10px' }}>
-                      <span className="t-xs" style={{ color: adjColor, marginRight: 2 }}>
+                    <td className="px-2.5 py-[7px]">
+                      <span className="t-xs mr-0.5" style={{ color: adjColor }}>
                         {adjPrefix}
                       </span>
                       <input
                         type="number"
                         value={row.adjustment}
                         onChange={e => updateRule(row.id, 'adjustment', Number(e.target.value))}
-                        style={{
-                          width: 80, padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: adjColor, fontWeight: 700,
-                        }}
+                        className="w-20 px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded font-bold"
+                        style={{ color: adjColor }}
                       />
                     </td>
                     {/* Active toggle */}
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <input
                         type="checkbox"
                         checked={row.active}
                         onChange={e => updateRule(row.id, 'active', e.target.checked)}
-                        style={{ width: 15, height: 15, accentColor: 'var(--gold)', cursor: 'pointer' }}
+                        className="w-[15px] h-[15px] accent-[var(--gold)] cursor-pointer"
                       />
                     </td>
                     {/* Delete */}
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <button
                         onClick={() => deleteRule(row.id)}
-                        className="t-sm"
-                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                        className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
                         title="Delete rule"
                       >
                         ×
@@ -920,8 +839,8 @@ function PricingRulesTab({ addToast }) {
               })}
             </tbody>
           </table>
-          <div style={{ paddingTop: 12 }}>
-            <button className="btn btn-outline" style={{ fontSize: 12, padding: '5px 14px' }} onClick={addRule}>
+          <div className="pt-3">
+            <button className="btn btn-outline text-[12px] px-[14px] py-[5px]" onClick={addRule}>
               + Add Rule
             </button>
           </div>
@@ -930,11 +849,11 @@ function PricingRulesTab({ addToast }) {
 
       {/* Competitor Rate Benchmarking */}
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Competitor Rate Benchmarking</span>
         </div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
+        <div className="card-body overflow-x-auto">
+          <table className="w-full border-collapse mb-3">
             <thead>
               <tr>
                 {['Competitor Name', 'Room Type', 'Their Daily Rate ₹', 'Your Rate ₹', 'Δ %', ''].map(h => (
@@ -950,58 +869,45 @@ function PricingRulesTab({ addToast }) {
                 const deltaColor = deltaNum < 0 ? '#22c55e' : '#ef4444'
                 const deltaPrefix = deltaNum > 0 ? '+' : ''
                 return (
-                  <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '7px 10px' }}>
+                  <tr key={row.id} className="border-b border-line">
+                    <td className="px-2.5 py-[7px]">
                       <input
                         type="text"
                         value={row.name}
                         onChange={e => updateComp(row.id, 'name', e.target.value)}
-                        style={{
-                          width: 160, padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: 'var(--text)',
-                        }}
+                        className="w-40 px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       />
                     </td>
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <select
                         value={row.roomType}
                         onChange={e => updateComp(row.id, 'roomType', e.target.value)}
-                        style={{
-                          padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: 'var(--text)',
-                        }}
+                        className="px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       >
                         {['Single', 'Double', 'Suite', 'Deluxe'].map(t => (
                           <option key={t} value={t}>{t}</option>
                         ))}
                       </select>
                     </td>
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <input
                         type="number"
                         value={row.theirRate}
                         min={0}
                         onChange={e => updateComp(row.id, 'theirRate', Number(e.target.value))}
-                        style={{
-                          width: 90, padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: 'var(--text)',
-                        }}
+                        className="w-[90px] px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       />
                     </td>
-                    <td className="t-sm" style={{ padding: '7px 10px', color: 'var(--text3)' }}>
+                    <td className="t-sm px-2.5 py-[7px] text-ink3">
                       ₹{yourRate}
                     </td>
-                    <td className="t-title" style={{ padding: '7px 10px', color: deltaColor }}>
+                    <td className="t-title px-2.5 py-[7px]" style={{ color: deltaColor }}>
                       {deltaPrefix}{delta}%
                     </td>
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <button
                         onClick={() => deleteComp(row.id)}
-                        className="t-sm"
-                        style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                        className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
                       >
                         ×
                       </button>
@@ -1011,12 +917,12 @@ function PricingRulesTab({ addToast }) {
               })}
             </tbody>
           </table>
-          <button className="btn btn-outline" style={{ fontSize: 12, padding: '5px 14px', marginBottom: 20 }} onClick={addCompetitor}>
+          <button className="btn btn-outline text-[12px] px-[14px] py-[5px] mb-5" onClick={addCompetitor}>
             + Add Competitor
           </button>
 
           {/* Bar chart */}
-          <div style={{ height: 160 }}>
+          <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text3)' }} />
@@ -1034,7 +940,7 @@ function PricingRulesTab({ addToast }) {
         </div>
       </div>
 
-      <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', marginTop: 8 }}>
+      <div className="pt-4 border-t border-line mt-2">
         <button className="btn btn-primary" onClick={handleSaveRules} disabled={saving}>
           {saving ? 'Saving…' : 'Save Rules'}
         </button>
@@ -1128,13 +1034,13 @@ function NotificationsTab({ addToast }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       <div className="card">
         <div className="card-header">
           <span className="card-title">Automated Message Schedule</span>
         </div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="card-body overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
                 {['Trigger / Event', 'Delay', 'Active', 'Template'].map(h => (
@@ -1144,35 +1050,26 @@ function NotificationsTab({ addToast }) {
             </thead>
             <tbody>
               {templates.map(tpl => (
-                <tr key={tpl.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '10px 12px' }}>
-                    <span className="t-title" style={{ color: 'var(--text)' }}>{tpl.label}</span>
+                <tr key={tpl.id} className="border-b border-line">
+                  <td className="px-3 py-2.5">
+                    <span className="t-title">{tpl.label}</span>
                   </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <span style={{
-                      display: 'inline-block',
-                      padding: '2px 10px',
-                      borderRadius: 20,
-                      background: 'rgba(245,158,11,0.15)',
-                      color: '#f59e0b',
-                      fontSize: 11,
-                      fontWeight: 700,
-                    }}>
+                  <td className="px-3 py-2.5">
+                    <span className="inline-block px-2.5 py-0.5 rounded-[20px] bg-[rgba(245,158,11,0.15)] text-[#f59e0b] text-[11px] font-bold">
                       {tpl.delay}
                     </span>
                   </td>
-                  <td style={{ padding: '10px 12px' }}>
+                  <td className="px-3 py-2.5">
                     <input
                       type="checkbox"
                       checked={tpl.active}
                       onChange={e => toggleActive(tpl.id, e.target.checked)}
-                      style={{ width: 15, height: 15, accentColor: 'var(--gold)', cursor: 'pointer' }}
+                      className="w-[15px] h-[15px] accent-[var(--gold)] cursor-pointer"
                     />
                   </td>
-                  <td style={{ padding: '10px 12px' }}>
+                  <td className="px-3 py-2.5">
                     <button
-                      className="btn btn-outline"
-                      style={{ fontSize: 11, padding: '4px 12px' }}
+                      className="btn btn-outline text-[11px] px-3 py-1"
                       onClick={() => openEdit(tpl)}
                     >
                       Edit Template
@@ -1185,7 +1082,7 @@ function NotificationsTab({ addToast }) {
         </div>
       </div>
 
-      <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', marginTop: 8 }}>
+      <div className="pt-4 border-t border-line mt-2">
         <button className="btn btn-primary" onClick={() => addToast('Notification schedule saved', 'success')}>
           Save Schedule
         </button>
@@ -1197,42 +1094,23 @@ function NotificationsTab({ addToast }) {
           title={`Edit Template — ${editingTpl.label}`}
           onClose={closeEdit}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="flex flex-col gap-3">
             <textarea
               ref={textareaRef}
               rows={5}
               value={editContent}
               onChange={e => setEditContent(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 10px',
-                fontSize: 13,
-                background: 'var(--surface2)',
-                border: '1px solid var(--border)',
-                borderRadius: 6,
-                color: 'var(--text)',
-                resize: 'vertical',
-                fontFamily: 'var(--font-mono)',
-                boxSizing: 'border-box',
-              }}
+              className="w-full px-2.5 py-2 text-[13px] bg-surface2 border border-line rounded-md text-ink resize-y box-border"
+              style={{ fontFamily: 'var(--font-mono)' }}
             />
             {/* Variable chips */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <div className="flex flex-wrap gap-1.5">
               {TEMPLATE_VARS.map(v => (
                 <button
                   key={v}
                   onClick={() => insertVar(v)}
-                  style={{
-                    padding: '3px 10px',
-                    borderRadius: 20,
-                    background: 'var(--gold-bg, #3a2e0a)',
-                    border: '1px solid var(--gold)',
-                    color: 'var(--gold)',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontFamily: 'var(--font-mono)',
-                  }}
+                  className="px-2.5 py-[3px] rounded-[20px] bg-[var(--gold-bg,#3a2e0a)] border border-gold text-gold text-[11px] font-bold cursor-pointer"
+                  style={{ fontFamily: 'var(--font-mono)' }}
                   title={`Insert ${v}`}
                 >
                   {v}
@@ -1240,11 +1118,11 @@ function NotificationsTab({ addToast }) {
               ))}
             </div>
             {/* Actions */}
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', paddingTop: 4 }}>
-              <button className="btn btn-outline" style={{ fontSize: 12 }} onClick={closeEdit}>
+            <div className="flex gap-2.5 justify-end pt-1">
+              <button className="btn btn-outline text-[12px]" onClick={closeEdit}>
                 Cancel
               </button>
-              <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={saveTemplate}>
+              <button className="btn btn-primary text-[12px]" onClick={saveTemplate}>
                 Save Template
               </button>
             </div>
@@ -1270,14 +1148,13 @@ function PropertiesTab({ settings, setSettings, addToast }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="flex flex-col gap-6">
       {/* Current Property Card */}
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Current Property</span>
           <button
-            className="btn btn-outline"
-            style={{ fontSize: 12, padding: '5px 14px' }}
+            className="btn btn-outline text-[12px] px-[14px] py-[5px]"
             onClick={() => setEditingMain(v => !v)}
           >
             {editingMain ? 'Close' : 'Edit'}
@@ -1285,27 +1162,23 @@ function PropertiesTab({ settings, setSettings, addToast }) {
         </div>
         <div className="card-body">
           {!editingMain ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <span className="t-h2" style={{ color: 'var(--text)' }}>
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="t-h2">
                   {settings.hotelName}
                 </span>
-                <span style={{
-                  padding: '2px 10px', borderRadius: 20,
-                  background: 'rgba(34,197,94,0.15)', color: '#22c55e',
-                  fontSize: 11, fontWeight: 700,
-                }}>
+                <span className="px-2.5 py-0.5 rounded-[20px] bg-[rgba(34,197,94,0.15)] text-[#22c55e] text-[11px] font-bold">
                   Active
                 </span>
               </div>
-              <p className="t-sm" style={{ margin: 0, color: 'var(--text3)' }}>{settings.address}</p>
-              <div className="t-sm" style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-                <span><span style={{ color: 'var(--text3)' }}>GSTIN:</span> {settings.gstin}</span>
-                <span><span style={{ color: 'var(--text3)' }}>Rooms:</span> {settings.totalRooms}</span>
+              <p className="t-sm m-0 text-ink3">{settings.address}</p>
+              <div className="t-sm flex gap-6 flex-wrap">
+                <span><span className="text-ink3">GSTIN:</span> {settings.gstin}</span>
+                <span><span className="text-ink3">Rooms:</span> {settings.totalRooms}</span>
               </div>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="grid grid-cols-2 gap-4">
               <Field label="Hotel Name">
                 <input className="form-input" value={settings.hotelName}
                   onChange={e => setSettings(s => ({ ...s, hotelName: e.target.value }))} />
@@ -1331,12 +1204,11 @@ function PropertiesTab({ settings, setSettings, addToast }) {
                   onChange={e => setSettings(s => ({ ...s, totalRooms: Number(e.target.value) }))} />
               </Field>
               <Field label="Address" fullWidth>
-                <textarea className="form-textarea" rows={3} value={settings.address}
-                  onChange={e => setSettings(s => ({ ...s, address: e.target.value }))}
-                  style={{ resize: 'vertical' }} />
+                <textarea className="form-textarea resize-y" rows={3} value={settings.address}
+                  onChange={e => setSettings(s => ({ ...s, address: e.target.value }))} />
               </Field>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <button className="btn btn-primary" style={{ fontSize: 12 }}
+              <div className="col-[1/-1]">
+                <button className="btn btn-primary text-[12px]"
                   onClick={() => { addToast('Property updated', 'success'); setEditingMain(false) }}>
                   Save Property
                 </button>
@@ -1348,11 +1220,10 @@ function PropertiesTab({ settings, setSettings, addToast }) {
 
       {/* Multi-property section */}
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Multi-Property Management</span>
           <button
-            className="btn btn-primary"
-            style={{ fontSize: 12, padding: '5px 14px', opacity: 0.5, cursor: 'not-allowed' }}
+            className="btn btn-primary text-[12px] px-[14px] py-[5px] opacity-50 cursor-not-allowed"
             onClick={() => addToast('Multi-property feature available in Pro plan', 'info')}
             title="Upgrade to Pro"
           >
@@ -1361,24 +1232,14 @@ function PropertiesTab({ settings, setSettings, addToast }) {
         </div>
         <div className="card-body">
           {/* Info banner */}
-          <div className="t-sm" style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '10px 14px',
-            borderRadius: 8,
-            background: 'rgba(201,168,76,0.08)',
-            border: '1px solid rgba(201,168,76,0.3)',
-            marginBottom: 16,
-            color: 'var(--text3)',
-          }}>
+          <div className="t-sm flex items-center gap-2.5 px-[14px] py-2.5 rounded-lg bg-[rgba(201,168,76,0.08)] border border-[rgba(201,168,76,0.3)] mb-4 text-ink3">
             <span className="t-h3">🔒</span>
             Upgrade to Multi-Property plan to manage multiple hotels from one account.
           </div>
 
           {/* Demo table — greyed out */}
-          <div style={{ opacity: 0.45, pointerEvents: 'none' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="opacity-45 pointer-events-none">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
                   {['Property', 'Address', 'Rooms', 'Manager', 'Status'].map(h => (
@@ -1387,21 +1248,17 @@ function PropertiesTab({ settings, setSettings, addToast }) {
                 </tr>
               </thead>
               <tbody>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td className="t-title" style={{ padding: '10px 12px', color: 'var(--text)' }}>
+                <tr className="border-b border-line">
+                  <td className="t-title px-3 py-2.5">
                     Quantum Vorvex — Branch
                   </td>
-                  <td className="t-sm" style={{ padding: '10px 12px', color: 'var(--text3)' }}>
+                  <td className="t-sm px-3 py-2.5 text-ink3">
                     456, MG Road, Bangalore
                   </td>
-                  <td className="t-sm" style={{ padding: '10px 12px', color: 'var(--text3)' }}>24</td>
-                  <td className="t-sm" style={{ padding: '10px 12px', color: 'var(--text3)' }}>Priya Sharma</td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <span style={{
-                      padding: '2px 10px', borderRadius: 20,
-                      background: 'rgba(34,197,94,0.15)', color: '#22c55e',
-                      fontSize: 11, fontWeight: 700,
-                    }}>
+                  <td className="t-sm px-3 py-2.5 text-ink3">24</td>
+                  <td className="t-sm px-3 py-2.5 text-ink3">Priya Sharma</td>
+                  <td className="px-3 py-2.5">
+                    <span className="px-2.5 py-0.5 rounded-[20px] bg-[rgba(34,197,94,0.15)] text-[#22c55e] text-[11px] font-bold">
                       Active
                     </span>
                   </td>
@@ -1500,10 +1357,10 @@ function UsersAccessTab({ addToast }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="flex justify-between items-center mb-5">
         <div>
-          <h3 className="t-h3" style={{ margin: 0, color: 'var(--text)' }}>Users & Access</h3>
-          <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--text3)' }}>
+          <h3 className="t-h3 m-0">Users & Access</h3>
+          <p className="mt-1 mb-0 text-[12.5px] text-ink3">
             Manage login accounts and their roles
           </p>
         </div>
@@ -1513,95 +1370,86 @@ function UsersAccessTab({ addToast }) {
       </div>
 
       {/* Role legend */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+      <div className="flex gap-2.5 mb-[18px] flex-wrap">
         {[
           { role: 'owner',   desc: 'Full access to all modules and user management' },
           { role: 'manager', desc: 'Operational access, cannot manage users' },
           { role: 'staff',   desc: 'Front-desk only: check-in, rooms, guests' },
         ].map(({ role, desc }) => (
-          <div key={role} style={{
-            display: 'flex', alignItems: 'flex-start', gap: 8,
-            padding: '10px 14px', background: 'var(--surface2)',
-            border: '1px solid var(--border)', borderRadius: 8,
-            flex: '1 1 180px', minWidth: 160,
-          }}>
-            <div style={{ marginTop: 1 }}>
-              <span className="t-label" style={{
-                display: 'inline-block',
-                color: ROLE_COLORS[role], background: ROLE_COLORS[role] + '1a',
-                padding: '2px 7px', borderRadius: 4,
-              }}>
+          <div key={role} className="flex items-start gap-2 px-[14px] py-2.5 bg-surface2 border border-line rounded-lg flex-[1_1_180px] min-w-[160px]">
+            <div className="mt-px">
+              <span
+                className="t-label inline-block px-[7px] py-0.5 rounded"
+                style={{ color: ROLE_COLORS[role], background: ROLE_COLORS[role] + '1a' }}
+              >
                 {ROLE_LABELS[role]}
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text3)', lineHeight: 1.5 }}>{desc}</p>
+            <p className="m-0 text-[11.5px] text-ink3 leading-[1.5]">{desc}</p>
           </div>
         ))}
       </div>
 
       {/* Users table */}
       {loading ? (
-        <div style={{ padding: 32, textAlign: 'center', color: 'var(--text3)' }}>Loading users…</div>
+        <div className="p-8 text-center text-ink3">Loading users…</div>
       ) : (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <div className="border border-line rounded-[10px] overflow-hidden">
+          <table className="w-full border-collapse text-[13px]">
             <thead>
-              <tr style={{ background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
+              <tr className="bg-surface2 border-b border-line">
                 {['Name', 'Email', 'Phone', 'Role', 'Status', isOwner ? 'Actions' : ''].filter(Boolean).map(h => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: 'var(--text3)', fontSize: 11.5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{h}</th>
+                  <th key={h} className="px-[14px] py-2.5 text-left font-semibold text-ink3 text-[11.5px] tracking-[0.04em] uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {users.map((u, i) => (
-                <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                  <td style={{ padding: '11px 14px', fontWeight: 500, color: 'var(--text)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                      <div style={{
-                        width: 28, height: 28, borderRadius: '50%',
-                        background: ROLE_COLORS[u.role] || '#888',
-                        color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 10.5, fontWeight: 700, flexShrink: 0,
-                      }}>
+                <tr key={u.id} className={i < users.length - 1 ? 'border-b border-line' : ''}>
+                  <td className="px-[14px] py-[11px] font-medium text-ink">
+                    <div className="flex items-center gap-[9px]">
+                      <div
+                        className="w-7 h-7 rounded-full text-[#000] flex items-center justify-center text-[10.5px] font-bold shrink-0"
+                        style={{ background: ROLE_COLORS[u.role] || '#888' }}
+                      >
                         {u.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
                       {u.name}
                       {u.id === currentUser?.id && (
-                        <span style={{ fontSize: 9.5, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 3, padding: '1px 5px' }}>you</span>
+                        <span className="text-[9.5px] text-ink3 bg-surface2 border border-line rounded-[3px] px-[5px] py-px">you</span>
                       )}
                     </div>
                   </td>
-                  <td style={{ padding: '11px 14px', color: 'var(--text2)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>{u.email}</td>
-                  <td className="t-xs" style={{ padding: '11px 14px', color: 'var(--text3)' }}>{u.phone || '—'}</td>
-                  <td style={{ padding: '11px 14px' }}>
-                    <span style={{
-                      fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em',
-                      textTransform: 'uppercase', color: ROLE_COLORS[u.role] || '#888',
-                      background: (ROLE_COLORS[u.role] || '#888') + '1a',
-                      padding: '2px 8px', borderRadius: 4,
-                    }}>
+                  <td className="px-[14px] py-[11px] text-ink2 text-[12px]" style={{ fontFamily: 'var(--font-mono)' }}>{u.email}</td>
+                  <td className="t-xs px-[14px] py-[11px] text-ink3">{u.phone || '—'}</td>
+                  <td className="px-[14px] py-[11px]">
+                    <span
+                      className="text-[10.5px] font-bold tracking-[0.06em] uppercase px-2 py-0.5 rounded"
+                      style={{ color: ROLE_COLORS[u.role] || '#888', background: (ROLE_COLORS[u.role] || '#888') + '1a' }}
+                    >
                       {ROLE_LABELS[u.role] || u.role}
                     </span>
                   </td>
-                  <td style={{ padding: '11px 14px' }}>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600,
-                      color: u.status === 'active' ? '#22c55e' : '#ef4444',
-                      background: u.status === 'active' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-                      padding: '2px 8px', borderRadius: 20,
-                    }}>
+                  <td className="px-[14px] py-[11px]">
+                    <span
+                      className="text-[11px] font-semibold px-2 py-0.5 rounded-[20px]"
+                      style={{
+                        color: u.status === 'active' ? '#22c55e' : '#ef4444',
+                        background: u.status === 'active' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                      }}
+                    >
                       {u.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   {isOwner && (
-                    <td style={{ padding: '11px 14px' }}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-outline btn-sm" onClick={() => openEdit(u)} style={{ padding: '3px 10px', fontSize: 11.5 }}>Edit</button>
+                    <td className="px-[14px] py-[11px]">
+                      <div className="flex gap-1.5">
+                        <button className="btn btn-outline btn-sm px-2.5 py-[3px] text-[11.5px]" onClick={() => openEdit(u)}>Edit</button>
                         <button
-                          className="btn btn-sm"
+                          className="btn btn-sm px-2.5 py-[3px] text-[11.5px] bg-[rgba(239,68,68,0.1)] text-[#ef4444] border border-[rgba(239,68,68,0.2)] rounded-md"
                           onClick={() => openDelete(u)}
                           disabled={u.id === currentUser?.id}
-                          style={{ padding: '3px 10px', fontSize: 11.5, background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, cursor: u.id === currentUser?.id ? 'not-allowed' : 'pointer', opacity: u.id === currentUser?.id ? 0.4 : 1 }}
+                          style={{ cursor: u.id === currentUser?.id ? 'not-allowed' : 'pointer', opacity: u.id === currentUser?.id ? 0.4 : 1 }}
                         >
                           Delete
                         </button>
@@ -1611,7 +1459,7 @@ function UsersAccessTab({ addToast }) {
                 </tr>
               ))}
               {users.length === 0 && (
-                <tr><td colSpan={6} style={{ padding: 32, textAlign: 'center', color: 'var(--text3)' }}>No users found.</td></tr>
+                <tr><td colSpan={6} className="p-8 text-center text-ink3">No users found.</td></tr>
               )}
             </tbody>
           </table>
@@ -1624,7 +1472,7 @@ function UsersAccessTab({ addToast }) {
           title={modal === 'create' ? 'Add User' : 'Edit User'}
           onClose={() => setModal(null)}
           footer={
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <div className="flex gap-2.5 justify-end">
               <button className="btn btn-outline btn-sm" onClick={() => setModal(null)}>Cancel</button>
               <button className="btn btn-gold btn-sm" onClick={handleSave} disabled={saving}>
                 {saving ? 'Saving…' : modal === 'create' ? 'Create User' : 'Save Changes'}
@@ -1632,7 +1480,7 @@ function UsersAccessTab({ addToast }) {
             </div>
           }
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 18px' }}>
+          <div className="grid grid-cols-2 gap-x-[18px] gap-y-[14px]">
             <div>
               <label style={labelStyle}>Full Name</label>
               <input style={inputStyle} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ramesh Gupta" />
@@ -1659,7 +1507,7 @@ function UsersAccessTab({ addToast }) {
             </div>
             <div>
               <label style={labelStyle}>{modal === 'edit' ? 'New Password (leave blank to keep)' : 'Password'}</label>
-              <div style={{ position: 'relative' }}>
+              <div className="relative">
                 <input
                   style={{ ...inputStyle, paddingRight: 38 }}
                   type={showPass ? 'text' : 'password'}
@@ -1668,8 +1516,7 @@ function UsersAccessTab({ addToast }) {
                   placeholder={modal === 'edit' ? '(unchanged)' : 'Min 6 characters'}
                 />
                 <button type="button" onClick={() => setShowPass(!showPass)}
-                  className="t-sm"
-                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)' }}>
+                  className="t-sm absolute right-2 top-1/2 -translate-y-1/2 bg-none border-none cursor-pointer text-ink3">
                   {showPass ? '🙈' : '👁'}
                 </button>
               </div>
@@ -1691,16 +1538,15 @@ function UsersAccessTab({ addToast }) {
       {modal === 'delete' && (
         <Modal title="Delete User" onClose={() => setModal(null)}
           footer={
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <div className="flex gap-2.5 justify-end">
               <button className="btn btn-outline btn-sm" onClick={() => setModal(null)}>Cancel</button>
-              <button className="btn btn-sm t-title" onClick={handleDelete} disabled={saving}
-                style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, padding: '6px 16px', cursor: 'pointer' }}>
+              <button className="btn btn-sm t-title bg-[rgba(239,68,68,0.15)] text-[#ef4444] border border-[rgba(239,68,68,0.3)] rounded-md px-4 py-1.5 cursor-pointer" onClick={handleDelete} disabled={saving}>
                 {saving ? 'Deleting…' : 'Yes, Delete'}
               </button>
             </div>
           }
         >
-          <p className="t-body" style={{ margin: 0, color: 'var(--text)' }}>
+          <p className="t-body m-0">
             Are you sure you want to delete <strong>{target?.name}</strong>? This cannot be undone.
           </p>
         </Modal>
@@ -1712,20 +1558,16 @@ function UsersAccessTab({ addToast }) {
 // ─── Shared controls for the configuration tabs ───────────────────────────────
 function Segmented({ value, options, onChange }) {
   return (
-    <div style={{ display: 'inline-flex', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: 3, gap: 3, flexWrap: 'wrap' }}>
+    <div className="inline-flex bg-surface2 border border-line rounded-lg p-[3px] gap-[3px] flex-wrap">
       {options.map(opt => {
         const active = value === opt.value
         return (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
-            style={{
-              padding: '6px 14px', borderRadius: 6, border: 'none', cursor: 'pointer',
-              fontSize: 13, fontWeight: active ? 600 : 500,
-              background: active ? 'var(--gold)' : 'transparent',
-              color: active ? '#000' : 'var(--text2)',
-              transition: 'all 0.14s',
-            }}
+            className={`px-[14px] py-1.5 rounded-md border-none cursor-pointer text-[13px] transition-all duration-[140ms] ${
+              active ? 'font-semibold bg-gold text-[#000]' : 'font-medium bg-transparent text-ink2'
+            }`}
           >
             {opt.label}
           </button>
@@ -1737,23 +1579,24 @@ function Segmented({ value, options, onChange }) {
 
 function ToggleRow({ label, hint, checked, onChange }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+    <div className="flex items-center justify-between gap-4 py-3 border-b border-line">
       <div>
-        <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--text)' }}>{label}</div>
-        {hint && <div className="t-xs" style={{ color: 'var(--text3)', marginTop: 2 }}>{hint}</div>}
+        <div className="text-[13.5px] font-semibold text-ink">{label}</div>
+        {hint && <div className="t-xs text-ink3 mt-0.5">{hint}</div>}
       </div>
       <button
         onClick={() => onChange(!checked)}
         aria-pressed={checked}
-        style={{
-          width: 42, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer', flexShrink: 0,
-          background: checked ? 'var(--gold)' : 'var(--border2)', position: 'relative', transition: 'background 0.16s',
-        }}
+        className={`w-[42px] h-6 rounded-xl border-none cursor-pointer shrink-0 relative transition-[background] duration-[160ms] ${
+          checked ? 'bg-gold' : 'bg-line2'
+        }`}
       >
-        <span style={{
-          position: 'absolute', top: 3, left: checked ? 21 : 3, width: 18, height: 18, borderRadius: '50%',
-          background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)', transition: 'left 0.16s',
-        }} />
+        <span
+          className={`absolute top-[3px] w-[18px] h-[18px] rounded-full bg-[#fff] transition-[left] duration-[160ms] ${
+            checked ? 'left-[21px]' : 'left-[3px]'
+          }`}
+          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
+        />
       </button>
     </div>
   )
@@ -1778,17 +1621,17 @@ function AppearanceTab({ addToast }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       <div className="card">
         <div className="card-header"><span className="card-title">Theme</span></div>
-        <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label className="form-label" style={{ fontSize: 12 }}>Color mode</label>
+        <div className="card-body flex flex-col gap-2">
+          <label className="form-label text-[12px]">Color mode</label>
           <Segmented
             value={darkMode ? 'dark' : 'light'}
             onChange={setTheme}
             options={[{ value: 'light', label: '☀ Light' }, { value: 'dark', label: '☾ Dark' }]}
           />
-          <p className="t-xs" style={{ color: 'var(--text3)', margin: '4px 0 0' }}>
+          <p className="t-xs text-ink3 mt-1 mb-0">
             Light keeps the pure white &amp; gold look; dark switches to a warm charcoal palette.
           </p>
         </div>
@@ -1797,25 +1640,23 @@ function AppearanceTab({ addToast }) {
       <div className="card">
         <div className="card-header"><span className="card-title">Accent Color</span></div>
         <div className="card-body">
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <div className="flex gap-3 flex-wrap">
             {ACCENT_PRESETS.map(a => {
               const active = prefs.accent === a.id
               return (
                 <button
                   key={a.id}
                   onClick={() => update({ accent: a.id })}
-                  style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, cursor: 'pointer',
-                    background: 'none', border: 'none', padding: 4,
-                  }}
+                  className="flex flex-col items-center gap-1.5 cursor-pointer bg-none border-none p-1"
                 >
-                  <span style={{
-                    width: 44, height: 44, borderRadius: '50%',
-                    background: `linear-gradient(135deg, ${a.gold}, ${a.gold2})`,
-                    border: active ? '3px solid var(--text)' : '3px solid transparent',
-                    boxShadow: active ? '0 0 0 2px var(--surface) inset' : 'none',
-                  }} />
-                  <span style={{ fontSize: 11.5, fontWeight: active ? 700 : 500, color: active ? 'var(--text)' : 'var(--text3)' }}>
+                  <span
+                    className={`w-11 h-11 rounded-full border-[3px] ${active ? 'border-ink' : 'border-transparent'}`}
+                    style={{
+                      background: `linear-gradient(135deg, ${a.gold}, ${a.gold2})`,
+                      boxShadow: active ? '0 0 0 2px var(--surface) inset' : 'none',
+                    }}
+                  />
+                  <span className={`text-[11.5px] ${active ? 'font-bold text-ink' : 'font-medium text-ink3'}`}>
                     {a.label}
                   </span>
                 </button>
@@ -1827,17 +1668,17 @@ function AppearanceTab({ addToast }) {
 
       <div className="card">
         <div className="card-header"><span className="card-title">Layout</span></div>
-        <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <label className="form-label" style={{ fontSize: 12 }}>Density</label>
+        <div className="card-body flex flex-col gap-[18px]">
+          <div className="flex flex-col gap-2">
+            <label className="form-label text-[12px]">Density</label>
             <Segmented
               value={prefs.density}
               onChange={v => update({ density: v })}
               options={[{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]}
             />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <label className="form-label" style={{ fontSize: 12 }}>Corner Style</label>
+          <div className="flex flex-col gap-2">
+            <label className="form-label text-[12px]">Corner Style</label>
             <Segmented
               value={prefs.radius}
               onChange={v => update({ radius: v })}
@@ -1847,13 +1688,12 @@ function AppearanceTab({ addToast }) {
         </div>
       </div>
 
-      <div style={{ paddingTop: 4 }}>
+      <div className="pt-1">
         <button className="btn btn-primary" onClick={() => addToast('Appearance saved', 'success')}>
           Save Appearance
         </button>
         <button
-          className="btn btn-outline"
-          style={{ marginLeft: 10 }}
+          className="btn btn-outline ml-2.5"
           onClick={() => { const d = { accent: 'classic', density: 'comfortable', radius: 'soft' }; setPrefs(d); applyAppearance(d); saveAppearance(d); addToast('Reset to defaults', 'info') }}
         >
           Reset to Default
@@ -1897,37 +1737,34 @@ function BrandingTab({ settings, setSettings, addToast }) {
   const initials = (settings.hotelName || 'QV').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       <div className="card">
         <div className="card-header"><span className="card-title">Logo &amp; Identity</span></div>
-        <div className="card-body" style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
+        <div className="card-body flex items-center gap-[18px] flex-wrap">
           <div
             onClick={() => fileRef.current?.click()}
-            style={{
-              width: 84, height: 84, borderRadius: 16, cursor: 'pointer', overflow: 'hidden', flexShrink: 0,
-              background: branding.logoUrl ? '#fff' : 'var(--gold-bg)', border: '2px solid var(--gold)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}
+            className="w-[84px] h-[84px] rounded-2xl cursor-pointer overflow-hidden shrink-0 border-2 border-gold flex items-center justify-center"
+            style={{ background: branding.logoUrl ? '#fff' : 'var(--gold-bg)' }}
             title="Click to upload logo"
           >
             {branding.logoUrl
-              ? <img src={branding.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-              : <span className="t-display" style={{ color: 'var(--gold)' }}>{initials}</span>}
+              ? <img src={branding.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+              : <span className="t-display text-gold">{initials}</span>}
           </div>
           <div>
-            <button className="btn btn-outline" style={{ fontSize: 12 }} onClick={() => fileRef.current?.click()}>Upload Logo</button>
+            <button className="btn btn-outline text-[12px]" onClick={() => fileRef.current?.click()}>Upload Logo</button>
             {branding.logoUrl && (
-              <button className="btn btn-outline" style={{ fontSize: 12, marginLeft: 8 }} onClick={() => setBranding(b => ({ ...b, logoUrl: '' }))}>Remove</button>
+              <button className="btn btn-outline text-[12px] ml-2" onClick={() => setBranding(b => ({ ...b, logoUrl: '' }))}>Remove</button>
             )}
-            <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text3)' }}>PNG or SVG with transparent background recommended.</p>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogo} />
+            <p className="mt-1.5 mb-0 text-[11px] text-ink3">PNG or SVG with transparent background recommended.</p>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} />
           </div>
         </div>
       </div>
 
       <div className="card">
         <div className="card-header"><span className="card-title">Brand Text</span></div>
-        <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="card-body grid grid-cols-2 gap-4">
           <Field label="Hotel / Brand Name">
             <input className="form-input" value={settings.hotelName}
               onChange={e => setSettings(s => ({ ...s, hotelName: e.target.value }))} />
@@ -1978,10 +1815,10 @@ function PreferencesTab({ addToast }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       <div className="card">
         <div className="card-header"><span className="card-title">Regional</span></div>
-        <div className="card-body" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="card-body grid grid-cols-2 gap-4">
           <Field label="Language">
             <select className="form-select" value={prefs.language} onChange={e => set({ language: e.target.value })}>
               <option value="en">English</option>
@@ -2025,7 +1862,7 @@ function PreferencesTab({ addToast }) {
 
       <div className="card">
         <div className="card-header"><span className="card-title">Notifications &amp; Session</span></div>
-        <div className="card-body" style={{ paddingTop: 4 }}>
+        <div className="card-body pt-1">
           <ToggleRow label="Sound alerts" hint="Play a chime for new bookings and check-ins"
             checked={prefs.soundAlerts} onChange={v => set({ soundAlerts: v })} />
           <ToggleRow label="Daily email digest" hint="Receive a summary of the day's activity each evening"
@@ -2079,27 +1916,22 @@ export default function Settings({ onRunSetup }) {
   const validActiveTab = tabs.find(t => t.id === activeTab) ? activeTab : (tabs[0]?.id || 'profile')
 
   return (
-    <div style={{ padding: '24px', maxWidth: 900, margin: '0 auto' }}>
+    <div className="p-6 max-w-[900px] mx-auto">
       {/* Header */}
-      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+      <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="t-h1" style={{
-            margin: 0,
-            color: 'var(--text)',
-            letterSpacing: '-0.02em',
-          }}>
+          <h1 className="t-h1 m-0 tracking-[-0.02em]">
             Settings
           </h1>
-          <p className="t-sm" style={{ margin: '4px 0 0', color: 'var(--text3)' }}>
+          <p className="t-sm mt-1 mb-0 text-ink3">
             Configure hotel profile, room types, pricing, and system preferences
           </p>
         </div>
         {onRunSetup && (role === 'owner' || role === 'admin') && (
           <button
-            className="btn btn-outline btn-sm"
+            className="btn btn-outline btn-sm shrink-0"
             onClick={onRunSetup}
             title="Re-run the first-time setup wizard"
-            style={{ flexShrink: 0 }}
           >
             ⚙ Re-run Setup
           </button>

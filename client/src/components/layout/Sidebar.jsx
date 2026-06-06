@@ -127,35 +127,18 @@ export default function Sidebar() {
       {/* Sidebar */}
       <div
         id="sidebar"
-        style={{
-          width,
-          minWidth: width,
-          height: '100dvh',
-          background: '#141414',
-          display: 'flex',
-          flexDirection: 'column',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          flexShrink: 0,
-          zIndex: 100,
-          transition: 'width 0.2s ease, min-width 0.2s ease',
-        }}
-        className={sidebarOpen ? 'sb-open' : ''}
+        style={{ width, minWidth: width }}
+        className={`h-[100dvh] bg-[#141414] flex flex-col overflow-y-auto overflow-x-hidden shrink-0 z-[100] transition-[width,min-width] duration-200 ease-[ease] ${sidebarOpen ? 'sb-open' : ''}`}
       >
         {/* Logo section */}
-        <div style={{ padding: collapsed ? '18px 0 14px' : '20px 18px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 11,
-            justifyContent: collapsed ? 'center' : 'space-between',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+        <div className="border-b border-b-[rgba(255,255,255,0.07)]" style={{ padding: collapsed ? '18px 0 14px' : '20px 18px 16px' }}>
+          <div className={`flex items-center gap-[11px] ${collapsed ? 'justify-center' : 'justify-between'}`}>
+            <div className="flex items-center gap-[11px] min-w-0">
               {!collapsed && (
-                <div style={{ minWidth: 0 }}>
-                  <div className="t-h2" style={{
-                    color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2,
-                  }}>
+                <div className="min-w-0">
+                  <div className="t-h2 text-[#fff] tracking-[-0.02em] leading-[1.2]">
                     {head && <span>{head} </span>}
-                    <span style={{ color: '#c9a84c' }}>{tail}</span>
+                    <span className="text-[#c9a84c]">{tail}</span>
                   </div>
                 </div>
               )}
@@ -169,22 +152,18 @@ export default function Sidebar() {
 
           {/* Expand toggle (collapsed state) — centered under the logo */}
           {isDesktop && collapsed && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}>
+            <div className="flex justify-center mt-3">
               <CollapseButton collapsed={collapsed} onClick={toggleSidebarCollapsed} />
             </div>
           )}
         </div>
 
         {/* Nav sections */}
-        <nav style={{ flex: 1, padding: '8px 0' }}>
+        <nav className="flex-1 py-2">
           {filteredSections.map((section) => (
-            <div key={section.label} style={{ marginBottom: 4 }}>
+            <div key={section.label} className="mb-1">
               {!collapsed && (
-                <div style={{
-                  fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
-                  textTransform: 'uppercase', color: '#3a3a3a',
-                  padding: '10px 18px 4px',
-                }}>
+                <div className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#3a3a3a] pt-2.5 px-[18px] pb-1">
                   {section.label}
                 </div>
               )}
@@ -202,43 +181,27 @@ export default function Sidebar() {
         </nav>
 
         {/* User footer */}
-        <div style={{
-          padding: collapsed ? '12px 0' : '12px 14px',
-          borderTop: '1px solid rgba(255,255,255,0.07)',
-          marginTop: 'auto',
-        }}>
-          <div style={{
-            display: 'flex', alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            gap: 10, marginBottom: 10,
-          }}>
+        <div
+          className={`border-t border-t-[rgba(255,255,255,0.07)] mt-auto ${collapsed ? 'py-3' : 'py-3 px-3.5'}`}
+        >
+          <div className={`flex items-center gap-2.5 mb-2.5 ${collapsed ? 'justify-center' : 'justify-start'}`}>
             <div
               title={collapsed ? `${userName} · ${roleLabel}` : undefined}
-              style={{
-                width: 32, height: 32, borderRadius: '50%',
-                background: roleColor,
-                color: '#000',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 11.5, fontWeight: 700, flexShrink: 0,
-              }}
+              className="w-8 h-8 rounded-full text-[#000] flex items-center justify-center text-[11.5px] font-bold shrink-0"
+              style={{ background: roleColor }}
             >
               {userInitials}
             </div>
             {!collapsed && (
-              <div style={{ overflow: 'hidden', flex: 1 }}>
-                <div style={{
-                  color: '#fff', fontSize: 12.5, fontWeight: 600,
-                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                }}>
+              <div className="overflow-hidden flex-1">
+                <div className="text-[#fff] text-[12.5px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis">
                   {userName}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                  <span style={{
-                    fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
-                    textTransform: 'uppercase', color: roleColor,
-                    background: roleColor + '1a',
-                    padding: '1px 5px', borderRadius: 3,
-                  }}>
+                <div className="flex items-center gap-[5px] mt-0.5">
+                  <span
+                    className="text-[9px] font-bold tracking-[0.06em] uppercase px-[5px] py-px rounded-[3px]"
+                    style={{ color: roleColor, background: roleColor + '1a' }}
+                  >
                     {roleLabel}
                   </span>
                 </div>
@@ -254,14 +217,9 @@ export default function Sidebar() {
               width: collapsed ? 40 : '100%',
               marginLeft: collapsed ? 'auto' : 0,
               marginRight: collapsed ? 'auto' : 0,
-              background: 'rgba(220,53,69,0.08)',
-              border: '1px solid rgba(220,53,69,0.2)',
-              borderRadius: 6, padding: collapsed ? '8px 0' : '7px 10px',
-              display: 'flex', alignItems: 'center',
-              justifyContent: collapsed ? 'center' : 'flex-start', gap: 7,
-              cursor: 'pointer', color: '#dc5555', transition: 'all 0.14s',
+              padding: collapsed ? '8px 0' : '7px 10px',
             }}
-            className="t-xs"
+            className={`t-xs bg-[rgba(220,53,69,0.08)] border border-[rgba(220,53,69,0.2)] rounded-md flex items-center gap-[7px] cursor-pointer text-[#dc5555] transition-all duration-[140ms] ${collapsed ? 'justify-center' : 'justify-start'}`}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220,53,69,0.16)'; e.currentTarget.style.borderColor = 'rgba(220,53,69,0.4)' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(220,53,69,0.08)'; e.currentTarget.style.borderColor = 'rgba(220,53,69,0.2)' }}
           >
@@ -285,15 +243,7 @@ function CollapseButton({ collapsed, onClick }) {
       onMouseLeave={() => setHovered(false)}
       title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      style={{
-        width: 28, height: 28, flexShrink: 0,
-        borderRadius: 6,
-        background: hovered ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        color: hovered ? '#c9a84c' : '#888',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer', transition: 'all 0.14s',
-      }}
+      className={`w-7 h-7 shrink-0 rounded-md border border-[rgba(255,255,255,0.08)] flex items-center justify-center cursor-pointer transition-all duration-[140ms] ${hovered ? 'bg-[rgba(201,168,76,0.12)] text-[#c9a84c]' : 'bg-[rgba(255,255,255,0.04)] text-[#888]'}`}
     >
       {collapsed ? <LuChevronsRight size={16} /> : <LuChevronsLeft size={16} />}
     </button>
@@ -309,29 +259,18 @@ function NavItem({ item, isActive, collapsed, onClick }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       title={collapsed ? item.label : undefined}
-      style={{
-        display: 'flex', alignItems: 'center',
-        justifyContent: collapsed ? 'center' : 'flex-start',
-        gap: collapsed ? 0 : 10,
-        padding: collapsed ? '11px 0' : '9px 16px',
-        cursor: 'pointer', fontSize: 13.5,
-        color: isActive ? '#fff' : hovered ? '#fff' : '#888',
-        borderLeft: isActive ? '2px solid #c9a84c' : '2px solid transparent',
-        background: isActive
-          ? 'rgba(201,168,76,0.08)'
-          : hovered ? 'rgba(255,255,255,0.04)' : 'transparent',
-        transition: 'all 0.12s', userSelect: 'none',
-        fontWeight: isActive ? 500 : 400,
-      }}
+      className={`flex items-center cursor-pointer text-[13.5px] transition-all duration-[120ms] select-none ${collapsed ? 'justify-center gap-0 py-[11px] px-0' : 'justify-start gap-2.5 py-[9px] px-4'} ${
+        isActive
+          ? 'text-[#fff] border-l-2 border-l-[#c9a84c] bg-[rgba(201,168,76,0.08)] font-medium'
+          : `${hovered ? 'text-[#fff] bg-[rgba(255,255,255,0.04)]' : 'text-[#888] bg-transparent'} border-l-2 border-l-transparent font-normal`
+      }`}
     >
-      <span style={{
-        width: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0, color: isActive ? '#c9a84c' : hovered ? '#c9a84c' : '#8a857a',
-        transition: 'color 0.12s',
-      }}>
+      <span
+        className={`w-5 flex items-center justify-center shrink-0 transition-[color] duration-[120ms] ${isActive || hovered ? 'text-[#c9a84c]' : 'text-[#8a857a]'}`}
+      >
         <item.Icon size={17} strokeWidth={isActive ? 2.3 : 1.9} />
       </span>
-      {!collapsed && <span style={{ flex: 1 }}>{item.label}</span>}
+      {!collapsed && <span className="flex-1">{item.label}</span>}
     </div>
   )
 }

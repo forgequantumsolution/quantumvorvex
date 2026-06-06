@@ -85,37 +85,23 @@ function InvoiceModal({ invoice, onClose }) {
     >
       <div>
         {/* Hotel header */}
-        <div style={{
-          textAlign: 'center',
-          borderBottom: '2px solid var(--border)',
-          paddingBottom: 16,
-          marginBottom: 20,
-        }}>
-          <p className="t-h1" style={{
-            margin: 0,
-            color: 'var(--gold)',
-            letterSpacing: '-0.02em',
-          }}>
+        <div className="text-center border-b-2 border-line pb-4 mb-5">
+          <p className="t-h1 m-0 text-gold tracking-[-0.02em]">
             Quantum Vorvex
           </p>
-          <p className="t-xs" style={{ margin: '3px 0 0', color: 'var(--text3)' }}>
+          <p className="t-xs mt-[3px] mb-0 text-ink3">
             Hotel Management System
           </p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text3)' }}>
+          <p className="mt-0.5 mb-0 text-[11px] text-ink3">
             123 Quantum Nagar, Bengaluru — 560001 · GSTIN: 22AAAAA0000A1Z5
           </p>
-          <p className="t-title" style={{
-            margin: '12px 0 0',
-            letterSpacing: '0.12em',
-            color: 'var(--text)',
-            textTransform: 'uppercase',
-          }}>
+          <p className="t-title mt-3 mb-0 tracking-[0.12em] uppercase">
             Tax Invoice
           </p>
         </div>
 
         {/* Invoice meta */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+        <div className="grid grid-cols-2 gap-2.5 mb-5">
           {[
             ['Invoice No',  invoice.invoiceNo],
             ['Date',        formatDate(invoice.createdAt)],
@@ -123,18 +109,11 @@ function InvoiceModal({ invoice, onClose }) {
             ['Room',        invoice.room],
             ['Period',      invoice.period],
           ].map(([label, val]) => (
-            <div key={label} style={{
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '8px 12px',
-            }}>
-              <p className="t-label" style={{ margin: 0, color: 'var(--text3)' }}>
+            <div key={label} className="bg-surface2 border border-line rounded-md px-3 py-2">
+              <p className="t-label m-0">
                 {label}
               </p>
-              <p className="t-title" style={{
-                margin: '3px 0 0',
-                color: 'var(--text)',
+              <p className="t-title mt-[3px] mb-0" style={{
                 fontFamily: label === 'Invoice No' || label === 'Room'
                   ? 'var(--font-mono)'
                   : undefined,
@@ -146,11 +125,11 @@ function InvoiceModal({ invoice, onClose }) {
         </div>
 
         {/* Line items */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
+        <table className="w-full border-collapse mb-4">
           <thead>
-            <tr style={{ background: 'var(--surface2)' }}>
-              <th className="t-label" style={{ textAlign: 'left', padding: '8px 12px', color: 'var(--text3)' }}>Description</th>
-              <th className="t-label" style={{ textAlign: 'right', padding: '8px 12px', color: 'var(--text3)' }}>Amount</th>
+            <tr className="bg-surface2">
+              <th className="t-label text-left px-3 py-2">Description</th>
+              <th className="t-label text-right px-3 py-2">Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -159,56 +138,48 @@ function InvoiceModal({ invoice, onClose }) {
               invoice.food       > 0 ? ['Food Plan',  invoice.food]       : null,
               invoice.amenities  > 0 ? ['Amenities',  invoice.amenities]  : null,
             ].filter(Boolean).map(([desc, amt]) => (
-              <tr key={desc} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td className="t-sm" style={{ padding: '9px 12px', color: 'var(--text)' }}>{desc}</td>
-                <td className="t-sm" style={{ padding: '9px 12px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text)' }}>
+              <tr key={desc} className="border-b border-line">
+                <td className="t-sm px-3 py-[9px]">{desc}</td>
+                <td className="t-sm px-3 py-[9px] text-right" style={{ fontFamily: 'var(--font-mono)' }}>
                   {formatCurrency(amt)}
                 </td>
               </tr>
             ))}
 
             {/* Subtotal */}
-            <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-              <td className="t-title" style={{ padding: '9px 12px', color: 'var(--text2)' }}>Subtotal</td>
-              <td className="t-title" style={{ padding: '9px 12px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text2)' }}>
+            <tr className="border-b border-line bg-surface2">
+              <td className="t-title px-3 py-[9px] text-ink2">Subtotal</td>
+              <td className="t-title px-3 py-[9px] text-right text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>
                 {formatCurrency(subtotal)}
               </td>
             </tr>
 
             {/* CGST */}
-            <tr style={{ borderBottom: '1px solid var(--border)' }}>
-              <td className="t-sm" style={{ padding: '9px 12px', color: 'var(--text3)' }}>
+            <tr className="border-b border-line">
+              <td className="t-sm px-3 py-[9px] text-ink3">
                 CGST ({invoice.gstRate / 2}%)
               </td>
-              <td className="t-sm" style={{ padding: '9px 12px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>
+              <td className="t-sm px-3 py-[9px] text-right text-ink3" style={{ fontFamily: 'var(--font-mono)' }}>
                 {formatCurrency(halfGst)}
               </td>
             </tr>
 
             {/* SGST */}
-            <tr style={{ borderBottom: '2px solid var(--border)' }}>
-              <td className="t-sm" style={{ padding: '9px 12px', color: 'var(--text3)' }}>
+            <tr className="border-b-2 border-line">
+              <td className="t-sm px-3 py-[9px] text-ink3">
                 SGST ({invoice.gstRate / 2}%)
               </td>
-              <td className="t-sm" style={{ padding: '9px 12px', textAlign: 'right', fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>
+              <td className="t-sm px-3 py-[9px] text-right text-ink3" style={{ fontFamily: 'var(--font-mono)' }}>
                 {formatCurrency(halfGst)}
               </td>
             </tr>
 
             {/* Grand Total */}
-            <tr style={{ background: 'var(--gold-bg)' }}>
-              <td className="t-title" style={{
-                padding: '11px 12px',
-                color: 'var(--gold)',
-              }}>
+            <tr className="bg-[var(--gold-bg)]">
+              <td className="t-title px-3 py-[11px] text-gold">
                 Grand Total
               </td>
-              <td className="t-h3" style={{
-                padding: '11px 12px',
-                textAlign: 'right',
-                fontFamily: 'var(--font-mono)',
-                color: 'var(--gold)',
-              }}>
+              <td className="t-h3 px-3 py-[11px] text-right text-gold" style={{ fontFamily: 'var(--font-mono)' }}>
                 {formatCurrency(invoice.total)}
               </td>
             </tr>
@@ -216,34 +187,18 @@ function InvoiceModal({ invoice, onClose }) {
         </table>
 
         {/* Payment status */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '10px 14px',
-          background: 'var(--surface2)',
-          borderRadius: 6,
-          border: '1px solid var(--border)',
-          marginBottom: 16,
-        }}>
-          <span className="t-xs" style={{ color: 'var(--text3)' }}>Payment Status:</span>
+        <div className="flex items-center gap-2.5 px-[14px] py-2.5 bg-surface2 rounded-md border border-line mb-4">
+          <span className="t-xs text-ink3">Payment Status:</span>
           <Badge type={statusBadgeType(invoice.status)}>{invoice.status}</Badge>
           {invoice.paidAt && (
-            <span className="t-xs" style={{ color: 'var(--text3)', marginLeft: 4 }}>
+            <span className="t-xs text-ink3 ml-1">
               · Paid on {formatDate(invoice.paidAt)}
             </span>
           )}
         </div>
 
         {/* Footer */}
-        <p style={{
-          margin: 0,
-          textAlign: 'center',
-          fontSize: 11,
-          color: 'var(--text3)',
-          paddingTop: 12,
-          borderTop: '1px solid var(--border)',
-        }}>
+        <p className="m-0 text-center text-[11px] text-ink3 pt-3 border-t border-line">
           Powered by Quantum Vorvex · Forge Quantum Solutions
         </p>
       </div>
@@ -270,12 +225,12 @@ function CollectModal({ invoice, onClose, onConfirm }) {
       }
     >
       {/* Amount highlight */}
-      <div style={{ background: 'var(--gold-bg)', borderRadius: 8, padding: '12px 14px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="bg-[var(--gold-bg)] rounded-lg px-[14px] py-3 mb-4 flex justify-between items-center">
         <div>
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--gold)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>Amount Due</div>
-          <div className="t-h1" style={{ fontFamily: 'var(--font-mono)', color: 'var(--gold)' }}>{formatCurrency(invoice.total)}</div>
+          <div className="text-[10.5px] font-bold text-gold uppercase tracking-[0.08em] mb-0.5">Amount Due</div>
+          <div className="t-h1 text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(invoice.total)}</div>
         </div>
-        <div className="t-xs" style={{ textAlign: 'right', color: 'var(--text3)' }}>
+        <div className="t-xs text-right text-ink3">
           <div>{invoice.guest}</div>
           <div>Room {invoice.room}</div>
           <div>{invoice.invoiceNo}</div>
@@ -283,24 +238,18 @@ function CollectModal({ invoice, onClose, onConfirm }) {
       </div>
 
       {/* Payment method */}
-      <div style={{ marginBottom: 12 }}>
-        <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Payment Method</label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+      <div className="mb-3">
+        <label className="form-label block mb-[5px]">Payment Method</label>
+        <div className="grid grid-cols-4 gap-2">
           {['Cash', 'UPI', 'Card', 'Bank Transfer'].map(m => (
-            <button key={m} onClick={() => setMethod(m)} className="t-xs" style={{
-              padding: '8px 6px', borderRadius: 7,
-              cursor: 'pointer', textAlign: 'center', transition: 'all 0.15s',
-              background: method === m ? 'var(--gold-bg)' : 'var(--surface2)',
-              border: method === m ? '1.5px solid var(--gold)' : '1px solid var(--border)',
-              color: method === m ? 'var(--gold)' : 'var(--text2)',
-            }}>{m}</button>
+            <button key={m} onClick={() => setMethod(m)} className={`t-xs px-1.5 py-2 rounded-[7px] cursor-pointer text-center transition-all duration-150 ${method === m ? 'bg-[var(--gold-bg)] border-[1.5px] border-gold text-gold' : 'bg-surface2 border border-line text-ink2'}`}>{m}</button>
           ))}
         </div>
       </div>
 
       {/* Reference */}
       <div>
-        <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Reference / Transaction ID (optional)</label>
+        <label className="form-label block mb-[5px]">Reference / Transaction ID (optional)</label>
         <input className="form-input" placeholder="UPI ref, cheque no., etc." value={ref} onChange={e => setRef(e.target.value)} />
       </div>
     </Modal>
@@ -340,13 +289,12 @@ function RemindModal({ invoice, onClose, onSend }) {
         </>
       }
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="flex flex-col gap-4">
         {/* Recipient */}
         <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Recipient</label>
+          <label className="form-label block mb-[5px]">Recipient</label>
           <input
-            className="form-input"
-            style={{ width: '100%' }}
+            className="form-input w-full"
             value={invoice.guest}
             readOnly
           />
@@ -354,15 +302,14 @@ function RemindModal({ invoice, onClose, onSend }) {
 
         {/* Channel toggle */}
         <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 8 }}>Channel</label>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <label className="form-label block mb-2">Channel</label>
+          <div className="flex gap-2">
             {CHANNELS.map(ch => (
               <button
                 key={ch}
                 type="button"
-                className={`food-opt${channel === ch ? ' sel' : ''}`}
+                className={`food-opt flex-1 text-center${channel === ch ? ' sel' : ''}`}
                 onClick={() => setChannel(ch)}
-                style={{ flex: 1, textAlign: 'center' }}
               >
                 {ch}
               </button>
@@ -372,10 +319,9 @@ function RemindModal({ invoice, onClose, onSend }) {
 
         {/* Message */}
         <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Message</label>
+          <label className="form-label block mb-[5px]">Message</label>
           <textarea
-            className="form-textarea"
-            style={{ width: '100%', minHeight: 96, resize: 'vertical' }}
+            className="form-textarea w-full min-h-24 resize-y"
             value={message}
             onChange={e => setMessage(e.target.value)}
           />
@@ -431,13 +377,12 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
         </>
       }
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="flex flex-col gap-[14px]">
         {/* Guest */}
         <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Guest</label>
+          <label className="form-label block mb-[5px]">Guest</label>
           <select
-            className="form-select"
-            style={{ width: '100%' }}
+            className="form-select w-full"
             value={form.guestId}
             onChange={e => setForm(p => ({ ...p, guestId: e.target.value }))}
           >
@@ -449,10 +394,9 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
 
         {/* Period */}
         <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Period</label>
+          <label className="form-label block mb-[5px]">Period</label>
           <input
-            className="form-input"
-            style={{ width: '100%' }}
+            className="form-input w-full"
             placeholder="e.g. Apr 2026"
             value={form.period}
             onChange={e => setForm(p => ({ ...p, period: e.target.value }))}
@@ -460,14 +404,14 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
         </div>
 
         {/* Amount fields */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+        <div className="grid grid-cols-3 gap-3">
           {[
             ['Rent ₹',       'rent'],
             ['Food ₹',       'food'],
             ['Amenities ₹',  'amenities'],
           ].map(([label, key]) => (
             <div key={key}>
-              <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>{label}</label>
+              <label className="form-label block mb-[5px]">{label}</label>
               <input
                 className="form-input"
                 type="number"
@@ -482,10 +426,9 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
 
         {/* GST Rate */}
         <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>GST Rate (%)</label>
+          <label className="form-label block mb-[5px]">GST Rate (%)</label>
           <select
-            className="form-select"
-            style={{ width: '100%' }}
+            className="form-select w-full"
             value={form.gstRate}
             onChange={e => setForm(p => ({ ...p, gstRate: parseInt(e.target.value) }))}
           >
@@ -495,30 +438,18 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
 
         {/* Calculated total */}
         {subtotal > 0 && (
-          <div style={{
-            background: 'var(--gold-bg)',
-            border: '1px solid var(--gold-border)',
-            borderRadius: 6,
-            padding: '12px 14px',
-          }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+          <div className="bg-[var(--gold-bg)] border border-[var(--gold-border)] rounded-md px-[14px] py-3">
+            <div className="flex flex-col gap-[5px]">
               {[
                 ['Subtotal',              subtotal],
                 [`GST (${form.gstRate}%)`, gstAmount],
               ].map(([label, val]) => (
-                <div key={label} className="t-xs" style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text2)' }}>
+                <div key={label} className="t-xs flex justify-between">
                   <span>{label}</span>
                   <span style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(val)}</span>
                 </div>
               ))}
-              <div className="t-title" style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                color: 'var(--gold)',
-                borderTop: '1px solid var(--gold-border)',
-                paddingTop: 6,
-                marginTop: 2,
-              }}>
+              <div className="t-title flex justify-between text-gold border-t border-[var(--gold-border)] pt-1.5 mt-0.5">
                 <span>Total</span>
                 <span style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(total)}</span>
               </div>
@@ -548,41 +479,22 @@ function LedgerTab() {
   return (
     <div>
       {/* Guest selector */}
-      <div style={{ marginBottom: 20, maxWidth: 340, position: 'relative' }}>
-        <label className="form-label" style={{ display: 'block', marginBottom: 6 }}>Select Guest</label>
+      <div className="mb-5 max-w-[340px] relative">
+        <label className="form-label block mb-1.5">Select Guest</label>
         <input
-          className="form-input"
-          style={{ width: '100%' }}
+          className="form-input w-full"
           placeholder="Search guest…"
           value={selectedGuest || guestSearch}
           onFocus={() => { setDropdownOpen(true); if (selectedGuest) { setGuestSearch(''); setSelectedGuest('') } }}
           onChange={e => { setGuestSearch(e.target.value); setSelectedGuest(''); setDropdownOpen(true) }}
         />
         {dropdownOpen && filteredGuests.length > 0 && (
-          <div style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            right: 0,
-            background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 6,
-            marginTop: 2,
-            zIndex: 100,
-            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-          }}>
+          <div className="absolute top-full left-0 right-0 bg-surface border border-line rounded-md mt-0.5 z-[100] shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
             {filteredGuests.map(g => (
               <div
                 key={g}
                 onClick={() => { setSelectedGuest(g); setGuestSearch(g); setDropdownOpen(false) }}
-                className="t-sm"
-                style={{
-                  padding: '9px 14px',
-                  cursor: 'pointer',
-                  color: 'var(--text)',
-                  borderBottom: '1px solid var(--border)',
-                  transition: 'background 0.1s',
-                }}
+                className="t-sm px-[14px] py-[9px] cursor-pointer border-b border-line transition-[background] duration-100"
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
@@ -598,20 +510,16 @@ function LedgerTab() {
         <>
           {ledgerRows.length === 0 ? (
             <div className="empty-state">
-              <p style={{ margin: 0, fontWeight: 600, color: 'var(--text2)' }}>No ledger entries for {selectedGuest}</p>
+              <p className="m-0 font-semibold text-ink2">No ledger entries for {selectedGuest}</p>
             </div>
           ) : (
             <>
-              <div className="card" style={{ overflowX: 'auto', marginBottom: 14 }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <div className="card overflow-x-auto mb-[14px]">
+                <table className="w-full border-collapse">
                   <thead>
                     <tr>
                       {['Date', 'Type', 'Description', 'Amount ₹', 'Running Balance ₹'].map(h => (
-                        <th key={h} style={{
-                          textAlign: h === 'Amount ₹' || h === 'Running Balance ₹' ? 'right' : 'left',
-                          padding: '10px 14px',
-                          whiteSpace: 'nowrap',
-                        }}>
+                        <th key={h} className={`px-[14px] py-2.5 whitespace-nowrap ${h === 'Amount ₹' || h === 'Running Balance ₹' ? 'text-right' : 'text-left'}`}>
                           {h}
                         </th>
                       ))}
@@ -619,11 +527,11 @@ function LedgerTab() {
                   </thead>
                   <tbody>
                     {ledgerRows.map((row, i) => (
-                      <tr key={i} style={{ borderTop: '1px solid var(--border)' }}>
-                        <td className="t-xs" style={{ padding: '11px 14px', color: 'var(--text3)', ...monoStyle }}>
+                      <tr key={i} className="border-t border-line">
+                        <td className="t-xs px-[14px] py-[11px] text-ink3" style={{ ...monoStyle }}>
                           {row.date}
                         </td>
-                        <td style={{ padding: '11px 14px' }}>
+                        <td className="px-[14px] py-[11px]">
                           <span className="t-xs" style={{
                             color: row.type === 'Credit' ? 'var(--green-text)' : 'var(--red-text)',
                             ...monoStyle,
@@ -631,15 +539,13 @@ function LedgerTab() {
                             {row.type}
                           </span>
                         </td>
-                        <td className="t-sm" style={{ padding: '11px 14px', color: 'var(--text)' }}>
+                        <td className="t-sm px-[14px] py-[11px]">
                           {row.desc}
                         </td>
-                        <td className="t-sm" style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle, color: 'var(--text2)' }}>
+                        <td className="t-sm px-[14px] py-[11px] text-right text-ink2" style={{ ...monoStyle }}>
                           {formatCurrency(row.amount)}
                         </td>
-                        <td className="t-title" style={{
-                          padding: '11px 14px',
-                          textAlign: 'right',
+                        <td className="t-title px-[14px] py-[11px] text-right" style={{
                           ...monoStyle,
                           color: row.balance >= 0 ? 'var(--green-text)' : 'var(--red-text)',
                         }}>
@@ -652,17 +558,8 @@ function LedgerTab() {
               </div>
 
               {/* Closing balance */}
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: 'var(--surface2)',
-                border: '1px solid var(--border)',
-                borderRadius: 6,
-                padding: '12px 16px',
-                marginBottom: 16,
-              }}>
-                <span className="t-title" style={{ color: 'var(--text2)' }}>
+              <div className="flex items-center justify-between bg-surface2 border border-line rounded-md px-4 py-3 mb-4">
+                <span className="t-title text-ink2">
                   Closing Balance — {selectedGuest}
                 </span>
                 <span className="t-h3" style={{
@@ -683,7 +580,7 @@ function LedgerTab() {
 
       {!selectedGuest && (
         <div className="empty-state">
-          <p className="t-sm" style={{ margin: 0, color: 'var(--text3)' }}>
+          <p className="t-sm m-0 text-ink3">
             Select a guest to view their account ledger
           </p>
         </div>
@@ -726,41 +623,36 @@ function CashRegisterTab() {
   return (
     <div>
       {/* Controls row */}
-      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 20 }}>
+      <div className="flex gap-4 flex-wrap items-end mb-5">
         <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Date</label>
+          <label className="form-label block mb-[5px]">Date</label>
           <input
-            className="form-input"
+            className="form-input w-[180px]"
             type="date"
             value={date}
             onChange={e => setDate(e.target.value)}
-            style={{ width: 180 }}
           />
         </div>
         <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Opening Balance ₹</label>
+          <label className="form-label block mb-[5px]">Opening Balance ₹</label>
           <input
-            className="form-input"
+            className="form-input w-40"
             type="number"
             min="0"
             value={openingBalance}
             onChange={e => setOpening(parseFloat(e.target.value) || 0)}
-            style={{ width: 160, fontFamily: 'var(--font-mono)' }}
+            style={{ fontFamily: 'var(--font-mono)' }}
           />
         </div>
       </div>
 
       {/* Transactions table */}
-      <div className="card" style={{ overflowX: 'auto', marginBottom: 14 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+      <div className="card overflow-x-auto mb-[14px]">
+        <table className="w-full border-collapse">
           <thead>
             <tr>
               {['Time', 'Type', 'Description', 'Cash In ₹', 'Cash Out ₹'].map(h => (
-                <th key={h} style={{
-                  textAlign: h === 'Cash In ₹' || h === 'Cash Out ₹' ? 'right' : 'left',
-                  padding: '10px 14px',
-                  whiteSpace: 'nowrap',
-                }}>
+                <th key={h} className={`px-[14px] py-2.5 whitespace-nowrap ${h === 'Cash In ₹' || h === 'Cash Out ₹' ? 'text-right' : 'text-left'}`}>
                   {h}
                 </th>
               ))}
@@ -770,50 +662,44 @@ function CashRegisterTab() {
             {transactions.map((txn, i) => {
               const badge = cashTypeBadge(txn.type)
               return (
-                <tr key={i} style={{ borderTop: '1px solid var(--border)' }}>
-                  <td className="t-xs" style={{ padding: '11px 14px', ...monoStyle, color: 'var(--text3)' }}>
+                <tr key={i} className="border-t border-line">
+                  <td className="t-xs px-[14px] py-[11px] text-ink3" style={{ ...monoStyle }}>
                     {txn.time}
                   </td>
-                  <td style={{ padding: '11px 14px' }}>
-                    <span style={{
-                      display: 'inline-block',
-                      padding: '2px 8px',
-                      borderRadius: 4,
-                      fontSize: 11,
-                      fontWeight: 700,
+                  <td className="px-[14px] py-[11px]">
+                    <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold capitalize" style={{
                       background: badge.bg,
                       color: badge.color,
-                      textTransform: 'capitalize',
                     }}>
                       {badge.label}
                     </span>
                   </td>
-                  <td className="t-sm" style={{ padding: '11px 14px', color: 'var(--text)' }}>
+                  <td className="t-sm px-[14px] py-[11px]">
                     {txn.desc}
                   </td>
-                  <td className="t-sm" style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle }}>
+                  <td className="t-sm px-[14px] py-[11px] text-right" style={{ ...monoStyle }}>
                     {txn.cashIn > 0
-                      ? <span style={{ color: 'var(--green-text)', fontWeight: 600 }}>{formatCurrency(txn.cashIn)}</span>
-                      : <span style={{ color: 'var(--text3)' }}>—</span>}
+                      ? <span className="font-semibold text-success-text">{formatCurrency(txn.cashIn)}</span>
+                      : <span className="text-ink3">—</span>}
                   </td>
-                  <td className="t-sm" style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle }}>
+                  <td className="t-sm px-[14px] py-[11px] text-right" style={{ ...monoStyle }}>
                     {txn.cashOut > 0
-                      ? <span style={{ color: 'var(--red-text)', fontWeight: 600 }}>{formatCurrency(txn.cashOut)}</span>
-                      : <span style={{ color: 'var(--text3)' }}>—</span>}
+                      ? <span className="font-semibold text-danger-text">{formatCurrency(txn.cashOut)}</span>
+                      : <span className="text-ink3">—</span>}
                   </td>
                 </tr>
               )
             })}
 
             {/* Totals row */}
-            <tr style={{ borderTop: '2px solid var(--border)', background: 'var(--surface2)' }}>
-              <td colSpan={3} className="t-title" style={{ padding: '11px 14px', color: 'var(--text2)' }}>
+            <tr className="border-t-2 border-line bg-surface2">
+              <td colSpan={3} className="t-title px-[14px] py-[11px] text-ink2">
                 Totals
               </td>
-              <td className="t-title" style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle, color: 'var(--green-text)' }}>
+              <td className="t-title px-[14px] py-[11px] text-right text-success-text" style={{ ...monoStyle }}>
                 {formatCurrency(totalIn)}
               </td>
-              <td className="t-title" style={{ padding: '11px 14px', textAlign: 'right', ...monoStyle, color: 'var(--red-text)' }}>
+              <td className="t-title px-[14px] py-[11px] text-right text-danger-text" style={{ ...monoStyle }}>
                 {formatCurrency(totalOut)}
               </td>
             </tr>
@@ -822,30 +708,18 @@ function CashRegisterTab() {
       </div>
 
       {/* Closing balance summary */}
-      <div style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: 10,
-        marginBottom: 18,
-      }}>
+      <div className="flex flex-wrap gap-2.5 mb-[18px]">
         {[
           { label: 'Opening Balance', value: formatCurrency(openingBalance), color: 'var(--text2)' },
           { label: 'Total In',        value: formatCurrency(totalIn),        color: 'var(--green-text)' },
           { label: 'Total Out',       value: formatCurrency(totalOut),       color: 'var(--red-text)'   },
           { label: 'Closing Balance', value: formatCurrency(closing),        color: closing >= 0 ? 'var(--green-text)' : 'var(--red-text)', bold: true },
         ].map(item => (
-          <div key={item.label} style={{
-            flex: '1 1 140px',
-            background: 'var(--surface2)',
-            border: '1px solid var(--border)',
-            borderRadius: 6,
-            padding: '10px 14px',
-          }}>
-            <p className="t-label" style={{ margin: 0, color: 'var(--text3)' }}>
+          <div key={item.label} className="flex-[1_1_140px] bg-surface2 border border-line rounded-md px-[14px] py-2.5">
+            <p className="t-label m-0">
               {item.label}
             </p>
-            <p className="t-h3" style={{
-              margin: '4px 0 0',
+            <p className="t-h3 mt-1 mb-0" style={{
               fontFamily: 'var(--font-mono)',
               color: item.color,
             }}>
@@ -856,7 +730,7 @@ function CashRegisterTab() {
       </div>
 
       {/* Action buttons */}
-      <div style={{ display: 'flex', gap: 10 }}>
+      <div className="flex gap-2.5">
         <button className="btn btn-outline" onClick={() => window.print()}>
           Print Register
         </button>
@@ -869,28 +743,9 @@ function CashRegisterTab() {
 }
 
 // ─── Tab styles helper ────────────────────────────────────────────────────────
-const TAB_STYLE_ACTIVE = {
-  padding: '8px 18px',
-  borderRadius: 6,
-  fontSize: 13,
-  fontWeight: 600,
-  cursor: 'pointer',
-  background: 'var(--gold-bg)',
-  border: '1px solid var(--gold)',
-  color: 'var(--gold)',
-  transition: 'all 0.13s',
-}
-const TAB_STYLE_INACTIVE = {
-  padding: '8px 18px',
-  borderRadius: 6,
-  fontSize: 13,
-  fontWeight: 500,
-  cursor: 'pointer',
-  background: 'var(--surface)',
-  border: '1px solid var(--border)',
-  color: 'var(--text2)',
-  transition: 'all 0.13s',
-}
+const TAB_CLASS_BASE = 'px-[18px] py-2 rounded-md text-[13px] cursor-pointer transition-all duration-[130ms]'
+const TAB_CLASS_ACTIVE = 'font-semibold bg-[var(--gold-bg)] border border-gold text-gold'
+const TAB_CLASS_INACTIVE = 'font-medium bg-surface border border-line text-ink2'
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Billing() {
@@ -1004,33 +859,20 @@ export default function Billing() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="px-7 py-6 max-w-[1400px] mx-auto">
 
       {/* ── Page Header ────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-        marginBottom: 22,
-        gap: 16,
-        flexWrap: 'wrap',
-      }}>
+      <div className="flex items-start justify-between mb-[22px] gap-4 flex-wrap">
         <div>
-          <h1 style={{
-            fontSize: 26,
-            fontWeight: 800,
-            margin: 0,
-            color: 'var(--text)',
-            letterSpacing: '-0.03em',
-          }}>
+          <h1 className="text-[26px] font-extrabold m-0 text-ink tracking-[-0.03em]">
             Billing &amp; Payments
           </h1>
-          <p className="t-sm" style={{ margin: '3px 0 0', color: 'var(--text3)' }}>
+          <p className="t-sm mt-[3px] mb-0 text-ink3">
             Invoice management with GST compliance
           </p>
         </div>
         {activeTab === 'invoices' && (
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="flex gap-2">
             <button className="btn btn-outline btn-sm" onClick={load} disabled={loading}>↻ Refresh</button>
             <button className="btn btn-outline btn-sm" onClick={handleExportCSV}>↓ Export CSV</button>
             <button className="btn btn-primary" onClick={() => setShowGenerate(true)}>+ Generate Invoice</button>
@@ -1039,66 +881,66 @@ export default function Billing() {
       </div>
 
       {error && (
-        <div className="t-sm" style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'var(--red-bg)', color: 'var(--red-text)' }}>
+        <div className="t-sm mb-4 px-[14px] py-2.5 rounded-lg bg-danger-bg text-danger-text">
           {error}
         </div>
       )}
 
       {/* ── Stat Cards ─────────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 22 }}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3 mb-[22px]">
         {/* Collected */}
         <div className="stat-card stat-bar-green">
-          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
+          <p className="t-label mt-0 mx-0 mb-1">
             Collected this month
           </p>
-          <p className="t-h1" style={{ margin: 0, color: 'var(--green-text)' }}>
+          <p className="t-h1 m-0 text-success-text">
             {formatCurrency(stats.collected)}
           </p>
-          <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>
+          <p className="mt-[3px] mb-0 text-[11px] text-ink3">
             {invoices.filter(i => i.status === 'Paid').length} invoices paid
           </p>
         </div>
 
         {/* Pending */}
         <div className="stat-card stat-bar-amber">
-          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
+          <p className="t-label mt-0 mx-0 mb-1">
             Pending
           </p>
-          <p className="t-h1" style={{ margin: 0, color: 'var(--amber-text)' }}>
+          <p className="t-h1 m-0 text-warning-text">
             {formatCurrency(stats.pendingTotal)}
           </p>
-          <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>
+          <p className="mt-[3px] mb-0 text-[11px] text-ink3">
             {stats.pendingCount} invoice{stats.pendingCount !== 1 ? 's' : ''}
           </p>
         </div>
 
         {/* Overdue */}
         <div className="stat-card stat-bar-red">
-          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
+          <p className="t-label mt-0 mx-0 mb-1">
             Overdue
           </p>
-          <p className="t-h1" style={{ margin: 0, color: 'var(--red-text)' }}>
+          <p className="t-h1 m-0 text-danger-text">
             {formatCurrency(stats.overdueTotal)}
           </p>
-          <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>
+          <p className="mt-[3px] mb-0 text-[11px] text-ink3">
             {stats.overdueCount} invoice{stats.overdueCount !== 1 ? 's' : ''}
           </p>
         </div>
 
         {/* GST Collected */}
         <div className="stat-card stat-bar-blue">
-          <p className="t-label" style={{ margin: '0 0 4px', color: 'var(--text3)' }}>
+          <p className="t-label mt-0 mx-0 mb-1">
             GST Collected
           </p>
-          <p className="t-h1" style={{ margin: 0, color: 'var(--blue-text)' }}>
+          <p className="t-h1 m-0 text-info-text">
             {formatCurrency(stats.gstCollected)}
           </p>
-          <p style={{ margin: '3px 0 0', fontSize: 11, color: 'var(--text3)' }}>From paid invoices</p>
+          <p className="mt-[3px] mb-0 text-[11px] text-ink3">From paid invoices</p>
         </div>
       </div>
 
       {/* ── Tab Navigation ──────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div className="flex gap-2 mb-5 flex-wrap">
         {[
           { id: 'invoices',      label: 'Invoices'      },
           { id: 'ledger',        label: 'Ledger'        },
@@ -1107,7 +949,7 @@ export default function Billing() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            style={activeTab === tab.id ? TAB_STYLE_ACTIVE : TAB_STYLE_INACTIVE}
+            className={`${TAB_CLASS_BASE} ${activeTab === tab.id ? TAB_CLASS_ACTIVE : TAB_CLASS_INACTIVE}`}
           >
             {tab.label}
           </button>
@@ -1118,43 +960,30 @@ export default function Billing() {
       {activeTab === 'invoices' && (
         <>
           {/* Filter Row */}
-          <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="flex gap-2.5 mb-4 flex-wrap items-center">
             {/* Search */}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <span className="t-sm" style={{
-                position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)',
-                color: 'var(--text3)', pointerEvents: 'none',
-              }}>
+            <div className="relative shrink-0">
+              <span className="t-sm absolute left-2.5 top-1/2 -translate-y-1/2 text-ink3 pointer-events-none">
                 ⌕
               </span>
               <input
-                className="form-input"
+                className="form-input pl-7 w-[220px] text-[12px]"
                 type="text"
                 placeholder="Search guest or invoice..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                style={{ paddingLeft: 28, width: 220, fontSize: 12 }}
               />
             </div>
 
             {/* Status filter pills */}
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div className="flex gap-1.5">
               {['All', 'Paid', 'Pending', 'Overdue'].map(s => {
                 const active = statusFilter === s
                 return (
                   <button
                     key={s}
                     onClick={() => setStatusFilter(s)}
-                    className="t-xs"
-                    style={{
-                      padding: '5px 13px',
-                      borderRadius: 20,
-                      cursor: 'pointer',
-                      background: active ? 'var(--gold-bg)' : 'var(--surface)',
-                      border: active ? '1px solid var(--gold)' : '1px solid var(--border)',
-                      color: active ? 'var(--gold)' : 'var(--text2)',
-                      transition: 'all 0.13s',
-                    }}
+                    className={`t-xs px-[13px] py-[5px] rounded-[20px] cursor-pointer transition-all duration-[130ms] ${active ? 'bg-[var(--gold-bg)] border border-gold text-gold' : 'bg-surface border border-line text-ink2'}`}
                   >
                     {s}
                   </button>
@@ -1162,29 +991,25 @@ export default function Billing() {
               })}
             </div>
 
-            <div style={{ flex: 1 }} />
-            <p className="t-xs" style={{ margin: 0, color: 'var(--text3)', flexShrink: 0 }}>
+            <div className="flex-1" />
+            <p className="t-xs m-0 text-ink3 shrink-0">
               {filtered.length} of {invoices.length} records
             </p>
           </div>
 
           {/* Payment Records Table */}
-          <div className="card" style={{ overflowX: 'auto' }}>
+          <div className="card overflow-x-auto">
             {filtered.length === 0 ? (
               <div className="empty-state">
-                <p style={{ margin: 0, fontWeight: 600, color: 'var(--text2)' }}>{loading ? 'Loading invoices…' : 'No invoices found'}</p>
-                {!loading && <p className="t-xs" style={{ margin: '4px 0 0' }}>Generate an invoice or adjust your filters</p>}
+                <p className="m-0 font-semibold text-ink2">{loading ? 'Loading invoices…' : 'No invoices found'}</p>
+                {!loading && <p className="t-xs mt-1 mx-0 mb-0">Generate an invoice or adjust your filters</p>}
               </div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <table className="w-full border-collapse">
                 <thead>
                   <tr>
                     {['Invoice #', 'Guest', 'Room', 'Period', 'Rent', 'Food', 'Amenities', 'GST (12%)', 'Total', 'Status', 'Actions'].map(h => (
-                      <th key={h} style={{
-                        textAlign: h === 'Actions' ? 'center' : h === 'Rent' || h === 'Food' || h === 'Amenities' || h === 'GST (12%)' || h === 'Total' ? 'right' : 'left',
-                        padding: '10px 12px',
-                        whiteSpace: 'nowrap',
-                      }}>
+                      <th key={h} className={`px-3 py-2.5 whitespace-nowrap ${h === 'Actions' ? 'text-center' : h === 'Rent' || h === 'Food' || h === 'Amenities' || h === 'GST (12%)' || h === 'Total' ? 'text-right' : 'text-left'}`}>
                         {h}
                       </th>
                     ))}
@@ -1192,97 +1017,80 @@ export default function Billing() {
                 </thead>
                 <tbody>
                   {filtered.map(inv => (
-                    <tr key={inv.id} style={{ transition: 'background 0.1s' }}>
+                    <tr key={inv.id} className="transition-[background] duration-100">
                       {/* Invoice # */}
-                      <td style={{ padding: '11px 12px' }}>
-                        <span className="t-xs" style={{
-                          fontFamily: 'var(--font-mono)',
-                          color: 'var(--gold)',
-                        }}>
+                      <td className="px-3 py-[11px]">
+                        <span className="t-xs text-gold" style={{ fontFamily: 'var(--font-mono)' }}>
                           {inv.invoiceNo}
                         </span>
                       </td>
 
                       {/* Guest */}
-                      <td style={{ padding: '11px 12px' }}>
-                        <span className="t-title" style={{ color: 'var(--text)' }}>
+                      <td className="px-3 py-[11px]">
+                        <span className="t-title">
                           {inv.guest}
                         </span>
                       </td>
 
                       {/* Room */}
-                      <td style={{ padding: '11px 12px' }}>
-                        <span className="t-sm" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text2)' }}>
+                      <td className="px-3 py-[11px]">
+                        <span className="t-sm text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>
                           {inv.room}
                         </span>
                       </td>
 
                       {/* Period */}
-                      <td className="t-xs" style={{ padding: '11px 12px', color: 'var(--text3)', whiteSpace: 'nowrap' }}>
+                      <td className="t-xs px-3 py-[11px] text-ink3 whitespace-nowrap">
                         {inv.period}
                       </td>
 
                       {/* Rent */}
-                      <td style={{ padding: '11px 12px', textAlign: 'right' }}>
-                        <span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text2)' }}>
+                      <td className="px-3 py-[11px] text-right">
+                        <span className="t-xs text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>
                           {formatCurrency(inv.rent)}
                         </span>
                       </td>
 
                       {/* Food */}
-                      <td style={{ padding: '11px 12px', textAlign: 'right' }}>
+                      <td className="px-3 py-[11px] text-right">
                         <span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: inv.food > 0 ? 'var(--text2)' : 'var(--text3)' }}>
                           {inv.food > 0 ? formatCurrency(inv.food) : '—'}
                         </span>
                       </td>
 
                       {/* Amenities */}
-                      <td style={{ padding: '11px 12px', textAlign: 'right' }}>
+                      <td className="px-3 py-[11px] text-right">
                         <span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: inv.amenities > 0 ? 'var(--text2)' : 'var(--text3)' }}>
                           {inv.amenities > 0 ? formatCurrency(inv.amenities) : '—'}
                         </span>
                       </td>
 
                       {/* GST */}
-                      <td style={{ padding: '11px 12px', textAlign: 'right' }}>
-                        <span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: 'var(--text2)' }}>
+                      <td className="px-3 py-[11px] text-right">
+                        <span className="t-xs text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>
                           {formatCurrency(inv.gstAmount)}
                         </span>
                       </td>
 
                       {/* Total */}
-                      <td style={{ padding: '11px 12px', textAlign: 'right' }}>
-                        <span className="t-title" style={{
-                          fontFamily: 'var(--font-mono)',
-                          color: 'var(--text)',
-                        }}>
+                      <td className="px-3 py-[11px] text-right">
+                        <span className="t-title" style={{ fontFamily: 'var(--font-mono)' }}>
                           {formatCurrency(inv.total)}
                         </span>
                       </td>
 
                       {/* Status */}
-                      <td style={{ padding: '11px 12px' }}>
+                      <td className="px-3 py-[11px]">
                         <Badge type={statusBadgeType(inv.status)}>{inv.status}</Badge>
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: '11px 12px' }}>
-                        <div style={{ display: 'flex', gap: 5, justifyContent: 'center', flexWrap: 'nowrap' }}>
+                      <td className="px-3 py-[11px]">
+                        <div className="flex gap-[5px] justify-center flex-nowrap">
                           {/* Collect — only for pending */}
                           {inv.status === 'Pending' && (
                             <button
-                              className="btn btn-xs"
-                              style={{
-                                background: 'var(--amber-bg)',
-                                color: 'var(--amber-text)',
-                                border: '1px solid var(--amber)',
-                                borderRadius: 4,
-                                padding: '3px 8px',
-                                fontSize: 11,
-                                cursor: 'pointer',
-                                fontWeight: 600,
-                                whiteSpace: 'nowrap',
-                              }}
+                              className="btn btn-xs bg-[var(--amber-bg)] text-warning-text border border-[var(--amber)] rounded px-2 py-[3px] text-[11px] cursor-pointer font-semibold whitespace-nowrap"
                               onClick={() => setCollectModal(inv)}
                             >
                               Collect
@@ -1299,17 +1107,7 @@ export default function Billing() {
 
                           {/* Invoice */}
                           <button
-                            className="btn btn-xs"
-                            style={{
-                              background: 'var(--gold-bg)',
-                              color: 'var(--gold)',
-                              border: '1px solid var(--gold-border)',
-                              borderRadius: 4,
-                              padding: '3px 8px',
-                              fontSize: 11,
-                              cursor: 'pointer',
-                              fontWeight: 600,
-                            }}
+                            className="btn btn-xs bg-[var(--gold-bg)] text-gold border border-[var(--gold-border)] rounded px-2 py-[3px] text-[11px] cursor-pointer font-semibold"
                             onClick={() => setInvoiceModal(inv)}
                           >
                             Invoice
