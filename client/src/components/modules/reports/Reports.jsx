@@ -304,7 +304,7 @@ export default function Reports() {
   useEffect(() => { load() }, [load])
 
   return (
-    <div className="p-6 max-w-[1100px] mx-auto">
+    <div>
       <div className="mb-5 flex justify-between items-start gap-3 flex-wrap">
         <div>
           <h1 className="t-h1 m-0 tracking-[-0.02em]">

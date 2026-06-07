@@ -300,7 +300,7 @@ export default function Documents() {
   }
 
   return (
-    <div className="p-6 max-w-[1200px]">
+    <div>
       {/* Header */}
       <div className="mb-5 flex justify-between items-start gap-3 flex-wrap">
         <div>

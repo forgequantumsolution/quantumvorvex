@@ -462,7 +462,7 @@ export default function Food() {
   }
 
   return (
-    <div className="px-7 py-6 max-w-[1400px] mx-auto">
+    <div>
       {/* Page header */}
       <div className="mb-[22px] flex justify-between items-start gap-3 flex-wrap">
         <div>

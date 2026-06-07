@@ -859,7 +859,7 @@ export default function Billing() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="px-7 py-6 max-w-[1400px] mx-auto">
+    <div>
 
       {/* ── Page Header ────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between mb-[22px] gap-4 flex-wrap">

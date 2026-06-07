@@ -667,7 +667,7 @@ export default function Housekeeping() {
   ]
 
   return (
-    <div className="px-7 py-6 overflow-y-auto h-full">
+    <div className="overflow-y-auto h-full">
       {/* Header */}
       <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
         <div>

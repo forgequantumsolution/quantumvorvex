@@ -617,7 +617,7 @@ export default function Guests() {
   const openEdit     = (guest) => { setProfileGuest(null); setEditGuest(guest) }
 
   return (
-    <div className="p-6 max-w-[1300px]">
+    <div>
       {/* Header */}
       <div className="flex justify-between items-start mb-5">
         <div>

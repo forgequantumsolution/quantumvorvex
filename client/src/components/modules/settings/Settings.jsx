@@ -1916,7 +1916,7 @@ export default function Settings({ onRunSetup }) {
   const validActiveTab = tabs.find(t => t.id === activeTab) ? activeTab : (tabs[0]?.id || 'profile')
 
   return (
-    <div className="p-6 max-w-[900px] mx-auto">
+    <div className="p-6">
       {/* Header */}
       <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
         <div>
