@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageWrapper, StatCard, Card, FilterTabs, SearchInput, Button } from '../../ui-tw'
 import BookingsTable from './BookingsTable'
-import NewBookingModal from './NewBookingModal'
+import BookingForm from './BookingForm'
 import CancelModal from '../cancellations/CancelModal'
 import { useToast } from '../../../hooks/useToast'
 import { usePrimaryAction } from '../../../store/hooks'
@@ -126,36 +126,46 @@ export default function Bookings() {
         </>
       }
     >
-      <Card
-        title="All Bookings"
-        actions={
-          <div className="flex items-center gap-2">
-            <SearchInput value={query} onChange={setQuery} placeholder="Search name, no. or room" className="w-56" />
-            <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
+      {showNew ? (
+        <Card
+          title="New Booking"
+          subtitle="Reserve a room and capture guest details"
+          actions={
+            <Button variant="ghost" onClick={() => setShowNew(false)}>✕ Close</Button>
+          }
+        >
+          <BookingForm onSaved={handleCreated} onCancel={() => setShowNew(false)} />
+        </Card>
+      ) : (
+        <Card
+          title="All Bookings"
+          actions={
+            <div className="flex items-center gap-2">
+              <SearchInput value={query} onChange={setQuery} placeholder="Search name, no. or room" className="w-56" />
+              <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
+            </div>
+          }
+        >
+          <div className="px-5 py-3 border-b border-line">
+            <FilterTabs tabs={TABS.map((t) => ({ ...t, count: counts[t.id] }))} active={tab} onChange={setTab} />
           </div>
-        }
-      >
-        <div className="px-5 py-3 border-b border-line">
-          <FilterTabs tabs={TABS.map((t) => ({ ...t, count: counts[t.id] }))} active={tab} onChange={setTab} />
-        </div>
 
-        {error && (
-          <div className="px-5 py-3 text-sm text-danger-text bg-danger-bg border-b border-line">{error}</div>
-        )}
+          {error && (
+            <div className="px-5 py-3 text-sm text-danger-text bg-danger-bg border-b border-line">{error}</div>
+          )}
 
-        <BookingsTable
-          bookings={filtered}
-          loading={loading}
-          busyId={busyId}
-          onCheckIn={handleCheckIn}
-          onCheckOut={handleCheckOut}
-          onConfirm={handleConfirm}
-          onCancel={setCancelTarget}
-          emptyMessage={query ? 'No bookings match your search.' : 'Create a booking to get started.'}
-        />
-      </Card>
-
-      <NewBookingModal isOpen={showNew} onClose={() => setShowNew(false)} onSaved={handleCreated} />
+          <BookingsTable
+            bookings={filtered}
+            loading={loading}
+            busyId={busyId}
+            onCheckIn={handleCheckIn}
+            onCheckOut={handleCheckOut}
+            onConfirm={handleConfirm}
+            onCancel={setCancelTarget}
+            emptyMessage={query ? 'No bookings match your search.' : 'Create a booking to get started.'}
+          />
+        </Card>
+      )}
       <CancelModal
         isOpen={!!cancelTarget}
         booking={cancelTarget}

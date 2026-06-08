@@ -68,6 +68,7 @@ export const bookingsApi = {
   cancel:   (id, data) => api.post(`/bookings/${id}/cancel`, data || {}),
   noShow:   (id)       => api.post(`/bookings/${id}/no-show`),
   remove:   (id)       => api.delete(`/bookings/${id}`),
+  uploadDocuments: (id, form) => api.post(`/bookings/${id}/documents`, form, { headers: { 'Content-Type': 'multipart/form-data' } }),
 }
 
 export const documentsApi = {
