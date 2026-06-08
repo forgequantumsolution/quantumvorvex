@@ -151,7 +151,7 @@ export const schemas = {
                     z.string().email('Invalid email').max(120).optional().nullable()),
     guestAddress: z.string().max(300).optional().nullable(),
     nationality:  z.string().max(50).optional().nullable(),
-    idType:       z.string().max(50).optional().nullable(),
+    idType:       z.string().max(200).optional().nullable(),  // may list multiple, e.g. "Aadhaar, PAN"
     idNumber:     z.string().max(50).optional().nullable(),
     adults:       z.coerce.number().int().min(1).max(20).default(1),
     children:     z.coerce.number().int().min(0).max(20).default(0),
@@ -181,7 +181,7 @@ export const schemas = {
                        z.string().email('Invalid email').max(120).optional().nullable()),
     guestAddress:    z.string().max(300).optional().nullable(),
     nationality:     z.string().max(50).optional().nullable(),
-    idType:          z.string().max(50).optional().nullable(),
+    idType:          z.string().max(200).optional().nullable(),
     idNumber:        z.string().max(50).optional().nullable(),
     adults:          z.coerce.number().int().min(1).max(20).optional(),
     children:        z.coerce.number().int().min(0).max(20).optional(),
@@ -205,7 +205,7 @@ export const schemas = {
 
   // Booking — check-in (optionally completes guest ID details + advance)
   checkInBooking: z.object({
-    idType:   z.string().max(50).optional().nullable(),
+    idType:   z.string().max(200).optional().nullable(),
     idNumber: z.string().max(50).optional().nullable(),
     advance:  z.coerce.number().min(0).max(1000000).optional(),
   }),

@@ -10,6 +10,8 @@ import {
   cancelBooking,
   noShowBooking,
   deleteBooking,
+  uploadBookingDocuments,
+  uploadDocs,
 } from '../controllers/bookingsController.js'
 import { verifyToken, requireMinRole } from '../middleware/auth.js'
 import { validate, schemas } from '../middleware/validate.js'
@@ -22,6 +24,9 @@ router.get('/',    getBookings)
 router.get('/:id', getBooking)
 router.post('/',   validate(schemas.createBooking), createBooking)
 router.put('/:id', validate(schemas.updateBooking), updateBooking)
+
+// ID-document uploads (multipart) — Aadhaar front/back, PAN, etc.
+router.post('/:id/documents', uploadDocs.array('documents', 12), uploadBookingDocuments)
 
 // Lifecycle actions
 router.post('/:id/confirm',   confirmBooking)

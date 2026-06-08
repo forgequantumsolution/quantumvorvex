@@ -1,7 +1,34 @@
+import path from 'path'
+import fs from 'fs'
+import multer from 'multer'
 import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
 
 const DAY_MS = 86400000
+
+// ── ID-document uploads (Aadhaar front/back, PAN, etc.) ──────────────────────────
+const docsDir = path.resolve('uploads/documents')
+if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true })
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, docsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname)
+    const safe = path.basename(file.originalname, ext).replace(/\s+/g, '-')
+    cb(null, `${safe}-${Date.now()}${ext}`)
+  },
+})
+
+export const uploadDocs = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB per file
+  fileFilter: (req, file, cb) => {
+    const allowed = ['.jpg', '.jpeg', '.png', '.pdf', '.webp']
+    const ext = path.extname(file.originalname).toLowerCase()
+    if (allowed.includes(ext)) cb(null, true)
+    else cb(new Error('Only image and PDF files are allowed.'))
+  },
+})
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -97,6 +124,7 @@ const findConflict = async (roomId, from, end, ignoreBookingId = null) => {
 const bookingInclude = {
   room: { include: { type: true } },
   guest: { select: { id: true, name: true, phone: true, status: true } },
+  documents: { orderBy: { uploadedAt: 'asc' } },
 }
 
 // ── Handlers ───────────────────────────────────────────────────────────────────
@@ -221,6 +249,45 @@ export const createBooking = async (req, res) => {
     return res.status(201).json({ booking })
   } catch (err) {
     logger.error('createBooking error', { error: err.message })
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// POST /bookings/:id/documents — attach one or more ID documents to a booking.
+// Files come as multipart field "documents"; their labels come as "docTypes"
+// (a JSON array, repeated field, or single value) aligned by upload order.
+export const uploadBookingDocuments = async (req, res) => {
+  try {
+    const { id } = req.params
+    const files = req.files || []
+    if (!files.length) return res.status(400).json({ message: 'No files uploaded.' })
+
+    const booking = await prisma.booking.findUnique({ where: { id }, select: { id: true } })
+    if (!booking) return res.status(404).json({ message: 'Booking not found.' })
+
+    // Normalise docTypes into an array aligned with files
+    let labels = req.body.docTypes
+    if (typeof labels === 'string') {
+      try { labels = JSON.parse(labels) } catch { labels = [labels] }
+    }
+    if (!Array.isArray(labels)) labels = labels ? [labels] : []
+
+    const created = await prisma.$transaction(
+      files.map((file, i) =>
+        prisma.bookingDocument.create({
+          data: {
+            bookingId: id,
+            docType: (labels[i] || path.basename(file.originalname)).toString().slice(0, 80),
+            url: `/uploads/documents/${file.filename}`,
+          },
+        })
+      )
+    )
+
+    logger.info('Booking documents uploaded', { event: 'BOOKING', bookingId: id, count: created.length })
+    return res.status(201).json({ documents: created })
+  } catch (err) {
+    logger.error('uploadBookingDocuments error', { error: err.message })
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }

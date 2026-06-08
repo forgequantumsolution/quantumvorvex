@@ -214,8 +214,21 @@ model Booking {
   selfCheckinToken    String?
   selfCheckinComplete Boolean   @default(false)
   propertyId          String?
+  documents           BookingDocument[]
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+}
+
+// ID / KYC documents captured at booking time (Aadhaar front/back, PAN, etc.)
+model BookingDocument {
+  id         String   @id @default(cuid())
+  bookingId  String
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  docType    String
+  url        String
+  uploadedAt DateTime @default(now())
+
+  @@index([bookingId])
 }
 
 model Notification {
