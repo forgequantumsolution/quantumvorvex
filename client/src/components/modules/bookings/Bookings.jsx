@@ -3,6 +3,7 @@ import { PageWrapper, StatCard, Card, FilterTabs, SearchInput, Button } from '..
 import BookingsTable from './BookingsTable'
 import BookingForm from './BookingForm'
 import CancelModal from '../cancellations/CancelModal'
+import CheckOutModal from '../checkout/CheckOutModal'
 import { useToast } from '../../../hooks/useToast'
 import { usePrimaryAction } from '../../../store/hooks'
 import { bookingsApi } from '../../../api/client'
@@ -29,6 +30,7 @@ export default function Bookings() {
   const [query, setQuery] = useState('')
   const [showNew, setShowNew] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
+  const [checkOutTarget, setCheckOutTarget] = useState(null)
   const [busyId, setBusyId] = useState(null)
 
   const load = useCallback(async () => {
@@ -106,8 +108,30 @@ export default function Bookings() {
   }
 
   const handleCheckIn  = (b) => runAction(b.id, () => bookingsApi.checkIn(b.id), `${b.guestName} checked in`)
-  const handleCheckOut = (b) => runAction(b.id, () => bookingsApi.checkOut(b.id), `${b.guestName} checked out`)
   const handleConfirm  = (b) => runAction(b.id, () => bookingsApi.confirm(b.id), `Booking ${b.bookingNo} confirmed`)
+
+  // Settle the bill + (optional) payment proof, then check out — via the modal.
+  const handleCheckOut = async ({ id, finalPayment, extraCharges, paymentMethod, paymentReference, proofFile }) => {
+    const b = bookings.find((x) => x.id === id)
+    setBusyId(id)
+    try {
+      // Attach the payment screenshot first so a failed upload aborts the check-out.
+      if (proofFile) {
+        const form = new FormData()
+        form.append('documents', proofFile)
+        form.append('docTypes', JSON.stringify(['payment_proof']))
+        await bookingsApi.uploadDocuments(id, form)
+      }
+      const { data } = await bookingsApi.checkOut(id, { finalPayment, extraCharges, paymentMethod, paymentReference })
+      setBookings((prev) => prev.map((x) => (x.id === id ? normalize(data.booking) : x)))
+      toast(`${b?.guestName || 'Guest'} checked out`)
+      setCheckOutTarget(null)
+    } catch (err) {
+      toast(err.response?.data?.message || 'Check-out failed', 'error')
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   // Generate the GST tax invoice and open it in a new tab (print / save as PDF).
   const handleInvoice = async (b) => {
@@ -187,7 +211,7 @@ export default function Bookings() {
             loading={loading}
             busyId={busyId}
             onCheckIn={handleCheckIn}
-            onCheckOut={handleCheckOut}
+            onCheckOut={setCheckOutTarget}
             onConfirm={handleConfirm}
             onCancel={setCancelTarget}
             onInvoice={handleInvoice}
@@ -200,6 +224,13 @@ export default function Bookings() {
         booking={cancelTarget}
         onClose={() => setCancelTarget(null)}
         onConfirm={handleCancel}
+      />
+      <CheckOutModal
+        isOpen={!!checkOutTarget}
+        booking={checkOutTarget}
+        submitting={busyId === checkOutTarget?.id}
+        onClose={() => setCheckOutTarget(null)}
+        onConfirm={handleCheckOut}
       />
     </PageWrapper>
   )

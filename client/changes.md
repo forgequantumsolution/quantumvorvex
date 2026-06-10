@@ -6,6 +6,72 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-10 · URL-based routing for Settings tabs
+
+## Summary
+The Settings sub-tabs were local state, so they weren't addressable and a refresh always dropped back
+to Hotel Profile. Each tab is now reflected in the URL as a query param (e.g. `/settings?tab=rooms`),
+so tabs are deep-linkable, shareable, and survive a refresh.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- Added `tabFromUrl()` (reads/validates `?tab=` against the known tab ids) and seeded `activeTab` from
+  it instead of the hardcoded `'profile'`.
+- Effect keeps `?tab=` in sync with the active tab using **`replaceState`** — keeps the page
+  addressable without spamming back-button history (back leaves Settings to the previous panel).
+- `popstate` listener re-reads the tab on browser back/forward.
+- Invalid / role-inaccessible / missing tab normalizes to the first allowed tab (reuses the existing
+  `validActiveTab` fallback) and rewrites the URL to match.
+
+### `tests/settings-tabs.spec.js`
+- New test: deep-link `/settings?tab=tax` opens Tax; switching to Room Config updates the URL to
+  `?tab=rooms`; refresh restores it; bare `/settings` normalizes to `?tab=profile`.
+
+## Notes
+- Chose a **query param** over a path segment (`/settings/rooms`) deliberately: the app's panel router
+  keys off `location.pathname` only (always `/settings` here) and its sync effect early-returns when
+  the pathname already matches — so a query param is invisible to it and needs **no change to the
+  global panel navigation**. A path segment would have required reworking `panelFromUrl` + the App URL
+  effect for every panel.
+
+---
+
+# Session — 2026-06-10 · Check-out: payment method, reference + screenshot, shared modal
+
+## Summary
+The check-out form only let staff add extra charges and a collection amount — it didn't record **how**
+the guest paid or let them attach proof. Added a payment-method selector, a reference field, and an
+optional payment-screenshot upload to the check-out modal. Also fixed the Bookings page, where the
+**Check-out** button bypassed the modal and checked out directly — it now opens the same modal.
+
+## File changes
+
+### `src/components/modules/checkout/CheckOutModal.jsx`
+- Added a **Payment method** dropdown (Cash / Card / UPI / Bank transfer / Cheque / Other), disabled
+  until a collection amount is entered, defaulting to Cash and resetting per booking.
+- Added a **Reference / txn no.** field shown only for non-cash methods while collecting.
+- Added an optional **Payment screenshot / proof** upload (image or PDF) with a 10MB client guard
+  matching the server limit, a selected-file chip with a Remove action, and an inline error.
+- `onConfirm` payload now carries `paymentMethod`, `paymentReference`, and `proofFile`.
+
+### `src/components/modules/checkout/CheckOut.jsx`
+- `handleCheckOut` now forwards `paymentMethod` / `paymentReference` to `bookingsApi.checkOut`, and
+  uploads the screenshot first (as a `payment_proof` booking document) so a failed upload aborts the
+  check-out instead of orphaning the proof.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- The table's **Check-out** button now opens `CheckOutModal` (`onCheckOut={setCheckOutTarget}`) instead
+  of calling the API immediately.
+- Rewrote `handleCheckOut` to consume the modal payload (upload proof → `checkOut` → update the row in
+  place so it moves to the Checked Out tab). Rendered `<CheckOutModal>` with `submitting` tied to `busyId`.
+
+## Notes
+- Reuses the existing `POST /bookings/:id/documents` route for the screenshot — no new client API.
+- Payment proofs land in the local `uploads/` disk like other docs (pending the planned S3 migration).
+
+---
+
 # Session — 2026-06-10 · Wire Settings tabs to the real API + logo cropping
 
 ## Summary

@@ -11,6 +11,18 @@
 // Default SAC for hotel room accommodation services (GST).
 const DEFAULT_SAC = '996311'
 
+// Human labels for the payment methods recorded at check-out.
+const PAYMENT_METHOD_LABELS = {
+  cash: 'Cash',
+  card: 'Card',
+  upi: 'UPI',
+  bank_transfer: 'Bank Transfer',
+  cheque: 'Cheque',
+  other: 'Other',
+}
+
+const paymentMethodLabel = (m) => PAYMENT_METHOD_LABELS[m] || (m ? String(m) : 'Cash')
+
 const esc = (v) =>
   String(v ?? '')
     .replace(/&/g, '&amp;')
@@ -84,6 +96,16 @@ export const buildInvoiceData = (booking, hotel = {}) => {
   const balance = +(booking.balance ?? total - received).toFixed(2)
   const taxRate = booking.taxRate || 0
 
+  // Collection payments logged against the guest (cash/card/upi/… at check-out).
+  const payments = (booking.guest?.payments || [])
+    .filter((p) => p.type === 'collection')
+    .map((p) => ({
+      amount: +(p.amount || 0).toFixed(2),
+      method: paymentMethodLabel(p.method),
+      reference: p.reference || null,
+      date: fmtDate(p.createdAt),
+    }))
+
   return {
     invoiceNo: booking.invoiceNo || booking.bookingNo,
     invoiceDate: fmtDate(booking.checkedOutAt || new Date()),
@@ -130,6 +152,7 @@ export const buildInvoiceData = (booking, hotel = {}) => {
       received,
       balance,
     },
+    payments,
     amountInWords: amountInWords(total),
   }
 }
@@ -183,6 +206,11 @@ export const renderInvoiceHtml = (booking, hotel = {}, opts = {}) => {
   .bank .label { font-size: 11px; font-weight: 700; color: #1e3a5f; margin-bottom: 6px; }
   .bank table td { border: 0; padding: 3px 0; font-size: 12px; }
   .bank table td:first-child { color: #6b7280; width: 90px; }
+  .payments { margin-top: 16px; }
+  .payments .paytable td:first-child { color: inherit; width: auto; }
+  .payments .paytable th { font-size: 10px; text-transform: uppercase; color: #6b7280; text-align: left; padding: 0 8px 4px 0; border: 0; background: none; }
+  .payments .paytable td { padding: 3px 8px 3px 0; font-size: 12px; }
+  .payments .paytable .num { text-align: right; padding-right: 0; }
   .totals td { padding: 6px 0; font-size: 13px; }
   .totals td:last-child { text-align: right; }
   .totals .grand td { border-top: 2px solid #c79a3a; border-bottom: 2px solid #c79a3a; font-size: 16px; font-weight: 800; color: #1e3a5f; padding: 10px 0; }
@@ -289,6 +317,24 @@ export const renderInvoiceHtml = (booking, hotel = {}, opts = {}) => {
           <tr><td>IFSC</td><td>${esc(h.bank.ifsc)}</td></tr>
           <tr><td>Account No</td><td>${esc(h.bank.accountNo)}</td></tr>
           <tr><td>Bank Name</td><td>${esc(h.bank.bankName)}</td></tr>
+        </table>
+      </div>` : ''}
+      ${d.payments.length ? `
+      <div class="bank payments">
+        <div class="label">Payment Details</div>
+        <table class="paytable">
+          <thead>
+            <tr><th>Date</th><th>Method</th><th>Reference</th><th class="num">Amount</th></tr>
+          </thead>
+          <tbody>
+            ${d.payments.map((p) => `
+            <tr>
+              <td>${esc(p.date)}</td>
+              <td>${esc(p.method)}</td>
+              <td>${esc(p.reference || '—')}</td>
+              <td class="num">${money(p.amount)}</td>
+            </tr>`).join('')}
+          </tbody>
         </table>
       </div>` : ''}
     </div>

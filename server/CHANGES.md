@@ -5,6 +5,41 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-10 · Log payment method at check-out + show it on the invoice
+
+## Summary
+Check-out accepted only `extraCharges` / `finalPayment` and never recorded **how** the guest paid.
+The collection now logs a `Payment` row (method + reference) against the guest, and the generated tax
+invoice lists those collections in a new Payment Details block.
+
+## File changes
+
+### `src/middleware/validate.js`
+- `checkOutBooking` schema now accepts `paymentMethod` (enum: cash / card / upi / bank_transfer /
+  cheque / other) and `paymentReference` (string, max 120) — both optional.
+
+### `src/controllers/bookingsController.js`
+- `checkOutBooking` — when `finalPayment > 0` and the booking has a `guestId`, creates a `Payment`
+  inside the existing transaction (`amount`, `method`, `reference`, `type: 'collection'`). Method
+  defaults to `cash`.
+- `getBookingInvoice` — the invoice query now includes `guest.payments` (oldest-first) so collections
+  can be rendered.
+
+### `src/utils/invoiceTemplate.js`
+- Added a `PAYMENT_METHOD_LABELS` map + `paymentMethodLabel()` helper.
+- `buildInvoiceData` derives a `payments` array (collection-type only: date, method, reference, amount),
+  also exposed in the `format=json` payload.
+- Template renders a **Payment Details** table in the lower-left (beside Bank Details), only when
+  payments exist; added matching CSS.
+
+## Notes
+- A guest is created per booking at check-in, so collections map cleanly to that stay's invoice.
+- Advances taken at booking/check-in are still only the booking's `advance` field (shown as "Received
+  Amount"); they are not logged as `Payment` rows, so they don't appear in the Payment Details list.
+- No schema/migration change — reuses the existing `Payment` model.
+
+---
+
 # Session — 2026-06-10 · Settings update: delete rows absent from the payload
 
 ## Summary

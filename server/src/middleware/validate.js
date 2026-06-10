@@ -212,8 +212,10 @@ export const schemas = {
 
   // Booking — check-out (settle balance + final extra charges)
   checkOutBooking: z.object({
-    extraCharges: z.coerce.number().min(0).max(1000000).optional(),
-    finalPayment: z.coerce.number().min(0).max(1000000).optional(),
+    extraCharges:     z.coerce.number().min(0).max(1000000).optional(),
+    finalPayment:     z.coerce.number().min(0).max(1000000).optional(),
+    paymentMethod:    z.enum(['cash', 'card', 'upi', 'bank_transfer', 'cheque', 'other']).optional(),
+    paymentReference: z.string().max(120).optional(),
   }),
 
   // Invoice / Payment

@@ -53,11 +53,19 @@ export default function CheckOut() {
     else toast('No in-house guests to check out', 'error')
   })
 
-  const handleCheckOut = async ({ id, finalPayment, extraCharges }) => {
+  const handleCheckOut = async ({ id, finalPayment, extraCharges, paymentMethod, paymentReference, proofFile }) => {
     setSubmitting(true)
     const b = bookings.find((x) => x.id === id)
     try {
-      await bookingsApi.checkOut(id, { finalPayment, extraCharges })
+      // Attach the payment screenshot first (while the booking is still in-house),
+      // so a failed upload aborts the check-out instead of orphaning the proof.
+      if (proofFile) {
+        const form = new FormData()
+        form.append('documents', proofFile)
+        form.append('docTypes', JSON.stringify(['payment_proof']))
+        await bookingsApi.uploadDocuments(id, form)
+      }
+      await bookingsApi.checkOut(id, { finalPayment, extraCharges, paymentMethod, paymentReference })
       setBookings((prev) => prev.filter((x) => x.id !== id))   // leaves the in-house list
       toast(`${b?.guestName || 'Guest'} checked out from Room ${b?.roomNumber}`)
       setTarget(null)

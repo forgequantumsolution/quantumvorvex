@@ -461,8 +461,10 @@ export const checkOutBooking = async (req, res) => {
     const extraCharges = req.body.extraCharges !== undefined ? req.body.extraCharges : booking.extraCharges
     const addedExtra   = extraCharges - booking.extraCharges
     const amount       = +(booking.amount + addedExtra).toFixed(2)
-    const advance      = +(booking.advance + (req.body.finalPayment || 0)).toFixed(2)
+    const finalPayment = req.body.finalPayment || 0
+    const advance      = +(booking.advance + finalPayment).toFixed(2)
     const balance      = +(amount - advance).toFixed(2)
+    const paymentMethod = req.body.paymentMethod || 'cash'
 
     const result = await prisma.$transaction(async (tx) => {
       const updated = await tx.booking.update({
@@ -477,6 +479,18 @@ export const checkOutBooking = async (req, res) => {
       })
       if (booking.guestId) {
         await tx.guest.update({ where: { id: booking.guestId }, data: { status: 'CheckedOut', checkOutDate: new Date() } })
+        // Log the settlement collected at check-out so it shows in the payments ledger.
+        if (finalPayment > 0) {
+          await tx.payment.create({
+            data: {
+              guestId:   booking.guestId,
+              amount:    finalPayment,
+              method:    paymentMethod,
+              reference: req.body.paymentReference || null,
+              type:      'collection',
+            },
+          })
+        }
       }
       await tx.room.update({ where: { id: booking.roomId }, data: { status: 'available' } })
       return updated
@@ -501,7 +515,10 @@ export const getBookingInvoice = async (req, res) => {
 
     const booking = await prisma.booking.findUnique({
       where: { id },
-      include: { room: { include: { type: true } } },
+      include: {
+        room: { include: { type: true } },
+        guest: { include: { payments: { orderBy: { createdAt: 'asc' } } } },
+      },
     })
     if (!booking) return res.status(404).json({ message: 'Booking not found.' })
 

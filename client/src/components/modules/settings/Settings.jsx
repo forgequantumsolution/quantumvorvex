@@ -2117,8 +2117,17 @@ const ALL_TABS = [
   { id: 'users',         label: 'Users & Access' },
 ]
 
+const TAB_IDS = ALL_TABS.map(t => t.id)
+
+// Read the active tab from the URL (?tab=…). Falls back when absent/invalid.
+function tabFromUrl(fallback = 'profile') {
+  if (typeof window === 'undefined') return fallback
+  const t = new URLSearchParams(window.location.search).get('tab')
+  return TAB_IDS.includes(t) ? t : fallback
+}
+
 export default function Settings({ onRunSetup }) {
-  const [activeTab, setActiveTab] = useState('profile')
+  const [activeTab, setActiveTab] = useState(tabFromUrl)
   const [settings, setSettings]   = useState(initSettings)
   const [roomTypes, setRoomTypes] = useState(initRoomTypes)
   const [foodPlans, setFoodPlans] = useState(initFoodPlans)
@@ -2146,6 +2155,28 @@ export default function Settings({ onRunSetup }) {
 
   // Reset to first allowed tab if current tab is no longer accessible
   const validActiveTab = tabs.find(t => t.id === activeTab) ? activeTab : (tabs[0]?.id || 'profile')
+
+  // Keep the URL's ?tab in sync with the active tab so the page is addressable
+  // and survives a refresh. The app's panel router only reads location.pathname
+  // (always "/settings" here), so this query param never interferes with it.
+  // replaceState (not push) keeps tab switches out of the back-button history.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('tab') === validActiveTab) return
+    params.set('tab', validActiveTab)
+    window.history.replaceState(
+      { ...window.history.state, tab: validActiveTab },
+      '',
+      `${window.location.pathname}?${params}`,
+    )
+  }, [validActiveTab])
+
+  // Browser back/forward (or a programmatic panel change) → re-read the tab.
+  useEffect(() => {
+    const onPop = () => setActiveTab(tabFromUrl())
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
 
   return (
     <div className="p-6">
