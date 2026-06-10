@@ -5,6 +5,36 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-10 · Document viewing fixes (booking docs + static serving)
+
+## Summary
+Documents uploaded during booking showed as "uploaded" but never appeared in the Documents panel,
+and even guest-uploaded docs couldn't be opened. Two backend causes: (1) `GET /documents` only read
+the `Document` table, but booking ID uploads land in the separate `BookingDocument` table; (2) the
+`/uploads` static handler pointed one directory above where files are actually written.
+
+## File changes
+
+### `src/controllers/documentsController.js`
+- `getDocuments` — now also pulls each guest's bookings' `BookingDocument` rows (via
+  `Booking.guestId → Guest`) and merges them into the per-guest `documents` array, normalized to the
+  same shape the client renders (`id`, `docType`, `url`, `uploadedAt`, `verified`). Booking docs get
+  `verified: false` (the model has no verification column) and a `source: 'booking'` tag.
+  `_count.documents` now reflects the combined total.
+
+### `src/app.js`
+- `/uploads` static handler — files are written to `<server>/uploads` (multer's `path.resolve` is
+  cwd-relative), but the handler served from the project root (`'..', '..'`). Dropped one `'..'` so it
+  serves `<server>/uploads`. This had caused `ERR_NOT_FOUND` on every document/logo link.
+
+## Notes
+- The "Verify" action hits `PUT /documents/:id/verify`, which updates the `Document` table — it will
+  404 for booking-doc ids. Booking docs display/open fine but can't be verified through the current
+  flow. A future fix would add a `verified` column to `BookingDocument` (or consolidate the two
+  upload paths) — see also the object-storage migration follow-up.
+
+---
+
 # Session — 2026-06-10 · Single active session per user (new-login-wins)
 
 ## Summary

@@ -3,7 +3,7 @@ import Tabs from '../../ui/Tabs'
 import Modal from '../../ui/Modal'
 import { useAppSelector, useHotelActions, useUiActions } from '../../../store/hooks'
 import { useToast } from '../../../hooks/useToast'
-import api from '../../../api/client'
+import api, { settingsApi } from '../../../api/client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ROLE_LABELS, ROLE_COLORS, canAccessSettingsTab } from '../../../utils/permissions'
 import {
@@ -12,7 +12,7 @@ import {
 
 // ─── Initial State ────────────────────────────────────────────────────────────
 const initSettings = {
-  hotelName:  'Quantum Vorvex',
+  name:       'Quantum Vorvex',
   ownerName:  'Ramesh Gupta',
   phone:      '9876543210',
   email:      'manager@quantumvorvex.com',
@@ -33,26 +33,42 @@ const initSettings = {
 const initFacilities = ['AC', 'WiFi', 'TV', 'Geyser', 'Hot Water', 'Parking', 'Balcony', 'CCTV']
 
 const initAmenities = [
-  { id: 'a1', name: 'Mini Fridge',        daily: 50,  monthly: 800  },
-  { id: 'a2', name: 'Washing Machine',    daily: 80,  monthly: 1200 },
-  { id: 'a3', name: 'Parking (Premium)',  daily: 100, monthly: 1500 },
-  { id: 'a4', name: 'Gym Access',         daily: 150, monthly: 2000 },
-  { id: 'a5', name: 'Laundry Service',    daily: 200, monthly: 0    },
+  { id: 'a1', name: 'Mini Fridge',        dailyRate: 50,  monthlyRate: 800  },
+  { id: 'a2', name: 'Washing Machine',    dailyRate: 80,  monthlyRate: 1200 },
+  { id: 'a3', name: 'Parking (Premium)',  dailyRate: 100, monthlyRate: 1500 },
+  { id: 'a4', name: 'Gym Access',         dailyRate: 150, monthlyRate: 2000 },
+  { id: 'a5', name: 'Laundry Service',    dailyRate: 200, monthlyRate: 0    },
 ]
 
 const initRoomTypes = [
-  { id: '1', name: 'Single', dailyRate: 500,  monthlyRate: 9000,  peakDaily: 700,  peakMonthly: 13000, count: 12, maxOccupancy: 1 },
-  { id: '2', name: 'Double', dailyRate: 800,  monthlyRate: 14000, peakDaily: 1100, peakMonthly: 20000, count: 10, maxOccupancy: 2 },
-  { id: '3', name: 'Suite',  dailyRate: 1500, monthlyRate: 28000, peakDaily: 2200, peakMonthly: 40000, count: 6,  maxOccupancy: 3 },
-  { id: '4', name: 'Deluxe', dailyRate: 1200, monthlyRate: 22000, peakDaily: 1800, peakMonthly: 32000, count: 4,  maxOccupancy: 2 },
+  { id: '1', name: 'Single', dailyRate: 500,  monthlyRate: 9000,  peakDailyRate: 700,  peakMonthlyRate: 13000, count: 12, maxOccupancy: 1 },
+  { id: '2', name: 'Double', dailyRate: 800,  monthlyRate: 14000, peakDailyRate: 1100, peakMonthlyRate: 20000, count: 10, maxOccupancy: 2 },
+  { id: '3', name: 'Suite',  dailyRate: 1500, monthlyRate: 28000, peakDailyRate: 2200, peakMonthlyRate: 40000, count: 6,  maxOccupancy: 3 },
+  { id: '4', name: 'Deluxe', dailyRate: 1200, monthlyRate: 22000, peakDailyRate: 1800, peakMonthlyRate: 32000, count: 4,  maxOccupancy: 2 },
 ]
 
 const initFoodPlans = [
-  { id: '1', name: 'Breakfast Only', oneTime: 120, weekly: 700,  monthly: 2500, desc: 'Morning meal'    },
-  { id: '2', name: 'All Meals',      oneTime: 350, weekly: 2100, monthly: 8000, desc: 'Full board'       },
-  { id: '3', name: 'Dinner Only',    oneTime: 180, weekly: 1050, monthly: 3500, desc: 'Evening meal'     },
-  { id: '4', name: 'Lunch Only',     oneTime: 150, weekly: 900,  monthly: 3000, desc: 'Afternoon meal'   },
+  { id: '1', name: 'Breakfast Only', oneTimeRate: 120, weeklyRate: 700,  monthlyRate: 2500, description: 'Morning meal'    },
+  { id: '2', name: 'All Meals',      oneTimeRate: 350, weeklyRate: 2100, monthlyRate: 8000, description: 'Full board'       },
+  { id: '3', name: 'Dinner Only',    oneTimeRate: 180, weeklyRate: 1050, monthlyRate: 3500, description: 'Evening meal'     },
+  { id: '4', name: 'Lunch Only',     oneTimeRate: 150, weeklyRate: 900,  monthlyRate: 3000, description: 'Afternoon meal'   },
 ]
+
+// Rows added in the UI carry a temporary `new-…` id used only as a React key;
+// the local seed defaults use short fake ids ('1', 'a1', …). Only real persisted
+// rows carry a cuid. At save time we keep the id only when it's a cuid (so the
+// server updates by id) and otherwise drop it (so the server upserts by name),
+// plus we drop UI-only fields that have no DB column.
+let _newRowSeq = 0
+const newRowId = () => `new-${_newRowSeq++}`
+const isPersistedId = (id) => typeof id === 'string' && /^c[a-z0-9]{20,}$/i.test(id)
+
+function stripForSave(row, uiOnlyFields = []) {
+  const out = { ...row }
+  if (!isPersistedId(out.id)) delete out.id
+  for (const f of uiOnlyFields) delete out[f]
+  return out
+}
 
 const initKycDocs = [
   { id: 'front', label: 'ID Front',            required: true,  maxMB: 5, enabled: true },
@@ -84,11 +100,11 @@ function InlineInput({ value, onChange, type = 'text', min, style }) {
   )
 }
 
-function SaveButton({ onClick }) {
+function SaveButton({ onClick, saving }) {
   return (
     <div className="pt-4 border-t border-line mt-2">
-      <button className="btn btn-primary" onClick={onClick}>
-        Save Changes
+      <button className="btn btn-primary" onClick={onClick} disabled={saving}>
+        {saving ? 'Saving…' : 'Save Changes'}
       </button>
     </div>
   )
@@ -96,24 +112,56 @@ function SaveButton({ onClick }) {
 
 // ─── Tab 1: Hotel Profile ─────────────────────────────────────────────────────
 function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwnerName }) {
-  const [logoPreview, setLogoPreview] = useState(null)
+  // Seed the preview from the saved logo so it survives a reload.
+  const [logoPreview, setLogoPreview] = useState(settings.logoUrl || null)
+  const [saving, setSaving] = useState(false)
   const fileRef = useRef(null)
 
-  function handleLogoChange(e) {
+  async function handleLogoChange(e) {
     const file = e.target.files[0]
     if (!file) return
-    const url = URL.createObjectURL(file)
-    setLogoPreview(url)
+    // Show an instant local preview, then upload.
+    setLogoPreview(URL.createObjectURL(file))
+    try {
+      const form = new FormData()
+      form.append('logo', file)
+      const { data } = await settingsApi.uploadLogo(form)
+      if (data.logoUrl) {
+        setLogoPreview(data.logoUrl)
+        setSettings(s => ({ ...s, logoUrl: data.logoUrl }))
+      }
+      addToast('Logo uploaded', 'success')
+    } catch {
+      addToast('Logo upload failed', 'error')
+    }
   }
 
-  function handleSave() {
-    setHotelName(settings.hotelName)
-    setOwnerName(settings.ownerName)
-    addToast('Settings saved successfully', 'success')
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await settingsApi.update({
+        hotel: {
+          name:      settings.name,
+          ownerName: settings.ownerName,
+          phone:     settings.phone,
+          email:     settings.email,
+          gstin:     settings.gstin,
+          licenseNo: settings.licenseNo,
+          address:   settings.address,
+        },
+      })
+      setHotelName(settings.name)
+      setOwnerName(settings.ownerName)
+      addToast('Settings saved successfully', 'success')
+    } catch {
+      addToast('Failed to save settings', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const initials = settings.hotelName
-    ? settings.hotelName.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  const initials = settings.name
+    ? settings.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
     : 'HM'
 
   return (
@@ -146,8 +194,8 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
       {/* Form grid */}
       <div className="grid grid-cols-2 gap-4">
         <Field label="Hotel Name">
-          <input className="form-input" value={settings.hotelName}
-            onChange={e => setSettings(s => ({ ...s, hotelName: e.target.value }))} />
+          <input className="form-input" value={settings.name}
+            onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
         </Field>
         <Field label="Owner Name">
           <input className="form-input" value={settings.ownerName}
@@ -175,31 +223,43 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
         </Field>
       </div>
 
-      <SaveButton onClick={handleSave} />
+      <SaveButton onClick={handleSave} saving={saving} />
     </div>
   )
 }
 
 // ─── Tab 2: Room Config ───────────────────────────────────────────────────────
-function RoomConfigTab({ settings, setSettings, addToast }) {
-  const [roomTypes, setRoomTypes] = useState(initRoomTypes)
+function RoomConfigTab({ settings, setSettings, roomTypes, setRoomTypes, addToast }) {
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [saving, setSaving] = useState(false)
 
   function updateRoom(id, field, value) {
     setRoomTypes(rows => rows.map(r => r.id === id ? { ...r, [field]: value } : r))
   }
 
   function addRoom() {
-    const newId = String(Date.now())
     setRoomTypes(rows => [...rows, {
-      id: newId, name: 'New Type', dailyRate: 500, monthlyRate: 9000,
-      peakDaily: 700, peakMonthly: 13000, count: 1, maxOccupancy: 1,
+      id: newRowId(), name: 'New Type', dailyRate: 500, monthlyRate: 9000,
+      peakDailyRate: 700, peakMonthlyRate: 13000, count: 1, maxOccupancy: 1,
     }])
   }
 
   function deleteRoom(id) {
     setRoomTypes(rows => rows.filter(r => r.id !== id))
     setConfirmDelete(null)
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      // `count` has no DB column — strip it (and temp ids) before sending.
+      await settingsApi.update({ roomTypes: roomTypes.map(r => stripForSave(r, ['count'])) })
+      addToast('Settings saved successfully', 'success')
+    } catch {
+      addToast('Failed to save room types', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const thStyle = {
@@ -256,9 +316,9 @@ function RoomConfigTab({ settings, setSettings, addToast }) {
                     { field: 'name',         val: row.name,         type: 'text',   w: 100 },
                     { field: 'dailyRate',     val: row.dailyRate,     type: 'number', w: 75 },
                     { field: 'monthlyRate',   val: row.monthlyRate,   type: 'number', w: 80 },
-                    { field: 'peakDaily',     val: row.peakDaily,     type: 'number', w: 80 },
-                    { field: 'peakMonthly',   val: row.peakMonthly,   type: 'number', w: 90 },
-                    { field: 'count',         val: row.count,         type: 'number', w: 60 },
+                    { field: 'peakDailyRate',   val: row.peakDailyRate,   type: 'number', w: 80 },
+                    { field: 'peakMonthlyRate', val: row.peakMonthlyRate, type: 'number', w: 90 },
+                    { field: 'count',         val: row.count ?? 0,    type: 'number', w: 60 },
                     { field: 'maxOccupancy',  val: row.maxOccupancy,  type: 'number', w: 60 },
                   ].map(({ field, val, type, w }) => (
                     <td key={field} className="px-2.5 py-[7px]">
@@ -296,16 +356,17 @@ function RoomConfigTab({ settings, setSettings, addToast }) {
         </div>
       </div>
 
-      <SaveButton onClick={() => addToast('Settings saved successfully', 'success')} />
+      <SaveButton onClick={handleSave} saving={saving} />
     </div>
   )
 }
 
 // ─── Tab 3: Facilities ────────────────────────────────────────────────────────
-function FacilitiesTab({ addToast }) {
+function FacilitiesTab({ amenities, setAmenities, addToast }) {
+  // Free-text facility chips stay client-side — there is no DB model for them.
   const [facilities, setFacilities] = useState(initFacilities)
   const [newFacility, setNewFacility]   = useState('')
-  const [amenities, setAmenities]       = useState(initAmenities)
+  const [saving, setSaving] = useState(false)
 
   function addFacility() {
     const trimmed = newFacility.trim()
@@ -323,11 +384,23 @@ function FacilitiesTab({ addToast }) {
   }
 
   function addAmenity() {
-    setAmenities(rows => [...rows, { id: String(Date.now()), name: 'New Amenity', daily: 0, monthly: 0 }])
+    setAmenities(rows => [...rows, { id: newRowId(), name: 'New Amenity', dailyRate: 0, monthlyRate: 0 }])
   }
 
   function removeAmenity(id) {
     setAmenities(rows => rows.filter(r => r.id !== id))
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await settingsApi.update({ amenities: amenities.map(r => stripForSave(r)) })
+      addToast('Settings saved successfully', 'success')
+    } catch {
+      addToast('Failed to save amenities', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -394,10 +467,10 @@ function FacilitiesTab({ addToast }) {
                     <InlineInput value={row.name} type="text" style={{ width: 160 }} onChange={v => updateAmenity(row.id, 'name', v)} />
                   </td>
                   <td className="px-3 py-[7px] text-center">
-                    <InlineInput value={row.daily} type="number" min={0} onChange={v => updateAmenity(row.id, 'daily', v)} />
+                    <InlineInput value={row.dailyRate} type="number" min={0} onChange={v => updateAmenity(row.id, 'dailyRate', v)} />
                   </td>
                   <td className="px-3 py-[7px] text-center">
-                    <InlineInput value={row.monthly} type="number" min={0} onChange={v => updateAmenity(row.id, 'monthly', v)} />
+                    <InlineInput value={row.monthlyRate} type="number" min={0} onChange={v => updateAmenity(row.id, 'monthlyRate', v)} />
                   </td>
                   <td className="px-3 py-[7px] text-center">
                     <button
@@ -414,25 +487,37 @@ function FacilitiesTab({ addToast }) {
         </div>
       </div>
 
-      <SaveButton onClick={() => addToast('Settings saved successfully', 'success')} />
+      <SaveButton onClick={handleSave} saving={saving} />
     </div>
   )
 }
 
 // ─── Tab 4: Food Plans ────────────────────────────────────────────────────────
-function FoodPlansTab({ addToast }) {
-  const [plans, setPlans] = useState(initFoodPlans)
+function FoodPlansTab({ plans, setPlans, addToast }) {
+  const [saving, setSaving] = useState(false)
 
   function updatePlan(id, field, value) {
     setPlans(rows => rows.map(r => r.id === id ? { ...r, [field]: value } : r))
   }
 
   function addPlan() {
-    setPlans(rows => [...rows, { id: String(Date.now()), name: 'New Plan', oneTime: 0, weekly: 0, monthly: 0, desc: '' }])
+    setPlans(rows => [...rows, { id: newRowId(), name: 'New Plan', oneTimeRate: 0, weeklyRate: 0, monthlyRate: 0, description: '' }])
   }
 
   function removePlan(id) {
     setPlans(rows => rows.filter(r => r.id !== id))
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await settingsApi.update({ foodPlans: plans.map(r => stripForSave(r)) })
+      addToast('Settings saved successfully', 'success')
+    } catch {
+      addToast('Failed to save food plans', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -462,16 +547,16 @@ function FoodPlansTab({ addToast }) {
                     <InlineInput value={row.name} type="text" style={{ width: 130 }} onChange={v => updatePlan(row.id, 'name', v)} />
                   </td>
                   <td className="px-3 py-[7px] text-center">
-                    <InlineInput value={row.oneTime} type="number" min={0} onChange={v => updatePlan(row.id, 'oneTime', v)} />
+                    <InlineInput value={row.oneTimeRate} type="number" min={0} onChange={v => updatePlan(row.id, 'oneTimeRate', v)} />
                   </td>
                   <td className="px-3 py-[7px] text-center">
-                    <InlineInput value={row.weekly} type="number" min={0} onChange={v => updatePlan(row.id, 'weekly', v)} />
+                    <InlineInput value={row.weeklyRate} type="number" min={0} onChange={v => updatePlan(row.id, 'weeklyRate', v)} />
                   </td>
                   <td className="px-3 py-[7px] text-center">
-                    <InlineInput value={row.monthly} type="number" min={0} onChange={v => updatePlan(row.id, 'monthly', v)} />
+                    <InlineInput value={row.monthlyRate} type="number" min={0} onChange={v => updatePlan(row.id, 'monthlyRate', v)} />
                   </td>
                   <td className="px-3 py-[7px]">
-                    <InlineInput value={row.desc} type="text" style={{ width: 140 }} onChange={v => updatePlan(row.id, 'desc', v)} />
+                    <InlineInput value={row.description} type="text" style={{ width: 140 }} onChange={v => updatePlan(row.id, 'description', v)} />
                   </td>
                   <td className="px-3 py-[7px] text-center">
                     <button
@@ -488,13 +573,36 @@ function FoodPlansTab({ addToast }) {
         </div>
       </div>
 
-      <SaveButton onClick={() => addToast('Settings saved successfully', 'success')} />
+      <SaveButton onClick={handleSave} saving={saving} />
     </div>
   )
 }
 
 // ─── Tab 5: Tax & Pricing ─────────────────────────────────────────────────────
 function TaxPricingTab({ settings, setSettings, addToast }) {
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await settingsApi.update({
+        hotel: {
+          gstRate:     settings.gstRate,
+          gstType:     settings.gstType,
+          gstin:       settings.gstin,
+          gstApplyOn:  settings.gstApplyOn,
+          lateFeeRate: settings.lateFeeRate,
+          gracePeriod: settings.gracePeriod,
+        },
+      })
+      addToast('Settings saved successfully', 'success')
+    } catch {
+      addToast('Failed to save settings', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div className="card">
@@ -567,7 +675,7 @@ function TaxPricingTab({ settings, setSettings, addToast }) {
         </div>
       </div>
 
-      <SaveButton onClick={() => addToast('Settings saved successfully', 'success')} />
+      <SaveButton onClick={handleSave} saving={saving} />
     </div>
   )
 }
@@ -1165,7 +1273,7 @@ function PropertiesTab({ settings, setSettings, addToast }) {
             <div className="flex flex-col gap-2.5">
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="t-h2">
-                  {settings.hotelName}
+                  {settings.name}
                 </span>
                 <span className="px-2.5 py-0.5 rounded-[20px] bg-[rgba(34,197,94,0.15)] text-[#22c55e] text-[11px] font-bold">
                   Active
@@ -1180,8 +1288,8 @@ function PropertiesTab({ settings, setSettings, addToast }) {
           ) : (
             <div className="grid grid-cols-2 gap-4">
               <Field label="Hotel Name">
-                <input className="form-input" value={settings.hotelName}
-                  onChange={e => setSettings(s => ({ ...s, hotelName: e.target.value }))} />
+                <input className="form-input" value={settings.name}
+                  onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
               </Field>
               <Field label="Owner Name">
                 <input className="form-input" value={settings.ownerName}
@@ -1730,11 +1838,11 @@ function BrandingTab({ settings, setSettings, addToast }) {
 
   function handleSave() {
     try { localStorage.setItem(BRANDING_KEY, JSON.stringify(branding)) } catch { /* ignore */ }
-    setHotelName(settings.hotelName)
+    setHotelName(settings.name)
     addToast('Branding saved', 'success')
   }
 
-  const initials = (settings.hotelName || 'QV').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  const initials = (settings.name || 'QV').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 
   return (
     <div className="flex flex-col gap-5">
@@ -1766,8 +1874,8 @@ function BrandingTab({ settings, setSettings, addToast }) {
         <div className="card-header"><span className="card-title">Brand Text</span></div>
         <div className="card-body grid grid-cols-2 gap-4">
           <Field label="Hotel / Brand Name">
-            <input className="form-input" value={settings.hotelName}
-              onChange={e => setSettings(s => ({ ...s, hotelName: e.target.value }))} />
+            <input className="form-input" value={settings.name}
+              onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
           </Field>
           <Field label="Tagline">
             <input className="form-input" value={branding.tagline}
@@ -1897,12 +2005,21 @@ const ALL_TABS = [
 export default function Settings({ onRunSetup }) {
   const [activeTab, setActiveTab] = useState('profile')
   const [settings, setSettings]   = useState(initSettings)
+  const [roomTypes, setRoomTypes] = useState(initRoomTypes)
+  const [foodPlans, setFoodPlans] = useState(initFoodPlans)
+  const [amenities, setAmenities] = useState(initAmenities)
   const addToast     = useToast()
 
-  // Load the hotel's saved settings so profile/tax tabs reflect real data.
+  // Load the hotel's saved settings so every backed tab reflects real data.
+  // The controller returns { hotel, roomTypes, foodPlans, amenities }.
   useEffect(() => {
-    api.get('/settings')
-      .then(({ data }) => { if (data.settings) setSettings(s => ({ ...s, ...data.settings })) })
+    settingsApi.get()
+      .then(({ data }) => {
+        if (data.hotel)              setSettings(s => ({ ...s, ...data.hotel }))
+        if (data.roomTypes?.length)  setRoomTypes(data.roomTypes)
+        if (data.foodPlans?.length)  setFoodPlans(data.foodPlans)
+        if (data.amenities?.length)  setAmenities(data.amenities)
+      })
       .catch(() => { /* keep defaults */ })
   }, [])
   const { setHotelName, setOwnerName } = useHotelActions()
@@ -1949,13 +2066,14 @@ export default function Settings({ onRunSetup }) {
           />
         </div>
         <div data-tab-id="rooms">
-          <RoomConfigTab settings={settings} setSettings={setSettings} addToast={addToast} />
+          <RoomConfigTab settings={settings} setSettings={setSettings}
+            roomTypes={roomTypes} setRoomTypes={setRoomTypes} addToast={addToast} />
         </div>
         <div data-tab-id="facilities">
-          <FacilitiesTab addToast={addToast} />
+          <FacilitiesTab amenities={amenities} setAmenities={setAmenities} addToast={addToast} />
         </div>
         <div data-tab-id="food">
-          <FoodPlansTab addToast={addToast} />
+          <FoodPlansTab plans={foodPlans} setPlans={setFoodPlans} addToast={addToast} />
         </div>
         <div data-tab-id="tax">
           <TaxPricingTab settings={settings} setSettings={setSettings} addToast={addToast} />

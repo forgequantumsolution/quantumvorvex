@@ -118,7 +118,9 @@ app.use(cookieParser())
 app.use(requestLogger)
 
 // ── Static uploads ────────────────────────────────────────────────────────────
-app.use('/uploads', express.static(path.join(__dirname, '..', '..', 'uploads')))
+// Files are written to <server>/uploads (cwd-relative in multer config), so
+// serve from there — __dirname is <server>/src, one '..' up.
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')))
 
 // ── Health endpoints ──────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

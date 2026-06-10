@@ -75,19 +75,39 @@ const FOOD_ORDERS = [
   { id: uid('fo3'), guestName: 'Rajesh Kumar', roomNumber: '202', planName: 'No Meals',        date: d(0), status: 'n/a' },
 ]
 
-const SETTINGS = {
-  hotelName: 'Quantum Vorvex',
+// Shaped to match the real GET /settings response: a Hotel record plus the
+// related RoomType / FoodPlan / Amenity collections.
+const SETTINGS_HOTEL = {
+  id: uid('hotel'),
+  name: 'Quantum Vorvex',
   ownerName: 'Ramesh Gupta',
   phone: '+91 98765 43210',
   email: 'contact@quantumvorvex.com',
   address: '12, MG Road, Bengaluru, Karnataka 560001',
   gstin: '29AADCB2230M1ZP',
-  checkInTime: '12:00',
-  checkOutTime: '11:00',
-  currency: 'INR',
-  taxRate: 12,
+  licenseNo: 'KA-2024-HOTEL-001',
   logoUrl: null,
+  gstRate: 12,
+  gstType: 'CGST+SGST',
+  gstApplyOn: 'All',
+  lateFeeRate: 5,
+  gracePeriod: 3,
 }
+
+const SETTINGS_ROOM_TYPES = [
+  { id: uid('rt'), name: 'Single', dailyRate: 500,  monthlyRate: 9000,  peakDailyRate: 700,  peakMonthlyRate: 13000, maxOccupancy: 1 },
+  { id: uid('rt'), name: 'Double', dailyRate: 800,  monthlyRate: 14000, peakDailyRate: 1100, peakMonthlyRate: 20000, maxOccupancy: 2 },
+]
+
+const SETTINGS_FOOD_PLANS = [
+  { id: uid('fp'), name: 'Breakfast Only', oneTimeRate: 120, weeklyRate: 700,  monthlyRate: 2500, description: 'Morning meal' },
+  { id: uid('fp'), name: 'All Meals',      oneTimeRate: 350, weeklyRate: 2100, monthlyRate: 8000, description: 'Full board'    },
+]
+
+const SETTINGS_AMENITIES = [
+  { id: uid('am'), name: 'Mini Fridge',     dailyRate: 50, monthlyRate: 800,  chargeable: true },
+  { id: uid('am'), name: 'Washing Machine', dailyRate: 80, monthlyRate: 1200, chargeable: true },
+]
 
 const DOCUMENTS = [
   { id: uid('d1'), guestId: uid('g1'), guestName: 'Anil Sharma',  type: 'Aadhaar', fileName: 'aadhaar_anil.pdf',  verified: true,  uploadedAt: d(3) },
@@ -222,8 +242,13 @@ export async function getMockResponse(method, url) {
   if (path === '/reports/export/csv') return new Blob(['mock,csv,data'], { type: 'text/csv' })
 
   // Settings
-  if (path === '/settings' && m === 'get') return { settings: SETTINGS }
-  if (path === '/settings' && m === 'put') return { settings: SETTINGS, message: 'Settings saved.' }
+  if (path === '/settings' && m === 'get') return {
+    hotel: SETTINGS_HOTEL,
+    roomTypes: SETTINGS_ROOM_TYPES,
+    foodPlans: SETTINGS_FOOD_PLANS,
+    amenities: SETTINGS_AMENITIES,
+  }
+  if (path === '/settings' && m === 'put') return { message: 'Settings updated successfully.' }
   if (path === '/settings/logo')           return { logoUrl: '/logo-mock.png', message: 'Logo uploaded.' }
 
   // Notifications

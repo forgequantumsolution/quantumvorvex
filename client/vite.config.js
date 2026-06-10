@@ -11,6 +11,12 @@ export default defineConfig({
         target: "http://localhost:5001",
         changeOrigin: true,
       },
+      // Uploaded files (ID documents, logos) are served statically by the
+      // backend at /uploads — proxy them so links resolve in dev.
+      "/uploads": {
+        target: "http://localhost:5001",
+        changeOrigin: true,
+      },
     },
   },
 });

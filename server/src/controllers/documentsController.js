@@ -32,7 +32,7 @@ export const upload = multer({
 // GET /documents
 export const getDocuments = async (req, res) => {
   try {
-    const guests = await prisma.guest.findMany({
+    const rows = await prisma.guest.findMany({
       select: {
         id: true,
         docId: true,
@@ -45,9 +45,37 @@ export const getDocuments = async (req, res) => {
         documents: {
           orderBy: { uploadedAt: 'desc' },
         },
-        _count: { select: { documents: true } },
+        // ID/KYC files captured at booking time live in BookingDocument,
+        // linked to a Booking — pull them in via the guest's bookings.
+        bookings: {
+          select: {
+            documents: {
+              select: { id: true, docType: true, url: true, uploadedAt: true },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
+    })
+
+    // Merge per-guest Document rows with their bookings' BookingDocument rows
+    // into a single `documents` array of the shape the client expects.
+    const guests = rows.map(({ bookings, ...g }) => {
+      const bookingDocs = bookings.flatMap((b) =>
+        b.documents.map((d) => ({
+          id: d.id,
+          guestId: g.id,
+          docType: d.docType,
+          url: d.url,
+          verified: false,        // BookingDocument has no verification state
+          uploadedAt: d.uploadedAt,
+          source: 'booking',
+        }))
+      )
+      const documents = [...g.documents, ...bookingDocs].sort(
+        (a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt)
+      )
+      return { ...g, documents, _count: { documents: documents.length } }
     })
 
     return res.status(200).json({ guests })

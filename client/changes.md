@@ -6,6 +6,27 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-10 · Proxy /uploads so document links resolve in dev
+
+## Summary
+Document/logo links (`/uploads/...`) resolved against the Vite dev server (5173), which has no such
+files, so opening a document 404'd. The Vite proxy only forwarded `/api` to the backend.
+
+## File changes
+
+### `vite.config.js`
+- Added a `/uploads` proxy entry pointing at the backend (`http://localhost:5001`, `changeOrigin`),
+  mirroring the existing `/api` proxy. Now uploaded files served by the backend's
+  `express.static('/uploads')` resolve in dev.
+
+## Notes
+- Requires a Vite dev-server restart (proxy config isn't hot-reloaded).
+- Also fixes logo uploads, which use the same `/uploads/...` path scheme.
+- Production: only works if frontend and backend share an origin. If split across domains, return
+  absolute upload URLs instead. See the object-storage migration follow-up.
+
+---
+
 # Session — 2026-06-10 · URL-based panel navigation (refresh keeps the page)
 
 ## Summary
