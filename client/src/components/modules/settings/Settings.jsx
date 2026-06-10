@@ -1,6 +1,8 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import Cropper from 'react-easy-crop'
 import Tabs from '../../ui/Tabs'
 import Modal from '../../ui/Modal'
+import { getCroppedBlob, blobToDataUrl } from '../../../utils/cropImage'
 import { useAppSelector, useHotelActions, useUiActions } from '../../../store/hooks'
 import { useToast } from '../../../hooks/useToast'
 import api, { settingsApi } from '../../../api/client'
@@ -110,29 +112,110 @@ function SaveButton({ onClick, saving }) {
   )
 }
 
+// Reusable crop modal: pan + zoom a picked image to a 1:1 square, then hand the
+// cropped Blob to `onComplete`. Open when `src` (a data URL) is set.
+function LogoCropModal({
+  src, onCancel, onComplete, busy = false,
+  title = 'Crop image', cropShape = 'round',
+  confirmLabel = 'Crop & Save', busyLabel = 'Saving…',
+}) {
+  // Callers pass key={src} so this remounts (resetting pan/zoom) per image.
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [areaPixels, setAreaPixels] = useState(null)
+
+  const onCropComplete = useCallback((_, a) => setAreaPixels(a), [])
+
+  async function confirm() {
+    if (!areaPixels) return
+    const blob = await getCroppedBlob(src, areaPixels)
+    await onComplete(blob)
+  }
+
+  return (
+    <Modal
+      isOpen={!!src}
+      onClose={busy ? () => {} : onCancel}
+      title={title}
+      footer={
+        <>
+          <button className="btn btn-outline" onClick={onCancel} disabled={busy}>Cancel</button>
+          <button className="btn btn-primary" onClick={confirm} disabled={busy || !areaPixels}>
+            {busy ? busyLabel : confirmLabel}
+          </button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <div className="relative w-full h-[300px] bg-surface2 rounded-lg overflow-hidden">
+          {src && (
+            <Cropper
+              image={src}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              cropShape={cropShape}
+              showGrid={false}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropComplete}
+            />
+          )}
+        </div>
+        <label className="flex items-center gap-3">
+          <span className="t-sm text-ink3 shrink-0">Zoom</span>
+          <input
+            type="range" min={1} max={3} step={0.01}
+            value={zoom}
+            onChange={e => setZoom(Number(e.target.value))}
+            className="w-full accent-[var(--gold)]"
+          />
+        </label>
+      </div>
+    </Modal>
+  )
+}
+
 // ─── Tab 1: Hotel Profile ─────────────────────────────────────────────────────
 function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwnerName }) {
-  // Seed the preview from the saved logo so it survives a reload.
-  const [logoPreview, setLogoPreview] = useState(settings.logoUrl || null)
+  const [logoPreview, setLogoPreview] = useState(null)
   const [saving, setSaving] = useState(false)
   const fileRef = useRef(null)
 
-  async function handleLogoChange(e) {
+  // The picked file is read into `cropSrc` to open the crop modal; the cropped
+  // square is then uploaded.
+  const [cropSrc, setCropSrc] = useState(null)
+  const [uploading, setUploading] = useState(false)
+
+  // Local preview wins (just-uploaded); otherwise fall back to the saved logo,
+  // which arrives asynchronously from GET /settings — so it shows after reload.
+  const logoSrc = logoPreview || settings.logoUrl || null
+
+  function handleFileSelect(e) {
     const file = e.target.files[0]
     if (!file) return
-    // Show an instant local preview, then upload.
-    setLogoPreview(URL.createObjectURL(file))
+    const reader = new FileReader()
+    reader.onload = () => setCropSrc(reader.result)
+    reader.readAsDataURL(file)
+    e.target.value = '' // allow re-selecting the same file
+  }
+
+  async function uploadCropped(blob) {
+    setUploading(true)
     try {
       const form = new FormData()
-      form.append('logo', file)
+      form.append('logo', blob, 'logo.png')
       const { data } = await settingsApi.uploadLogo(form)
       if (data.logoUrl) {
         setLogoPreview(data.logoUrl)
         setSettings(s => ({ ...s, logoUrl: data.logoUrl }))
       }
       addToast('Logo uploaded', 'success')
+      setCropSrc(null)
     } catch {
       addToast('Logo upload failed', 'error')
+    } finally {
+      setUploading(false)
     }
   }
 
@@ -171,11 +254,11 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
         <div
           onClick={() => fileRef.current?.click()}
           className="w-20 h-20 rounded-full border-2 border-gold flex items-center justify-center cursor-pointer overflow-hidden shrink-0"
-          style={{ background: logoPreview ? 'transparent' : 'var(--gold-bg, #3a2e0a)' }}
+          style={{ background: logoSrc ? 'transparent' : 'var(--gold-bg, #3a2e0a)' }}
           title="Click to upload logo"
         >
-          {logoPreview ? (
-            <img src={logoPreview} alt="Logo" className="w-full h-full object-cover" />
+          {logoSrc ? (
+            <img src={logoSrc} alt="Logo" className="w-full h-full object-cover" />
           ) : (
             <span className="t-h1 text-gold">
               {initials}
@@ -186,10 +269,22 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
           <button className="btn btn-outline text-[12px]" onClick={() => fileRef.current?.click()}>
             Upload Logo
           </button>
-          <p className="mt-1 mb-0 text-[11px] text-ink3">PNG, JPG up to 2MB</p>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+          <p className="mt-1 mb-0 text-[11px] text-ink3">PNG, JPG up to 2MB · you can crop after selecting</p>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
         </div>
       </div>
+
+      <LogoCropModal
+        key={cropSrc || 'closed'}
+        src={cropSrc}
+        busy={uploading}
+        title="Crop logo"
+        cropShape="round"
+        confirmLabel="Crop & Upload"
+        busyLabel="Uploading…"
+        onCancel={() => setCropSrc(null)}
+        onComplete={uploadCropped}
+      />
 
       {/* Form grid */}
       <div className="grid grid-cols-2 gap-4">
@@ -1823,6 +1918,7 @@ const initBranding = {
 function BrandingTab({ settings, setSettings, addToast }) {
   const { setHotelName } = useHotelActions()
   const fileRef = useRef(null)
+  const [cropSrc, setCropSrc] = useState(null)
   const [branding, setBranding] = useState(() => {
     try { const r = localStorage.getItem(BRANDING_KEY); return r ? { ...initBranding, ...JSON.parse(r) } : initBranding }
     catch { return initBranding }
@@ -1832,8 +1928,17 @@ function BrandingTab({ settings, setSettings, addToast }) {
     const file = e.target.files?.[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => setBranding(b => ({ ...b, logoUrl: reader.result }))
+    reader.onload = () => setCropSrc(reader.result)
     reader.readAsDataURL(file)
+    e.target.value = '' // allow re-selecting the same file
+  }
+
+  // Branding logo lives in localStorage as a base64 data URL (no server upload).
+  async function applyCropped(blob) {
+    const dataUrl = await blobToDataUrl(blob)
+    setBranding(b => ({ ...b, logoUrl: dataUrl }))
+    setCropSrc(null)
+    addToast('Logo cropped — remember to Save', 'success')
   }
 
   function handleSave() {
@@ -1864,11 +1969,21 @@ function BrandingTab({ settings, setSettings, addToast }) {
             {branding.logoUrl && (
               <button className="btn btn-outline text-[12px] ml-2" onClick={() => setBranding(b => ({ ...b, logoUrl: '' }))}>Remove</button>
             )}
-            <p className="mt-1.5 mb-0 text-[11px] text-ink3">PNG or SVG with transparent background recommended.</p>
+            <p className="mt-1.5 mb-0 text-[11px] text-ink3">PNG or SVG with transparent background recommended · crop after selecting.</p>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} />
           </div>
         </div>
       </div>
+
+      <LogoCropModal
+        key={cropSrc || 'closed'}
+        src={cropSrc}
+        title="Crop logo"
+        cropShape="rect"
+        confirmLabel="Crop & Apply"
+        onCancel={() => setCropSrc(null)}
+        onComplete={applyCropped}
+      />
 
       <div className="card">
         <div className="card-header"><span className="card-title">Brand Text</span></div>

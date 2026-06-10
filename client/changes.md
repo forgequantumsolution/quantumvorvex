@@ -6,6 +6,64 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-10 · Wire Settings tabs to the real API + logo cropping
+
+## Summary
+The Settings page was mostly UI scaffolding — only Pricing Rules and Users & Access talked to the
+backend; the rest saved to in-memory state or `localStorage`. Wired every tab whose backend model
+already exists (Hotel Profile, Tax & Pricing, Room Config, Food Plans, Facilities/amenities) plus
+logo upload to the existing `settingsApi`. Also fixed the logo disappearing on refresh and added a
+proper crop step (pan/zoom, 1:1) before uploading — on both Hotel Profile and Branding.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- **Load contract fixed:** the mount effect read `data.settings`, but the controller returns
+  `{ hotel, roomTypes, foodPlans, amenities }` — so nothing loaded against the real server. Now reads
+  the real shape via `settingsApi.get()` and distributes it.
+- **Lifted shared state:** `roomTypes` / `foodPlans` / `amenities` now live in the `Settings` root and
+  pass down to their tabs, so rows carry real DB `cuid`s.
+- **Field renames to match Prisma** (state keys, handlers, JSX): `hotelName→name`,
+  `peakDaily→peakDailyRate`, `peakMonthly→peakMonthlyRate`, `oneTime→oneTimeRate`,
+  `weekly→weeklyRate`, `desc→description`, `daily→dailyRate`, `monthly→monthlyRate`.
+- **Save handlers wired** for Hotel Profile / Tax & Pricing / Room Config / Food Plans / Facilities →
+  `settingsApi.update(slice)` with success/error toasts; shared `SaveButton` shows a "Saving…" state.
+- **`stripForSave` / `isPersistedId`:** an id is sent only when it's a real cuid (so new rows and the
+  local seed defaults upsert by name instead of failing an update-by-id); drops UI-only fields (`count`).
+  New rows get a temporary `new-…` id used only as the React key.
+- UI-only fields with no DB column kept local: `totalRooms`, `floors`, `seasonalPricing`, the
+  Facilities free-text chip list.
+- **Logo persistence fix:** preview was seeded once via `useState(settings.logoUrl)` before the async
+  GET resolved, so it vanished on refresh. Now renders `logoPreview || settings.logoUrl`.
+- **Cropper:** added a reusable `LogoCropModal` (pan/zoom, 1:1, configurable shape/labels, keyed by
+  `src` to reset per image). Hotel Profile uploads the cropped square to `POST /settings/logo`;
+  Branding crops to a base64 data URL stored in `localStorage` (unchanged persistence model).
+
+### `src/api/mockData.js`
+- Reshaped the flat `SETTINGS` into `SETTINGS_HOTEL` + `SETTINGS_ROOM_TYPES` / `_FOOD_PLANS` /
+  `_AMENITIES` with DB field names; `GET /settings` now returns `{ hotel, roomTypes, foodPlans,
+  amenities }` and `PUT /settings` returns the success message — keeps `VITE_MOCK=true` consistent.
+
+### `src/utils/cropImage.js` (new)
+- `getCroppedBlob(src, pixelCrop)` — canvas crop → normalized 512×512 PNG Blob.
+- `blobToDataUrl(blob)` — Blob → base64 data URL (for the localStorage-stored Branding logo).
+
+### `tests/settings-tabs.spec.js` (new) + `tests/helpers.js`
+- New Playwright suite (real backend): edit round-trips with restore for each wired tab, logo
+  upload+crop+reload persistence, Branding local crop, and an add/delete flow exercising the temp-id
+  handling. Round-trips assert against the fresh `GET /settings` body (deterministic, avoids
+  controlled-input timing flakes).
+- `helpers.js` — scoped `login()`/`openPanel()` selectors to `#sidebar`; the new topbar also renders a
+  "Front Desk" label, which broke the old `getByText` (strict-mode, two matches).
+
+## Notes
+- Added dependency: **`react-easy-crop`** (`package.json`/lockfile).
+- Pairs with the server delete-diff change (see `../server/CHANGES.md`) so removing a row persists.
+- Hotel Profile and Branding still hold **two separate logos** (server `logoUrl` vs localStorage
+  base64). Consolidating onto one server logo is a possible follow-up.
+
+---
+
 # Session — 2026-06-10 · Proxy /uploads so document links resolve in dev
 
 ## Summary
@@ -105,8 +163,9 @@ of a silent logout.
 ## File changes
 
 ### `src/api/client.js`
-- 401 response interceptor — when the server returns `code: 'ERR_SESSION_SUPERSEDED'`, stash the
-  reason message in `sessionStorage` (`qv_logout_reason`) before triggering the existing
+- 401 response interceptor — for session-specific codes (`ERR_SESSION_SUPERSEDED` = logged in
+  elsewhere, or `ERR_SESSION_EXPIRED` = old/migrated token needing a fresh login), stash the
+  server's reason message in `sessionStorage` (`qv_logout_reason`) before triggering the existing
   `auth:unauthorized` logout flow. Other 401s behave exactly as before.
 
 ### `src/components/auth/LoginPage.jsx`

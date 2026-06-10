@@ -35,12 +35,14 @@ api.interceptors.response.use(
     const url = err.config?.url || ''
     const isAuthCall = /\/auth\/(login|me|otp|refresh)/.test(url)
     if (err.response?.status === 401 && !isAuthCall) {
-      // If the server rejected us because the account signed in elsewhere, stash the
-      // reason so <LoginPage/> can explain the logout instead of bouncing silently.
-      if (err.response?.data?.code === 'ERR_SESSION_SUPERSEDED' && typeof sessionStorage !== 'undefined') {
+      // For session-specific rejections (logged in elsewhere, or an expired/migrated
+      // token), stash the server's reason so <LoginPage/> can explain the logout
+      // instead of bouncing silently.
+      const code = err.response?.data?.code
+      if ((code === 'ERR_SESSION_SUPERSEDED' || code === 'ERR_SESSION_EXPIRED') && typeof sessionStorage !== 'undefined') {
         sessionStorage.setItem(
           'qv_logout_reason',
-          err.response.data.message || 'You were signed out because your account logged in on another device.',
+          err.response.data.message || 'Your session has expired. Please sign in again.',
         )
       }
       localStorage.removeItem('qv_token')

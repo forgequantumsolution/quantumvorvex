@@ -226,6 +226,7 @@ model BookingDocument {
   booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   docType    String
   url        String
+  verified   Boolean  @default(false)
   uploadedAt DateTime @default(now())
 
   @@index([bookingId])

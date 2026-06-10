@@ -37,6 +37,10 @@ function clearFailures(ip) {
   failedAttempts.delete(getAttemptKey(ip))
 }
 
+// One active session per user — only bump/track sessionVersion when enabled (production).
+// Off in local dev so test/demo logins don't churn the counter. Mirrors the middleware flag.
+const ENFORCE_SINGLE_SESSION = process.env.ENFORCE_SINGLE_SESSION === 'true'
+
 const COOKIE_OPTIONS = {
   httpOnly: true,
   secure:   process.env.NODE_ENV === 'production',
@@ -128,12 +132,17 @@ export const login = async (req, res) => {
     // Login success — clear failures, issue token
     clearFailures(ip)
 
-    // Bump sessionVersion so any token held by a previously logged-in device is now stale (one active session per user)
-    const { sessionVersion } = await prisma.user.update({
-      where:  { id: user.id },
-      data:   { sessionVersion: { increment: 1 } },
-      select: { sessionVersion: true },
-    })
+    // Single-session: bump sessionVersion so any token on a previously logged-in device
+    // goes stale. Only when enforcement is enabled (see ENFORCE_SINGLE_SESSION).
+    let sessionVersion
+    if (ENFORCE_SINGLE_SESSION) {
+      const bumped = await prisma.user.update({
+        where:  { id: user.id },
+        data:   { sessionVersion: { increment: 1 } },
+        select: { sessionVersion: true },
+      })
+      sessionVersion = bumped.sessionVersion
+    }
 
     const token = issueAuthToken(res, { ...user, sessionVersion })
     securityLog.loginSuccess(user.id, user.email, ip, ua)
@@ -322,12 +331,17 @@ export const verifyOtp = async (req, res) => {
 
     await prisma.loginOtp.update({ where: { id: record.id }, data: { usedAt: new Date() } })
 
-    // Bump sessionVersion so any token held by a previously logged-in device is now stale (one active session per user)
-    const { sessionVersion } = await prisma.user.update({
-      where:  { id: user.id },
-      data:   { sessionVersion: { increment: 1 } },
-      select: { sessionVersion: true },
-    })
+    // Single-session: bump sessionVersion so any token on a previously logged-in device
+    // goes stale. Only when enforcement is enabled (see ENFORCE_SINGLE_SESSION).
+    let sessionVersion
+    if (ENFORCE_SINGLE_SESSION) {
+      const bumped = await prisma.user.update({
+        where:  { id: user.id },
+        data:   { sessionVersion: { increment: 1 } },
+        select: { sessionVersion: true },
+      })
+      sessionVersion = bumped.sessionVersion
+    }
 
     const token = issueAuthToken(res, { ...user, sessionVersion })
     securityLog.loginSuccess(user.id, user.email, ip, ua)

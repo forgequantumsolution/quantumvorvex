@@ -5,22 +5,58 @@ Paths below are relative to `server/`.
 
 ---
 
-# Session — 2026-06-10 · Document viewing fixes (booking docs + static serving)
+# Session — 2026-06-10 · Settings update: delete rows absent from the payload
+
+## Summary
+Wiring the Settings tabs to `PUT /settings` (frontend change, see `../client/changes.md`) exposed a
+gap: `updateSettings` upserted the submitted room types / food plans / amenities but never deleted
+ones the user had removed in the UI — so deletions reappeared on reload. Each submitted collection is
+now treated as the full desired set.
+
+## File changes
+
+### `src/controllers/settingsController.js`
+- `updateSettings` — after upserting each collection, deletes the rows whose `name` is not in the
+  submitted array:
+  - `roomType.deleteMany({ name: { notIn }, rooms: { none: {} } })` — guarded by `rooms: none` so a
+    type still referenced by a `Room` is kept (avoids an FK violation) rather than erroring.
+  - `foodPlan.deleteMany` / `amenity.deleteMany` by `name notIn` — no FK relations, safe to remove.
+
+## Notes
+- `name` is the stable key here (it's `@unique` on all three models and matches the upsert-by-name path).
+- A room type in use is silently retained on save; surfacing a "can't delete — rooms assigned" message
+  would need richer per-row feedback (not done).
+- No schema/migration change.
+
+---
+
+# Session — 2026-06-10 · Document viewing + verification fixes (booking docs + static serving)
 
 ## Summary
 Documents uploaded during booking showed as "uploaded" but never appeared in the Documents panel,
-and even guest-uploaded docs couldn't be opened. Two backend causes: (1) `GET /documents` only read
-the `Document` table, but booking ID uploads land in the separate `BookingDocument` table; (2) the
-`/uploads` static handler pointed one directory above where files are actually written.
+guest-uploaded docs couldn't be opened, and verifying a booking doc 500'd. Causes: (1) `GET /documents`
+only read the `Document` table, but booking ID uploads land in the separate `BookingDocument` table;
+(2) the `/uploads` static handler pointed one directory above where files are actually written;
+(3) `PUT /documents/:id/verify` only updated `Document`, and `BookingDocument` had no `verified` column.
 
 ## File changes
+
+### `prisma/schema.prisma`
+- `BookingDocument` — added `verified Boolean @default(false)`. Migration:
+  `20260610143126_add_bookingdocument_verified` (additive, backfills existing rows — no data loss).
 
 ### `src/controllers/documentsController.js`
 - `getDocuments` — now also pulls each guest's bookings' `BookingDocument` rows (via
   `Booking.guestId → Guest`) and merges them into the per-guest `documents` array, normalized to the
-  same shape the client renders (`id`, `docType`, `url`, `uploadedAt`, `verified`). Booking docs get
-  `verified: false` (the model has no verification column) and a `source: 'booking'` tag.
-  `_count.documents` now reflects the combined total.
+  same shape the client renders (`id`, `docType`, `url`, `verified`, `uploadedAt`), each tagged
+  `source: 'booking'`. `verified` reflects the real column value. `_count.documents` is the combined total.
+- `verifyDocument` — two fixes:
+  - **Root cause of the 500:** the endpoint is called with no request body, and under Express 5
+    `req.body` is `undefined` for a bodyless request, so `const { verified } = req.body` threw before
+    any DB call. Now `req.body || {}`.
+  - The id may belong to either table. Now uses `updateMany` against `Document` first, then falls back
+    to `BookingDocument`; returns 404 only if neither matches. (`updateMany` returns a count instead of
+    throwing on no-match, replacing the prior throw-based P2025 handling.)
 
 ### `src/app.js`
 - `/uploads` static handler — files are written to `<server>/uploads` (multer's `path.resolve` is
@@ -28,10 +64,9 @@ the `Document` table, but booking ID uploads land in the separate `BookingDocume
   serves `<server>/uploads`. This had caused `ERR_NOT_FOUND` on every document/logo link.
 
 ## Notes
-- The "Verify" action hits `PUT /documents/:id/verify`, which updates the `Document` table — it will
-  404 for booking-doc ids. Booking docs display/open fine but can't be verified through the current
-  flow. A future fix would add a `verified` column to `BookingDocument` (or consolidate the two
-  upload paths) — see also the object-storage migration follow-up.
+- Requires `prisma generate` + a backend restart to pick up the regenerated client and new column.
+- Booking docs and guest KYC docs are now both viewable and verifiable through the same panel.
+- Uploaded files still live on server local disk (not the DB) — see the object-storage migration follow-up.
 
 ---
 
@@ -50,22 +85,35 @@ Frontend handling of the resulting 401 is logged in [../client/CHANGES.md](../cl
 - `User` — added `sessionVersion Int @default(0)`. Migration: `20260610091925_add_session_version`
   (additive, `@default(0)` backfills existing rows — no data loss).
 
+### `.env` / `.env.example`
+- Added `ENFORCE_SINGLE_SESSION` flag (default `false`) to both files. **Off in local dev** so
+  E2E/demo logins don't evict each other; set `true` in production. Gates both the version bump and
+  the middleware check — when off, auth is fully stateless (original behaviour, no per-request DB hit).
+
 ### `src/controllers/authController.js`
 - `issueAuthToken` — added `sessionVersion` to the JWT payload.
-- `login` and `verifyOtp` — after successful auth, atomically `increment` the user's
+- `login` and `verifyOtp` — when `ENFORCE_SINGLE_SESSION` is on, atomically `increment` the user's
   `sessionVersion` and sign the token with the new value. The increment is what makes any token
-  held by a previously logged-in device stale.
+  held by a previously logged-in device stale. When off, no bump (token carries no version).
 
 ### `src/middleware/auth.js`
-- `verifyToken` is now `async`. After `jwt.verify`, it looks up the user and:
+- `verifyToken` is now `async`. When `ENFORCE_SINGLE_SESSION` is on, after `jwt.verify` it looks up
+  the user and:
   - rejects if the user is missing/`inactive` → `401 ERR_SESSION_INVALID`;
+  - rejects a token with **no** `sessionVersion` claim (issued before this feature, or after a
+    DB reset/reseed) → `401 ERR_SESSION_EXPIRED` ("session expired, please sign in again") —
+    distinct copy so the migration logout isn't mislabelled as a takeover;
   - rejects if `user.sessionVersion !== decoded.sessionVersion` →
     `401 ERR_SESSION_SUPERSEDED` ("logged in on another device").
-- Cost: one indexed PK lookup per authenticated request (negligible at this scale).
+  - Cost: one indexed PK lookup per authenticated request (negligible at this scale).
+- When the flag is off, the whole block is skipped — no DB hit, no eviction.
 
 ## Notes
-- On first deploy, all pre-existing tokens lack a matching `sessionVersion` → every user is logged
-  out once and must sign in again. Expected.
+- **Why gated:** during development the owner account hit `sessionVersion = 51` because E2E/demo
+  logins each bumped it, evicting the real browser session "after a while." The flag keeps strict
+  single-session for production while letting dev/test logins coexist.
+- When first enabled in production, all pre-existing tokens lack a matching `sessionVersion` →
+  every user is logged out once and must sign in again. Expected.
 - The separate `Staff`/`StaffSession` auth system is unaffected — this covers the `User`/JWT flow only.
 
 ---
