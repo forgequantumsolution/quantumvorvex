@@ -2,9 +2,9 @@ import { useEffect } from 'react'
 
 /**
  * Tailwind dialog with a dimmed backdrop. Closes on ESC or backdrop click.
- * `size`: sm | md | lg. Provide `footer` for a sticky action row.
+ * `size`: sm | md | lg | xl. Provide `footer` for a sticky action row.
  */
-const SIZES = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl' }
+const SIZES = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-3xl', xl: 'max-w-5xl' }
 
 export default function Modal({ isOpen, onClose, title, subtitle, size = 'md', footer, children }) {
   useEffect(() => {

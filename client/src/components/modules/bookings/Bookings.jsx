@@ -4,6 +4,7 @@ import BookingsTable from './BookingsTable'
 import BookingForm from './BookingForm'
 import CancelModal from '../cancellations/CancelModal'
 import CheckOutModal from '../checkout/CheckOutModal'
+import InvoiceModal from './InvoiceModal'
 import { useToast } from '../../../hooks/useToast'
 import { usePrimaryAction } from '../../../store/hooks'
 import { bookingsApi } from '../../../api/client'
@@ -31,6 +32,7 @@ export default function Bookings() {
   const [showNew, setShowNew] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
   const [checkOutTarget, setCheckOutTarget] = useState(null)
+  const [invoiceTarget, setInvoiceTarget] = useState(null)
   const [busyId, setBusyId] = useState(null)
 
   const load = useCallback(async () => {
@@ -133,34 +135,6 @@ export default function Bookings() {
     }
   }
 
-  // Generate the GST tax invoice and open it in a new tab (print / save as PDF).
-  const handleInvoice = async (b) => {
-    setBusyId(b.id)
-    try {
-      const { data } = await bookingsApi.getInvoice(b.id)   // HTML blob
-      const url = URL.createObjectURL(data)
-      const win = window.open(url, '_blank')
-      if (!win) {
-        // Popup blocked — fall back to a direct download
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `invoice-${b.bookingNo}.html`
-        document.body.appendChild(a)
-        a.click()
-        a.remove()
-      }
-      setTimeout(() => URL.revokeObjectURL(url), 60000)
-    } catch (err) {
-      let msg = 'Could not generate invoice'
-      const d = err.response?.data
-      if (d instanceof Blob) { try { msg = JSON.parse(await d.text()).message || msg } catch { /* keep default */ } }
-      else if (d?.message) msg = d.message
-      toast(msg, 'error')
-    } finally {
-      setBusyId(null)
-    }
-  }
-
   const handleCancel = async ({ id, reason }) => {
     const b = bookings.find((x) => x.id === id)
     await runAction(id, () => bookingsApi.cancel(id, { reason }), `Booking ${b?.bookingNo || ''} cancelled`, 'error')
@@ -214,7 +188,7 @@ export default function Bookings() {
             onCheckOut={setCheckOutTarget}
             onConfirm={handleConfirm}
             onCancel={setCancelTarget}
-            onInvoice={handleInvoice}
+            onInvoice={setInvoiceTarget}
             emptyMessage={query ? 'No bookings match your search.' : 'Create a booking to get started.'}
           />
         </Card>
@@ -231,6 +205,11 @@ export default function Bookings() {
         submitting={busyId === checkOutTarget?.id}
         onClose={() => setCheckOutTarget(null)}
         onConfirm={handleCheckOut}
+      />
+      <InvoiceModal
+        isOpen={!!invoiceTarget}
+        booking={invoiceTarget}
+        onClose={() => setInvoiceTarget(null)}
       />
     </PageWrapper>
   )

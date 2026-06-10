@@ -6,6 +6,38 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-10 · Invoice preview modal + PDF download
+
+## Summary
+The Bookings invoice button blindly opened the invoice HTML in a new tab (or downloaded `.html` when
+pop-ups were blocked). Replaced it with an in-app preview modal that shows the invoice in an iframe and
+offers Print + Download — and the download is now a real **PDF** rendered by the backend (see
+`../server/CHANGES.md`), not raw HTML.
+
+## File changes
+
+### `src/components/modules/bookings/InvoiceModal.jsx` (new)
+- Fetches the invoice HTML via `bookingsApi.getInvoice(id)` (authenticated blob) and previews it in an
+  `<iframe>` using a blob object URL; revokes the URL on close.
+- **Print** — calls `contentWindow.print()` on the loaded preview (same-origin blob, no pop-up needed).
+- **Download PDF** — fetches `getInvoice(id, { format: 'pdf' })` and saves `invoice-<bookingNo>.pdf`,
+  with a "Preparing PDF…" button state and a toast on failure.
+- Shared `errorMessage()` helper parses the API's blob error bodies into a readable message.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- Removed the old `handleInvoice` (new-tab/HTML-download). The invoice button now opens the modal
+  (`onInvoice={setInvoiceTarget}`); rendered `<InvoiceModal>` alongside the other modals.
+
+### `src/components/ui-tw/Modal.jsx`
+- Added an `xl` size (`max-w-5xl`) so the invoice preview has room.
+
+## Notes
+- Preview is fast HTML-in-iframe; only the Download fetches the (slower) server-rendered PDF on click.
+- Replaces the unauthenticated `invoiceUrl` open path — preview/print/download all go through the
+  authenticated API client now.
+
+---
+
 # Session — 2026-06-10 · URL-based routing for Settings tabs
 
 ## Summary

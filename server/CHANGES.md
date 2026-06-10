@@ -5,6 +5,45 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-10 · Invoice PDF rendering (Puppeteer)
+
+## Summary
+The invoice endpoint only emitted HTML, so the client's "download" saved a `.html` file. Added a
+`format=pdf` mode that renders the existing invoice template to a real PDF via Puppeteer, returning
+`application/pdf`. Same template → the PDF is identical to the HTML preview.
+
+## File changes
+
+### `src/utils/pdf.js` (new)
+- `htmlToPdf(html, { baseUrl })` — launches/reuses a headless Chrome (relaunch on disconnect), injects a
+  `<base href="${baseUrl}/">` so the template's relative `/uploads/logo.png` resolves against the running
+  server, then `page.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true })`.
+- Chrome executable resolved from `PUPPETEER_EXECUTABLE_PATH` / `CHROME_PATH`, then common Win/Linux/macOS
+  paths (falls back to Puppeteer's own resolution).
+- `closePdfBrowser()` for best-effort shutdown.
+
+### `src/controllers/bookingsController.js`
+- `getBookingInvoice` — new `format=pdf` branch: renders the template HTML, converts via `htmlToPdf`
+  (passing `${req.protocol}://${req.get('host')}` as `baseUrl`), responds `application/pdf` inline. On
+  failure returns `500 { code: 'ERR_PDF_RENDER' }` with a "Chrome must be installed" hint.
+
+### `.npmrc` (new)
+- `puppeteer_skip_download=true` — we drive an installed Chrome rather than Puppeteer's bundled Chromium
+  (the bundled download was failing locally). Documents the env overrides + the "remove this for envs
+  without Chrome" escape hatch.
+
+### `package.json`
+- Added dependency **`puppeteer` ^25.1.0**.
+
+## Notes
+- **Deploy requirement:** with the skip-download flag, the server needs a Chrome/Chromium binary present
+  at runtime (set `PUPPETEER_EXECUTABLE_PATH` if non-standard), or remove the `.npmrc` line to let
+  Puppeteer bundle its own.
+- Verified locally: renders a valid PDF (`%PDF-` header) using the detected system Chrome.
+- HTML (`format=html`) and JSON (`format=json`) responses are unchanged.
+
+---
+
 # Session — 2026-06-10 · Log payment method at check-out + show it on the invoice
 
 ## Summary

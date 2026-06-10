@@ -4,6 +4,7 @@ import multer from 'multer'
 import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
 import { renderInvoiceHtml, buildInvoiceData } from '../utils/invoiceTemplate.js'
+import { htmlToPdf } from '../utils/pdf.js'
 
 const DAY_MS = 86400000
 
@@ -535,6 +536,25 @@ export const getBookingInvoice = async (req, res) => {
 
     if (format === 'json') {
       return res.status(200).json({ invoice: buildInvoiceData(booking, hotel) })
+    }
+
+    if (format === 'pdf') {
+      // Reuse the exact HTML template, then render it to PDF. A <base> href lets
+      // the template's relative /uploads/logo.png resolve against this server.
+      const baseUrl = `${req.protocol}://${req.get('host')}`
+      const html = renderInvoiceHtml(booking, hotel)
+      try {
+        const pdf = await htmlToPdf(html, { baseUrl })
+        res.setHeader('Content-Type', 'application/pdf')
+        res.setHeader('Content-Disposition', `inline; filename="invoice-${booking.bookingNo}.pdf"`)
+        return res.status(200).send(pdf)
+      } catch (err) {
+        logger.error('Invoice PDF render failed', { error: err.message })
+        return res.status(500).json({
+          message: 'Could not render the invoice PDF. Ensure Chrome is installed on the server.',
+          code: 'ERR_PDF_RENDER',
+        })
+      }
     }
 
     const html = renderInvoiceHtml(booking, hotel, { autoPrint })
