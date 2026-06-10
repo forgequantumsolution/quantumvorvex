@@ -27,6 +27,38 @@ files, so opening a document 404'd. The Vite proxy only forwarded `/api` to the 
 
 ---
 
+# Session — 2026-06-10 · Topbar breadcrumb (remove duplicate page heading)
+
+## Summary
+- Every page showed its title twice — a big topbar title plus the module's own in-page heading
+  (e.g. "reports" above "Reports & Analytics"). The topbar title is now a compact breadcrumb
+  (`Section › Page`, e.g. `Finance › Reports`), leaving each page with a single real heading.
+- Also fixes the topbar showing the raw panel id (lowercase "reports") — its old label map only
+  covered the six front-desk panels.
+
+## File changes
+
+### `src/utils/navigation.js` (new)
+- `NAV_SECTIONS` moved here from `Sidebar.jsx` — single source of truth for the nav structure
+  (sections, panel ids, labels, icons).
+- `PANEL_META` derived from it: panel id → `{ label, section }` lookup for the breadcrumb.
+
+### `src/components/layout/Sidebar.jsx`
+- Imports the shared `NAV_SECTIONS` instead of its own local copy (no visual change).
+
+### `src/components/layout/Topbar.jsx`
+- Removed the local 6-panel `PANEL_LABELS` map; uses `PANEL_META` (all panels) instead.
+- Replaced the `t-h2` page title with a breadcrumb: muted section name › current page
+  (slightly heavier text), date below as before. The section crumb is plain text (sections
+  aren't pages). Panels outside the nav structure fall back to a capitalized page name with
+  no section crumb.
+
+## Notes
+- Sidebar and breadcrumb can no longer drift apart when adding a panel (shared structure).
+- Verified with a green `npm run build`.
+
+---
+
 # Session — 2026-06-10 · URL-based panel navigation (refresh keeps the page)
 
 ## Summary
