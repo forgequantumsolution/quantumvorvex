@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   LuLayoutDashboard, LuCalendarCheck, LuLogIn, LuLogOut, LuCalendarX, LuWrench,
   LuUsers, LuBedDouble, LuFileText, LuUtensils, LuSparkles,
@@ -252,13 +252,26 @@ function CollapseButton({ collapsed, onClick }) {
 
 function NavItem({ item, isActive, collapsed, onClick }) {
   const [hovered, setHovered] = useState(false)
+  const itemRef = useRef(null)
+  // Viewport coords for the tooltip — fixed positioning escapes the
+  // sidebar's overflow-x-hidden clipping.
+  const [tipPos, setTipPos] = useState({ top: 0, left: 0 })
+
+  const handleMouseEnter = () => {
+    setHovered(true)
+    if (collapsed && itemRef.current) {
+      const rect = itemRef.current.getBoundingClientRect()
+      setTipPos({ top: rect.top + rect.height / 2, left: rect.right + 10 })
+    }
+  }
 
   return (
     <div
+      ref={itemRef}
       onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setHovered(false)}
-      title={collapsed ? item.label : undefined}
+      aria-label={collapsed ? item.label : undefined}
       className={`flex items-center cursor-pointer text-[13.5px] transition-all duration-[120ms] select-none ${collapsed ? 'justify-center gap-0 py-[11px] px-0' : 'justify-start gap-2.5 py-[9px] px-4'} ${
         isActive
           ? 'text-[#fff] border-l-2 border-l-[#c9a84c] bg-[rgba(201,168,76,0.08)] font-medium'
@@ -271,6 +284,18 @@ function NavItem({ item, isActive, collapsed, onClick }) {
         <item.Icon size={17} strokeWidth={isActive ? 2.3 : 1.9} />
       </span>
       {!collapsed && <span className="flex-1">{item.label}</span>}
+
+      {/* Tooltip — collapsed state only */}
+      {collapsed && hovered && (
+        <div
+          className="fixed -translate-y-1/2 z-[300] pointer-events-none whitespace-nowrap bg-[#1f1f1f] text-[#fff] text-[12px] font-medium px-2.5 py-1.5 rounded-md border border-[rgba(255,255,255,0.1)] shadow-[0_4px_14px_rgba(0,0,0,0.45)]"
+          style={{ top: tipPos.top, left: tipPos.left }}
+          role="tooltip"
+        >
+          {item.label}
+          <span className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-2 rotate-45 bg-[#1f1f1f] border-l border-b border-[rgba(255,255,255,0.1)]" />
+        </div>
+      )}
     </div>
   )
 }

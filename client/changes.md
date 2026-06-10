@@ -6,6 +6,29 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-10 · Collapsed-sidebar tooltips
+
+## Summary
+- The collapsed (desktop) sidebar showed only icons with no indication of which tab was which —
+  the native `title` tooltip was unreliable/slow. Added an instant custom tooltip showing the
+  tab label on hover.
+
+## File changes
+
+### `src/components/layout/Sidebar.jsx`
+- `NavItem` — replaced the native `title` attribute with a custom styled tooltip rendered on
+  hover when `collapsed`:
+  - Dark pill (`#1f1f1f`, white 12px label, subtle border + shadow) with a small arrow pointing
+    at the icon, matching the sidebar's dark/gold theme.
+  - Uses `position: fixed` with coordinates measured via `getBoundingClientRect()` on
+    mouse-enter — required because the sidebar has `overflow-x-hidden`, which would clip an
+    absolutely-positioned tooltip.
+  - Added `aria-label={item.label}` on collapsed items so screen readers still announce the tab
+    name (the icon has no visible text when collapsed).
+- The footer "Sign Out" button and avatar keep their existing native `title` tooltips (unchanged).
+
+---
+
 # Session — 2026-06-04 · Real-backend integration + Playwright E2E
 
 Backend-specific changes for this session are logged in [../server/CHANGES.md](../server/CHANGES.md).
