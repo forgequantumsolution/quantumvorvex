@@ -35,6 +35,14 @@ api.interceptors.response.use(
     const url = err.config?.url || ''
     const isAuthCall = /\/auth\/(login|me|otp|refresh)/.test(url)
     if (err.response?.status === 401 && !isAuthCall) {
+      // If the server rejected us because the account signed in elsewhere, stash the
+      // reason so <LoginPage/> can explain the logout instead of bouncing silently.
+      if (err.response?.data?.code === 'ERR_SESSION_SUPERSEDED' && typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(
+          'qv_logout_reason',
+          err.response.data.message || 'You were signed out because your account logged in on another device.',
+        )
+      }
       localStorage.removeItem('qv_token')
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('auth:unauthorized'))

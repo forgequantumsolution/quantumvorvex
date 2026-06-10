@@ -58,7 +58,7 @@ const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex'
  * Returns the raw token so it can also be sent in the JSON body.
  */
 function issueAuthToken(res, user) {
-  const payload = { userId: user.id, email: user.email, role: user.role }
+  const payload = { userId: user.id, email: user.email, role: user.role, sessionVersion: user.sessionVersion }
   const token   = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn:  '7d',
     algorithm:  'HS256',
@@ -128,7 +128,14 @@ export const login = async (req, res) => {
     // Login success — clear failures, issue token
     clearFailures(ip)
 
-    const token = issueAuthToken(res, user)
+    // Bump sessionVersion so any token held by a previously logged-in device is now stale (one active session per user)
+    const { sessionVersion } = await prisma.user.update({
+      where:  { id: user.id },
+      data:   { sessionVersion: { increment: 1 } },
+      select: { sessionVersion: true },
+    })
+
+    const token = issueAuthToken(res, { ...user, sessionVersion })
     securityLog.loginSuccess(user.id, user.email, ip, ua)
 
     return res.status(200).json({
@@ -315,7 +322,14 @@ export const verifyOtp = async (req, res) => {
 
     await prisma.loginOtp.update({ where: { id: record.id }, data: { usedAt: new Date() } })
 
-    const token = issueAuthToken(res, user)
+    // Bump sessionVersion so any token held by a previously logged-in device is now stale (one active session per user)
+    const { sessionVersion } = await prisma.user.update({
+      where:  { id: user.id },
+      data:   { sessionVersion: { increment: 1 } },
+      select: { sessionVersion: true },
+    })
+
+    const token = issueAuthToken(res, { ...user, sessionVersion })
     securityLog.loginSuccess(user.id, user.email, ip, ua)
 
     return res.status(200).json({

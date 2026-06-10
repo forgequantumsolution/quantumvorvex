@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, lazy, Suspense } from 'react'
-import { useAppSelector, useAuthActions } from './store/hooks'
+import { useAppSelector, useAuthActions, useUiActions } from './store/hooks'
+import { panelFromUrl } from './store/slices/uiSlice'
 import Layout from './components/layout/Layout'
 import Toast from './components/ui/Toast'
 import GlobalSearch from './components/ui/GlobalSearch'
@@ -103,6 +104,7 @@ export default function App() {
   const currentUser = useAppSelector((s) => s.auth.currentUser)
   const token       = useAppSelector((s) => s.auth.token)
   const { login } = useAuthActions()
+  const { setActivePanel } = useUiActions()
   const [showSetup, setShowSetup] = useState(false)
   // True when the user arrived via a password-reset email link (/reset-password?token=…)
   const [resetRoute, setResetRoute] = useState(
@@ -132,6 +134,31 @@ export default function App() {
 
   // Keyboard shortcuts
   useKeyboardShortcuts({})
+
+  const isAuthed = Boolean(currentUser && token)
+
+  // ── URL ↔ panel sync ─────────────────────────────────────────────────────────
+  // State → URL: keep the path at /<panel> so every page is addressable and a
+  // refresh restores it (activePanel itself initializes from the URL in uiSlice).
+  useEffect(() => {
+    if (!isAuthed || resetRoute) return
+    const path = `/${activePanel}`
+    if (window.location.pathname === path) return
+    if (panelFromUrl(null) === null) {
+      // Current path isn't a panel (e.g. '/' right after login) — normalize it
+      // without adding a history entry.
+      window.history.replaceState({ panel: activePanel }, '', path)
+    } else {
+      window.history.pushState({ panel: activePanel }, '', path)
+    }
+  }, [activePanel, isAuthed, resetRoute])
+
+  // URL → state: browser back/forward.
+  useEffect(() => {
+    const onPopState = () => setActivePanel(panelFromUrl('today'))
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [setActivePanel])
 
   // ── Password-reset deep link — show regardless of any existing session ───────
   if (resetRoute) {

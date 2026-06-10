@@ -5,6 +5,41 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-10 · Single active session per user (new-login-wins)
+
+## Summary
+Enforce **one active session per user** across all roles (owner/manager/staff). Logging in on a
+new device invalidates the session on any previous device — the old device is bounced to login on
+its next request. Implemented with a `sessionVersion` counter embedded in the JWT and validated
+server-side on every authenticated request (the previously stateless JWT could not be revoked).
+Frontend handling of the resulting 401 is logged in [../client/CHANGES.md](../client/CHANGES.md).
+
+## File changes
+
+### `prisma/schema.prisma`
+- `User` — added `sessionVersion Int @default(0)`. Migration: `20260610091925_add_session_version`
+  (additive, `@default(0)` backfills existing rows — no data loss).
+
+### `src/controllers/authController.js`
+- `issueAuthToken` — added `sessionVersion` to the JWT payload.
+- `login` and `verifyOtp` — after successful auth, atomically `increment` the user's
+  `sessionVersion` and sign the token with the new value. The increment is what makes any token
+  held by a previously logged-in device stale.
+
+### `src/middleware/auth.js`
+- `verifyToken` is now `async`. After `jwt.verify`, it looks up the user and:
+  - rejects if the user is missing/`inactive` → `401 ERR_SESSION_INVALID`;
+  - rejects if `user.sessionVersion !== decoded.sessionVersion` →
+    `401 ERR_SESSION_SUPERSEDED` ("logged in on another device").
+- Cost: one indexed PK lookup per authenticated request (negligible at this scale).
+
+## Notes
+- On first deploy, all pre-existing tokens lack a matching `sessionVersion` → every user is logged
+  out once and must sign in again. Expected.
+- The separate `Staff`/`StaffSession` auth system is unaffected — this covers the `User`/JWT flow only.
+
+---
+
 # Session — 2026-06-04 · Bug fixes surfaced during frontend integration
 
 While wiring the frontend modules to the real backend, the following backend issues were

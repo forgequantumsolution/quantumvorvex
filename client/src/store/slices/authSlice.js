@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit'
 import { authApi } from '../../api/client'
-import { setActivePanel } from './uiSlice'
+import { setActivePanel, panelFromUrl } from './uiSlice'
 
 const initialState = {
   token: null,
@@ -35,8 +35,9 @@ export default authSlice.reducer
 export const login = (token, user) => (dispatch) => {
   localStorage.setItem('qv_token', token)
   dispatch(setCredentials({ token, user }))
-  // Land on the first accessible front-desk panel (the app is scoped to five).
-  dispatch(setActivePanel('bookings'))
+  // Honour a deep link (e.g. /rooms opened while logged out); otherwise land
+  // on the default front-desk panel.
+  dispatch(setActivePanel(panelFromUrl('bookings')))
 }
 
 export const logout = () => async (dispatch) => {

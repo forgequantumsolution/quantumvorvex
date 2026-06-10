@@ -124,6 +124,13 @@ export default function LoginPage() {
   const [view, setView]     = useState('login')
   const [method, setMethod] = useState('password')   // 'password' | 'otp'
 
+  // Surface a logout reason left by the API client (read once at mount, then clear).
+  const [notice] = useState(() => {
+    const reason = sessionStorage.getItem('qv_logout_reason')
+    if (reason) sessionStorage.removeItem('qv_logout_reason')
+    return reason || ''
+  })
+
   const title =
     view === 'forgot' ? 'Reset Password' :
     method === 'otp'  ? 'Sign In with Code' :
@@ -162,6 +169,13 @@ export default function LoginPage() {
           </div>
 
           <div className="login-card-body">
+            {notice && (
+              <div className="flex items-start gap-2 mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                <span className="shrink-0 mt-0.5 inline-flex"><AlertIcon /></span>
+                <span>{notice}</span>
+              </div>
+            )}
+
             <div className="login-card-title-row">
               <h2 className="login-card-title">{title}</h2>
               <div className="login-status">

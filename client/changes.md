@@ -6,6 +6,66 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-10 · URL-based panel navigation (refresh keeps the page)
+
+## Summary
+- Panels were pure Redux state (`ui.activePanel`) — the URL never changed, so a refresh always
+  reset to the default panel. Each panel now has its own path (`/bookings`, `/rooms`, …):
+  refresh restores the page, back/forward work, and panel links are shareable/bookmarkable.
+  No react-router adoption needed — all navigation already funnels through `setActivePanel`.
+
+## File changes
+
+### `src/store/slices/uiSlice.js`
+- New exported helper `panelFromUrl(fallback)` — maps `window.location.pathname` to a panel id
+  (e.g. `/rooms` → `rooms`), validated against the full panel list (`ROLE_PANELS.owner` from
+  `utils/permissions.js`); returns `fallback` for unknown paths.
+- `initialState.activePanel` now initializes from `panelFromUrl('today')` instead of the
+  hardcoded `'today'` — this is the actual refresh fix.
+
+### `src/App.jsx`
+- State → URL effect: whenever `activePanel` changes (authenticated only, and not on the
+  `/reset-password` deep link), the address bar is updated to `/<panel>` — `replaceState` when
+  normalizing a non-panel path like `/` (no junk history entry), `pushState` otherwise.
+- URL → state effect: `popstate` listener dispatches `setActivePanel(panelFromUrl('today'))` so
+  browser back/forward switch panels.
+
+### `src/store/slices/authSlice.js`
+- `login` thunk — previously always forced `setActivePanel('bookings')`; now
+  `setActivePanel(panelFromUrl('bookings'))`, so a deep link opened while logged out
+  (e.g. `/rooms`) is honoured after sign-in.
+
+## Notes
+- Role checks unchanged — a staff user opening `/billing` still gets the Access Restricted screen.
+- Vite dev server already falls back to `index.html` for panel paths; the **production** host
+  needs an SPA fallback (serve `index.html` for unknown paths) or refreshing on `/rooms` 404s.
+- Verified with a green `npm run build`.
+
+# Session — 2026-06-10 · Single-session 401 handling (logged-in-elsewhere notice)
+
+## Summary
+Frontend half of the "one active session per user" feature (backend logged in
+[../server/CHANGES.md](../server/CHANGES.md)). When the server signs a device out because the
+account logged in elsewhere, the user now sees an explanatory banner on the login screen instead
+of a silent logout.
+
+## File changes
+
+### `src/api/client.js`
+- 401 response interceptor — when the server returns `code: 'ERR_SESSION_SUPERSEDED'`, stash the
+  reason message in `sessionStorage` (`qv_logout_reason`) before triggering the existing
+  `auth:unauthorized` logout flow. Other 401s behave exactly as before.
+
+### `src/components/auth/LoginPage.jsx`
+- Read `qv_logout_reason` once via a lazy `useState` initializer (read-and-clear; avoids a
+  `set-state-in-effect` lint violation and avoids persisting the notice in Redux).
+- Render an amber notice banner (Tailwind) at the top of the login card when a reason is present:
+  "You were signed out because your account logged in on another device."
+
+## Notes
+- The interceptor already exempts `/auth/*` calls, so a wrong password on the login form still
+  surfaces as a field error, not the logout banner.
+
 # Session — 2026-06-10 · Collapsed-sidebar tooltips
 
 ## Summary

@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
+import prisma from '../utils/prisma.js'
 
-export const verifyToken = (req, res, next) => {
+export const verifyToken = async (req, res, next) => {
   try {
     let token = null
 
@@ -20,6 +21,22 @@ export const verifyToken = (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+    // Enforce one active session per user: the token's sessionVersion must match the
+    // user's current value. A newer login elsewhere bumps it, making this token stale.
+    const user = await prisma.user.findUnique({
+      where:  { id: decoded.userId },
+      select: { sessionVersion: true, status: true },
+    })
+
+    if (!user || user.status === 'inactive') {
+      return res.status(401).json({ message: 'Account is unavailable. Please sign in again.', code: 'ERR_SESSION_INVALID' })
+    }
+
+    if (user.sessionVersion !== decoded.sessionVersion) {
+      return res.status(401).json({ message: 'You were signed out because your account logged in on another device.', code: 'ERR_SESSION_SUPERSEDED' })
+    }
+
     req.user = decoded
     next()
   } catch (err) {

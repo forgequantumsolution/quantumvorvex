@@ -240,15 +240,16 @@ model Notification {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      String   @default("staff")
-  status    String   @default("active")
-  phone     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  password       String
+  role           String   @default("staff")
+  status         String   @default("active")
+  phone          String?
+  sessionVersion Int      @default(0)   // bumped on every login; tokens carrying a stale value are rejected → one active session per user
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // ─── AUTH: password reset + passwordless OTP login ──────────────────────────────
