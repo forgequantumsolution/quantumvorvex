@@ -3,6 +3,7 @@ import fs from 'fs'
 import multer from 'multer'
 import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
+import { renderInvoiceHtml, buildInvoiceData } from '../utils/invoiceTemplate.js'
 
 const DAY_MS = 86400000
 
@@ -485,6 +486,54 @@ export const checkOutBooking = async (req, res) => {
     return res.status(200).json({ booking: result })
   } catch (err) {
     logger.error('checkOutBooking error', { error: err.message })
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /bookings/:id/invoice?format=html|json&print=1
+// Generates a GST tax invoice from a completed (checked-out) booking, pulling
+// guest/room/hotel data from the tables and rendering the standard template.
+export const getBookingInvoice = async (req, res) => {
+  try {
+    const { id } = req.params
+    const format = (req.query.format || 'html').toLowerCase()
+    const autoPrint = req.query.print === '1' || req.query.print === 'true'
+
+    const booking = await prisma.booking.findUnique({
+      where: { id },
+      include: { room: { include: { type: true } } },
+    })
+    if (!booking) return res.status(404).json({ message: 'Booking not found.' })
+
+    // Invoice/proforma is available once a booking is real (confirmed onward).
+    if (!['Confirmed', 'CheckedIn', 'CheckedOut'].includes(booking.status)) {
+      return res.status(400).json({
+        message: 'An invoice can only be generated for a confirmed, checked-in or checked-out booking.',
+        code: 'ERR_NOT_COMPLETE',
+        status: booking.status,
+      })
+    }
+
+    const hotel = (await prisma.hotel.findFirst()) || {}
+
+    if (format === 'json') {
+      return res.status(200).json({ invoice: buildInvoiceData(booking, hotel) })
+    }
+
+    const html = renderInvoiceHtml(booking, hotel, { autoPrint })
+
+    // This response is a standalone HTML document, not part of the SPA — relax
+    // the strict API CSP so its inline <style> (and optional auto-print script)
+    // can run when opened directly in a browser tab.
+    res.setHeader(
+      'Content-Security-Policy',
+      `default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'${autoPrint ? "; script-src 'unsafe-inline'" : ''}`
+    )
+    res.setHeader('Content-Type', 'text/html; charset=utf-8')
+    res.setHeader('Content-Disposition', `inline; filename="invoice-${booking.bookingNo}.html"`)
+    return res.status(200).send(html)
+  } catch (err) {
+    logger.error('getBookingInvoice error', { error: err.message })
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }

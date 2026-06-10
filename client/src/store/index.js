@@ -11,7 +11,7 @@ import {
 } from 'redux-persist'
 
 import uiReducer from './slices/uiSlice'
-import authReducer from './slices/authSlice'
+import authReducer, { clearCredentials } from './slices/authSlice'
 import hotelReducer from './slices/hotelSlice'
 import toastReducer from './slices/toastSlice'
 import opsReducer from './slices/opsSlice'
@@ -61,3 +61,13 @@ export const store = configureStore({
 })
 
 export const persistor = persistStore(store)
+
+// When the API client detects a 401 it emits `auth:unauthorized`. Clear the
+// persisted session so <App/> falls back to the login screen — no page reload,
+// which is what previously caused the reload-loop / flicker against a stale token.
+if (typeof window !== 'undefined') {
+  window.addEventListener('auth:unauthorized', () => {
+    const { token, currentUser } = store.getState().auth
+    if (token || currentUser) store.dispatch(clearCredentials())
+  })
+}

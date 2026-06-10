@@ -11,6 +11,7 @@ import {
   noShowBooking,
   deleteBooking,
   uploadBookingDocuments,
+  getBookingInvoice,
   uploadDocs,
 } from '../controllers/bookingsController.js'
 import { verifyToken, requireMinRole } from '../middleware/auth.js'
@@ -22,6 +23,9 @@ router.use(verifyToken)
 
 router.get('/',    getBookings)
 router.get('/:id', getBooking)
+
+// Tax invoice (HTML, print-ready) generated from a completed booking
+router.get('/:id/invoice', getBookingInvoice)
 router.post('/',   validate(schemas.createBooking), createBooking)
 router.put('/:id', validate(schemas.updateBooking), updateBooking)
 

@@ -109,6 +109,34 @@ export default function Bookings() {
   const handleCheckOut = (b) => runAction(b.id, () => bookingsApi.checkOut(b.id), `${b.guestName} checked out`)
   const handleConfirm  = (b) => runAction(b.id, () => bookingsApi.confirm(b.id), `Booking ${b.bookingNo} confirmed`)
 
+  // Generate the GST tax invoice and open it in a new tab (print / save as PDF).
+  const handleInvoice = async (b) => {
+    setBusyId(b.id)
+    try {
+      const { data } = await bookingsApi.getInvoice(b.id)   // HTML blob
+      const url = URL.createObjectURL(data)
+      const win = window.open(url, '_blank')
+      if (!win) {
+        // Popup blocked — fall back to a direct download
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `invoice-${b.bookingNo}.html`
+        document.body.appendChild(a)
+        a.click()
+        a.remove()
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60000)
+    } catch (err) {
+      let msg = 'Could not generate invoice'
+      const d = err.response?.data
+      if (d instanceof Blob) { try { msg = JSON.parse(await d.text()).message || msg } catch { /* keep default */ } }
+      else if (d?.message) msg = d.message
+      toast(msg, 'error')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   const handleCancel = async ({ id, reason }) => {
     const b = bookings.find((x) => x.id === id)
     await runAction(id, () => bookingsApi.cancel(id, { reason }), `Booking ${b?.bookingNo || ''} cancelled`, 'error')
@@ -162,6 +190,7 @@ export default function Bookings() {
             onCheckOut={handleCheckOut}
             onConfirm={handleConfirm}
             onCancel={setCancelTarget}
+            onInvoice={handleInvoice}
             emptyMessage={query ? 'No bookings match your search.' : 'Create a booking to get started.'}
           />
         </Card>

@@ -51,12 +51,9 @@ const INVOICES = [
   { id: uid('inv5'), invoiceNumber: 'INV-2026-005', guestId: uid('g6'), guestName: 'Kavya Reddy',      roomNumber: '101', stayType: 'daily',   period: '5 days',   rentAmount: 9000,  foodAmount: 1500, amenitiesAmount: 300, gstRate: 12, gstAmount: 1296, totalAmount: 12096, status: 'overdue', createdAt: d(30) },
 ]
 
-const BOOKINGS = [
-  { id: uid('b1'), guestName: 'Deepak Nair',    phone: '9812345678', roomNumber: '301', roomType: 'Executive', checkIn: d(-2), checkOut: d(-7),  adults: 2, children: 0, status: 'confirmed', advance: 5000,  source: 'Direct',   createdAt: d(5) },
-  { id: uid('b2'), guestName: 'Anjali Singh',   phone: '9823456789', roomNumber: '103', roomType: 'Standard',  checkIn: d(-1), checkOut: d(-3),  adults: 1, children: 0, status: 'confirmed', advance: 2000,  source: 'OTA',      createdAt: d(3) },
-  { id: uid('b3'), guestName: 'Farhan Ahmed',   phone: '9834567890', roomNumber: '201', roomType: 'Deluxe',    checkIn: d(-5), checkOut: d(-10), adults: 2, children: 1, status: 'pending',   advance: 0,     source: 'Phone',    createdAt: d(2) },
-  { id: uid('b4'), guestName: 'Neha Joshi',     phone: '9845678901', roomNumber: '302', roomType: 'Executive', checkIn: d(-7), checkOut: d(-14), adults: 2, children: 0, status: 'confirmed', advance: 10000, source: 'Website',  createdAt: d(1) },
-]
+// Seed booking data removed — bookings now come from the real API/database.
+// (Only used if VITE_MOCK=true; left empty so no demo bookings ever appear.)
+const BOOKINGS = []
 
 const NOTIFICATIONS = [
   { id: uid('n1'), type: 'warn',    title: 'Room 105 Maintenance Due',  message: 'AC servicing overdue by 3 days.',          createdAt: d(0), dismissed: false },
@@ -206,7 +203,7 @@ export async function getMockResponse(method, url) {
 
   // Bookings
   if (path === '/bookings' && m === 'get')  return { bookings: BOOKINGS, total: BOOKINGS.length }
-  if (path === '/bookings' && m === 'post') return { booking: BOOKINGS[0], message: 'Booking created.' }
+  if (path === '/bookings' && m === 'post') return { booking: { id: uid('bnew'), status: 'Confirmed' }, message: 'Booking created.' }
   if (path.match(/^\/bookings\/[^/]+$/) && m === 'put') return { booking: BOOKINGS[0], message: 'Updated.' }
 
   // Documents

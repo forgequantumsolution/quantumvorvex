@@ -21,16 +21,28 @@ if (MOCK) {
     const data = await getMockResponse(config.method, config.url)
     return { data, status: 200, statusText: 'OK', headers: {}, config, request: {} }
   }
-} else {
-  // Real 401 redirect only in production mode
-  api.interceptors.response.use(
-    res => res,
-    err => {
-      if (err.response?.status === 401) window.location.href = '/login'
-      return Promise.reject(err)
-    }
-  )
 }
+
+// ── 401 handling ──────────────────────────────────────────────────────────────
+// On any 401 (missing / expired / invalid token) clear the stored session and
+// notify the store to drop its credentials. The app then re-renders <LoginPage/>.
+// We deliberately do NOT use window.location.href — a hard navigation reload-loops
+// against the persisted session and causes the page to flicker. Auth endpoints are
+// exempt so a wrong password on the login form surfaces as an error, not a wipe.
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    const url = err.config?.url || ''
+    const isAuthCall = /\/auth\/(login|me|otp|refresh)/.test(url)
+    if (err.response?.status === 401 && !isAuthCall) {
+      localStorage.removeItem('qv_token')
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+      }
+    }
+    return Promise.reject(err)
+  }
+)
 
 export default api
 
@@ -69,6 +81,11 @@ export const bookingsApi = {
   noShow:   (id)       => api.post(`/bookings/${id}/no-show`),
   remove:   (id)       => api.delete(`/bookings/${id}`),
   uploadDocuments: (id, form) => api.post(`/bookings/${id}/documents`, form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  // Tax invoice for a completed booking. Returns invoice HTML (responseType blob);
+  // pass { format: 'json' } for the structured data instead.
+  getInvoice: (id, params) => api.get(`/bookings/${id}/invoice`, { params, responseType: 'blob' }),
+  // Direct URL to open/print the invoice in a new tab.
+  invoiceUrl: (id) => `${api.defaults.baseURL}/bookings/${id}/invoice?print=1`,
 }
 
 export const documentsApi = {
