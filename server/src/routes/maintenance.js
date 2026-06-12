@@ -9,9 +9,15 @@ import {
   deleteRequest,
   getSchedules,
   createSchedule,
+  getPublicRoom,
+  createGuestRequest,
 } from '../controllers/maintenanceController.js'
 
 const router = express.Router()
+
+// ── Public guest QR endpoints (NO auth) — must precede verifyToken ────────────
+router.get('/public/room', getPublicRoom)
+router.post('/public', validate(schemas.createGuestMaintenanceRequest), createGuestRequest)
 
 router.use(verifyToken)
 

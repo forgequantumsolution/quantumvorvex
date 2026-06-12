@@ -57,6 +57,7 @@ model RoomType {
 model Room {
   id                 String              @id @default(cuid())
   number             String              @unique
+  qrToken            String?             @unique
   typeId             String
   type               RoomType            @relation(fields: [typeId], references: [id])
   floor              Int                 @default(1)

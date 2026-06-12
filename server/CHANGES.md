@@ -5,6 +5,55 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-12 · Guest Maintenance Tickets via In-Room QR Code
+
+## Summary
+Added a public (unauthenticated) entry point so guests can file a maintenance ticket by scanning a
+per-room QR code. Each room gets a unique `qrToken`; the guest page resolves the room from the token
+and creates a ticket through the existing maintenance pipeline. `reportedBy`, `priority`, and `status`
+are forced server-side and never trusted from the client. Frontend is logged in `../client/changes.md`.
+
+## File changes
+
+### `prisma/schema.prisma`
+- `Room` — added `qrToken String? @unique`. Migration `20260612000000_add_room_qr_token` (additive,
+  nullable + unique index — no data loss).
+
+### `src/controllers/roomsController.js`
+- Added `generateQrToken()` (16-byte hex via `crypto`). New rooms are created with a `qrToken`.
+
+### `src/controllers/maintenanceController.js`
+- `getPublicRoom` — `GET /maintenance/public/room?t=<token>`: resolves a room by `qrToken` so the
+  guest page can confirm the room before submitting.
+- `createGuestRequest` — `POST /maintenance/public`: creates a ticket from a guest scan, forcing
+  `reportedBy: "Guest – Room <n>"`, `priority: "Medium"`, `status: "Open"`, and raising a notification.
+
+### `src/routes/maintenance.js`
+- Mounted `GET /public/room` and `POST /public` **before** `router.use(verifyToken)` so they stay public.
+
+### `src/app.js`
+- Moved the `/api/v1/maintenance` mount **above** the bare-prefix `app.use('/api/v1', foodPlansRoutes)`.
+  `foodPlansRoutes` is mounted at `/api/v1` and calls `router.use(verifyToken)` on its whole router, so
+  it intercepted every `/api/v1/*` request registered after it — which 401'd the new public guest QR
+  routes. Reordering lets the specific `/maintenance` prefix match first. (Latent footgun for any future
+  public route registered after the food router; left a comment.)
+
+### `src/middleware/validate.js`
+- Added `createGuestMaintenanceRequest` schema: `{ qrToken, category, title, description? }`.
+
+### `scripts/backfill-room-qr-tokens.js` (new)
+- Idempotent one-off: assigns a `qrToken` to any existing room missing one.
+
+## Manual steps (run once)
+- Restart the backend, then `npx prisma generate` (regenerates the Prisma client for `qrToken`).
+- `node scripts/backfill-room-qr-tokens.js` to give existing rooms a token.
+
+## Notes
+- `POST /maintenance/public` relies on the shared `apiLimiter`; consider a tighter per-IP limit to
+  deter QR-photo spam.
+
+---
+
 # Session — 2026-06-10 · Invoice PDF rendering (Puppeteer)
 
 ## Summary

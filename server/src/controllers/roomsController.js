@@ -1,4 +1,8 @@
+import crypto from 'crypto'
 import prisma from '../utils/prisma.js'
+
+// Unguessable per-room token embedded in the room's maintenance QR code.
+export const generateQrToken = () => crypto.randomBytes(16).toString('hex')
 
 // GET /rooms
 export const getRooms = async (req, res) => {
@@ -57,6 +61,7 @@ export const createRoom = async (req, res) => {
         dailyRate: dailyRate || roomType.dailyRate,
         monthlyRate: monthlyRate || roomType.monthlyRate,
         typeId: roomType.id,
+        qrToken: generateQrToken(),
       },
       include: { type: true },
     })

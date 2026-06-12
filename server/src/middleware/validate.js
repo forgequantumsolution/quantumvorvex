@@ -278,6 +278,16 @@ export const schemas = {
     photoUrl:    z.string().max(500).optional().nullable(),
   }),
 
+  // Guest-submitted ticket via room QR code (public, unauthenticated).
+  // The room is resolved server-side from qrToken; priority/reportedBy/status
+  // are never trusted from the client.
+  createGuestMaintenanceRequest: z.object({
+    qrToken:     z.string().min(8, 'Invalid QR code').max(128),
+    category:    z.enum(['Plumbing', 'Electrical', 'HVAC', 'Furniture', 'Housekeeping', 'Other']).default('Other'),
+    title:       z.string().min(2, 'Please describe the issue').max(120).trim(),
+    description: z.string().max(1000).optional().nullable(),
+  }),
+
   updateMaintenanceRequest: z.object({
     category:    z.enum(['Plumbing', 'Electrical', 'HVAC', 'Furniture', 'Housekeeping', 'Other']).optional(),
     title:       z.string().min(2).max(120).trim().optional(),

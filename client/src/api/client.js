@@ -139,6 +139,9 @@ export const maintenanceApi = {
   remove:    (id)       => api.delete(`/maintenance/${id}`),
   schedules:      ()     => api.get('/maintenance/schedule'),
   createSchedule: (data) => api.post('/maintenance/schedule', data),
+  // Public guest QR flow (no auth header needed, but harmless if present)
+  getPublicRoom: (token) => api.get('/maintenance/public/room', { params: { t: token } }),
+  createPublic:  (data)  => api.post('/maintenance/public', data),
 }
 
 export const housekeepingApi = {

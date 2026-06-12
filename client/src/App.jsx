@@ -10,6 +10,7 @@ import InstallPrompt from './components/ui/InstallPrompt'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import SetupWizard from './components/modules/setup/SetupWizard'
 import GuestPortal from './components/modules/portal/GuestPortal'
+import GuestMaintenanceForm from './components/modules/maintenance/GuestMaintenanceForm'
 import LoginPage from './components/auth/LoginPage'
 import ResetPasswordPage from './components/auth/ResetPasswordPage'
 // import LandingPage from './components/auth/LandingPage'
@@ -106,6 +107,10 @@ export default function App() {
   const [resetRoute, setResetRoute] = useState(
     () => typeof window !== 'undefined' && window.location.pathname === '/reset-password'
   )
+  // True when a guest scanned a room maintenance QR (/report?t=…) — public, no login.
+  const [reportRoute] = useState(
+    () => typeof window !== 'undefined' && window.location.pathname === '/report'
+  )
   const exitResetRoute = () => {
     window.history.replaceState({}, '', '/')
     setResetRoute(false)
@@ -155,6 +160,16 @@ export default function App() {
     window.addEventListener('popstate', onPopState)
     return () => window.removeEventListener('popstate', onPopState)
   }, [setActivePanel])
+
+  // ── Guest maintenance QR deep link — public, shown before any auth gate ──────
+  if (reportRoute) {
+    return (
+      <>
+        <GuestMaintenanceForm />
+        <Toast />
+      </>
+    )
+  }
 
   // ── Password-reset deep link — show regardless of any existing session ───────
   if (resetRoute) {

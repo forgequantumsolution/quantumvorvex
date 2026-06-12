@@ -6,6 +6,40 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-12 · Guest Maintenance Tickets via In-Room QR Code
+
+## Summary
+Guests can now report a maintenance issue by scanning a QR code in their room — no login, no app.
+Each room has a unique `qrToken`; the QR points to `/report?t=<token>`, a standalone public page that
+resolves the room, lets the guest pick a category and describe the issue, and files a ticket straight
+into the existing staff Maintenance dashboard (flagged `Guest – Room <n>`). Staff generate/print the
+per-room QR sticker from the Rooms module.
+
+## File changes
+
+### `src/components/modules/maintenance/GuestMaintenanceForm.jsx` (new)
+- Mobile-first public page reached at `/report?t=<token>`. Reads the token from the URL, calls
+  `maintenanceApi.getPublicRoom` to confirm the room, then submits via `maintenanceApi.createPublic`.
+  Shows a thank-you screen with the ticket reference. No auth, rendered outside the app shell.
+
+### `src/App.jsx`
+- Added a `reportRoute` early-return (mirrors the existing `resetRoute` pattern) so `/report` renders
+  `GuestMaintenanceForm` before any authentication gate.
+
+### `src/api/client.js`
+- Added `maintenanceApi.getPublicRoom(token)` and `maintenanceApi.createPublic(data)` hitting the new
+  public `/maintenance/public/*` endpoints.
+
+### `src/components/modules/rooms/Rooms.jsx`
+- Added a **Maintenance QR** action in the room detail modal that opens a printable sticker
+  (`QRCodeSVG` from `qrcode.react`) encoding `<origin>/report?t=<qrToken>`, with a print-sticker button.
+- `normalizeRoom` now carries `qrToken` through from the API.
+
+### `package.json`
+- Added `qrcode.react` dependency.
+
+---
+
 # Session — 2026-06-12 · Fold Check-In & Check-Out into Bookings + Today
 
 ## Summary
