@@ -26,8 +26,6 @@ function todayLabel() {
 const PRIMARY_ACTIONS = {
   today:         { label: 'New Booking',   target: 'bookings'      },
   bookings:      { label: 'New Booking',   target: 'bookings'      },
-  checkin:       { label: 'Check In',      target: 'checkin'       },
-  checkout:      { label: 'Check Out',     target: 'checkout'      },
   cancellations: { label: 'Cancel Booking', target: 'cancellations' },
   maintenance:   { label: 'New Ticket',    target: 'maintenance'   },
 }

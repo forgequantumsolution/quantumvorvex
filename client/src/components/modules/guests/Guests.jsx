@@ -542,7 +542,7 @@ function EditGuestModal({ guest, onClose, onSave }) {
 
 export default function Guests() {
   const addToast = useToast()
-  const { setActivePanel } = useUiActions()
+  const { navigateTo } = useUiActions()
 
   const [guests, setGuests] = useState([])
   const [loading, setLoading] = useState(true)
@@ -627,7 +627,7 @@ export default function Guests() {
         <div className="flex gap-2">
           <button className="btn btn-outline btn-sm" onClick={load} disabled={loading}>↻ Refresh</button>
           <button className="btn btn-outline btn-sm" onClick={() => exportGuestCSV(filtered)}>↓ Export CSV</button>
-          <button className="btn btn-primary" onClick={() => setActivePanel('checkin')}>+ Check-In</button>
+          <button className="btn btn-primary" onClick={() => navigateTo({ panel: 'bookings', params: { tab: 'Upcoming' } })}>+ Check-In</button>
         </div>
       </div>
 

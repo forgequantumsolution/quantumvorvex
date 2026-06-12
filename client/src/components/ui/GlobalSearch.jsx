@@ -6,7 +6,6 @@ const PANELS = [
   { id: 'rooms', label: 'Rooms', meta: 'Room inventory management', icon: '⊟' },
   { id: 'floorplan', label: 'Floor Plan', meta: 'Visual layout by floor', icon: '◫' },
   { id: 'reports', label: 'Reports', meta: 'Revenue & occupancy analytics', icon: '◈' },
-  { id: 'checkin', label: 'Check-In', meta: 'New guest check-in wizard', icon: '↗' },
   { id: 'guests', label: 'All Guests', meta: 'Guest registry', icon: '◎' },
   { id: 'bookings', label: 'Bookings', meta: 'Advance reservations', icon: '◷' },
   { id: 'documents', label: 'Documents', meta: 'KYC verification', icon: '◫' },

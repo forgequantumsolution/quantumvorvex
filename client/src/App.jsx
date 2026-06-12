@@ -18,11 +18,9 @@ import { MOCK_USER, MOCK_TOKEN } from './api/mockData.js'
 
 const IS_MOCK = import.meta.env.VITE_MOCK === 'true'
 
-// Lazy load the five front-desk modules for performance
+// Lazy load the front-desk modules for performance
 const Today         = lazy(() => import('./components/modules/today/Today'))
 const Bookings      = lazy(() => import('./components/modules/bookings/Bookings'))
-const CheckIn       = lazy(() => import('./components/modules/checkin/CheckIn'))
-const CheckOut      = lazy(() => import('./components/modules/checkout/CheckOut'))
 const Cancellations = lazy(() => import('./components/modules/cancellations/Cancellations'))
 const Maintenance   = lazy(() => import('./components/modules/maintenance/Maintenance'))
 const Housekeeping  = lazy(() => import('./components/modules/housekeeping/Housekeeping'))
@@ -83,8 +81,6 @@ function AccessDenied({ panel }) {
 const PANEL_MAP = {
   today:         Today,
   bookings:      Bookings,
-  checkin:       CheckIn,
-  checkout:      CheckOut,
   cancellations: Cancellations,
   maintenance:   Maintenance,
   housekeeping:  Housekeeping,
