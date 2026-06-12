@@ -156,8 +156,12 @@ app.use('/api/v1/documents',     apiLimiter, documentsRoutes)
 app.use('/api/v1/settings',      apiLimiter, settingsRoutes)
 app.use('/api/v1/notifications', apiLimiter, notificationsRoutes)
 app.use('/api/v1/reports',       apiLimiter, reportsRoutes)
-app.use('/api/v1',               apiLimiter, foodPlansRoutes)
+// NOTE: maintenance is mounted before the bare-prefix foodPlansRoutes below.
+// foodPlansRoutes is mounted at '/api/v1' and applies verifyToken to its whole
+// router, so it intercepts every /api/v1/* request registered after it — which
+// would 401 the public guest QR routes (/api/v1/maintenance/public/*).
 app.use('/api/v1/maintenance',   apiLimiter, maintenanceRoutes)
+app.use('/api/v1',               apiLimiter, foodPlansRoutes)
 app.use('/api/v1/housekeeping',  apiLimiter, housekeepingRoutes)
 app.use('/api/v1/staff',         apiLimiter, staffRoutes)
 app.use('/api/v1/pricing',       apiLimiter, pricingRoutes)

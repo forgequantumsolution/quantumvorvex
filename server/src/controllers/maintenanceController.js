@@ -83,6 +83,62 @@ export const createRequest = async (req, res) => {
   }
 }
 
+// GET /maintenance/public/room?t=<qrToken>  (public — no auth)
+// Lets the guest QR page confirm the room before the guest submits a ticket.
+export const getPublicRoom = async (req, res) => {
+  try {
+    const token = req.query.t
+    if (!token) return res.status(400).json({ message: 'Missing QR token.', code: 'ERR_QR_MISSING' })
+    const room = await prisma.room.findUnique({
+      where: { qrToken: String(token) },
+      select: { number: true, floor: true },
+    })
+    if (!room) return res.status(404).json({ message: 'This QR code is not recognised.', code: 'ERR_QR_INVALID' })
+    res.json({ room })
+  } catch (e) {
+    logger.error('getPublicRoom error', { error: e.message })
+    res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// POST /maintenance/public  (public — no auth)
+// A guest scans the in-room QR and reports an issue. Room is resolved from the
+// token; reportedBy/priority/status are forced server-side and never trusted.
+export const createGuestRequest = async (req, res) => {
+  try {
+    const { qrToken, category, title, description } = req.body
+    const room = await prisma.room.findUnique({ where: { qrToken } })
+    if (!room) return res.status(404).json({ message: 'This QR code is not recognised.', code: 'ERR_QR_INVALID' })
+
+    const ticketNo = await generateTicketNo()
+    const request = await prisma.maintenanceRequest.create({
+      data: {
+        ticketNo,
+        roomId: room.id,
+        category: category || 'Other',
+        issueType: category || 'Other',
+        title,
+        description: description ?? null,
+        priority: 'Medium',
+        reportedBy: `Guest – Room ${room.number}`,
+        status: 'Open',
+      },
+      include,
+    })
+
+    // Surface guest-reported issues to the team.
+    await prisma.notification.create({
+      data: { type: 'info', message: `Guest reported: ${title} in Room ${room.number} (${ticketNo})` },
+    })
+
+    logger.info('Guest maintenance ticket created', { event: 'MAINTENANCE', ticketNo, source: 'guest-qr' })
+    res.status(201).json({ ticketNo, room: { number: room.number } })
+  } catch (e) {
+    logger.error('createGuestRequest error', { error: e.message })
+    res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
 // PUT /maintenance/:id
 export const updateRequest = async (req, res) => {
   try {

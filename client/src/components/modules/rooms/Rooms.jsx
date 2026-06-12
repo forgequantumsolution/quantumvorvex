@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Button from '../../ui/Button'
@@ -14,7 +15,12 @@ const normalizeRoom = (r) => ({
   type: r.type?.name || (typeof r.type === 'string' ? r.type : 'Standard'),
   dailyRate: r.dailyRate,
   monthlyRate: r.monthlyRate,
+  qrToken: r.qrToken,
 })
+
+// Public URL a guest reaches when scanning the room's maintenance QR.
+const reportUrl = (qrToken) =>
+  `${typeof window !== 'undefined' ? window.location.origin : ''}/report?t=${qrToken}`
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const STATUS_BADGE = {
@@ -73,7 +79,7 @@ function KanbanColumn({ title, rooms, badgeType, onSelect }) {
 }
 
 // ─── Room Detail Modal Content ────────────────────────────────────────────────
-function RoomDetail({ room, onClose, onStatusChange }) {
+function RoomDetail({ room, onClose, onStatusChange, onShowQr }) {
   if (!room) return null
 
   const badgeType = STATUS_BADGE[room.status] || 'grey'
@@ -147,9 +153,62 @@ function RoomDetail({ room, onClose, onStatusChange }) {
               Mark Reserved
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={() => onShowQr(room)}>
+            ▦ Maintenance QR
+          </Button>
         </div>
       </div>
     </>
+  )
+}
+
+// ─── Room QR Code (maintenance) ───────────────────────────────────────────────
+function RoomQrCode({ room }) {
+  if (!room) return null
+
+  if (!room.qrToken) {
+    return (
+      <p className="t-sm text-ink3 text-center py-6 m-0">
+        This room has no QR token yet. Run the backfill script, or re-create the room.
+      </p>
+    )
+  }
+
+  const url = reportUrl(room.qrToken)
+
+  // Print just the sticker (QR + room number) in an isolated window.
+  const handlePrint = () => {
+    const svg = document.getElementById('room-qr-svg')?.outerHTML || ''
+    const win = window.open('', '_blank', 'width=420,height=560')
+    if (!win) return
+    win.document.write(`
+      <html>
+        <head><title>Room ${room.number} — Report an Issue</title></head>
+        <body style="margin:0;font-family:system-ui,sans-serif;text-align:center;padding:40px">
+          <h2 style="margin:0 0 4px">Room ${room.number}</h2>
+          <p style="margin:0 0 24px;color:#555;font-size:14px">Scan to report a maintenance issue</p>
+          ${svg}
+          <p style="margin:24px 0 0;color:#888;font-size:11px">No app or login needed</p>
+        </body>
+      </html>`)
+    win.document.close()
+    win.focus()
+    win.print()
+  }
+
+  return (
+    <div className="text-center">
+      <p className="t-sm text-ink3 mb-4">
+        Print this and place it in the room. Guests scan it to report a maintenance issue — no login needed.
+      </p>
+      <div className="inline-flex bg-white p-4 rounded-lg border border-line">
+        <QRCodeSVG id="room-qr-svg" value={url} size={200} level="M" includeMargin />
+      </div>
+      <p className="t-xs text-ink3 break-all mt-3">{url}</p>
+      <div className="mt-4">
+        <Button variant="primary" onClick={handlePrint}>🖨 Print sticker</Button>
+      </div>
+    </div>
   )
 }
 
@@ -204,6 +263,7 @@ export default function Rooms() {
   const [search, setSearch]           = useState('')
   const [view, setView]               = useState('grid')   // 'grid' | 'kanban'
   const [selectedRoom, setSelectedRoom] = useState(null)
+  const [qrRoom, setQrRoom]           = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [addForm, setAddForm]         = useState(EMPTY_FORM)
 
@@ -436,7 +496,17 @@ export default function Rooms() {
           room={selectedRoom}
           onClose={() => setSelectedRoom(null)}
           onStatusChange={handleStatusChange}
+          onShowQr={(room) => { setSelectedRoom(null); setQrRoom(room) }}
         />
+      </Modal>
+
+      {/* ── Maintenance QR Modal ────────────────────────────────────────────── */}
+      <Modal
+        isOpen={!!qrRoom}
+        onClose={() => setQrRoom(null)}
+        title={qrRoom ? `Room ${qrRoom.number} — Maintenance QR` : ''}
+      >
+        <RoomQrCode room={qrRoom} />
       </Modal>
 
       {/* ── Add Room Modal ──────────────────────────────────────────────────── */}
