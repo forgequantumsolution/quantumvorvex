@@ -3,7 +3,7 @@ import { useUiActions } from '../store/hooks'
 
 // Keyboard shortcuts:
 //   D = dashboard      R = rooms        F = floorplan
-//   T = reports        C = checkin      G = guests
+//   T = reports        C = bookings     G = guests
 //   B = billing        S = settings     M = maintenance
 //   H = housekeeping
 //   Shift+S = staff
@@ -18,7 +18,7 @@ const PANEL_MAP = {
   r: 'rooms',
   f: 'floorplan',
   t: 'reports',
-  c: 'checkin',
+  c: 'bookings',
   g: 'guests',
   b: 'billing',
   s: 'settings',

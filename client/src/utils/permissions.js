@@ -24,7 +24,7 @@ export const ROLE_COLORS = {
 
 // Panels each role can access. Panels are added here as their modules are
 // wired to the real backend (see docs/FRONTEND_API_PLAN.md).
-const FRONT_DESK_PANELS = ['today', 'bookings', 'checkin', 'checkout', 'cancellations', 'maintenance']
+const FRONT_DESK_PANELS = ['today', 'bookings', 'cancellations', 'maintenance']
 const OPERATIONS_PANELS = ['guests', 'rooms', 'housekeeping']
 // Owner/manager panels (staff excluded).
 const MANAGER_PANELS = ['documents', 'food', 'billing', 'reports', 'settings']

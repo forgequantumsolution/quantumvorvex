@@ -6,6 +6,69 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-12 · Fold Check-In & Check-Out into Bookings + Today
+
+## Summary
+The Front Desk nav had three separate items — **Bookings**, **Check-In**, **Check-Out** — but Check-In
+and Check-Out were just filtered views of the bookings list (`status ∈ {Confirmed, Pending}` and
+`status = CheckedIn`) using actions the Bookings table already exposes inline, and the **Today** board
+already surfaced the same arrivals/departures. Removed the two redundant screens. Bookings is now the
+single reservation surface; Today is the daily front-desk board and deep-links into the relevant
+Bookings status tab. New model: **Today = "what do I do now," Bookings = the reservation record.**
+
+## File changes
+
+### `src/store/slices/uiSlice.js`
+- Added `activePanelParams` to state and a `navigateTo({ panel, params })` action that switches panel
+  while handing params (e.g. `{ tab: 'CheckedIn' }`) to the incoming page. Plain `setActivePanel` now
+  clears the params so a direct nav resets to defaults.
+
+### `src/store/hooks.js`
+- Bound `navigateTo` in `useUiActions`.
+
+### `src/utils/navigation.js`
+- Removed the `checkin` and `checkout` Front Desk items (and the now-unused `LuLogIn` / `LuLogOut`
+  imports). Front Desk is now `Bookings · Cancellations · Maintenance`.
+
+### `src/utils/permissions.js`
+- Dropped `checkin` / `checkout` from `FRONT_DESK_PANELS` (old `/checkin` URLs now fall back to Today).
+
+### `src/App.jsx`
+- Removed the `CheckIn` / `CheckOut` lazy imports and their `PANEL_MAP` entries.
+
+### `src/components/layout/Topbar.jsx`
+- Removed the `checkin` / `checkout` contextual primary actions.
+
+### `src/components/modules/today/Today.jsx`
+- Added a `goBookings(tab)` helper (via `navigateTo`). KPI strip, the Arrivals/Departures column
+  "view" links, the per-row Check-in/Check-out actions, and the "Overdue checkouts" attention row now
+  deep-link to Bookings (`Upcoming` for arrivals, `CheckedIn` for departures/in-house) instead of the
+  standalone desks.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- Reads `activePanelParams.tab` (validated against the tab ids) to seed the active tab and follows it
+  via an effect, so a deep-link from Today/Guests lands on the right status tab.
+
+### `src/components/modules/guests/Guests.jsx`
+- "+ Check-In" button now `navigateTo`s Bookings `Upcoming` instead of the removed `checkin` panel.
+
+### `src/hooks/useKeyboardShortcuts.js`
+- Repointed the `C` shortcut from `checkin` → `bookings` (updated the legend comment too).
+
+### `src/components/ui/GlobalSearch.jsx`
+- Removed the `Check-In` quick-nav entry.
+
+### Deleted
+- `src/components/modules/checkin/CheckIn.jsx`, `src/components/modules/checkin/ArrivalCard.jsx`,
+  `src/components/modules/checkout/CheckOut.jsx`. Kept `checkout/CheckOutModal.jsx` — Bookings uses it.
+
+## Notes
+- `npm run build` passes; the CheckIn/CheckOut chunks are gone, Bookings remains.
+- Watch point: Today's *Departures* derive from `guests` (status `checked_in`) while the Bookings
+  `CheckedIn` tab derives from `bookings` — same real-world set, two data sources, so they can drift.
+
+---
+
 # Session — 2026-06-10 · Invoice preview modal + PDF download
 
 ## Summary
