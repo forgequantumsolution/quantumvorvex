@@ -1,10 +1,11 @@
 name: Build & Deploy (main)
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - shriyansh/frontend
-  workflow_dispatch:
+
 
 permissions:
   contents: read
