@@ -1,8 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit'
-import { ROLE_PANELS } from '../../utils/permissions'
-
-// Every routable panel id (the owner role can access all of them).
-const ALL_PANELS = ROLE_PANELS.owner
+import { ALL_PANELS } from '../../utils/permissions'
 
 // Resolve the panel encoded in the current URL path (e.g. /rooms → 'rooms').
 // Returns `fallback` when the path isn't a known panel.
@@ -18,6 +15,9 @@ const initialState = {
   sidebarCollapsed: false,  // desktop icon-rail collapse
   // Deep links / refreshes land on the panel in the URL, not always 'today'.
   activePanel: panelFromUrl('today'),
+  // Optional params handed to the incoming panel (e.g. a target sub-tab when
+  // Today deep-links into Bookings). Cleared on any plain setActivePanel.
+  activePanelParams: null,
   searchOpen: false,
   // Generic "primary action" trigger fired by the contextual header button.
   // A page listens for its own panel name + a changing nonce, then runs its action.
@@ -35,7 +35,12 @@ const uiSlice = createSlice({
     closeSidebar: (state) => { state.sidebarOpen = false },
     toggleSidebarCollapsed: (state) => { state.sidebarCollapsed = !state.sidebarCollapsed },
     setSidebarCollapsed: (state, { payload }) => { state.sidebarCollapsed = payload },
-    setActivePanel: (state, { payload }) => { state.activePanel = payload },
+    setActivePanel: (state, { payload }) => { state.activePanel = payload; state.activePanelParams = null },
+    // Navigate to a panel while handing it params (e.g. { tab: 'CheckedIn' }).
+    navigateTo: (state, { payload }) => {
+      state.activePanel = payload.panel
+      state.activePanelParams = payload.params || null
+    },
     setSearchOpen: (state, { payload }) => { state.searchOpen = payload },
     // Navigate to the target panel and bump the nonce so that page runs its primary action.
     requestPrimaryAction: (state, { payload }) => {
@@ -54,6 +59,7 @@ export const {
   toggleSidebarCollapsed,
   setSidebarCollapsed,
   setActivePanel,
+  navigateTo,
   setSearchOpen,
   requestPrimaryAction,
 } = uiSlice.actions

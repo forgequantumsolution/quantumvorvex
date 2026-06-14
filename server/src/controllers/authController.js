@@ -4,6 +4,23 @@ import crypto from 'crypto'
 import prisma from '../utils/prisma.js'
 import logger, { securityLog } from '../utils/logger.js'
 import { sendPasswordResetEmail, sendOtpEmail } from '../utils/email.js'
+import { audit } from '../utils/audit.js'
+import { getUserAccess } from '../utils/permissionCache.js'
+
+// Build the client-facing user object, including the resolved RBAC permission map so
+// the frontend can drive sidebar visibility + action gating without a second request.
+async function authUserPayload(user) {
+  const access = await getUserAccess(user.id)
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    roleName: access?.roleName || null,   // display label (Role.name)
+    isOwner: access?.isOwner || false,
+    permissions: access?.perms || {},
+  }
+}
 
 // In-memory failed login tracker (per IP, resets after window)
 // For production: replace with Redis INCR + EXPIRE
@@ -62,7 +79,7 @@ const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex'
  * Returns the raw token so it can also be sent in the JSON body.
  */
 function issueAuthToken(res, user) {
-  const payload = { userId: user.id, email: user.email, role: user.role, sessionVersion: user.sessionVersion }
+  const payload = { userId: user.id, email: user.email, sessionVersion: user.sessionVersion }
   const token   = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn:  '7d',
     algorithm:  'HS256',
@@ -79,8 +96,14 @@ export const seedAdminUser = async () => {
     const count = await prisma.user.count()
     if (count === 0) {
       const hashed = await bcrypt.hash('admin123', 12)
+      // Ensure an Owner role exists (full access) and link the bootstrap admin to it.
+      const ownerRole = await prisma.role.upsert({
+        where:  { name: 'Owner' },
+        update: { isSystem: true, isOwner: true },
+        create: { name: 'Owner', description: 'Full access to everything.', isSystem: true, isOwner: true },
+      })
       await prisma.user.create({
-        data: { name: 'Admin', email: 'admin@hotel.com', password: hashed, role: 'owner' },
+        data: { name: 'Admin', email: 'admin@hotel.com', password: hashed, roleId: ownerRole.id },
       })
       logger.info('Default admin account created — change credentials immediately', {
         event: 'SYSTEM',
@@ -111,7 +134,7 @@ export const login = async (req, res) => {
     // Lookup user — always run bcrypt even on miss to prevent timing attacks
     const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, name: true, email: true, role: true, status: true, password: true },
+      select: { id: true, name: true, email: true, status: true, password: true },
     })
 
     const DUMMY_HASH = '$2a$12$invalidhashinvalidhashinvalidhashx'
@@ -150,7 +173,7 @@ export const login = async (req, res) => {
     return res.status(200).json({
       message: 'Login successful.',
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: await authUserPayload(user),
     })
   } catch (err) {
     logger.error('Login handler error', { error: err.message, ip, event: 'AUTH' })
@@ -176,12 +199,51 @@ export const me = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where:  { id: req.user.userId },
-      select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true },
+      select: { id: true, name: true, email: true, phone: true, createdAt: true },
     })
     if (!user) return res.status(404).json({ error: 'User not found.', code: 'ERR_NOT_FOUND' })
-    return res.status(200).json({ user })
+    return res.status(200).json({ user: { ...(await authUserPayload(user)), createdAt: user.createdAt } })
   } catch (err) {
     logger.error('Me endpoint error', { error: err.message, userId: req.user?.userId })
+    return res.status(500).json({ error: 'An unexpected error occurred.', code: 'ERR_INTERNAL' })
+  }
+}
+
+// POST /auth/change-password (authenticated) — verify the current password, set a new
+// one, then bump sessionVersion (revokes other sessions) and reissue this session's token.
+export const changePassword = async (req, res) => {
+  const ip = req.ip || 'unknown'
+  const ua = req.headers['user-agent'] || 'unknown'
+  try {
+    const { currentPassword, newPassword } = req.body   // Validated by Zod
+
+    const user = await prisma.user.findUnique({
+      where:  { id: req.user.userId },
+      select: { id: true, name: true, email: true, password: true, sessionVersion: true },
+    })
+    if (!user) return res.status(404).json({ error: 'User not found.', code: 'ERR_NOT_FOUND' })
+
+    const ok = await bcrypt.compare(currentPassword, user.password)
+    if (!ok) {
+      securityLog.loginFailure(user.email, ip, ua, 'change_password_wrong_current')
+      return res.status(401).json({ error: 'Current password is incorrect.', code: 'ERR_AUTH' })
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 12)
+    const updated = await prisma.user.update({
+      where:  { id: user.id },
+      data:   { password: hashed, mustChangePassword: false, sessionVersion: { increment: 1 } },
+      select: { sessionVersion: true },
+    })
+
+    // Reissue so the current device stays signed in; the bumped sessionVersion
+    // invalidates any other device once single-session enforcement is on.
+    const token = issueAuthToken(res, { ...user, sessionVersion: updated.sessionVersion })
+    await audit(req, 'user.password_change', { entity: 'user', entityId: user.id })
+    logger.info('Password changed', { event: 'AUTH', userId: user.id, ip })
+    return res.status(200).json({ message: 'Password updated.', token })
+  } catch (err) {
+    logger.error('changePassword error', { error: err.message, ip })
     return res.status(500).json({ error: 'An unexpected error occurred.', code: 'ERR_INTERNAL' })
   }
 }
@@ -322,7 +384,7 @@ export const verifyOtp = async (req, res) => {
     // Correct code — consume it and load the user.
     const user = await prisma.user.findUnique({
       where:  { email },
-      select: { id: true, name: true, email: true, role: true, status: true },
+      select: { id: true, name: true, email: true, status: true },
     })
 
     if (!user || user.status === 'inactive') {
@@ -349,7 +411,7 @@ export const verifyOtp = async (req, res) => {
     return res.status(200).json({
       message: 'Login successful.',
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: await authUserPayload(user),
     })
   } catch (err) {
     logger.error('verifyOtp error', { error: err.message, ip })

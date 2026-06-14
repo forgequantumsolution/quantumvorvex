@@ -18,7 +18,11 @@ const PRIORITY_COLOR = {
 }
 
 export default function Today() {
-  const { setActivePanel } = useUiActions()
+  const { setActivePanel, navigateTo } = useUiActions()
+
+  // Front-desk work now lives inside Bookings; deep-link straight to the
+  // relevant status tab instead of a standalone check-in/check-out screen.
+  const goBookings = (tab) => navigateTo({ panel: 'bookings', params: { tab } })
 
   const [bookings, setBookings] = useState([])
   const [guests,   setGuests]   = useState([])
@@ -54,10 +58,10 @@ export default function Today() {
   const cancellations = bookings.filter(b => String(b.status).toLowerCase() === 'cancelled')
 
   const kpis = [
-    { label: 'Arrivals',        value: arrivals.length,    Icon: LuLogIn,   color: 'var(--blue)',  panel: 'checkin'  },
-    { label: 'Departures',      value: departures.length,  Icon: LuLogOut,  color: 'var(--amber)', panel: 'checkout' },
-    { label: 'In-house',        value: inHouse.length,     Icon: LuUsers,   color: 'var(--green)', panel: 'checkout' },
-    { label: 'Open maintenance', value: openTickets.length, Icon: LuWrench,  color: 'var(--red)',   panel: 'maintenance' },
+    { label: 'Arrivals',        value: arrivals.length,    Icon: LuLogIn,   color: 'var(--blue)',  onClick: () => goBookings('Upcoming')  },
+    { label: 'Departures',      value: departures.length,  Icon: LuLogOut,  color: 'var(--amber)', onClick: () => goBookings('CheckedIn') },
+    { label: 'In-house',        value: inHouse.length,     Icon: LuUsers,   color: 'var(--green)', onClick: () => goBookings('CheckedIn') },
+    { label: 'Open maintenance', value: openTickets.length, Icon: LuWrench,  color: 'var(--red)',   onClick: () => setActivePanel('maintenance') },
   ]
 
   return (
@@ -67,7 +71,7 @@ export default function Today() {
         {kpis.map(k => (
           <button
             key={k.label}
-            onClick={() => setActivePanel(k.panel)}
+            onClick={k.onClick}
             className="stat-card text-left cursor-pointer border border-line flex items-center gap-[14px]"
           >
             <div
@@ -90,7 +94,7 @@ export default function Today() {
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,320px),1fr))] gap-4 items-start">
 
         {/* Arrivals */}
-        <Column title="Expected Arrivals" Icon={LuLogIn} count={arrivals.length} onView={() => setActivePanel('checkin')} viewLabel="Check-In desk">
+        <Column title="Expected Arrivals" Icon={LuLogIn} count={arrivals.length} onView={() => goBookings('Upcoming')} viewLabel="View bookings">
           {arrivals.length === 0
             ? <Empty text="No arrivals scheduled" />
             : arrivals.slice(0, 6).map(b => (
@@ -99,13 +103,13 @@ export default function Today() {
                 name={b.guestName}
                 meta={`Room ${b.roomNumber || '—'} · ${b.roomType || ''}`}
                 right={<DateChip label={isToday(b.checkIn) ? 'Today' : formatDate(b.checkIn, { month: 'short', day: 'numeric' })} tone={isToday(b.checkIn) ? 'gold' : 'grey'} />}
-                action={{ label: 'Check in', onClick: () => setActivePanel('checkin') }}
+                action={{ label: 'Check in', onClick: () => goBookings('Upcoming') }}
               />
             ))}
         </Column>
 
         {/* Departures */}
-        <Column title="Departures" Icon={LuLogOut} count={departures.length} onView={() => setActivePanel('checkout')} viewLabel="Check-Out desk">
+        <Column title="Departures" Icon={LuLogOut} count={departures.length} onView={() => goBookings('CheckedIn')} viewLabel="View bookings">
           {departures.length === 0
             ? <Empty text="No checkouts due" />
             : departures.slice(0, 6).map(g => {
@@ -116,7 +120,7 @@ export default function Today() {
                   name={g.name}
                   meta={`Room ${g.roomNumber || '—'}`}
                   right={<DateChip label={overdue ? 'Overdue' : 'Today'} tone={overdue ? 'red' : 'amber'} />}
-                  action={{ label: 'Check out', onClick: () => setActivePanel('checkout') }}
+                  action={{ label: 'Check out', onClick: () => goBookings('CheckedIn') }}
                 />
               )
             })}
@@ -128,7 +132,7 @@ export default function Today() {
             Icon={LuLogOut} tone="red"
             label="Overdue checkouts"
             value={overdueCheckouts.length}
-            onClick={() => setActivePanel('checkout')}
+            onClick={() => goBookings('CheckedIn')}
           />
           <AttentionRow
             Icon={LuCalendarX} tone="amber"

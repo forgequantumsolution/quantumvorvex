@@ -27,6 +27,11 @@ model Hotel {
   setupComplete      Boolean  @default(false)
   termsAndConditions String?
   wifiPassword       String?
+  // JSON-encoded config blobs for Settings tabs that have no dedicated table.
+  documentsConfig    String?   // { kycDocs:[{id,label,required,maxMB,enabled}], expiryReminderDays }
+  branding           String?   // { tagline, loginTitle, footerNote, logoUrl }
+  preferences        String?   // { language, currency, dateFormat, timeFormat, itemsPerPage, soundAlerts, emailDigest, autoLogout }
+  appearance         String?   // { accent, density, radius }
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
@@ -40,7 +45,6 @@ model Property {
   status    String   @default("active")
   createdAt DateTime @default(now())
   rooms     Room[]
-  staff     StaffProperty[]
 }
 
 model RoomType {
@@ -57,6 +61,7 @@ model RoomType {
 model Room {
   id                 String              @id @default(cuid())
   number             String              @unique
+  qrToken            String?             @unique
   typeId             String
   type               RoomType            @relation(fields: [typeId], references: [id])
   floor              Int                 @default(1)
@@ -114,6 +119,7 @@ model Guest {
   payments        Payment[]
   reminders       Reminder[]
   bookings        Booking[]
+  communications  GuestCommunication[]
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 }
@@ -245,12 +251,67 @@ model User {
   name           String
   email          String   @unique
   password       String
-  role           String   @default("staff")
+  roleId         String?
+  roleRef        Role?    @relation(fields: [roleId], references: [id])
   status         String   @default("active")
   phone          String?
-  sessionVersion Int      @default(0)   // bumped on every login; tokens carrying a stale value are rejected → one active session per user
+  // Set when an account is created/reset with the shared default password.
+  // Wired but not yet enforced (password change is optional for now).
+  mustChangePassword Boolean @default(false)
+  sessionVersion Int      @default(0)   // bumped on every login (and on role/password change) → stale tokens rejected
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  @@index([roleId])
+}
+
+// ─── RBAC: admin-defined roles + per-module access levels ───────────────────────
+// Module keys = the backend route domains (validated against server/src/config/modules.js):
+//   bookings, maintenance, guests, rooms, documents, food, housekeeping,
+//   billing, reports, settings, users
+// (today / cancellations are UI-only panels, derived in the frontend.)
+enum AccessLevel {
+  NONE
+  VIEW
+  MANAGE
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  name        String           @unique
+  description String?
+  isSystem    Boolean          @default(false)  // seeded roles: protected from deletion
+  isOwner     Boolean          @default(false)  // implicit full access — bypasses permission checks
+  users       User[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model RolePermission {
+  id     String      @id @default(cuid())
+  roleId String
+  role   Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  module String                          // one of the module keys (validated in code)
+  level  AccessLevel @default(NONE)
+
+  @@unique([roleId, module])
+  @@index([roleId])
+}
+
+// Audit trail for authorization-sensitive actions (role/user/permission/password changes).
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?                       // actor (no FK — survives user deletion)
+  action    String                        // e.g. role.create, user.role_change, user.password_change
+  entity    String?                       // role | user | …
+  entityId  String?
+  detail    String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
 }
 
 // ─── AUTH: password reset + passwordless OTP login ──────────────────────────────
@@ -378,58 +439,10 @@ model MaintenanceSchedule {
 }
 
 // ─── ADDON 4: STAFF ───────────────────────────────────────────────────────────
-
-model Staff {
-  id           String         @id @default(cuid())
-  name         String
-  phone        String
-  email        String         @unique
-  passwordHash String
-  role         String         @default("front_desk")
-  status       String         @default("active")
-  lastLogin    DateTime?
-  createdAt    DateTime       @default(now())
-  sessions     StaffSession[]
-  activityLogs ActivityLog[]
-  properties   StaffProperty[]
-}
-
-model StaffSession {
-  id        String   @id @default(cuid())
-  staffId   String
-  staff     Staff    @relation(fields: [staffId], references: [id])
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-}
-
-model ActivityLog {
-  id        String   @id @default(cuid())
-  staffId   String
-  staff     Staff    @relation(fields: [staffId], references: [id])
-  action    String
-  module    String
-  recordId  String?
-  detail    String?
-  ipAddress String?
-  createdAt DateTime @default(now())
-}
-
-model Permission {
-  id     String @id @default(cuid())
-  role   String
-  module String
-  level  String @default("none")
-  @@unique([role, module])
-}
-
-model StaffProperty {
-  staffId    String
-  propertyId String
-  staff      Staff    @relation(fields: [staffId], references: [id])
-  property   Property @relation(fields: [propertyId], references: [id])
-  @@id([staffId, propertyId])
-}
+// Removed 2026-06-14: the Staff / StaffSession / StaffProperty / ActivityLog /
+// Permission models were dead (all tables empty, accounts could not log in).
+// Identity is unified on User + Role (see above). A clean AuditLog (FK → User)
+// will be (re)introduced with backend enforcement.
 
 // ─── ADDON 9: HOUSEKEEPING ────────────────────────────────────────────────────
 
@@ -469,5 +482,19 @@ model GuestPortalToken {
   type      String   @default("booking")
   expiresAt DateTime
   used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ─── ADDON 16: GUEST COMMUNICATIONS LOG ───────────────────────────────────────
+
+model GuestCommunication {
+  id        String   @id @default(cuid())
+  guestId   String
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  channel   String   @default("note")    // whatsapp | sms | email | call | note
+  direction String   @default("outbound") // inbound | outbound
+  subject   String?
+  content   String
+  staff     String?                        // who logged / sent it
   createdAt DateTime @default(now())
 }

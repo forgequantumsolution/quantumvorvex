@@ -1,65 +1,70 @@
 /**
- * Role-based access control for UI panels and features.
+ * Role-based access control for the UI.
  *
- * Roles:
- *   owner   — Full access to everything including user management
- *   manager — Operational access, can view settings but not manage users
- *   staff   — Front-desk only: check-in, rooms, guests, housekeeping, maintenance
- *   admin   — Treated same as owner (legacy)
+ * Permissions are now DATA, resolved by the backend and delivered on the user object
+ * (`currentUser.permissions` = { module: 'NONE'|'VIEW'|'MANAGE' }, plus `isOwner`).
+ * The frontend mirrors the backend's check so the sidebar and action controls reflect
+ * the user's real access. The backend still enforces every request — this is UX only.
  */
 
-export const ROLE_LABELS = {
-  owner:   'Owner',
-  manager: 'Manager',
-  staff:   'Staff',
-  admin:   'Owner',
+const LEVEL_RANK = { NONE: 0, VIEW: 1, MANAGE: 2 }
+
+// Each sidebar panel → the backend module that governs it. `today` and `cancellations`
+// are UI-only panels that derive from the bookings module.
+export const PANEL_MODULE = {
+  today:         'bookings',
+  bookings:      'bookings',
+  cancellations: 'bookings',
+  maintenance:   'maintenance',
+  guests:        'guests',
+  rooms:         'rooms',
+  documents:     'documents',
+  food:          'food',
+  housekeeping:  'housekeeping',
+  billing:       'billing',
+  reports:       'reports',
+  users:         'users',
+  settings:      'settings',
 }
 
-export const ROLE_COLORS = {
-  owner:   '#c9a84c',
-  manager: '#4c9ac9',
-  staff:   '#6bb56b',
-  admin:   '#c9a84c',
+// Every known panel id (used by the URL router to validate ?panel paths).
+export const ALL_PANELS = Object.keys(PANEL_MODULE)
+
+function isOwnerUser(user) {
+  return !!(user && user.isOwner)
 }
 
-// Panels each role can access. Panels are added here as their modules are
-// wired to the real backend (see docs/FRONTEND_API_PLAN.md).
-const FRONT_DESK_PANELS = ['today', 'bookings', 'checkin', 'checkout', 'cancellations', 'maintenance']
-const OPERATIONS_PANELS = ['guests', 'rooms', 'housekeeping']
-// Owner/manager panels (staff excluded).
-const MANAGER_PANELS = ['documents', 'food', 'billing', 'reports', 'settings']
-// Owner/admin-only administrative panels.
-const ADMIN_PANELS = ['staff']
-
-export const ROLE_PANELS = {
-  owner:   [...FRONT_DESK_PANELS, ...OPERATIONS_PANELS, ...MANAGER_PANELS, ...ADMIN_PANELS],
-  manager: [...FRONT_DESK_PANELS, ...OPERATIONS_PANELS, ...MANAGER_PANELS],
-  staff:   [...FRONT_DESK_PANELS, ...OPERATIONS_PANELS],
-  admin:   [...FRONT_DESK_PANELS, ...OPERATIONS_PANELS, ...MANAGER_PANELS, ...ADMIN_PANELS],
+/**
+ * hasModule(user, 'billing', 'MANAGE') — does the user meet the required level on a module?
+ * Owner roles always pass. `user` is the currentUser object.
+ */
+export function hasModule(user, module, level = 'VIEW') {
+  if (!user) return false
+  if (isOwnerUser(user)) return true
+  const have = user.permissions?.[module] || 'NONE'
+  return (LEVEL_RANK[have] || 0) >= (LEVEL_RANK[level] || 0)
 }
 
-// Settings tabs each role can see
-export const ROLE_SETTINGS_TABS = {
-  owner:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'appearance', 'branding', 'preferences', 'properties', 'users'],
-  manager: ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'notifications', 'appearance', 'preferences'],
-  staff:   [],
-  admin:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'appearance', 'branding', 'preferences', 'properties', 'users'],
+/** Can the user open a sidebar panel (needs at least VIEW on its module). */
+export function canAccess(user, panel) {
+  const module = PANEL_MODULE[panel]
+  if (!module) return true // unknown/utility panel — don't hard-block
+  return hasModule(user, module, 'VIEW')
 }
 
-export function canAccess(role, panel) {
-  const allowed = ROLE_PANELS[role] || ROLE_PANELS.staff
-  return allowed.includes(panel)
+/** The panels the user may see, in canonical order. */
+export function getAllowedPanels(user) {
+  return ALL_PANELS.filter((panel) => canAccess(user, panel))
 }
 
-export function getAllowedPanels(role) {
-  return ROLE_PANELS[role] || ROLE_PANELS.staff
-}
+// ── Settings sub-tabs ──────────────────────────────────────────────────────────
+// The RBAC model is module-level (one `settings` module), so sub-tab visibility is
+// derived: owners see everything; anyone else with settings access sees the standard set.
+const OWNER_SETTINGS_TABS   = ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'appearance', 'branding', 'preferences', 'properties']
+const MANAGER_SETTINGS_TABS = ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'notifications', 'appearance', 'preferences']
 
-export function canAccessSettingsTab(role, tab) {
-  const allowed = ROLE_SETTINGS_TABS[role] || []
-  return allowed.includes(tab)
-}
-
-export function isOwnerOrManager(role) {
-  return role === 'owner' || role === 'manager' || role === 'admin'
+export function canAccessSettingsTab(user, tab) {
+  if (isOwnerUser(user)) return OWNER_SETTINGS_TABS.includes(tab)
+  if (hasModule(user, 'settings', 'VIEW')) return MANAGER_SETTINGS_TABS.includes(tab)
+  return false
 }

@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma.js'
+import htmlToPdf from '../utils/pdf.js'
 
 // GET /reports/dashboard
 export const getDashboard = async (req, res) => {
@@ -234,5 +235,164 @@ export const exportCsv = async (req, res) => {
   } catch (err) {
     console.error('exportCsv error:', err)
     return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /reports/occupancy?from=&to=  — daily occupancy series + by-room-type snapshot
+export const getOccupancy = async (req, res) => {
+  try {
+    const { from, to } = req.query
+    const end = to ? new Date(to) : new Date()
+    const start = from ? new Date(from) : new Date(end.getTime() - 29 * 86400000)
+    start.setHours(0, 0, 0, 0)
+    end.setHours(23, 59, 59, 999)
+
+    const [rooms, bookings] = await Promise.all([
+      prisma.room.findMany({ where: { status: { not: 'deleted' } }, include: { type: true } }),
+      prisma.booking.findMany({
+        where: {
+          status: { in: ['Confirmed', 'CheckedIn', 'CheckedOut'] },
+          fromDate: { lte: end },
+        },
+        select: { fromDate: true, toDate: true, checkedOutAt: true },
+      }),
+    ])
+
+    const totalRooms = rooms.length
+
+    // Build a per-day occupancy count: a booking occupies a room from fromDate
+    // through toDate (or checkout). Counts overlapping bookings per calendar day.
+    const byDay = []
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const day = new Date(d)
+      day.setHours(0, 0, 0, 0)
+      const dayEnd = new Date(day)
+      dayEnd.setHours(23, 59, 59, 999)
+
+      const occupied = bookings.filter((b) => {
+        const bStart = new Date(b.fromDate)
+        const bEnd = b.toDate ? new Date(b.toDate) : (b.checkedOutAt ? new Date(b.checkedOutAt) : dayEnd)
+        return bStart <= dayEnd && bEnd >= day
+      }).length
+
+      byDay.push({
+        date: day.toISOString().split('T')[0],
+        occupied,
+        total: totalRooms,
+        rate: totalRooms > 0 ? parseFloat(((occupied / totalRooms) * 100).toFixed(1)) : 0,
+      })
+    }
+
+    // Current occupancy snapshot grouped by room type
+    const typeMap = {}
+    for (const r of rooms) {
+      const name = r.type?.name || 'Unspecified'
+      if (!typeMap[name]) typeMap[name] = { roomType: name, total: 0, occupied: 0 }
+      typeMap[name].total += 1
+      if (r.status === 'occupied') typeMap[name].occupied += 1
+    }
+    const byRoomType = Object.values(typeMap).map((t) => ({
+      ...t,
+      rate: t.total > 0 ? parseFloat(((t.occupied / t.total) * 100).toFixed(1)) : 0,
+    }))
+
+    const avgRate = byDay.length > 0
+      ? parseFloat((byDay.reduce((s, d) => s + d.rate, 0) / byDay.length).toFixed(1))
+      : 0
+
+    return res.status(200).json({ byDay, byRoomType, totalRooms, avgRate })
+  } catch (err) {
+    console.error('getOccupancy error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /reports/export/pdf?type=guests|billing|gst&from=&to=
+export const exportPdf = async (req, res) => {
+  try {
+    const { type, from, to } = req.query
+    const hotel = await prisma.hotel.findFirst()
+    const hotelName = hotel?.name || 'Quantum Vorvex'
+
+    const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+    const fmt = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
+
+    let title = ''
+    let headers = []
+    let rows = []
+    let filename = 'report.pdf'
+
+    if (type === 'guests') {
+      title = 'Guests Report'
+      filename = 'guests-report.pdf'
+      const guests = await prisma.guest.findMany({
+        include: { room: { select: { number: true } } },
+        orderBy: { createdAt: 'desc' },
+      })
+      headers = ['Doc ID', 'Name', 'Phone', 'Room', 'Stay', 'Check In', 'Status', 'Rate']
+      rows = guests.map((g) => [
+        g.docId, g.name, g.phone, g.room?.number || '—', g.stayType,
+        g.checkInDate?.toISOString().split('T')[0] || '—', g.status, fmt(g.roomRate),
+      ])
+    } else if (type === 'billing' || type === 'gst') {
+      const where = {}
+      if (from || to) {
+        where.createdAt = {}
+        if (from) where.createdAt.gte = new Date(from)
+        if (to) { const t = new Date(to); t.setHours(23, 59, 59, 999); where.createdAt.lte = t }
+      }
+      const invoices = await prisma.invoice.findMany({
+        where, include: { guest: { select: { name: true, docId: true } } }, orderBy: { createdAt: 'desc' },
+      })
+      if (type === 'billing') {
+        title = 'Billing Report'
+        filename = 'billing-report.pdf'
+        headers = ['Invoice', 'Guest', 'Period', 'Rent', 'Food', 'GST', 'Total', 'Status']
+        rows = invoices.map((inv) => [
+          inv.invoiceNo, inv.guest?.name || '—', inv.period,
+          fmt(inv.rent), fmt(inv.food), fmt(inv.gstAmount), fmt(inv.total), inv.status,
+        ])
+      } else {
+        title = 'GST Report'
+        filename = 'gst-report.pdf'
+        headers = ['Invoice', 'Guest', 'Taxable', 'Rate %', 'CGST', 'SGST', 'Total GST', 'Total']
+        rows = invoices.map((inv) => {
+          const taxable = inv.rent + inv.food + inv.amenities
+          const half = parseFloat((inv.gstAmount / 2).toFixed(2))
+          return [inv.invoiceNo, inv.guest?.name || '—', fmt(taxable), inv.gstRate, fmt(half), fmt(half), fmt(inv.gstAmount), fmt(inv.total)]
+        })
+      }
+    } else {
+      return res.status(400).json({ message: 'Invalid export type. Use guests, billing, or gst.' })
+    }
+
+    const generatedAt = new Date().toLocaleString('en-IN')
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+      <style>
+        @page { size: A4; margin: 16mm; }
+        body { font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 11px; }
+        h1 { font-size: 20px; margin: 0; color: #b8860b; }
+        .meta { color: #666; font-size: 10px; margin: 2px 0 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; background: #f4f1e8; padding: 6px 8px; border-bottom: 2px solid #b8860b; font-size: 10px; text-transform: uppercase; }
+        td { padding: 6px 8px; border-bottom: 1px solid #eee; }
+        tr:nth-child(even) td { background: #fafafa; }
+      </style></head><body>
+      <h1>${esc(hotelName)}</h1>
+      <div class="meta">${esc(title)} · Generated ${esc(generatedAt)}${rows.length ? ` · ${rows.length} records` : ''}</div>
+      <table>
+        <thead><tr>${headers.map((h) => `<th>${esc(h)}</th>`).join('')}</tr></thead>
+        <tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${headers.length}">No records</td></tr>`}</tbody>
+      </table>
+    </body></html>`
+
+    const baseUrl = `${req.protocol}://${req.get('host')}`
+    const pdf = await htmlToPdf(html, { baseUrl })
+    res.setHeader('Content-Type', 'application/pdf')
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`)
+    return res.status(200).end(pdf)
+  } catch (err) {
+    console.error('exportPdf error:', err)
+    return res.status(500).json({ message: 'Failed to generate PDF.' })
   }
 }

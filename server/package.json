@@ -9,6 +9,7 @@
     "start": "node src/server.js",
     "db:migrate": "prisma migrate dev",
     "db:seed": "node src/utils/seed.js",
+    "db:seed:demo": "node src/utils/seedDemo.js",
     "db:generate": "prisma generate"
   },
   "keywords": [],

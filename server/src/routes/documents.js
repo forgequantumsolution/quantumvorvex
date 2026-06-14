@@ -5,11 +5,11 @@ import {
   verifyDocument,
   upload,
 } from '../controllers/documentsController.js'
-import { verifyToken } from '../middleware/auth.js'
+import { verifyToken, requirePermission } from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.use(verifyToken)
+router.use(verifyToken, requirePermission('documents'))
 
 router.get('/', getDocuments)
 router.post('/:guestId', upload.single('document'), uploadDocument)

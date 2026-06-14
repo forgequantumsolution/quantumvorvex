@@ -1,5 +1,7 @@
 import jwt from 'jsonwebtoken'
 import prisma from '../utils/prisma.js'
+import { LEVEL_RANK } from '../config/modules.js'
+import { getUserAccess } from '../utils/permissionCache.js'
 
 // One active session per user. Off by default so local dev / E2E logins don't evict
 // each other; enable with ENFORCE_SINGLE_SESSION=true (production).
@@ -57,29 +59,52 @@ export const verifyToken = async (req, res, next) => {
   }
 }
 
-// Role hierarchy: owner > manager > staff
-const ROLE_RANK = { owner: 3, manager: 2, staff: 1, admin: 3 }
-
-/**
- * requireRole(['owner', 'manager']) — passes if token role is in the allowed list
- */
-export const requireRole = (roles) => (req, res, next) => {
-  const allowed = Array.isArray(roles) ? roles : [roles]
-  const userRole = req.user?.role
-  if (!userRole || !allowed.includes(userRole)) {
-    return res.status(403).json({ message: 'Forbidden. Insufficient permissions.' })
-  }
-  next()
+// ─── RBAC enforcement ──────────────────────────────────────────────────────────
+// Resolve the requester's CURRENT role + permissions once per request (cached on req,
+// backed by an in-memory cache). Used by requirePermission / requireOwner below.
+async function resolveAccess(req) {
+  if (req._access !== undefined) return req._access
+  req._access = await getUserAccess(req.user?.userId)
+  return req._access
 }
 
 /**
- * requireMinRole('manager') — passes if user rank >= minRole rank
+ * requirePermission('billing')           — level inferred from method (GET→VIEW, else MANAGE)
+ * requirePermission('reports', 'VIEW')   — explicit level (use when the verb ≠ intent,
+ *                                           e.g. POST /reports/export is really a read)
+ * Owner roles (isOwner) bypass all checks. Must run after verifyToken.
  */
-export const requireMinRole = (minRole) => (req, res, next) => {
-  const userRank = ROLE_RANK[req.user?.role] || 0
-  const minRank  = ROLE_RANK[minRole] || 0
-  if (userRank < minRank) {
-    return res.status(403).json({ message: 'Forbidden. Insufficient permissions.' })
+export const requirePermission = (moduleKey, action) => async (req, res, next) => {
+  try {
+    const access = await resolveAccess(req)
+    if (!access) {
+      return res.status(401).json({ message: 'Account is unavailable. Please sign in again.', code: 'ERR_SESSION_INVALID' })
+    }
+    if (access.status === 'inactive') {
+      return res.status(403).json({ message: 'Account is inactive. Contact an administrator.', code: 'ERR_ACCOUNT_INACTIVE' })
+    }
+    if (access.isOwner) return next()
+
+    const required = (action || (req.method === 'GET' ? 'VIEW' : 'MANAGE')).toUpperCase()
+    const have     = access.perms[moduleKey] || 'NONE'
+    if ((LEVEL_RANK[have] || 0) >= (LEVEL_RANK[required] || 0)) return next()
+
+    return res.status(403).json({
+      message: 'Forbidden. Insufficient permissions.',
+      code: 'ERR_FORBIDDEN', module: moduleKey, required,
+    })
+  } catch (err) {
+    return res.status(500).json({ message: 'Authorization check failed.', code: 'ERR_INTERNAL' })
+  }
+}
+
+/**
+ * requireOwner — only users whose role has isOwner. Used for role management.
+ */
+export const requireOwner = async (req, res, next) => {
+  const access = await resolveAccess(req)
+  if (!access || !access.isOwner) {
+    return res.status(403).json({ message: 'Owner access required.', code: 'ERR_FORBIDDEN' })
   }
   next()
 }

@@ -27,6 +27,7 @@ export function useUiActions() {
           toggleSidebarCollapsed: ui.toggleSidebarCollapsed,
           setSidebarCollapsed: ui.setSidebarCollapsed,
           setActivePanel: ui.setActivePanel,
+          navigateTo: ui.navigateTo,
           setSearchOpen: ui.setSearchOpen,
           requestPrimaryAction: ui.requestPrimaryAction,
         },

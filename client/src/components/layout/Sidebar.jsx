@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { LuPower, LuChevronsLeft, LuChevronsRight } from 'react-icons/lu'
+import { LuPower, LuChevronsLeft, LuChevronsRight, LuKeyRound } from 'react-icons/lu'
 import { useAppSelector, useUiActions, useAuthActions } from '../../store/hooks'
-import { getAllowedPanels, ROLE_LABELS, ROLE_COLORS } from '../../utils/permissions'
+import { getAllowedPanels } from '../../utils/permissions'
 import { NAV_SECTIONS } from '../../utils/navigation'
+import ChangePasswordModal from '../ui/ChangePasswordModal'
 
 function getInitials(name = '') {
   return name
@@ -41,11 +42,11 @@ export default function Sidebar() {
   }, [])
 
   const collapsed = sidebarCollapsed && isDesktop
+  const [showChangePassword, setShowChangePassword] = useState(false)
 
-  const role          = currentUser?.role || 'staff'
-  const allowedPanels = getAllowedPanels(role)
-  const roleLabel     = ROLE_LABELS[role] || role
-  const roleColor     = ROLE_COLORS[role] || '#888'
+  const allowedPanels = getAllowedPanels(currentUser)
+  const roleLabel     = currentUser?.roleName || 'User'
+  const roleColor     = currentUser?.isOwner ? '#c9a84c' : '#4c9ac9'
 
   const { head, tail } = splitHotelName(hotelName)
   const userInitials   = getInitials(currentUser?.name || 'Admin')
@@ -162,6 +163,23 @@ export default function Sidebar() {
             )}
           </div>
 
+          {/* Change password — available to every signed-in user */}
+          <button
+            onClick={() => setShowChangePassword(true)}
+            title="Change Password"
+            style={{
+              width: collapsed ? 40 : '100%',
+              marginLeft: collapsed ? 'auto' : 0,
+              marginRight: collapsed ? 'auto' : 0,
+              padding: collapsed ? '8px 0' : '7px 10px',
+              marginBottom: 8,
+            }}
+            className={`t-xs bg-[rgba(255,255,255,0.04)] border border-[rgba(255,255,255,0.08)] rounded-md flex items-center gap-[7px] cursor-pointer text-[#888] transition-all duration-[140ms] hover:text-[#fff] ${collapsed ? 'justify-center' : 'justify-start'}`}
+          >
+            <LuKeyRound size={15} />
+            {!collapsed && <span>Change Password</span>}
+          </button>
+
           {/* Logout button */}
           <button
             onClick={handleLogout}
@@ -183,6 +201,11 @@ export default function Sidebar() {
       </div>
 
       {/* overlay visibility is handled by index.css #sb-overlay rules */}
+
+      <ChangePasswordModal
+        isOpen={showChangePassword}
+        onClose={() => setShowChangePassword(false)}
+      />
     </>
   )
 }

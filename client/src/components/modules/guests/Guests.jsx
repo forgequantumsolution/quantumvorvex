@@ -138,7 +138,45 @@ function InfoRow({ label, value }) {
 // ─── Guest Profile Modal (tabbed) ────────────────────────────────────────────
 
 function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
+  const addToast = useToast()
   const [tab, setTab] = useState('info')
+  const [comms, setComms] = useState([])
+  const [commsLoading, setCommsLoading] = useState(false)
+  const [showComposer, setShowComposer] = useState(false)
+  const [commChannel, setCommChannel] = useState('note')
+  const [commText, setCommText] = useState('')
+  const [savingComm, setSavingComm] = useState(false)
+
+  const guestId = guest?.id
+  const loadComms = useCallback(() => {
+    if (!guestId) return
+    setCommsLoading(true)
+    guestsApi.getCommunications(guestId)
+      .then(res => setComms(res.data.communications || []))
+      .catch(() => setComms([]))
+      .finally(() => setCommsLoading(false))
+  }, [guestId])
+
+  // Fetch the communication log when the Communications tab is opened.
+  useEffect(() => {
+    if (tab === 'comms') loadComms()
+  }, [tab, loadComms])
+
+  async function handleLogComm() {
+    if (!commText.trim()) return
+    setSavingComm(true)
+    try {
+      await guestsApi.addCommunication(guestId, { channel: commChannel, content: commText.trim(), direction: 'outbound' })
+      setCommText(''); setShowComposer(false)
+      addToast('Communication logged.', 'success')
+      loadComms()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not log communication.', 'error')
+    } finally {
+      setSavingComm(false)
+    }
+  }
+
   if (!guest) return null
   const dueDate = getDueDate(guest)
   const totalSpend = guest.billingHistory.reduce((s, b) => s + b.total, 0)
@@ -279,29 +317,61 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
         {tab === 'comms' && (
           <div>
             <div className="flex flex-col gap-2.5">
-              {guest.commLog.map((c, i) => (
-                <div key={i} className="flex items-start gap-3 px-3.5 py-3 bg-surface2 rounded-lg border border-line">
-                  <div className="t-body w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{
-                    background: c.type === 'WhatsApp' ? '#dcfce7' : c.type === 'SMS' ? '#dbeafe' : 'var(--gold-bg)',
-                    color: c.type === 'WhatsApp' ? '#16a34a' : c.type === 'SMS' ? '#2563eb' : 'var(--gold)',
-                  }}>
-                    {c.type === 'WhatsApp' ? '💬' : c.type === 'SMS' ? '📱' : '📄'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-[12.5px] font-semibold text-ink mb-0.5">{c.type}</div>
-                    <div className="t-xs mb-1">{c.msg}</div>
-                    <div className="text-[11px] text-ink3">{c.time}</div>
-                  </div>
-                </div>
-              ))}
-              {guest.commLog.length === 0 && (
+              {commsLoading ? (
+                <div className="t-sm text-center py-8 text-ink3">Loading…</div>
+              ) : comms.length === 0 ? (
                 <div className="t-sm text-center py-8 text-ink3">No communication log</div>
-              )}
+              ) : comms.map((c) => {
+                const ch = (c.channel || 'note').toLowerCase()
+                const icon = ch === 'whatsapp' ? '💬' : ch === 'sms' ? '📱' : ch === 'email' ? '✉️' : ch === 'call' ? '📞' : '📄'
+                const bg = ch === 'whatsapp' ? '#dcfce7' : ch === 'sms' ? '#dbeafe' : 'var(--gold-bg)'
+                const color = ch === 'whatsapp' ? '#16a34a' : ch === 'sms' ? '#2563eb' : 'var(--gold)'
+                return (
+                  <div key={c.id} className="flex items-start gap-3 px-3.5 py-3 bg-surface2 rounded-lg border border-line">
+                    <div className="t-body w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: bg, color }}>
+                      {icon}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[12.5px] font-semibold text-ink mb-0.5 capitalize">
+                        {c.channel}{c.direction === 'inbound' ? ' · received' : ''}
+                      </div>
+                      <div className="t-xs mb-1">{c.content}</div>
+                      <div className="text-[11px] text-ink3">
+                        {formatDate(c.createdAt)}{c.staff ? ` · ${c.staff}` : ''}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-            <button className="btn btn-outline btn-sm mt-3.5"
-              onClick={() => {}}>
-              + Log Communication
-            </button>
+
+            {showComposer ? (
+              <div className="mt-3.5 flex flex-col gap-2 p-3 bg-surface2 rounded-lg border border-line">
+                <select className="form-input" value={commChannel} onChange={e => setCommChannel(e.target.value)}>
+                  <option value="note">Note</option>
+                  <option value="call">Call</option>
+                  <option value="whatsapp">WhatsApp</option>
+                  <option value="sms">SMS</option>
+                  <option value="email">Email</option>
+                </select>
+                <textarea
+                  className="form-input min-h-[72px]"
+                  placeholder="What was communicated?"
+                  value={commText}
+                  onChange={e => setCommText(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <button className="btn btn-primary btn-sm" disabled={savingComm || !commText.trim()} onClick={handleLogComm}>
+                    {savingComm ? 'Saving…' : 'Save'}
+                  </button>
+                  <button className="btn btn-outline btn-sm" onClick={() => { setShowComposer(false); setCommText('') }}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button className="btn btn-outline btn-sm mt-3.5" onClick={() => setShowComposer(true)}>
+                + Log Communication
+              </button>
+            )}
           </div>
         )}
 
@@ -542,7 +612,7 @@ function EditGuestModal({ guest, onClose, onSave }) {
 
 export default function Guests() {
   const addToast = useToast()
-  const { setActivePanel } = useUiActions()
+  const { navigateTo } = useUiActions()
 
   const [guests, setGuests] = useState([])
   const [loading, setLoading] = useState(true)
@@ -592,6 +662,20 @@ export default function Guests() {
     }
   }
 
+  const handleRenew = async (guest) => {
+    try {
+      // Monthly stays extend by one month; daily stays push checkout out a day.
+      const payload = guest.stayType === 'monthly'
+        ? { months: 1 }
+        : { checkOutDate: new Date(Date.now() + 86400000).toISOString() }
+      await guestsApi.renew(guest.id, payload)
+      addToast(`Stay renewed for ${guest.name}.`, 'success')
+      load()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not renew stay.', 'error')
+    }
+  }
+
   const handleEditSave = async (updated) => {
     try {
       await guestsApi.update(updated.id, editPayload(updated))
@@ -627,7 +711,7 @@ export default function Guests() {
         <div className="flex gap-2">
           <button className="btn btn-outline btn-sm" onClick={load} disabled={loading}>↻ Refresh</button>
           <button className="btn btn-outline btn-sm" onClick={() => exportGuestCSV(filtered)}>↓ Export CSV</button>
-          <button className="btn btn-primary" onClick={() => setActivePanel('checkin')}>+ Check-In</button>
+          <button className="btn btn-primary" onClick={() => navigateTo({ panel: 'bookings', params: { tab: 'Upcoming' } })}>+ Check-In</button>
         </div>
       </div>
 
@@ -708,7 +792,7 @@ export default function Guests() {
                         )}
                         {guest.status === 'Due' && (
                           <button className="btn btn-xs bg-success-bg text-success-text"
-                            onClick={() => addToast(`Renewed stay for ${guest.name}`, 'success')}>Renew</button>
+                            onClick={() => handleRenew(guest)}>Renew</button>
                         )}
                       </div>
                     </td>

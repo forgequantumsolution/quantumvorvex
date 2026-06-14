@@ -6,7 +6,7 @@ import CancelModal from '../cancellations/CancelModal'
 import CheckOutModal from '../checkout/CheckOutModal'
 import InvoiceModal from './InvoiceModal'
 import { useToast } from '../../../hooks/useToast'
-import { usePrimaryAction } from '../../../store/hooks'
+import { useAppSelector, usePrimaryAction } from '../../../store/hooks'
 import { bookingsApi } from '../../../api/client'
 import { formatCurrency } from '../../../utils/format'
 import { isUpcoming } from '../../../utils/booking'
@@ -20,14 +20,18 @@ const TABS = [
   { id: 'CheckedOut', label: 'Checked Out' },
   { id: 'Cancelled', label: 'Cancelled' },
 ]
+const TAB_IDS = TABS.map((t) => t.id)
 
 export default function Bookings() {
   const toast = useToast()
 
+  // Today (and other panels) can deep-link to a specific status tab via navigateTo.
+  const navTab = useAppSelector((s) => s.ui.activePanelParams?.tab)
+
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [tab, setTab] = useState('all')
+  const [tab, setTab] = useState(() => (TAB_IDS.includes(navTab) ? navTab : 'all'))
   const [query, setQuery] = useState('')
   const [showNew, setShowNew] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
@@ -49,6 +53,11 @@ export default function Bookings() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // Follow a deep-link tab if the panel was opened with one (e.g. from Today).
+  useEffect(() => {
+    if (TAB_IDS.includes(navTab)) setTab(navTab)
+  }, [navTab])
 
   // Open the New Booking form when the header's contextual button fires
   usePrimaryAction('bookings', () => setShowNew(true))

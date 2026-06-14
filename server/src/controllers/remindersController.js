@@ -17,6 +17,22 @@ export const getTemplates = async (req, res) => {
   catch (e) { res.status(500).json({ error: e.message }) }
 }
 
+export const createTemplate = async (req, res) => {
+  try {
+    const { trigger, content, active } = req.body
+    if (!trigger || !content) {
+      return res.status(400).json({ error: 'trigger and content are required' })
+    }
+    const template = await prisma.messageTemplate.create({
+      data: { trigger, content, active: active !== undefined ? active : true },
+    })
+    res.status(201).json(template)
+  } catch (e) {
+    if (e.code === 'P2002') return res.status(409).json({ error: 'A template with this trigger already exists' })
+    res.status(500).json({ error: e.message })
+  }
+}
+
 export const updateTemplate = async (req, res) => {
   try {
     const { id } = req.params

@@ -181,6 +181,93 @@ export const updateGuest = async (req, res) => {
   }
 }
 
+// POST /guests/:id/renew — extend an active stay (new period / checkout date)
+export const renewGuestStay = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { months, checkOutDate, roomRate } = req.body
+
+    const guest = await prisma.guest.findUnique({ where: { id } })
+    if (!guest) return res.status(404).json({ message: 'Guest not found.' })
+    if (guest.status === 'Checked Out') {
+      return res.status(400).json({ message: 'Cannot renew a checked-out guest.' })
+    }
+
+    const data = {
+      stayCount: (guest.stayCount || 1) + 1,
+      status: 'Active',
+    }
+
+    if (guest.stayType === 'monthly') {
+      const addMonths = months ? parseInt(months, 10) : 1
+      // Anchor the new period on the current checkout (or now) and push it out.
+      const base = guest.checkOutDate ? new Date(guest.checkOutDate) : new Date()
+      const next = new Date(base)
+      next.setMonth(next.getMonth() + addMonths)
+      data.months = (guest.months || 1) + addMonths
+      data.checkOutDate = next
+    } else if (checkOutDate) {
+      data.checkOutDate = new Date(checkOutDate)
+    }
+
+    if (roomRate !== undefined) data.roomRate = parseFloat(roomRate)
+
+    const updated = await prisma.guest.update({
+      where: { id },
+      data,
+      include: { room: { include: { type: true } } },
+    })
+
+    return res.status(200).json({ guest: updated, message: 'Stay renewed successfully.' })
+  } catch (err) {
+    console.error('renewGuestStay error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /guests/:id/communications — communication log for a guest
+export const getGuestCommunications = async (req, res) => {
+  try {
+    const { id } = req.params
+    const communications = await prisma.guestCommunication.findMany({
+      where: { guestId: id },
+      orderBy: { createdAt: 'desc' },
+    })
+    return res.status(200).json({ communications })
+  } catch (err) {
+    console.error('getGuestCommunications error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// POST /guests/:id/communications — log a communication entry
+export const createGuestCommunication = async (req, res) => {
+  try {
+    const { id } = req.params
+    const { channel, direction, subject, content, staff } = req.body
+
+    if (!content) return res.status(400).json({ message: 'content is required.' })
+
+    const guest = await prisma.guest.findUnique({ where: { id } })
+    if (!guest) return res.status(404).json({ message: 'Guest not found.' })
+
+    const communication = await prisma.guestCommunication.create({
+      data: {
+        guestId: id,
+        channel: channel || 'note',
+        direction: direction || 'outbound',
+        subject: subject || null,
+        content,
+        staff: staff || req.user?.name || null,
+      },
+    })
+    return res.status(201).json({ communication })
+  } catch (err) {
+    console.error('createGuestCommunication error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
 // POST /guests/:id/checkout
 export const checkoutGuest = async (req, res) => {
   try {

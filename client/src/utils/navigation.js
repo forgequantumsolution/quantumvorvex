@@ -1,5 +1,5 @@
 import {
-  LuLayoutDashboard, LuCalendarCheck, LuLogIn, LuLogOut, LuCalendarX, LuWrench,
+  LuLayoutDashboard, LuCalendarCheck, LuCalendarX, LuWrench,
   LuUsers, LuBedDouble, LuFileText, LuUtensils, LuSparkles,
   LuCreditCard, LuChartColumn, LuUserCog, LuSettings,
 } from 'react-icons/lu'
@@ -17,8 +17,6 @@ export const NAV_SECTIONS = [
     label: 'Front Desk',
     items: [
       { id: 'bookings',      label: 'Bookings',      Icon: LuCalendarCheck },
-      { id: 'checkin',       label: 'Check-In',      Icon: LuLogIn },
-      { id: 'checkout',      label: 'Check-Out',     Icon: LuLogOut },
       { id: 'cancellations', label: 'Cancellations', Icon: LuCalendarX },
       { id: 'maintenance',   label: 'Maintenance',   Icon: LuWrench },
     ],
@@ -43,7 +41,7 @@ export const NAV_SECTIONS = [
   {
     label: 'Administration',
     items: [
-      { id: 'staff',         label: 'Staff',         Icon: LuUserCog },
+      { id: 'users',         label: 'Users & Roles', Icon: LuUserCog },
       { id: 'settings',      label: 'Settings',      Icon: LuSettings },
     ],
   },
