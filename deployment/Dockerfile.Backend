@@ -1,0 +1,86 @@
+# =============================================================================
+# Quantum Vorvex — Backend image (Node 20 Alpine, multi-stage, hardened)
+#
+# API-ONLY image (nginx serves the SPA). Includes Chromium because the invoice
+# PDF generator (server/src/utils/pdf.js) drives a system Chrome via Puppeteer.
+#
+# Runs with cwd = /app/server so multer's cwd-relative `uploads/` AND app.js's
+# `__dirname/../uploads` both resolve to /app/server/uploads (one mount point).
+#
+# Targets:
+#   deps     — production-only deps (no devDeps)
+#   build    — full deps + `prisma generate` (CLI + engines + generated client)
+#   migrate  — one-shot `prisma migrate deploy` runner (used by compose)
+#   runtime  — final lean image: prod deps + generated client + Chromium (default)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage 1 — deps (production deps only; .npmrc skips the Puppeteer download)
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS deps
+WORKDIR /app/server
+COPY server/package.json server/package-lock.json server/.npmrc ./
+RUN npm ci --omit=dev --ignore-scripts
+
+# -----------------------------------------------------------------------------
+# Stage 2 — build (full deps + generated Prisma client)
+# openssl so Prisma detects openssl-3.x and builds the matching engine.
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS build
+WORKDIR /app/server
+RUN apk add --no-cache openssl
+COPY server/package.json server/package-lock.json server/.npmrc ./
+RUN npm ci
+COPY server/prisma ./prisma
+RUN npx prisma generate
+
+# -----------------------------------------------------------------------------
+# Stage 3 — migrate (one-shot used by the `migrate` compose service)
+# -----------------------------------------------------------------------------
+FROM build AS migrate
+WORKDIR /app/server
+CMD ["npx", "prisma", "migrate", "deploy"]
+
+# -----------------------------------------------------------------------------
+# Stage 4 — runtime (final API image, non-root, with Chromium for PDFs)
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS runtime
+
+# Chromium + fonts/libs for Puppeteer; openssl for the Prisma engine; wget for healthcheck
+RUN apk add --no-cache \
+      chromium nss freetype harfbuzz ca-certificates ttf-freefont \
+      openssl wget \
+    && rm -rf /var/cache/apk/*
+
+# Puppeteer uses the system Chromium (never downloads its own)
+ENV PUPPETEER_SKIP_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+WORKDIR /app/server
+
+# Production node_modules, then overlay the generated Prisma client + engines
+COPY --from=deps  /app/server/node_modules         ./node_modules
+COPY --from=build /app/server/node_modules/.prisma ./node_modules/.prisma
+COPY --from=build /app/server/node_modules/@prisma ./node_modules/@prisma
+
+# Application source (no client — nginx serves the SPA)
+COPY server/src     ./src
+COPY server/prisma  ./prisma
+COPY server/package.json ./package.json
+
+# uploads/ is a mount point; create it and hand /app/server to the app user
+RUN mkdir -p /app/server/uploads && chown -R appuser:appgroup /app/server
+
+USER appuser
+
+ENV NODE_ENV=production \
+    PORT=5000
+
+EXPOSE 5000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD wget -qO- http://localhost:5000/health || exit 1
+
+CMD ["node", "src/server.js"]

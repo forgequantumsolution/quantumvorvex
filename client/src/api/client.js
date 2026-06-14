@@ -70,6 +70,9 @@ export const guestsApi = {
   getOne: (id)     => api.get(`/guests/${id}`),
   update: (id, data) => api.put(`/guests/${id}`, data),
   checkout: (id, data) => api.post(`/guests/${id}/checkout`, data),
+  renew:    (id, data) => api.post(`/guests/${id}/renew`, data),       // { months } | { checkOutDate }
+  getCommunications: (id)       => api.get(`/guests/${id}/communications`),
+  addCommunication:  (id, data) => api.post(`/guests/${id}/communications`, data), // { channel, direction, subject, content }
 }
 
 export const billingApi = {
@@ -77,6 +80,8 @@ export const billingApi = {
   generate: (data) => api.post('/billing/generate', data),
   collect: (id)    => api.put(`/billing/${id}/collect`),
   getPdf: (id)     => api.get(`/billing/${id}/pdf`, { responseType: 'blob' }),
+  getLedger:       (guestId) => api.get('/billing/ledger', { params: { guestId } }),
+  getCashRegister: (date)    => api.get('/billing/cash-register', { params: { date } }),
 }
 
 export const bookingsApi = {
@@ -116,7 +121,9 @@ export const reportsApi = {
   getDashboard: ()          => api.get('/reports/dashboard'),
   getRevenue: (params)      => api.get('/reports/revenue', { params }),
   getGst: (params)          => api.get('/reports/gst', { params }),
+  getOccupancy: (params)    => api.get('/reports/occupancy', { params }),
   exportCsv: (type, params) => api.get('/reports/export/csv', { params: { type, ...params }, responseType: 'blob' }),
+  exportPdf: (type, params) => api.get('/reports/export/pdf', { params: { type, ...params }, responseType: 'blob' }),
 }
 
 export const settingsApi = {
@@ -160,6 +167,8 @@ export const staffApi = {
   getActivity:       (params)   => api.get('/staff/activity', { params }),
   getPermissions:    ()         => api.get('/staff/permissions'),
   updatePermissions: (data)     => api.put('/staff/permissions', data),
+  getSessions:       (id)       => api.get(`/staff/${id}/sessions`),
+  forceLogout:       (id)       => api.post(`/staff/${id}/logout`),
 }
 
 export const usersApi = {
@@ -173,11 +182,16 @@ export const pricingApi = {
   getRules:  ()      => api.get('/pricing/rules'),
   saveRules: (rules) => api.put('/pricing/rules', { rules }),
   compute:   (data)  => api.post('/pricing/compute', data),
+  getCompetitors:    ()         => api.get('/pricing/competitors'),
+  createCompetitor:  (data)     => api.post('/pricing/competitors', data),     // { name, roomType, theirRate }
+  updateCompetitor:  (id, data) => api.put(`/pricing/competitors/${id}`, data),
+  deleteCompetitor:  (id)       => api.delete(`/pricing/competitors/${id}`),
 }
 
 export const remindersApi = {
   send:           (data)     => api.post('/reminders/send', data),
   getTemplates:   ()         => api.get('/reminders/templates'),
+  createTemplate: (data)     => api.post('/reminders/templates', data),  // { trigger, content, active }
   updateTemplate: (id, data) => api.put(`/reminders/templates/${id}`, data),
 }
 

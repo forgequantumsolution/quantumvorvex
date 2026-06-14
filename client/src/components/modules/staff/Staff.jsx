@@ -530,7 +530,19 @@ export default function Staff() {
     setLoading(true); setError('')
     try {
       const { data } = await staffApi.getAll()
-      setStaffList(Array.isArray(data) ? data : (data.staff || []))
+      const list = Array.isArray(data) ? data : (data.staff || [])
+      // Fetch active-session counts per member so the table + Force Logout reflect
+      // real state (the list endpoint doesn't include sessions).
+      const withSessions = await Promise.all(list.map(async (m) => {
+        try {
+          const s = await staffApi.getSessions(m.id)
+          const sessions = Array.isArray(s.data) ? s.data : (s.data.sessions || [])
+          return { ...m, sessions: sessions.length }
+        } catch {
+          return { ...m, sessions: 0 }
+        }
+      }))
+      setStaffList(withSessions)
     } catch {
       setError('Could not load staff. Make sure the backend is running.')
     } finally {
@@ -582,11 +594,17 @@ export default function Staff() {
     }
   }
 
-  function handleForceLogout() {
-    // No server-side session store yet — clear the local indicator only.
-    setStaffList(s => s.map(m => m.id === forceLogoutTarget.id ? { ...m, sessions: 0 } : m))
-    addToast(`Session terminated for ${forceLogoutTarget.name}.`, 'success')
-    setForceLogoutTarget(null)
+  async function handleForceLogout() {
+    const target = forceLogoutTarget
+    try {
+      await staffApi.forceLogout(target.id)
+      setStaffList(s => s.map(m => m.id === target.id ? { ...m, sessions: 0 } : m))
+      addToast(`Session terminated for ${target.name}.`, 'success')
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Could not terminate session.', 'error')
+    } finally {
+      setForceLogoutTarget(null)
+    }
   }
 
   async function handleToggleStatus(member) {

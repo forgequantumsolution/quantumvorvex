@@ -103,6 +103,182 @@ Bookings status tab. New model: **Today = "what do I do now," Bookings = the res
 
 ---
 
+# Session — 2026-06-13 · Settings tabs — real persistence for all tabs
+
+## Summary
+Audited all 13 Settings tabs. 8 already persisted (Hotel Profile, Room Config, Facilities, Food Plans,
+Tax & Pricing, Pricing Rules, Notifications, Users & Access). The remaining 5 only toasted "saved" —
+now wired to persist through `settingsApi` (backed by new `hotel` JSON columns). Each tab hydrates from
+the loaded settings and saves with loading/error states.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- **Documents tab** — KYC checklist + expiry-reminder days now load from / save to
+  `hotel.documentsConfig` (JSON). Save button calls `settingsApi.update`.
+- **Branding tab** — tagline / login title / footer / logo persist to `hotel.branding` (JSON) in
+  addition to the existing localStorage cache (so the login screen still picks them up); hydrates
+  backend → localStorage on load.
+- **Preferences tab** — regional + notification/session prefs persist to `hotel.preferences` (JSON);
+  same backend-wins-over-cache hydration. Now receives `settings` prop.
+- **Appearance tab** — accent / density / corner-radius persist to `hotel.appearance` (JSON) on Save
+  (still applies live as you tweak); hydrates + re-skins from the saved blob. Now receives `settings`.
+- **Properties tab** — "Save Property" now persists the editable hotel fields via `settingsApi.update`
+  (+ updates the store's hotel/owner name) instead of a no-op toast. (Multi-property table is still the
+  intentional "Upgrade to Pro" paywall — left gated.)
+- All five `SaveButton`/buttons now show a `Saving…` state.
+
+---
+
+# Session — 2026-06-13 · Frontend-only features wired to new backend APIs
+
+## Summary
+The 9 "missing backend endpoint" features from `docs/FRONTEND_API_PLAN.md` (working UI on mock/local
+data) are now wired to real endpoints. Added API helpers + mock entries, then swapped each UI from
+local data to the API.
+
+## File changes
+
+### `src/api/client.js`
+- `billingApi`: `getLedger`, `getCashRegister`.
+- `guestsApi`: `renew`, `getCommunications`, `addCommunication`.
+- `reportsApi`: `getOccupancy`, `exportPdf`.
+- `staffApi`: `getSessions`, `forceLogout`.
+- `pricingApi`: `getCompetitors`, `createCompetitor`, `updateCompetitor`, `deleteCompetitor`.
+- `remindersApi`: `createTemplate`.
+
+### `src/api/mockData.js`
+- Added mock data + route handlers for ledger, cash-register, occupancy, PDF export, guest
+  communications, guest renew, staff sessions/logout, pricing competitors, and reminder templates.
+
+### `src/components/modules/billing/Billing.jsx`
+- **Ledger tab** — guest dropdown now from `guestsApi.getAll`; ledger from `billingApi.getLedger`
+  (was hardcoded `MOCK_LEDGER`). **Cash Register tab** — fetches `billingApi.getCashRegister(date)`
+  (was `MOCK_CASH_TXN`). Removed the now-dead mock constants; added loading/empty states.
+
+### `src/components/modules/reports/Reports.jsx`
+- **Occupancy tab** — added a live daily-occupancy trend chart + by-room-type table from
+  `reportsApi.getOccupancy` (falls back to deriving from rooms). **Export tab** — added PDF export
+  buttons alongside CSV via `reportsApi.exportPdf`.
+
+### `src/components/modules/staff/Staff.jsx`
+- Loads real active-session counts per member; **Force Logout** calls `staffApi.forceLogout` (was a
+  local-only indicator clear).
+
+### `src/components/modules/guests/Guests.jsx`
+- **Communications tab** — fetches `guestsApi.getCommunications` and logs entries via
+  `addCommunication` (channel picker + composer); was a hardcoded empty `commLog`.
+- **Renew** button now calls `guestsApi.renew` (was a toast-only stub).
+
+### `src/components/modules/settings/Settings.jsx`
+- **Pricing Rules tab** — Competitor Rate Benchmarking now loads/creates/updates/deletes via
+  `pricingApi.*competitor*` (persist on blur/change; add/delete hit the API); was local-only.
+- **Notifications tab** — message templates load from `remindersApi.getTemplates` (seeds the default
+  set on first run if empty), edit persists via `updateTemplate`, active toggle persists; was local.
+
+### `package.json`
+- Installed the already-declared-but-missing `qrcode.react` dependency (Rooms.jsx import was breaking
+  the production build).
+
+---
+
+# Session — 2026-06-12 · Guest Maintenance Tickets via In-Room QR Code
+
+## Summary
+Guests can now report a maintenance issue by scanning a QR code in their room — no login, no app.
+Each room has a unique `qrToken`; the QR points to `/report?t=<token>`, a standalone public page that
+resolves the room, lets the guest pick a category and describe the issue, and files a ticket straight
+into the existing staff Maintenance dashboard (flagged `Guest – Room <n>`). Staff generate/print the
+per-room QR sticker from the Rooms module.
+
+## File changes
+
+### `src/components/modules/maintenance/GuestMaintenanceForm.jsx` (new)
+- Mobile-first public page reached at `/report?t=<token>`. Reads the token from the URL, calls
+  `maintenanceApi.getPublicRoom` to confirm the room, then submits via `maintenanceApi.createPublic`.
+  Shows a thank-you screen with the ticket reference. No auth, rendered outside the app shell.
+
+### `src/App.jsx`
+- Added a `reportRoute` early-return (mirrors the existing `resetRoute` pattern) so `/report` renders
+  `GuestMaintenanceForm` before any authentication gate.
+
+### `src/api/client.js`
+- Added `maintenanceApi.getPublicRoom(token)` and `maintenanceApi.createPublic(data)` hitting the new
+  public `/maintenance/public/*` endpoints.
+
+### `src/components/modules/rooms/Rooms.jsx`
+- Added a **Maintenance QR** action in the room detail modal that opens a printable sticker
+  (`QRCodeSVG` from `qrcode.react`) encoding `<origin>/report?t=<qrToken>`, with a print-sticker button.
+- `normalizeRoom` now carries `qrToken` through from the API.
+
+### `package.json`
+- Added `qrcode.react` dependency.
+
+---
+
+# Session — 2026-06-12 · Fold Check-In & Check-Out into Bookings + Today
+
+## Summary
+The Front Desk nav had three separate items — **Bookings**, **Check-In**, **Check-Out** — but Check-In
+and Check-Out were just filtered views of the bookings list (`status ∈ {Confirmed, Pending}` and
+`status = CheckedIn`) using actions the Bookings table already exposes inline, and the **Today** board
+already surfaced the same arrivals/departures. Removed the two redundant screens. Bookings is now the
+single reservation surface; Today is the daily front-desk board and deep-links into the relevant
+Bookings status tab. New model: **Today = "what do I do now," Bookings = the reservation record.**
+
+## File changes
+
+### `src/store/slices/uiSlice.js`
+- Added `activePanelParams` to state and a `navigateTo({ panel, params })` action that switches panel
+  while handing params (e.g. `{ tab: 'CheckedIn' }`) to the incoming page. Plain `setActivePanel` now
+  clears the params so a direct nav resets to defaults.
+
+### `src/store/hooks.js`
+- Bound `navigateTo` in `useUiActions`.
+
+### `src/utils/navigation.js`
+- Removed the `checkin` and `checkout` Front Desk items (and the now-unused `LuLogIn` / `LuLogOut`
+  imports). Front Desk is now `Bookings · Cancellations · Maintenance`.
+
+### `src/utils/permissions.js`
+- Dropped `checkin` / `checkout` from `FRONT_DESK_PANELS` (old `/checkin` URLs now fall back to Today).
+
+### `src/App.jsx`
+- Removed the `CheckIn` / `CheckOut` lazy imports and their `PANEL_MAP` entries.
+
+### `src/components/layout/Topbar.jsx`
+- Removed the `checkin` / `checkout` contextual primary actions.
+
+### `src/components/modules/today/Today.jsx`
+- Added a `goBookings(tab)` helper (via `navigateTo`). KPI strip, the Arrivals/Departures column
+  "view" links, the per-row Check-in/Check-out actions, and the "Overdue checkouts" attention row now
+  deep-link to Bookings (`Upcoming` for arrivals, `CheckedIn` for departures/in-house) instead of the
+  standalone desks.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- Reads `activePanelParams.tab` (validated against the tab ids) to seed the active tab and follows it
+  via an effect, so a deep-link from Today/Guests lands on the right status tab.
+
+### `src/components/modules/guests/Guests.jsx`
+- "+ Check-In" button now `navigateTo`s Bookings `Upcoming` instead of the removed `checkin` panel.
+
+### `src/hooks/useKeyboardShortcuts.js`
+- Repointed the `C` shortcut from `checkin` → `bookings` (updated the legend comment too).
+
+### `src/components/ui/GlobalSearch.jsx`
+- Removed the `Check-In` quick-nav entry.
+
+### Deleted
+- `src/components/modules/checkin/CheckIn.jsx`, `src/components/modules/checkin/ArrivalCard.jsx`,
+  `src/components/modules/checkout/CheckOut.jsx`. Kept `checkout/CheckOutModal.jsx` — Bookings uses it.
+
+## Notes
+- `npm run build` passes; the CheckIn/CheckOut chunks are gone, Bookings remains.
+- Watch point: Today's *Departures* derive from `guests` (status `checked_in`) while the Bookings
+  `CheckedIn` tab derives from `bookings` — same real-world set, two data sources, so they can drift.
+
+---
+
 # Session — 2026-06-10 · Invoice preview modal + PDF download
 
 ## Summary

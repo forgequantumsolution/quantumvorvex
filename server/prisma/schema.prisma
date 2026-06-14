@@ -27,6 +27,11 @@ model Hotel {
   setupComplete      Boolean  @default(false)
   termsAndConditions String?
   wifiPassword       String?
+  // JSON-encoded config blobs for Settings tabs that have no dedicated table.
+  documentsConfig    String?   // { kycDocs:[{id,label,required,maxMB,enabled}], expiryReminderDays }
+  branding           String?   // { tagline, loginTitle, footerNote, logoUrl }
+  preferences        String?   // { language, currency, dateFormat, timeFormat, itemsPerPage, soundAlerts, emailDigest, autoLogout }
+  appearance         String?   // { accent, density, radius }
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
@@ -115,6 +120,7 @@ model Guest {
   payments        Payment[]
   reminders       Reminder[]
   bookings        Booking[]
+  communications  GuestCommunication[]
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 }
@@ -470,5 +476,19 @@ model GuestPortalToken {
   type      String   @default("booking")
   expiresAt DateTime
   used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// ─── ADDON 16: GUEST COMMUNICATIONS LOG ───────────────────────────────────────
+
+model GuestCommunication {
+  id        String   @id @default(cuid())
+  guestId   String
+  guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
+  channel   String   @default("note")    // whatsapp | sms | email | call | note
+  direction String   @default("outbound") // inbound | outbound
+  subject   String?
+  content   String
+  staff     String?                        // who logged / sent it
   createdAt DateTime @default(now())
 }

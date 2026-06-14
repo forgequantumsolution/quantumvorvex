@@ -1,0 +1,147 @@
+# =============================================================================
+# Quantum Vorvex — production stack (single VM, Docker Compose)
+#
+#   postgres  — PostgreSQL 16 (named volume, healthchecked)
+#   migrate   — one-shot `prisma migrate deploy`, runs once then exits
+#   app       — Express API (API only; nginx serves the SPA). Has Chromium for PDFs.
+#   nginx     — static React build + reverse proxy on :80 (host nginx terminates TLS)
+#
+# Bring-up order is enforced: postgres (healthy) -> migrate (completed) ->
+# app (healthy) -> nginx. Configure secrets in a root .env (see .env.example).
+# Build files live in deployment/; this file stays at the repo root.
+# Images come from GHCR (see .github/workflows/deploy.yml); `build:` is kept for
+# local use. The server deploy sets IMAGE_TAG=<sha>.
+# =============================================================================
+
+name: quantumvorvex
+
+networks:
+  qvnet:
+    driver: bridge
+
+volumes:
+  pg_data:
+  uploads_data:
+
+services:
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: quantumvorvex_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks: [qvnet]
+    shm_size: 256mb
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    security_opt: ["no-new-privileges:true"]
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 512M }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  # ---------------------------------------------------------------------------
+  migrate:
+    build:
+      context: .
+      dockerfile: deployment/Dockerfile.Backend
+      target: migrate
+    image: ghcr.io/forgequantumsolution/quantumvorvex-migrate:${IMAGE_TAG:-latest}
+    container_name: quantumvorvex_migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [qvnet]
+
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: deployment/Dockerfile.Backend
+      target: runtime
+    image: ghcr.io/forgequantumsolution/quantumvorvex-backend:${IMAGE_TAG:-latest}
+    container_name: quantumvorvex_app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      CLIENT_URL: ${CLIENT_URL}
+      ENFORCE_SINGLE_SESSION: ${ENFORCE_SINGLE_SESSION:-true}
+      # Email (password reset links + login OTP). Blank -> codes print to logs.
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_APP_PASSWORD: ${EMAIL_APP_PASSWORD:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+    volumes:
+      - uploads_data:/app/server/uploads
+    expose: ["5000"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks: [qvnet]
+    security_opt: ["no-new-privileges:true"]
+    # Chromium (Puppeteer) needs a roomy /dev/shm; the default 64m crashes it.
+    # NOTE: read_only is intentionally NOT set here — Chromium writes a temp
+    # profile under the container FS, so the root FS must stay writable.
+    shm_size: 512mb
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 40s
+      retries: 3
+    deploy:
+      resources:
+        limits: { cpus: "1.0", memory: 1024M }
+        reservations: { cpus: "0.25", memory: 256M }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "5" }
+
+  # ---------------------------------------------------------------------------
+  nginx:
+    build:
+      context: .
+      dockerfile: deployment/Dockerfile.Frontend
+    image: ghcr.io/forgequantumsolution/quantumvorvex-frontend:${IMAGE_TAG:-latest}
+    container_name: quantumvorvex_nginx
+    restart: unless-stopped
+    # Host nginx terminates TLS on :443 and proxies to this container.
+    # Bound to localhost so only the host reverse proxy can reach it.
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks: [qvnet]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 128M }
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
