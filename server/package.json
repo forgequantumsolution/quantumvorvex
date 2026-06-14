@@ -10,6 +10,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "node src/utils/seed.js",
     "db:seed:demo": "node src/utils/seedDemo.js",
+    "db:rbac": "node src/utils/ensureRbac.run.js",
     "db:generate": "prisma generate"
   },
   "keywords": [],

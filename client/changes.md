@@ -6,6 +6,26 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-14 · Protected super-admin (UI lock)
+
+## Summary
+Client side of the protected super-admin (backend in `../server/CHANGES.md`): the super-admin row in
+Users & Roles is visually marked and locked down.
+
+## File changes
+
+### `src/components/modules/users/UsersRoles.jsx`
+- Super-admin row shows a gold **★ Super Admin** tag and hides the Deactivate/Delete actions.
+- In the user edit modal, the Role and Status selects are disabled for the super-admin (with a note
+  that role/status are locked; name/password remain editable). Uses the `isSuperAdmin` flag now
+  returned by `GET /users`.
+
+### `tests/rbac-enforcement.spec.js`
+- Added a test: the super-admin is seeded + `isSuperAdmin`, and role-change / deactivate / delete all
+  return 403, while the seeded credentials log in.
+
+---
+
 # Session — 2026-06-14 · Reusable ConfirmModal (replace native delete alerts)
 
 ## Summary
