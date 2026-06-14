@@ -4,20 +4,16 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - shriyansh/frontend
+      - main
 
 
 permissions:
   contents: read
   packages: write
 
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: false
-
 env:
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/quantumvorvex
-  CD_PATH: /opt/quantumvorvex
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/quantumvorvex-demo
+  CD_PATH: /home/forge/quantumvorvex/demo
 
 jobs:
   # ───────────────────────────────────────────────────────────────────────────
@@ -82,8 +78,9 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: docker-compose.yml
+          source: deployment/docker-compose.demo.yml
           target: ${{ env.CD_PATH }}
+          strip_components: 1
 
       - name: Pull, migrate, and bring the stack up
         uses: appleboy/ssh-action@v1.2.0
@@ -91,21 +88,17 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          envs: GHCR_TOKEN,GHCR_USER,IMAGE_TAG,CD_PATH
+          envs: GHCR_TOKEN,GHCR_USER,CD_PATH
           script_stop: true
           script: |
             set -e
             cd "$CD_PATH"
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-            export IMAGE_TAG="$IMAGE_TAG"
-            docker compose pull
-            docker compose up -d --wait postgres
-            docker compose run --rm --no-deps migrate
-            docker compose up -d --no-build
-            docker logout ghcr.io
-            docker image prune -f
+            docker compose -f docker-compose.demo.yml pull
+            docker compose -f docker-compose.demo.yml up -d --wait postgres
+            docker compose -f docker-compose.demo.yml run --rm --no-deps migrate
+            docker compose -f docker-compose.demo.yml up -d --no-build --remove-orphans
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
-          IMAGE_TAG: ${{ github.sha }}
           CD_PATH: ${{ env.CD_PATH }}
