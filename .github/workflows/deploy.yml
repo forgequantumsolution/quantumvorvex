@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - shriyansh/frontend
+      - main
 
 
 permissions:
@@ -16,8 +16,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/quantumvorvex
-  CD_PATH: /opt/quantumvorvex
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/quantumvorvex-demo
+  CD_PATH: /home/forge/quantumvorvex/demo
 
 jobs:
   # ───────────────────────────────────────────────────────────────────────────
