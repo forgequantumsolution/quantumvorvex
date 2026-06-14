@@ -93,14 +93,6 @@ app.use(cors({
 }))
 
 // ── Rate limiters ─────────────────────────────────────────────────────────────
-const authLimiter = rateLimit({
-  // Strict in production; generous in dev/test so local E2E runs aren't locked out.
-  windowMs: 15 * 60 * 1000, max: process.env.NODE_ENV === 'production' ? 10 : 1000,
-  standardHeaders: true, legacyHeaders: false,
-  message: { error: 'Too many auth requests. Try again in 15 minutes.', code: 'ERR_RATE_LIMIT' },
-  skip: (req) => req.path === '/logout',
-})
-
 const apiLimiter = rateLimit({
   // Strict in production; generous in dev/test so local E2E runs aren't throttled.
   windowMs: 15 * 60 * 1000, max: process.env.NODE_ENV === 'production' ? 200 : 5000,
@@ -148,7 +140,7 @@ app.get('/health/ready', async (req, res) => {
 })
 
 // ── API Routes ────────────────────────────────────────────────────────────────
-app.use('/api/v1/auth',          authLimiter, authRoutes)
+app.use('/api/v1/auth',          authRoutes)
 app.use('/api/v1/rooms',         apiLimiter, apiSlowDown, roomsRoutes)
 app.use('/api/v1/guests',        apiLimiter, apiSlowDown, guestsRoutes)
 app.use('/api/v1/billing',       apiLimiter, apiSlowDown, billingRoutes)
