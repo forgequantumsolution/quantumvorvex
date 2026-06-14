@@ -22,38 +22,6 @@ async function authUserPayload(user) {
   }
 }
 
-// In-memory failed login tracker (per IP, resets after window)
-// For production: replace with Redis INCR + EXPIRE
-const failedAttempts = new Map()
-const MAX_ATTEMPTS   = 5
-const LOCK_WINDOW_MS = 15 * 60 * 1000   // 15 minutes
-
-function getAttemptKey(ip) { return `login:${ip}` }
-
-function isLockedOut(ip) {
-  const entry = failedAttempts.get(getAttemptKey(ip))
-  if (!entry) return false
-  if (Date.now() - entry.firstAt > LOCK_WINDOW_MS) {
-    failedAttempts.delete(getAttemptKey(ip))
-    return false
-  }
-  return entry.count >= MAX_ATTEMPTS
-}
-
-function recordFailure(ip) {
-  const key   = getAttemptKey(ip)
-  const entry = failedAttempts.get(key)
-  if (!entry || Date.now() - entry.firstAt > LOCK_WINDOW_MS) {
-    failedAttempts.set(key, { count: 1, firstAt: Date.now() })
-  } else {
-    entry.count++
-  }
-}
-
-function clearFailures(ip) {
-  failedAttempts.delete(getAttemptKey(ip))
-}
-
 // One active session per user — only bump/track sessionVersion when enabled (production).
 // Off in local dev so test/demo logins don't churn the counter. Mirrors the middleware flag.
 const ENFORCE_SINGLE_SESSION = process.env.ENFORCE_SINGLE_SESSION === 'true'
@@ -122,15 +90,6 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body   // Validated by Zod middleware
 
-    // Brute-force lockout check
-    if (isLockedOut(ip)) {
-      securityLog.loginFailure(email, ip, ua, 'ip_locked_out')
-      return res.status(429).json({
-        error: 'Too many failed login attempts. Try again in 15 minutes.',
-        code:  'ERR_ACCOUNT_LOCKED',
-      })
-    }
-
     // Lookup user — always run bcrypt even on miss to prevent timing attacks
     const user = await prisma.user.findUnique({
       where: { email },
@@ -142,7 +101,6 @@ export const login = async (req, res) => {
     const isMatch    = await bcrypt.compare(password, hash)
 
     if (!user || !isMatch) {
-      recordFailure(ip)
       securityLog.loginFailure(email, ip, ua, user ? 'wrong_password' : 'user_not_found')
       return res.status(401).json({ error: 'Invalid email or password.', code: 'ERR_AUTH' })
     }
@@ -151,9 +109,6 @@ export const login = async (req, res) => {
       securityLog.loginFailure(email, ip, ua, 'account_inactive')
       return res.status(403).json({ error: 'Account is inactive. Contact an administrator.', code: 'ERR_ACCOUNT_INACTIVE' })
     }
-
-    // Login success — clear failures, issue token
-    clearFailures(ip)
 
     // Single-session: bump sessionVersion so any token on a previously logged-in device
     // goes stale. Only when enforcement is enabled (see ENFORCE_SINGLE_SESSION).

@@ -14,6 +14,7 @@ const SAFE_SELECT = {
   phone: true,
   roleId: true,
   status: true,
+  isSuperAdmin: true,
   mustChangePassword: true,
   createdAt: true,
   updatedAt: true,
@@ -90,6 +91,17 @@ export const updateUser = async (req, res) => {
     const target = await prisma.user.findUnique({ where: { id }, include: { roleRef: true } })
     if (!target) return res.status(404).json({ error: 'User not found.' })
 
+    // The protected super-admin's role, status, and email are immutable (name/phone/
+    // password may still be updated). Re-seeded on every boot regardless.
+    if (target.isSuperAdmin) {
+      if (roleId !== undefined && roleId !== target.roleId)
+        return res.status(403).json({ error: "The super admin's role cannot be changed." })
+      if (status !== undefined && status !== target.status)
+        return res.status(403).json({ error: 'The super admin cannot be deactivated.' })
+      if (email !== undefined && email.toLowerCase() !== target.email.toLowerCase())
+        return res.status(403).json({ error: "The super admin's email cannot be changed." })
+    }
+
     const roleChangeRequested = roleId !== undefined
     let newRole = target.roleRef
     if (roleChangeRequested) {
@@ -143,6 +155,10 @@ export const deleteUser = async (req, res) => {
 
     const target = await prisma.user.findUnique({ where: { id }, include: { roleRef: true } })
     if (!target) return res.status(404).json({ error: 'User not found.' })
+
+    if (target.isSuperAdmin) {
+      return res.status(403).json({ error: 'The super admin account cannot be deleted.' })
+    }
 
     // Protect the last active owner.
     if (target.roleRef?.isOwner && target.status === 'active') {
