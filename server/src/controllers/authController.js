@@ -5,6 +5,22 @@ import prisma from '../utils/prisma.js'
 import logger, { securityLog } from '../utils/logger.js'
 import { sendPasswordResetEmail, sendOtpEmail } from '../utils/email.js'
 import { audit } from '../utils/audit.js'
+import { getUserAccess } from '../utils/permissionCache.js'
+
+// Build the client-facing user object, including the resolved RBAC permission map so
+// the frontend can drive sidebar visibility + action gating without a second request.
+async function authUserPayload(user) {
+  const access = await getUserAccess(user.id)
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    isOwner: access?.isOwner || false,
+    permissions: access?.perms || {},
+  }
+}
 
 // In-memory failed login tracker (per IP, resets after window)
 // For production: replace with Redis INCR + EXPIRE
@@ -151,7 +167,7 @@ export const login = async (req, res) => {
     return res.status(200).json({
       message: 'Login successful.',
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: await authUserPayload(user),
     })
   } catch (err) {
     logger.error('Login handler error', { error: err.message, ip, event: 'AUTH' })
@@ -180,7 +196,7 @@ export const me = async (req, res) => {
       select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true },
     })
     if (!user) return res.status(404).json({ error: 'User not found.', code: 'ERR_NOT_FOUND' })
-    return res.status(200).json({ user })
+    return res.status(200).json({ user: { ...(await authUserPayload(user)), createdAt: user.createdAt } })
   } catch (err) {
     logger.error('Me endpoint error', { error: err.message, userId: req.user?.userId })
     return res.status(500).json({ error: 'An unexpected error occurred.', code: 'ERR_INTERNAL' })
@@ -389,7 +405,7 @@ export const verifyOtp = async (req, res) => {
     return res.status(200).json({
       message: 'Login successful.',
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: await authUserPayload(user),
     })
   } catch (err) {
     logger.error('verifyOtp error', { error: err.message, ip })

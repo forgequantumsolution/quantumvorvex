@@ -6,6 +6,57 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-14 · RBAC Phase 3 — Dynamic frontend permissions
+
+## Summary
+The frontend now reads the live permission map (`currentUser.permissions` + `isOwner`, delivered by
+the backend on login / `/auth/me`) instead of a hardcoded role→panels table. Sidebar visibility,
+panel access, and action gating are permission-driven, so custom roles render correctly. Added
+self-service password change (available to every user, including staff) and a 403 resync.
+
+## File changes
+
+### `src/utils/permissions.js` (rewritten)
+- Replaced the static `ROLE_PANELS`/`ROLE_SETTINGS_TABS` tables with a `PANEL_MODULE` map +
+  `hasModule(user, module, level)`, `canAccess(user, panel)`, `getAllowedPanels(user)`, and
+  `canAccessSettingsTab(user, tab)`. Exported `ALL_PANELS`. `today`/`cancellations` derive from the
+  `bookings` module; Settings sub-tabs derive from settings access. Kept `ROLE_LABELS`/`ROLE_COLORS`.
+
+### `src/store/slices/uiSlice.js`
+- `panelFromUrl` now validates against `ALL_PANELS` (was `ROLE_PANELS.owner`).
+
+### `src/components/layout/Sidebar.jsx`
+- `getAllowedPanels(currentUser)` (was role string). Added a **Change Password** control in the user
+  footer (always available) that opens `ChangePasswordModal`.
+
+### `src/App.jsx`
+- `canAccess(currentUser, activePanel)` for the access gate. Added a boot effect that refreshes
+  `/auth/me` (resyncs permissions) and listens for `auth:forbidden` to resync after a live access change.
+
+### `src/api/client.js`
+- Response interceptor now also handles `403 ERR_FORBIDDEN`: dispatches an `auth:forbidden` window
+  event so the app resyncs the permission map / sidebar.
+
+### `src/components/modules/settings/Settings.jsx`
+- Settings tabs filtered via `canAccessSettingsTab(currentUser, …)`.
+
+### `src/components/modules/users/UsersRoles.jsx`
+- User CRUD gated by `useCan('users', 'MANAGE')`; role CRUD remains owner-only.
+
+### `src/hooks/useCan.js` (new)
+- `useCan(module, level='MANAGE')` — reads the live permission map for action gating.
+
+### `src/components/ui/ChangePasswordModal.jsx` (new)
+- Formik + Yup modal hitting `authApi.changePassword`; on success swaps in the reissued token
+  without disrupting the session. Launched from the sidebar (not gated by any module).
+
+### `tests/rbac-frontend.spec.js` (new)
+- Playwright (4 tests): staff sidebar shows front-desk/ops only; owner sees finance + admin;
+  any user can change their password via the sidebar; a custom `billing:VIEW` role sees Billing but
+  not Reports/Settings/Guests.
+
+---
+
 # Session — 2026-06-14 · RBAC Phase 2 — enforcement (client touches)
 
 ## Summary

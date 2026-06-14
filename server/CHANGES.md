@@ -5,6 +5,23 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-14 · RBAC Phase 3 — Dynamic frontend permissions (backend touches)
+
+## Summary
+Phase 3 is mostly frontend (see `../client/CHANGES.md`). Backend change: the auth responses now
+deliver the user's resolved permission map so the client can drive sidebar visibility and action
+gating without a second request.
+
+## File changes
+
+### `src/controllers/authController.js`
+- Added `authUserPayload(user)` — returns `{ id, name, email, phone, role, isOwner, permissions }`,
+  where `permissions` is the `{ module: level }` map resolved via `permissionCache.getUserAccess`.
+- `login`, `verifyOtp`, and `me` now return this enriched user object (so permissions arrive on
+  login and refresh on `/auth/me`). The change-password endpoint (Phase 2) is unchanged.
+
+---
+
 # Session — 2026-06-14 · RBAC Phase 2 — Backend enforcement
 
 ## Summary

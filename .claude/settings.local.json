@@ -29,7 +29,8 @@
       "Bash(printf \"mock\")",
       "Bash(vercel storage:*)",
       "Bash(yes)",
-      "Bash(npx prisma *)"
+      "Bash(npx prisma *)",
+      "Bash(npx playwright *)"
     ],
     "additionalDirectories": [
       "d:\\Forge Quantum Solutions\\Quantum Vorvex\\server\\src"

@@ -50,6 +50,13 @@ api.interceptors.response.use(
         window.dispatchEvent(new CustomEvent('auth:unauthorized'))
       }
     }
+    // A 403 from the RBAC layer means the user's access may have changed (e.g. role
+    // edited). Nudge the app to resync the live permission map so the sidebar updates.
+    if (err.response?.status === 403 && err.response?.data?.code === 'ERR_FORBIDDEN' && !isAuthCall) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:forbidden'))
+      }
+    }
     return Promise.reject(err)
   }
 )

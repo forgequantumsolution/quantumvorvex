@@ -6,6 +6,7 @@ import Tabs from '../../ui/Tabs'
 import FormikField from '../../ui/FormikField'
 import { useToast } from '../../../hooks/useToast'
 import { useAppSelector } from '../../../store/hooks'
+import { useCan } from '../../../hooks/useCan'
 import { usersApi, rolesApi } from '../../../api/client'
 import { userSchema } from '../../../validation/userSchema'
 import { timeAgo } from '../../../utils/format'
@@ -309,7 +310,8 @@ function RolesTab({ roles, modules, canManage, onAdd, onEdit, onDelete }) {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function UsersRoles() {
   const currentUser = useAppSelector((s) => s.auth.currentUser)
-  const canManage = currentUser?.role === 'owner' // role management & user CRUD are owner-only
+  const canManageUsers = useCan('users', 'MANAGE')                 // user CRUD needs users:manage
+  const canManageRoles = !!(currentUser?.isOwner || currentUser?.role === 'owner') // roles are owner-only
   const addToast = useToast()
 
   const [activeTab, setActiveTab] = useState('users')
@@ -436,7 +438,7 @@ export default function UsersRoles() {
           <UsersTab
             users={users}
             roles={roles}
-            canManage={canManage}
+            canManage={canManageUsers}
             onAdd={() => setUserModal({ user: null })}
             onEdit={(u) => setUserModal({ user: u })}
             onToggleStatus={toggleUserStatus}
@@ -447,7 +449,7 @@ export default function UsersRoles() {
           <RolesTab
             roles={roles}
             modules={modules}
-            canManage={canManage}
+            canManage={canManageRoles}
             onAdd={() => setRoleModal({ role: null })}
             onEdit={(r) => setRoleModal({ role: r })}
             onDelete={deleteRole}

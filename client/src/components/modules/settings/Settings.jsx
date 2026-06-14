@@ -2047,8 +2047,8 @@ export default function Settings({ onRunSetup }) {
   const currentUser  = useAppSelector(s => s.auth.currentUser)
   const role         = currentUser?.role || 'staff'
 
-  // Filter tabs based on role permissions
-  const tabs = ALL_TABS.filter(t => canAccessSettingsTab(role, t.id))
+  // Filter tabs based on the user's resolved permissions
+  const tabs = ALL_TABS.filter(t => canAccessSettingsTab(currentUser, t.id))
 
   // Reset to first allowed tab if current tab is no longer accessible
   const validActiveTab = tabs.find(t => t.id === activeTab) ? activeTab : (tabs[0]?.id || 'profile')

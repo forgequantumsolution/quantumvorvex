@@ -15,6 +15,7 @@ import LoginPage from './components/auth/LoginPage'
 import ResetPasswordPage from './components/auth/ResetPasswordPage'
 // import LandingPage from './components/auth/LandingPage'
 import { canAccess } from './utils/permissions'
+import { authApi } from './api/client'
 import { MOCK_USER, MOCK_TOKEN } from './api/mockData.js'
 
 const IS_MOCK = import.meta.env.VITE_MOCK === 'true'
@@ -100,7 +101,7 @@ export default function App() {
   const darkMode    = useAppSelector((s) => s.ui.darkMode)
   const currentUser = useAppSelector((s) => s.auth.currentUser)
   const token       = useAppSelector((s) => s.auth.token)
-  const { login } = useAuthActions()
+  const { login, setCurrentUser } = useAuthActions()
   const { setActivePanel } = useUiActions()
   const [showSetup, setShowSetup] = useState(false)
   // True when the user arrived via a password-reset email link (/reset-password?token=…)
@@ -132,6 +133,25 @@ export default function App() {
       login(MOCK_TOKEN, MOCK_USER)
     }
   }, [IS_MOCK, currentUser, login])
+
+  // Refresh the live permission map on boot (and resync after an access change).
+  // Persisted currentUser may carry stale permissions if a role changed since last login.
+  useEffect(() => {
+    if (IS_MOCK || !token) return
+    let last = 0
+    const resync = async () => {
+      const now = Date.now()
+      if (now - last < 3000) return   // debounce repeated 403s
+      last = now
+      try {
+        const { data } = await authApi.me()
+        if (data?.user) setCurrentUser(data.user)
+      } catch { /* 401s are handled by the axios interceptor */ }
+    }
+    resync()
+    window.addEventListener('auth:forbidden', resync)
+    return () => window.removeEventListener('auth:forbidden', resync)
+  }, [token, setCurrentUser])
 
   // Keyboard shortcuts
   useKeyboardShortcuts({})
@@ -199,11 +219,10 @@ export default function App() {
     )
   }
 
-  const role = currentUser.role
   const ActivePanel = PANEL_MAP[activePanel] || Today
 
-  // Check if current user can access the active panel
-  const hasAccess = canAccess(role, activePanel)
+  // Check if current user can access the active panel (driven by live permissions)
+  const hasAccess = canAccess(currentUser, activePanel)
 
   return (
     <>
