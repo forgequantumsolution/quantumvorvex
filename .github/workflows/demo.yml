@@ -97,7 +97,7 @@ jobs:
             docker compose -f docker-compose.demo.yml pull
             docker compose -f docker-compose.demo.yml up -d --wait postgres
             docker compose -f docker-compose.demo.yml run --rm --no-deps migrate
-            docker compose -f docker-compose.demo.yml up -d --no-build
+            docker compose -f docker-compose.demo.yml up -d --no-build --remove-orphans
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}

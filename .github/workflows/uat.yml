@@ -85,7 +85,7 @@ jobs:
             docker compose -f docker-compose.uat.yml pull
             docker compose -f docker-compose.uat.yml up -d --wait postgres
             docker compose -f docker-compose.uat.yml run --rm --no-deps migrate
-            docker compose -f docker-compose.uat.yml up -d
+            docker compose -f docker-compose.uat.yml up -d --remove-orphans
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
