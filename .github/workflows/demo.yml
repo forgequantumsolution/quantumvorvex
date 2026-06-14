@@ -2,7 +2,8 @@ name: Build & Deploy (main)
 
 on:
   workflow_dispatch:
-  push:
+  pull_request:
+    types: [closed]
     branches:
       - main
 
@@ -21,6 +22,9 @@ jobs:
   # ───────────────────────────────────────────────────────────────────────────
   build:
     name: Build ${{ matrix.name }}
+    # Run only on a merged PR into main (or a manual dispatch) — a PR closed
+    # without merging must NOT deploy.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -37,6 +41,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -67,10 +73,13 @@ jobs:
   deploy:
     name: Deploy to server
     needs: build
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Copy docker-compose.yml to the server
         uses: appleboy/scp-action@v0.1.7
