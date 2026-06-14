@@ -6,6 +6,28 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-14 · Reusable ConfirmModal (replace native delete alerts)
+
+## Summary
+Replaced the native `window.confirm()` dialogs on the Users & Roles delete actions with a styled
+in-app confirmation modal.
+
+## File changes
+
+### `src/components/ui/ConfirmModal.jsx` (new)
+- Reusable confirm dialog built on `Modal`: `title` / `message` / `confirmLabel` / `cancelLabel`,
+  a `danger` variant (red confirm button), and a `busy` state (disables buttons, shows "Working…").
+
+### `src/components/modules/users/UsersRoles.jsx`
+- User and role deletes now open `ConfirmModal` instead of `window.confirm`. A single `runDelete()`
+  handles either kind via a `{ kind, item }` state, with a `deleting` busy flag and error toasts.
+
+### `tests/rbac-frontend.spec.js`
+- Added a test: deleting a role opens the in-app confirm modal and completes — with a
+  `page.on('dialog')` guard asserting no native browser dialog fires.
+
+---
+
 # Session — 2026-06-14 · RBAC Phase 4 — Drop legacy role + create-user autofill fix
 
 ## Summary

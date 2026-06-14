@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Formik, Form } from 'formik'
 import Modal from '../../ui/Modal'
+import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import FormikField from '../../ui/FormikField'
@@ -326,6 +327,8 @@ export default function UsersRoles() {
 
   const [userModal, setUserModal] = useState(null)     // { user } | { user: null } | null
   const [roleModal, setRoleModal] = useState(null)     // { role } | { role: null } | null
+  const [confirm, setConfirm]     = useState(null)     // { kind: 'user'|'role', item } | null
+  const [deleting, setDeleting]   = useState(false)
 
   const loadAll = useCallback(async () => {
     setLoading(true); setError('')
@@ -376,14 +379,21 @@ export default function UsersRoles() {
     }
   }
 
-  async function deleteUser(u) {
-    if (!window.confirm(`Delete ${u.name}? This cannot be undone.`)) return
+  // Delete is confirmed via <ConfirmModal> (no native window.confirm).
+  async function runDelete() {
+    if (!confirm) return
+    const { kind, item } = confirm
+    setDeleting(true)
     try {
-      await usersApi.remove(u.id)
-      addToast('User deleted.', 'success')
+      if (kind === 'user') await usersApi.remove(item.id)
+      else await rolesApi.remove(item.id)
+      addToast(kind === 'user' ? 'User deleted.' : 'Role deleted.', 'success')
+      setConfirm(null)
       loadAll()
     } catch (err) {
-      addToast(err.response?.data?.error || 'Could not delete user.', 'error')
+      addToast(err.response?.data?.error || `Could not delete ${kind}.`, 'error')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -404,16 +414,6 @@ export default function UsersRoles() {
     }
   }
 
-  async function deleteRole(r) {
-    if (!window.confirm(`Delete the "${r.name}" role?`)) return
-    try {
-      await rolesApi.remove(r.id)
-      addToast('Role deleted.', 'success')
-      loadAll()
-    } catch (err) {
-      addToast(err.response?.data?.error || 'Could not delete role.', 'error')
-    }
-  }
 
   const tabs = [
     { id: 'users', label: 'Users' },
@@ -445,7 +445,7 @@ export default function UsersRoles() {
             onAdd={() => setUserModal({ user: null })}
             onEdit={(u) => setUserModal({ user: u })}
             onToggleStatus={toggleUserStatus}
-            onDelete={deleteUser}
+            onDelete={(u) => setConfirm({ kind: 'user', item: u })}
           />
         </div>
         <div data-tab-id="roles">
@@ -455,7 +455,7 @@ export default function UsersRoles() {
             canManage={canManageRoles}
             onAdd={() => setRoleModal({ role: null })}
             onEdit={(r) => setRoleModal({ role: r })}
-            onDelete={deleteRole}
+            onDelete={(r) => setConfirm({ kind: 'role', item: r })}
           />
         </div>
       </Tabs>
@@ -478,6 +478,21 @@ export default function UsersRoles() {
           onSave={saveRole}
         />
       )}
+
+      <ConfirmModal
+        isOpen={!!confirm}
+        onClose={() => setConfirm(null)}
+        onConfirm={runDelete}
+        busy={deleting}
+        danger
+        title={confirm?.kind === 'role' ? 'Delete role' : 'Delete user'}
+        confirmLabel="Delete"
+        message={
+          confirm?.kind === 'role'
+            ? <>Delete the <strong className="text-ink">{confirm?.item?.name}</strong> role? This cannot be undone.</>
+            : <>Delete <strong className="text-ink">{confirm?.item?.name}</strong>? This cannot be undone.</>
+        }
+      />
     </div>
   )
 }
