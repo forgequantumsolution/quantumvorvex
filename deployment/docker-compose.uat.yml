@@ -94,7 +94,7 @@ services:
     restart: unless-stopped
     # Host nginx terminates TLS and proxies to this localhost port.
     ports:
-      - "127.0.0.1:8002:80"
+      - "8002:80"
     depends_on:
       backend:
         condition: service_healthy
