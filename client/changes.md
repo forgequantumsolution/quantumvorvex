@@ -6,6 +6,58 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-14 · RBAC Phase 1 — Users & Roles panel (Staff module removed)
+
+## Summary
+Replaced the dead **Staff** module with a dedicated **Users & Roles** panel backed by the new
+backend Role / RolePermission API. The sidebar's "Staff" slot is now "Users & Roles": a Users tab
+(create/edit/deactivate/delete with a role dropdown; password optional → defaults to `Welcome@123`)
+and a Roles tab (create/edit roles with a per-module **None/View/Manage** matrix; Owner read-only,
+system roles protected). Role management is owner-only. Also removed the now-duplicate Settings →
+"Users & Access" tab. **Permissions are not yet enforced per-route** (Phase 2) — the sidebar still
+gates by the legacy role string for now. Backend logged in `../server/CHANGES.md`.
+
+## File changes
+
+### `src/components/modules/users/UsersRoles.jsx` (new)
+- The Users & Roles panel. Tabs: **Users** (table + add/edit modal via Formik, role dropdown, optional
+  password with a `Welcome@123` hint; toasts the default password on create) and **Roles** (role cards
+  with their module badges + a create/edit modal containing the module×level matrix). Owner-only
+  controls (`canManage = currentUser.role === 'owner'`); Owner role shown read-only.
+
+### `src/validation/userSchema.js` (new)
+- Yup schema for the user form — password optional (blank → server default), strength-checked when set.
+
+### `src/api/client.js`
+- Removed `staffApi`. Added `rolesApi` (`getAll`, `getModules`, `create`, `update`, `remove`).
+
+### `src/utils/navigation.js`
+- Renamed the Administration nav item `staff` → `users` ("Users & Roles", same `LuUserCog` icon).
+
+### `src/utils/permissions.js`
+- `ADMIN_PANELS` `['staff']` → `['users']`. Removed the `users` Settings tab from `ROLE_SETTINGS_TABS`
+  (user/role management now lives in the dedicated panel, not Settings).
+
+### `src/App.jsx`
+- Swapped the lazy `Staff` import + `PANEL_MAP` entry for `UsersRoles` under the `users` key.
+
+### `src/hooks/useKeyboardShortcuts.js`
+- Shift+S now navigates to the `users` panel (was `staff`).
+
+### `src/components/modules/settings/Settings.jsx`
+- Removed the **"Users & Access"** tab: dropped it from `ALL_TABS`, removed its render block, and deleted
+  the `UsersAccessTab` component + `EMPTY_USER_FORM` (~280 lines). Bundle ~95 kB → ~86 kB.
+
+### `tests/users-roles.spec.js` (new)
+- Playwright coverage (5 tests): owner sees "Users & Roles" (no "Staff"); panel lists seeded users +
+  roles; owner creates a role then a user (sees the `Welcome@123` default); staff can't see the panel;
+  Settings no longer has "Users & Access".
+
+### Deleted
+- `src/components/modules/staff/Staff.jsx`, `src/validation/staffSchema.js`.
+
+---
+
 # Session — 2026-06-12 · Guest Maintenance Tickets via In-Room QR Code
 
 ## Summary

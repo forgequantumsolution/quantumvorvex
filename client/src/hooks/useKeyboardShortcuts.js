@@ -60,10 +60,10 @@ export function useKeyboardShortcuts({ onShortcutsModal, onAssistantToggle } = {
         return
       }
 
-      // Shift+S → staff panel
+      // Shift+S → Users & Roles panel
       if (e.shiftKey && key === 's' && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault()
-        setActivePanel('staff')
+        setActivePanel('users')
         return
       }
 

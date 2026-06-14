@@ -27,7 +27,9 @@
       "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('hex'\\)\\)\")",
       "Bash(vercel env:*)",
       "Bash(printf \"mock\")",
-      "Bash(vercel storage:*)"
+      "Bash(vercel storage:*)",
+      "Bash(yes)",
+      "Bash(npx prisma *)"
     ],
     "additionalDirectories": [
       "d:\\Forge Quantum Solutions\\Quantum Vorvex\\server\\src"

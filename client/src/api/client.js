@@ -160,22 +160,19 @@ export const housekeepingApi = {
   submitInspection: (data)         => api.post('/housekeeping/inspection', data),
 }
 
-export const staffApi = {
-  getAll:            ()         => api.get('/staff'),
-  create:            (data)     => api.post('/staff', data),
-  update:            (id, data) => api.put(`/staff/${id}`, data),
-  getActivity:       (params)   => api.get('/staff/activity', { params }),
-  getPermissions:    ()         => api.get('/staff/permissions'),
-  updatePermissions: (data)     => api.put('/staff/permissions', data),
-  getSessions:       (id)       => api.get(`/staff/${id}/sessions`),
-  forceLogout:       (id)       => api.post(`/staff/${id}/logout`),
-}
-
 export const usersApi = {
   getAll: ()         => api.get('/users'),
   create: (data)     => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
   remove: (id)       => api.delete(`/users/${id}`),
+}
+
+export const rolesApi = {
+  getAll:     ()         => api.get('/roles'),
+  getModules: ()         => api.get('/roles/modules'),
+  create:     (data)     => api.post('/roles', data),       // { name, description, permissions: [{module, level}] }
+  update:     (id, data) => api.put(`/roles/${id}`, data),
+  remove:     (id)       => api.delete(`/roles/${id}`),
 }
 
 export const pricingApi = {

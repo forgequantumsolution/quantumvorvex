@@ -5,6 +5,71 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-14 · RBAC Phase 1 — Roles & Users (Staff module removed)
+
+## Summary
+First phase of the access-control overhaul. Introduced admin-defined **roles** with a per-module
+access **level** (`NONE`/`VIEW`/`MANAGE`) and unified identity onto `User` (each user has one `Role`).
+Removed the dead **Staff** module entirely — its tables (`Staff`, `StaffSession`, `StaffProperty`,
+`ActivityLog`, legacy `Permission`) were all empty (0 rows) and staff accounts could not even log in.
+Seeded Owner/Manager/Staff system roles mirroring prior behavior and linked existing users.
+**No enforcement yet** — `requirePermission` across all routes is Phase 2; this phase is the data layer
+plus the Users & Roles management API. Frontend logged in `../client/CHANGES.md`. Design:
+`docs/ACCESS_CONTROL_PLAN.md`.
+
+## File changes
+
+### `prisma/schema.prisma`
+- Added `enum AccessLevel { NONE VIEW MANAGE }`, `model Role` (`isSystem`, `isOwner`), and
+  `model RolePermission` (`@@unique([roleId, module])`, `@@index([roleId])`; `module` is a `String`
+  validated in code, `level` is `AccessLevel`).
+- `User` — added `roleId` + `roleRef` relation, `mustChangePassword Boolean` (wired, unused for now),
+  `@@index([roleId])`. Legacy `role` string kept for a safe cutover (dropped in the final phase).
+- Removed `Staff`, `StaffSession`, `StaffProperty`, `ActivityLog`, `Permission` and the `Property.staff`
+  relation. Migration `20260614101652_rbac_roles_remove_staff` (empty tables — no data loss).
+
+### `src/config/modules.js` (new)
+- Single source of truth for the 11 backend modules (`bookings, maintenance, guests, rooms, documents,
+  food, housekeeping, billing, reports, settings, users`) + `ACCESS_LEVELS`, `LEVEL_RANK`, validators.
+  `today`/`cancellations` are intentionally UI-only (derived in the frontend), not backend modules.
+
+### `src/controllers/rolesController.js` (new)
+- `getModules`, `getRoles` (permissions shaped as a `{module: level}` map), `createRole`, `updateRole`
+  (blocks editing the Owner role; replaces permission rows transactionally), `deleteRole` (blocks system
+  roles and roles with users). `module`/`level` sanitized against the central list.
+
+### `src/routes/roles.js` (new)
+- Mounted at `/api/v1/roles`. Reads (`GET /`, `GET /modules`) are authenticated; writes
+  (`POST`/`PUT`/`DELETE`) are owner-only via `requireRole(['owner'])`.
+
+### `src/controllers/usersController.js`
+- `getUsers` returns `roleRef`. `createUser` takes `roleId` (or legacy `role` fallback), password
+  optional → defaults to **`Welcome@123`** (sets `mustChangePassword`, returns it once as
+  `defaultPassword`). `updateUser`/`deleteUser` enforce the **last-active-owner invariant** (can't
+  delete/deactivate/demote the final owner). Legacy `role` string kept in sync via `legacyRoleFor()`.
+
+### `src/middleware/validate.js`
+- `createUser`/`updateUser` — password now optional, added `roleId`. Added `createRole`/`updateRole`
+  schemas (name/description + `permissions[]` of `{module, level∈NONE|VIEW|MANAGE}`).
+
+### `src/app.js`
+- Swapped the `/api/v1/staff` mount for `/api/v1/roles`; removed the staff route import.
+- `apiLimiter` is now env-aware (`max: 200` in production, `5000` in dev/test) so local E2E runs aren't
+  throttled — matches the existing `authLimiter` pattern.
+
+### `src/utils/seed.js`
+- Seeds Owner (`isOwner`)/Manager/Staff roles with a per-module matrix mirroring the old behavior, and
+  links the seeded users to them.
+
+### `src/utils/seedDemo.js`
+- Removed the staff / sessions / legacy permission-matrix / activity-log seeding block. Room inspections
+  now reference a real `User` id (`RoomInspection.staffId` is a free-form string, no FK).
+
+### Deleted
+- `src/routes/staff.js`, `src/controllers/staffController.js`.
+
+---
+
 # Session — 2026-06-12 · Guest Maintenance Tickets via In-Room QR Code
 
 ## Summary

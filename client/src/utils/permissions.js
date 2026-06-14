@@ -29,7 +29,7 @@ const OPERATIONS_PANELS = ['guests', 'rooms', 'housekeeping']
 // Owner/manager panels (staff excluded).
 const MANAGER_PANELS = ['documents', 'food', 'billing', 'reports', 'settings']
 // Owner/admin-only administrative panels.
-const ADMIN_PANELS = ['staff']
+const ADMIN_PANELS = ['users']
 
 export const ROLE_PANELS = {
   owner:   [...FRONT_DESK_PANELS, ...OPERATIONS_PANELS, ...MANAGER_PANELS, ...ADMIN_PANELS],
@@ -39,11 +39,12 @@ export const ROLE_PANELS = {
 }
 
 // Settings tabs each role can see
+// Note: user & role management lives in the dedicated "Users & Roles" panel, not Settings.
 export const ROLE_SETTINGS_TABS = {
-  owner:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'appearance', 'branding', 'preferences', 'properties', 'users'],
+  owner:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'appearance', 'branding', 'preferences', 'properties'],
   manager: ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'notifications', 'appearance', 'preferences'],
   staff:   [],
-  admin:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'appearance', 'branding', 'preferences', 'properties', 'users'],
+  admin:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'appearance', 'branding', 'preferences', 'properties'],
 }
 
 export function canAccess(role, panel) {

@@ -25,7 +25,7 @@ const Bookings      = lazy(() => import('./components/modules/bookings/Bookings'
 const Cancellations = lazy(() => import('./components/modules/cancellations/Cancellations'))
 const Maintenance   = lazy(() => import('./components/modules/maintenance/Maintenance'))
 const Housekeeping  = lazy(() => import('./components/modules/housekeeping/Housekeeping'))
-const Staff         = lazy(() => import('./components/modules/staff/Staff'))
+const UsersRoles    = lazy(() => import('./components/modules/users/UsersRoles'))
 const Guests        = lazy(() => import('./components/modules/guests/Guests'))
 const Rooms         = lazy(() => import('./components/modules/rooms/Rooms'))
 const Billing       = lazy(() => import('./components/modules/billing/Billing'))
@@ -85,7 +85,7 @@ const PANEL_MAP = {
   cancellations: Cancellations,
   maintenance:   Maintenance,
   housekeeping:  Housekeeping,
-  staff:         Staff,
+  users:         UsersRoles,
   guests:        Guests,
   rooms:         Rooms,
   billing:       Billing,
