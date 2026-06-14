@@ -4,6 +4,7 @@ import crypto from 'crypto'
 import prisma from '../utils/prisma.js'
 import logger, { securityLog } from '../utils/logger.js'
 import { sendPasswordResetEmail, sendOtpEmail } from '../utils/email.js'
+import { audit } from '../utils/audit.js'
 
 // In-memory failed login tracker (per IP, resets after window)
 // For production: replace with Redis INCR + EXPIRE
@@ -182,6 +183,45 @@ export const me = async (req, res) => {
     return res.status(200).json({ user })
   } catch (err) {
     logger.error('Me endpoint error', { error: err.message, userId: req.user?.userId })
+    return res.status(500).json({ error: 'An unexpected error occurred.', code: 'ERR_INTERNAL' })
+  }
+}
+
+// POST /auth/change-password (authenticated) — verify the current password, set a new
+// one, then bump sessionVersion (revokes other sessions) and reissue this session's token.
+export const changePassword = async (req, res) => {
+  const ip = req.ip || 'unknown'
+  const ua = req.headers['user-agent'] || 'unknown'
+  try {
+    const { currentPassword, newPassword } = req.body   // Validated by Zod
+
+    const user = await prisma.user.findUnique({
+      where:  { id: req.user.userId },
+      select: { id: true, name: true, email: true, role: true, password: true, sessionVersion: true },
+    })
+    if (!user) return res.status(404).json({ error: 'User not found.', code: 'ERR_NOT_FOUND' })
+
+    const ok = await bcrypt.compare(currentPassword, user.password)
+    if (!ok) {
+      securityLog.loginFailure(user.email, ip, ua, 'change_password_wrong_current')
+      return res.status(401).json({ error: 'Current password is incorrect.', code: 'ERR_AUTH' })
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 12)
+    const updated = await prisma.user.update({
+      where:  { id: user.id },
+      data:   { password: hashed, mustChangePassword: false, sessionVersion: { increment: 1 } },
+      select: { sessionVersion: true },
+    })
+
+    // Reissue so the current device stays signed in; the bumped sessionVersion
+    // invalidates any other device once single-session enforcement is on.
+    const token = issueAuthToken(res, { ...user, sessionVersion: updated.sessionVersion })
+    await audit(req, 'user.password_change', { entity: 'user', entityId: user.id })
+    logger.info('Password changed', { event: 'AUTH', userId: user.id, ip })
+    return res.status(200).json({ message: 'Password updated.', token })
+  } catch (err) {
+    logger.error('changePassword error', { error: err.message, ip })
     return res.status(500).json({ error: 'An unexpected error occurred.', code: 'ERR_INTERNAL' })
   }
 }

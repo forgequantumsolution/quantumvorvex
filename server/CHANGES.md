@@ -5,6 +5,62 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-14 · RBAC Phase 2 — Backend enforcement
+
+## Summary
+Closed the authorization gap: **every API route now enforces RBAC**. Each request resolves the
+requester's *current* role + permissions (cached), so role reassignment, permission edits, and
+deactivation take effect immediately — without waiting for the JWT to expire. Added a
+change-password endpoint and an audit trail for authorization-sensitive actions. Frontend still
+gates the sidebar by the legacy role string (dynamic permissions are Phase 3). Backend matrix:
+owner = all; manager = all except users/roles; staff = front-desk/ops only.
+
+## File changes
+
+### `src/utils/permissionCache.js` (new)
+- Two-layer in-memory cache: `userId → {status, roleId}` and `roleId → {isOwner, perms}`. The JWT
+  only carries `userId`; access is resolved here per request. `bustUser`/`bustRole`/`bustAll` for
+  invalidation. (Single-process; move to Redis for multi-instance — see single-session TODO.)
+
+### `src/middleware/auth.js`
+- `requirePermission(module, action?)` — required level defaults from HTTP method (`GET`→VIEW,
+  else MANAGE) and is overridable per route; owner roles (`isOwner`) bypass; inactive accounts get
+  403. `requireOwner` for role management. `resolveAccess(req)` memoizes the lookup on the request.
+
+### Routers — applied enforcement
+- `rooms`→rooms, `guests`→guests, `billing`→billing, `bookings`→bookings, `documents`→documents,
+  `settings`→settings, `reports`→reports, `housekeeping`→housekeeping, `maintenance`→maintenance
+  (public QR routes stay open), `users`→users, `pricing`→**settings** (config), `reminders`→**guests**
+  (messaging). `roles` reads require `users:VIEW`; writes require `requireOwner`.
+- Removed the redundant `requireMinRole('manager')` on booking/maintenance deletes (now covered by
+  `manage`).
+- **`foodPlans` (footgun fix):** this router is mounted at the bare `/api/v1` prefix, so a
+  router-level permission check intercepted every route registered after it. Moved `food` enforcement
+  to **per-route** so non-food paths fall through. (`notifications` stays auth-only — personal alerts.)
+
+### `src/controllers/usersController.js` / `rolesController.js`
+- Cache bust on every mutation (`bustUser` on user update/delete; `bustRole` on role update/delete).
+- Audit calls for `user.create|role_change|status_change|delete` and `role.create|update|delete`.
+
+### `src/controllers/authController.js` · `src/routes/auth.js` · `src/middleware/validate.js`
+- `POST /auth/change-password` (authenticated): verifies current password, sets new, bumps
+  `sessionVersion` (revokes other sessions), reissues the current token; audited. Added the
+  `changePassword` Zod schema.
+
+### `src/app.js`
+- (Phase 1 already swapped staff→roles + env-aware `apiLimiter`.) No further route-mount changes.
+
+### `src/utils/audit.js` (new) + `prisma/schema.prisma`
+- `audit(req, action, {entity, entityId, detail})` — best-effort, never blocks a request.
+- New `model AuditLog` (`userId?`, `action`, `entity?`, `entityId?`, `detail?`, `ip?`, indexes on
+  `userId`/`createdAt`). Migration `20260614115110_audit_log`.
+
+### Verification
+- API access matrix confirmed (owner/manager/staff); role reassignment + deactivation take effect on
+  the same token; change-password (new works / old fails); audit rows written.
+
+---
+
 # Session — 2026-06-14 · RBAC Phase 1 — Roles & Users (Staff module removed)
 
 ## Summary

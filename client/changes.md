@@ -6,6 +6,25 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-14 · RBAC Phase 2 — enforcement (client touches)
+
+## Summary
+Phase 2 was backend-heavy (see `../server/CHANGES.md`). On the client: added the change-password
+API helper and end-to-end enforcement tests. The sidebar still gates by the legacy role string —
+making it read the live permission map (+ a 403 interceptor) is Phase 3.
+
+## File changes
+
+### `src/api/client.js`
+- Added `authApi.changePassword(data)` → `POST /auth/change-password`.
+
+### `tests/rbac-enforcement.spec.js` (new)
+- Playwright (4 tests, hits the API at `:5001`): access matrix for staff/manager/owner; role
+  reassignment + deactivation take effect on the same token; change-password (new works / old fails);
+  non-owner cannot create/delete roles.
+
+---
+
 # Session — 2026-06-14 · RBAC Phase 1 — Users & Roles panel (Staff module removed)
 
 ## Summary

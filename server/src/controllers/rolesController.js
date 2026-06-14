@@ -1,5 +1,7 @@
 import prisma from '../utils/prisma.js'
 import { MODULES, ACCESS_LEVELS, isValidModule, isValidLevel } from '../config/modules.js'
+import { bustRole } from '../utils/permissionCache.js'
+import { audit } from '../utils/audit.js'
 
 // Shape a Role row into the API form: permissions as a { module: level } map.
 function shapeRole(role) {
@@ -60,6 +62,7 @@ export const createRole = async (req, res) => {
       },
       include: { permissions: true, _count: { select: { users: true } } },
     })
+    await audit(req, 'role.create', { entity: 'role', entityId: role.id, detail: role.name })
     res.status(201).json(shapeRole(role))
   } catch (e) {
     if (e.code === 'P2002') return res.status(409).json({ error: 'A role with that name already exists.' })
@@ -92,6 +95,9 @@ export const updateRole = async (req, res) => {
       }
     })
 
+    bustRole(id)   // permission/role changes take effect on the next request
+    await audit(req, 'role.update', { entity: 'role', entityId: id, detail: name || existing.name })
+
     const updated = await prisma.role.findUnique({
       where: { id },
       include: { permissions: true, _count: { select: { users: true } } },
@@ -117,6 +123,8 @@ export const deleteRole = async (req, res) => {
       return res.status(400).json({ error: 'Reassign the users on this role before deleting it.' })
     }
     await prisma.role.delete({ where: { id } })
+    bustRole(id)
+    await audit(req, 'role.delete', { entity: 'role', entityId: id, detail: role.name })
     res.json({ success: true })
   } catch (e) {
     res.status(500).json({ error: e.message })

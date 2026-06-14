@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs'
 import prisma from '../utils/prisma.js'
 import logger, { securityLog } from '../utils/logger.js'
+import { bustUser } from '../utils/permissionCache.js'
+import { audit } from '../utils/audit.js'
 
 // Shared default for new accounts when no password is supplied (changeable in Settings).
 const DEFAULT_PASSWORD = 'Welcome@123'
@@ -91,6 +93,7 @@ export const createUser = async (req, res) => {
       select: SAFE_SELECT,
     })
     securityLog.userCreated(req.user?.userId, user.id, role?.name)
+    await audit(req, 'user.create', { entity: 'user', entityId: user.id, detail: `${user.email} → ${role?.name || 'no role'}` })
     // Surface the default password once so the admin can hand it to the new user.
     res.status(201).json(usedDefault ? { ...user, defaultPassword: DEFAULT_PASSWORD } : user)
   } catch (e) {
@@ -143,6 +146,9 @@ export const updateUser = async (req, res) => {
     }
 
     const user = await prisma.user.update({ where: { id }, data, select: SAFE_SELECT })
+    bustUser(id)   // role reassignment / deactivation takes effect on the next request
+    if (roleChangeRequested) await audit(req, 'user.role_change', { entity: 'user', entityId: id, detail: `→ ${newRole?.name || 'none'}` })
+    if (status !== undefined) await audit(req, 'user.status_change', { entity: 'user', entityId: id, detail: status })
     res.json(user)
   } catch (e) {
     if (e.code === 'P2002') return res.status(409).json({ error: 'Email already exists.' })
@@ -172,7 +178,9 @@ export const deleteUser = async (req, res) => {
     }
 
     await prisma.user.delete({ where: { id } })
+    bustUser(id)
     securityLog.userDeleted(req.user?.userId, id)
+    await audit(req, 'user.delete', { entity: 'user', entityId: id, detail: target.email })
     res.json({ success: true })
   } catch (e) {
     if (e.code === 'P2025') return res.status(404).json({ error: 'User not found.' })

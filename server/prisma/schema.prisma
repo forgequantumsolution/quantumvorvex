@@ -302,6 +302,21 @@ model RolePermission {
   @@index([roleId])
 }
 
+// Audit trail for authorization-sensitive actions (role/user/permission/password changes).
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?                       // actor (no FK — survives user deletion)
+  action    String                        // e.g. role.create, user.role_change, user.password_change
+  entity    String?                       // role | user | …
+  entityId  String?
+  detail    String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
 // ─── AUTH: password reset + passwordless OTP login ──────────────────────────────
 model PasswordResetToken {
   id        String    @id @default(cuid())

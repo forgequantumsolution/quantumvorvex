@@ -9,11 +9,11 @@ import {
   getGuestCommunications,
   createGuestCommunication,
 } from '../controllers/guestsController.js'
-import { verifyToken } from '../middleware/auth.js'
+import { verifyToken, requirePermission } from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.use(verifyToken)
+router.use(verifyToken, requirePermission('guests'))
 
 router.get('/', getGuests)
 router.post('/', createGuest)

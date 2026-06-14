@@ -63,6 +63,16 @@ export const schemas = {
                 .regex(/[0-9]/, 'Must contain a number'),
   }),
 
+  // Change password (authenticated) — current + strong new password
+  changePassword: z.object({
+    currentPassword: z.string().min(1, 'Current password is required').max(128),
+    newPassword: z.string()
+                .min(8, 'Password must be at least 8 characters')
+                .max(128)
+                .regex(/[A-Z]/, 'Must contain an uppercase letter')
+                .regex(/[0-9]/, 'Must contain a number'),
+  }),
+
   // Passwordless OTP — request a code
   requestOtp: z.object({
     email: z.string().email('Invalid email address').toLowerCase().trim(),
