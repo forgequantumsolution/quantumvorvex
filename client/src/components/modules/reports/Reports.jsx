@@ -103,9 +103,14 @@ function RevenueTab({ revenue }) {
   )
 }
 
-// ─── Occupancy Tab (computed from live rooms) ──────────────────────────────────
-function OccupancyTab({ rooms }) {
+// ─── Occupancy Tab (daily trend + by-type, from /reports/occupancy) ─────────────
+function OccupancyTab({ rooms, occupancy }) {
+  // Prefer the API's room-type breakdown; fall back to deriving from the live
+  // rooms list if the occupancy endpoint hasn't loaded.
   const byType = useMemo(() => {
+    if (occupancy?.byRoomType?.length) {
+      return occupancy.byRoomType.map(t => ({ type: t.roomType, total: t.total, occupied: t.occupied }))
+    }
     const map = {}
     for (const r of rooms) {
       const type = r.type?.name || 'Other'
@@ -114,46 +119,77 @@ function OccupancyTab({ rooms }) {
       if (r.status === 'occupied') map[type].occupied += 1
     }
     return Object.values(map)
-  }, [rooms])
+  }, [rooms, occupancy])
 
+  const byDay = occupancy?.byDay || []
   const rateColor = (rate) => (rate >= 80 ? '#22c55e' : rate >= 50 ? '#f59e0b' : '#ef4444')
 
   return (
-    <div className="card">
-      <div className="card-header"><span className="card-title">Occupancy by Room Type</span></div>
-      <div className="card-body overflow-x-auto">
-        {byType.length === 0 ? (
-          <div className="empty-state">No rooms found</div>
-        ) : (
-          <table className="t-sm w-full border-collapse">
-            <thead>
-              <tr>
-                {['Room Type', 'Total Rooms', 'Occupied', 'Rate', 'Occupancy'].map(h => (
-                  <th key={h} className={`t-xs px-3 py-2 border-b border-line text-ink3 font-semibold ${h === 'Room Type' ? 'text-left' : 'text-center'}`}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {byType.map(row => {
-                const rate = row.total ? Math.round((row.occupied / row.total) * 100) : 0
-                const color = rateColor(rate)
-                return (
-                  <tr key={row.type} className="border-b border-line">
-                    <td className="px-3 py-2.5 font-semibold">{row.type}</td>
-                    <td className="px-3 py-2.5 text-center">{row.total}</td>
-                    <td className="px-3 py-2.5 text-center">{row.occupied}</td>
-                    <td className="px-3 py-2.5 text-center font-bold" style={{ color }}>{rate}%</td>
-                    <td className="px-3 py-2.5 min-w-[120px]">
-                      <div className="prog-bar h-2 rounded bg-surface2">
-                        <div className="prog-fill h-full rounded transition-[width] duration-[400ms] ease-[ease]" style={{ width: `${rate}%`, background: color }} />
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-2 gap-4">
+        <MiniStat label="Avg Occupancy (period)" value={`${occupancy?.avgRate ?? 0}%`} accent="#3b82f6" />
+        <MiniStat label="Total Rooms" value={occupancy?.totalRooms ?? rooms.length} accent="#c9a84c" />
+      </div>
+
+      {/* Daily occupancy trend */}
+      <div className="card">
+        <div className="card-header"><span className="card-title">Occupancy Trend (% by day)</span></div>
+        <div className="card-body">
+          {byDay.length === 0 ? (
+            <div className="empty-state h-[200px] flex items-center justify-center">
+              <p className="t-sm m-0 text-ink3">No occupancy data for this period</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={byDay} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--text3)' }} tickLine={false} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: 'var(--text3)' }} tickLine={false} axisLine={false} tickFormatter={v => `${v}%`} />
+                <Tooltip content={<DarkTooltip />} />
+                <Line type="monotone" dataKey="rate" name="Occupancy %" stroke="#3b82f6" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#3b82f6' }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      {/* Current occupancy by room type */}
+      <div className="card">
+        <div className="card-header"><span className="card-title">Current Occupancy by Room Type</span></div>
+        <div className="card-body overflow-x-auto">
+          {byType.length === 0 ? (
+            <div className="empty-state">No rooms found</div>
+          ) : (
+            <table className="t-sm w-full border-collapse">
+              <thead>
+                <tr>
+                  {['Room Type', 'Total Rooms', 'Occupied', 'Rate', 'Occupancy'].map(h => (
+                    <th key={h} className={`t-xs px-3 py-2 border-b border-line text-ink3 font-semibold ${h === 'Room Type' ? 'text-left' : 'text-center'}`}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {byType.map(row => {
+                  const rate = row.total ? Math.round((row.occupied / row.total) * 100) : 0
+                  const color = rateColor(rate)
+                  return (
+                    <tr key={row.type} className="border-b border-line">
+                      <td className="px-3 py-2.5 font-semibold">{row.type}</td>
+                      <td className="px-3 py-2.5 text-center">{row.total}</td>
+                      <td className="px-3 py-2.5 text-center">{row.occupied}</td>
+                      <td className="px-3 py-2.5 text-center font-bold" style={{ color }}>{rate}%</td>
+                      <td className="px-3 py-2.5 min-w-[120px]">
+                        <div className="prog-bar h-2 rounded bg-surface2">
+                          <div className="prog-fill h-full rounded transition-[width] duration-[400ms] ease-[ease]" style={{ width: `${rate}%`, background: color }} />
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -210,22 +246,24 @@ function GSTTab({ gst }) {
   )
 }
 
-// ─── Export Tab (real CSV downloads) ───────────────────────────────────────────
+// ─── Export Tab (real CSV + PDF downloads) ──────────────────────────────────────
 function ExportTab({ addToast }) {
-  const [busy, setBusy] = useState('')
+  const [busy, setBusy] = useState('')   // `${type}:${format}` while downloading
 
-  const download = async (type) => {
-    setBusy(type)
+  const download = async (type, format) => {
+    const key = `${type}:${format}`
+    setBusy(key)
     try {
-      const res = await reportsApi.exportCsv(type)
-      const blob = new Blob([res.data], { type: 'text/csv' })
+      const res = format === 'pdf' ? await reportsApi.exportPdf(type) : await reportsApi.exportCsv(type)
+      const mime = format === 'pdf' ? 'application/pdf' : 'text/csv'
+      const blob = new Blob([res.data], { type: mime })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${type}-report.csv`
+      a.download = `${type}-report.${format}`
       a.click()
       URL.revokeObjectURL(url)
-      addToast(`${type} report exported`, 'success')
+      addToast(`${type} report exported (${format.toUpperCase()})`, 'success')
     } catch (err) {
       addToast(err.response?.data?.message || 'Export failed', 'error')
     } finally {
@@ -234,9 +272,9 @@ function ExportTab({ addToast }) {
   }
 
   const exports = [
-    { type: 'guests',  label: 'CSV — Guests',  desc: 'Guest registry with all details' },
-    { type: 'billing', label: 'CSV — Billing', desc: 'All invoices and payments' },
-    { type: 'gst',     label: 'CSV — GST Report', desc: 'GST breakdown for CA filing' },
+    { type: 'guests',  label: 'Guests',     desc: 'Guest registry with all details' },
+    { type: 'billing', label: 'Billing',    desc: 'All invoices and payments' },
+    { type: 'gst',     label: 'GST Report', desc: 'GST breakdown for CA filing' },
   ]
 
   return (
@@ -248,13 +286,22 @@ function ExportTab({ addToast }) {
               <div className="t-title mb-1">{exp.label}</div>
               <div className="t-xs text-ink3">{exp.desc}</div>
             </div>
-            <button
-              className="btn btn-primary t-xs self-start px-4 py-1.5"
-              disabled={busy === exp.type}
-              onClick={() => download(exp.type)}
-            >
-              {busy === exp.type ? 'Exporting…' : 'Export CSV'}
-            </button>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                className="btn btn-outline t-xs px-4 py-1.5"
+                disabled={busy === `${exp.type}:csv`}
+                onClick={() => download(exp.type, 'csv')}
+              >
+                {busy === `${exp.type}:csv` ? 'Exporting…' : 'Export CSV'}
+              </button>
+              <button
+                className="btn btn-primary t-xs px-4 py-1.5"
+                disabled={busy === `${exp.type}:pdf`}
+                onClick={() => download(exp.type, 'pdf')}
+              >
+                {busy === `${exp.type}:pdf` ? 'Exporting…' : 'Export PDF'}
+              </button>
+            </div>
           </div>
         </div>
       ))}
@@ -278,22 +325,25 @@ export default function Reports() {
   const [revenue, setRevenue] = useState(null)
   const [gst, setGst] = useState(null)
   const [rooms, setRooms] = useState([])
+  const [occupancy, setOccupancy] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      const [d, rev, g, rm] = await Promise.all([
+      const [d, rev, g, rm, occ] = await Promise.all([
         reportsApi.getDashboard(),
         reportsApi.getRevenue(),
         reportsApi.getGst(),
         roomsApi.getAll(),
+        reportsApi.getOccupancy(),
       ])
       setDashboard(d.data)
       setRevenue(rev.data)
       setGst(g.data)
       setRooms(rm.data.rooms || [])
+      setOccupancy(occ.data)
     } catch {
       setError('Could not load reports. Make sure the backend is running.')
     } finally {
@@ -326,7 +376,7 @@ export default function Reports() {
       <Tabs tabs={TABS} active={activeTab} onChange={setActiveTab}>
         <div data-tab-id="overview"><OverviewTab dashboard={dashboard} revenue={revenue} /></div>
         <div data-tab-id="revenue"><RevenueTab revenue={revenue} /></div>
-        <div data-tab-id="occupancy"><OccupancyTab rooms={rooms} /></div>
+        <div data-tab-id="occupancy"><OccupancyTab rooms={rooms} occupancy={occupancy} /></div>
         <div data-tab-id="gst"><GSTTab gst={gst} /></div>
         <div data-tab-id="export"><ExportTab addToast={addToast} /></div>
       </Tabs>

@@ -108,6 +108,113 @@ export const collectPayment = async (req, res) => {
   }
 }
 
+// GET /billing/ledger?guestId=  — per-guest debit/credit entries + running balance
+export const getLedger = async (req, res) => {
+  try {
+    const { guestId } = req.query
+    if (!guestId) return res.status(400).json({ message: 'guestId is required.' })
+
+    const guest = await prisma.guest.findUnique({ where: { id: guestId } })
+    if (!guest) return res.status(404).json({ message: 'Guest not found.' })
+
+    const [invoices, payments] = await Promise.all([
+      prisma.invoice.findMany({ where: { guestId }, orderBy: { createdAt: 'asc' } }),
+      prisma.payment.findMany({ where: { guestId }, orderBy: { createdAt: 'asc' } }),
+    ])
+
+    // Build raw entries: invoice charges are debits, payments are credits.
+    const entries = []
+    for (const inv of invoices) {
+      const at = inv.createdAt
+      if (inv.rent) entries.push({ at, type: 'Debit', desc: `Room Rent — ${inv.period} (${inv.invoiceNo})`, amount: inv.rent })
+      if (inv.food) entries.push({ at, type: 'Debit', desc: `Food Plan — ${inv.period}`, amount: inv.food })
+      if (inv.amenities) entries.push({ at, type: 'Debit', desc: `Amenities — ${inv.period}`, amount: inv.amenities })
+      if (inv.gstAmount) entries.push({ at, type: 'Debit', desc: `GST (${inv.gstRate}%)`, amount: inv.gstAmount })
+    }
+    for (const p of payments) {
+      const label = p.type === 'advance' ? 'Advance' : p.type === 'refund' ? 'Refund' : 'Payment Received'
+      const sign = p.type === 'refund' ? -1 : 1
+      entries.push({
+        at: p.createdAt,
+        type: p.type === 'refund' ? 'Debit' : 'Credit',
+        desc: `${label}${p.method ? ` — ${p.method}` : ''}${p.reference ? ` (${p.reference})` : ''}`,
+        amount: Math.abs(p.amount),
+        _credit: sign,
+      })
+    }
+
+    entries.sort((a, b) => new Date(a.at) - new Date(b.at))
+
+    // Running balance: debits decrease (guest owes), credits increase toward zero.
+    let balance = 0
+    const rows = entries.map((e) => {
+      const delta = e.type === 'Credit' ? e.amount : -e.amount
+      balance += delta
+      return {
+        date: new Date(e.at).toISOString().split('T')[0],
+        type: e.type,
+        desc: e.desc,
+        amount: e.amount,
+        balance: parseFloat(balance.toFixed(2)),
+      }
+    })
+
+    return res.status(200).json({
+      guest: { id: guest.id, name: guest.name, docId: guest.docId },
+      entries: rows,
+      closingBalance: rows.length ? rows[rows.length - 1].balance : 0,
+    })
+  } catch (err) {
+    console.error('getLedger error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /billing/cash-register?date=YYYY-MM-DD  — cash movements for a single day
+export const getCashRegister = async (req, res) => {
+  try {
+    const { date } = req.query
+    const day = date ? new Date(date) : new Date()
+    const start = new Date(day); start.setHours(0, 0, 0, 0)
+    const end = new Date(day); end.setHours(23, 59, 59, 999)
+
+    const payments = await prisma.payment.findMany({
+      where: { createdAt: { gte: start, lte: end } },
+      include: { guest: { select: { name: true, docId: true } }, invoice: { select: { invoiceNo: true } } },
+      orderBy: { createdAt: 'asc' },
+    })
+
+    const transactions = payments.map((p) => {
+      const isOut = p.type === 'refund'
+      const who = p.invoice?.invoiceNo
+        ? `${p.invoice.invoiceNo} — ${p.guest?.name || ''}`.trim()
+        : (p.guest?.name || p.guest?.docId || 'Walk-in')
+      return {
+        time: new Date(p.createdAt).toTimeString().slice(0, 5),
+        type: p.type || 'collection',
+        method: p.method,
+        desc: `${p.type === 'advance' ? 'Advance' : p.type === 'refund' ? 'Refund' : 'Collection'} — ${who}`,
+        cashIn: isOut ? 0 : p.amount,
+        cashOut: isOut ? p.amount : 0,
+      }
+    })
+
+    const totalIn = transactions.reduce((s, t) => s + t.cashIn, 0)
+    const totalOut = transactions.reduce((s, t) => s + t.cashOut, 0)
+
+    return res.status(200).json({
+      date: start.toISOString().split('T')[0],
+      transactions,
+      totalIn,
+      totalOut,
+      net: totalIn - totalOut,
+    })
+  } catch (err) {
+    console.error('getCashRegister error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
 // GET /billing/:id/pdf
 export const getInvoicePdf = async (req, res) => {
   try {

@@ -5,7 +5,7 @@ import Modal from '../../ui/Modal'
 import { getCroppedBlob, blobToDataUrl } from '../../../utils/cropImage'
 import { useAppSelector, useHotelActions, useUiActions } from '../../../store/hooks'
 import { useToast } from '../../../hooks/useToast'
-import api, { settingsApi } from '../../../api/client'
+import api, { settingsApi, pricingApi, remindersApi } from '../../../api/client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ROLE_LABELS, ROLE_COLORS, canAccessSettingsTab } from '../../../utils/permissions'
 import {
@@ -776,11 +776,36 @@ function TaxPricingTab({ settings, setSettings, addToast }) {
 }
 
 // ─── Tab 6: Documents ─────────────────────────────────────────────────────────
-function DocumentsTab({ settings, setSettings, addToast }) {
+function DocumentsTab({ settings, addToast }) {
   const [kycDocs, setKycDocs] = useState(initKycDocs)
+  const [expiryReminderDays, setExpiryReminderDays] = useState(30)
+  const [saving, setSaving] = useState(false)
+
+  // Hydrate from the persisted documentsConfig blob (JSON string on the hotel).
+  useEffect(() => {
+    if (!settings.documentsConfig) return
+    try {
+      const cfg = typeof settings.documentsConfig === 'string'
+        ? JSON.parse(settings.documentsConfig) : settings.documentsConfig
+      if (Array.isArray(cfg.kycDocs) && cfg.kycDocs.length) setKycDocs(cfg.kycDocs)
+      if (cfg.expiryReminderDays != null) setExpiryReminderDays(cfg.expiryReminderDays)
+    } catch { /* keep defaults */ }
+  }, [settings.documentsConfig])
 
   function toggleDoc(id, field, value) {
     setKycDocs(docs => docs.map(d => d.id === id ? { ...d, [field]: value } : d))
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await settingsApi.update({ hotel: { documentsConfig: JSON.stringify({ kycDocs, expiryReminderDays }) } })
+      addToast('Document settings saved', 'success')
+    } catch (e) {
+      addToast(e.response?.data?.message || 'Failed to save document settings', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -837,8 +862,8 @@ function DocumentsTab({ settings, setSettings, addToast }) {
               className="form-input max-w-[120px]"
               type="number"
               min={1}
-              value={settings.expiryReminderDays}
-              onChange={e => setSettings(s => ({ ...s, expiryReminderDays: Number(e.target.value) }))}
+              value={expiryReminderDays}
+              onChange={e => setExpiryReminderDays(Number(e.target.value))}
             />
           </Field>
           <p className="t-xs mt-2 mb-0 text-ink3">
@@ -847,7 +872,7 @@ function DocumentsTab({ settings, setSettings, addToast }) {
         </div>
       </div>
 
-      <SaveButton onClick={() => addToast('Settings saved successfully', 'success')} />
+      <SaveButton onClick={handleSave} saving={saving} />
     </div>
   )
 }
@@ -860,17 +885,11 @@ const initRules = [
   { id: '4', name: 'Early Bird Discount',    triggerType: 'lead_time',   threshold: 15, adjustment: -8,  active: false },
 ]
 
-const initCompetitors = [
-  { id: '1', name: 'Hotel Sunrise', roomType: 'Single', theirRate: 650  },
-  { id: '2', name: 'Grand Palms',   roomType: 'Double', theirRate: 1100 },
-  { id: '3', name: 'City Inn',      roomType: 'Suite',  theirRate: 1800 },
-]
-
 const YOUR_RATES = { Single: 500, Double: 800, Suite: 1500, Deluxe: 1200 }
 
 function PricingRulesTab({ addToast }) {
   const [rules, setRules]           = useState(initRules)
-  const [competitors, setCompetitors] = useState(initCompetitors)
+  const [competitors, setCompetitors] = useState([])
   const [saving, setSaving]         = useState(false)
 
   // Load saved dynamic-pricing rules from the backend.
@@ -885,6 +904,14 @@ function PricingRulesTab({ addToast }) {
       })
       .catch(() => { /* keep defaults */ })
   }, [])
+
+  // Load competitor rates from the backend.
+  const loadCompetitors = useCallback(() => {
+    pricingApi.getCompetitors()
+      .then(({ data }) => setCompetitors(Array.isArray(data) ? data : (data.competitors || [])))
+      .catch(() => { /* keep empty */ })
+  }, [])
+  useEffect(() => { loadCompetitors() }, [loadCompetitors])
 
   const handleSaveRules = async () => {
     setSaving(true)
@@ -931,14 +958,34 @@ function PricingRulesTab({ addToast }) {
     setCompetitors(rows => rows.map(r => r.id === id ? { ...r, [field]: value } : r))
   }
 
-  function addCompetitor() {
-    setCompetitors(rows => [...rows, {
-      id: String(Date.now()), name: 'New Hotel', roomType: 'Single', theirRate: 500,
-    }])
+  // Persist a competitor row to the backend (called on blur / select change).
+  // Accepts an explicit row so callers can pass freshly-changed values without
+  // waiting for the async state update to settle.
+  async function persistComp(row) {
+    if (!row?.id) return
+    try {
+      await pricingApi.updateCompetitor(row.id, { name: row.name, roomType: row.roomType, theirRate: Number(row.theirRate) })
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Could not save competitor', 'error')
+    }
   }
 
-  function deleteComp(id) {
-    setCompetitors(rows => rows.filter(r => r.id !== id))
+  async function addCompetitor() {
+    try {
+      await pricingApi.createCompetitor({ name: 'New Hotel', roomType: 'Single', theirRate: 500 })
+      loadCompetitors()
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Could not add competitor', 'error')
+    }
+  }
+
+  async function deleteComp(id) {
+    try {
+      await pricingApi.deleteCompetitor(id)
+      setCompetitors(rows => rows.filter(r => r.id !== id))
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Could not delete competitor', 'error')
+    }
   }
 
   // Build bar chart data: for each room type, compute avg competitor rate
@@ -1078,13 +1125,14 @@ function PricingRulesTab({ addToast }) {
                         type="text"
                         value={row.name}
                         onChange={e => updateComp(row.id, 'name', e.target.value)}
+                        onBlur={() => persistComp(row)}
                         className="w-40 px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       />
                     </td>
                     <td className="px-2.5 py-[7px]">
                       <select
                         value={row.roomType}
-                        onChange={e => updateComp(row.id, 'roomType', e.target.value)}
+                        onChange={e => { updateComp(row.id, 'roomType', e.target.value); persistComp({ ...row, roomType: e.target.value }) }}
                         className="px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       >
                         {['Single', 'Double', 'Suite', 'Deluxe'].map(t => (
@@ -1098,6 +1146,7 @@ function PricingRulesTab({ addToast }) {
                         value={row.theirRate}
                         min={0}
                         onChange={e => updateComp(row.id, 'theirRate', Number(e.target.value))}
+                        onBlur={() => persistComp(row)}
                         className="w-[90px] px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       />
                     </td>
@@ -1181,11 +1230,44 @@ const TEMPLATE_VARS = [
   '{{amount}}', '{{period}}', '{{wifiPassword}}', '{{hotelPhone}}',
 ]
 
+// UI-only label/delay metadata keyed by trigger (the backend stores only
+// trigger/content/active). Used to enrich rows loaded from the server.
+const TEMPLATE_META = Object.fromEntries(
+  initTemplates.map(t => [t.trigger, { label: t.label, delay: t.delay }])
+)
+const enrichTemplate = (t) => ({
+  ...t,
+  label: TEMPLATE_META[t.trigger]?.label || t.trigger,
+  delay: TEMPLATE_META[t.trigger]?.delay || '—',
+})
+
 function NotificationsTab({ addToast }) {
-  const [templates, setTemplates] = useState(initTemplates)
+  const [templates, setTemplates] = useState([])
   const [editingId, setEditingId]   = useState(null)
   const [editContent, setEditContent] = useState('')
+  const [saving, setSaving] = useState(false)
   const textareaRef = useRef(null)
+
+  // Load templates; if the table is empty, seed the default set once so the
+  // tab is usable out of the box.
+  const loadTemplates = useCallback(async () => {
+    try {
+      let { data } = await remindersApi.getTemplates()
+      let rows = Array.isArray(data) ? data : (data.templates || [])
+      if (rows.length === 0) {
+        await Promise.all(initTemplates.map(t =>
+          remindersApi.createTemplate({ trigger: t.trigger, content: t.content, active: t.active }).catch(() => null)
+        ))
+        const res = await remindersApi.getTemplates()
+        rows = Array.isArray(res.data) ? res.data : (res.data.templates || [])
+      }
+      setTemplates(rows.map(enrichTemplate))
+    } catch {
+      // Backend unavailable — fall back to local defaults so the UI still renders.
+      setTemplates(initTemplates.map(enrichTemplate))
+    }
+  }, [])
+  useEffect(() => { loadTemplates() }, [loadTemplates])
 
   const editingTpl = templates.find(t => t.id === editingId)
 
@@ -1199,10 +1281,18 @@ function NotificationsTab({ addToast }) {
     setEditContent('')
   }
 
-  function saveTemplate() {
-    setTemplates(rows => rows.map(t => t.id === editingId ? { ...t, content: editContent } : t))
-    addToast('Template saved', 'success')
-    closeEdit()
+  async function saveTemplate() {
+    setSaving(true)
+    try {
+      await remindersApi.updateTemplate(editingId, { content: editContent })
+      setTemplates(rows => rows.map(t => t.id === editingId ? { ...t, content: editContent } : t))
+      addToast('Template saved', 'success')
+      closeEdit()
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Could not save template', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   function insertVar(v) {
@@ -1222,8 +1312,15 @@ function NotificationsTab({ addToast }) {
     })
   }
 
-  function toggleActive(id, val) {
+  async function toggleActive(id, val) {
     setTemplates(rows => rows.map(t => t.id === id ? { ...t, active: val } : t))
+    try {
+      await remindersApi.updateTemplate(id, { active: val })
+    } catch (e) {
+      // Revert on failure.
+      setTemplates(rows => rows.map(t => t.id === id ? { ...t, active: !val } : t))
+      addToast(e.response?.data?.error || 'Could not update template', 'error')
+    }
   }
 
   const thStyle = {
@@ -1325,8 +1422,8 @@ function NotificationsTab({ addToast }) {
               <button className="btn btn-outline text-[12px]" onClick={closeEdit}>
                 Cancel
               </button>
-              <button className="btn btn-primary text-[12px]" onClick={saveTemplate}>
-                Save Template
+              <button className="btn btn-primary text-[12px]" onClick={saveTemplate} disabled={saving}>
+                {saving ? 'Saving…' : 'Save Template'}
               </button>
             </div>
           </div>
@@ -1339,6 +1436,26 @@ function NotificationsTab({ addToast }) {
 // ─── Tab 9: Properties ────────────────────────────────────────────────────────
 function PropertiesTab({ settings, setSettings, addToast }) {
   const [editingMain, setEditingMain] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const { setHotelName, setOwnerName } = useHotelActions()
+
+  async function handleSaveProperty() {
+    setSaving(true)
+    try {
+      await settingsApi.update({ hotel: {
+        name: settings.name, ownerName: settings.ownerName, phone: settings.phone,
+        email: settings.email, gstin: settings.gstin, address: settings.address,
+      } })
+      setHotelName(settings.name)
+      setOwnerName(settings.ownerName)
+      addToast('Property updated', 'success')
+      setEditingMain(false)
+    } catch (e) {
+      addToast(e.response?.data?.message || 'Failed to update property', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const thStyle = {
     padding: '8px 12px',
@@ -1412,8 +1529,8 @@ function PropertiesTab({ settings, setSettings, addToast }) {
               </Field>
               <div className="col-[1/-1]">
                 <button className="btn btn-primary text-[12px]"
-                  onClick={() => { addToast('Property updated', 'success'); setEditingMain(false) }}>
-                  Save Property
+                  onClick={handleSaveProperty} disabled={saving}>
+                  {saving ? 'Saving…' : 'Save Property'}
                 </button>
               </div>
             </div>
@@ -1806,10 +1923,23 @@ function ToggleRow({ label, hint, checked, onChange }) {
 }
 
 // ─── Tab: Appearance ──────────────────────────────────────────────────────────
-function AppearanceTab({ addToast }) {
+function AppearanceTab({ settings, addToast }) {
   const darkMode = useAppSelector(s => s.ui.darkMode)
   const { toggleDarkMode } = useUiActions()
   const [prefs, setPrefs] = useState(getAppearance)
+  const [saving, setSaving] = useState(false)
+
+  // Hydrate from the persisted appearance blob and re-skin the app to match.
+  useEffect(() => {
+    if (!settings?.appearance) return
+    try {
+      const a = typeof settings.appearance === 'string' ? JSON.parse(settings.appearance) : settings.appearance
+      const next = { ...getAppearance(), ...a }
+      setPrefs(next)
+      applyAppearance(next)
+      saveAppearance(next)
+    } catch { /* keep local */ }
+  }, [settings?.appearance])
 
   // Apply + persist immediately so the whole app re-skins live as you tweak.
   function update(patch) {
@@ -1821,6 +1951,18 @@ function AppearanceTab({ addToast }) {
 
   function setTheme(mode) {
     if ((mode === 'dark') !== darkMode) toggleDarkMode()
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await settingsApi.update({ hotel: { appearance: JSON.stringify(prefs) } })
+      addToast('Appearance saved', 'success')
+    } catch (e) {
+      addToast(e.response?.data?.message || 'Failed to save appearance', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -1892,8 +2034,8 @@ function AppearanceTab({ addToast }) {
       </div>
 
       <div className="pt-1">
-        <button className="btn btn-primary" onClick={() => addToast('Appearance saved', 'success')}>
-          Save Appearance
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving…' : 'Save Appearance'}
         </button>
         <button
           className="btn btn-outline ml-2.5"
@@ -1923,6 +2065,17 @@ function BrandingTab({ settings, setSettings, addToast }) {
     try { const r = localStorage.getItem(BRANDING_KEY); return r ? { ...initBranding, ...JSON.parse(r) } : initBranding }
     catch { return initBranding }
   })
+  const [saving, setSaving] = useState(false)
+
+  // Hydrate from the persisted branding blob (backend wins over the local cache).
+  useEffect(() => {
+    if (!settings.branding) return
+    try {
+      const b = typeof settings.branding === 'string' ? JSON.parse(settings.branding) : settings.branding
+      setBranding(prev => ({ ...prev, ...b }))
+      try { localStorage.setItem(BRANDING_KEY, JSON.stringify({ ...initBranding, ...b })) } catch { /* ignore */ }
+    } catch { /* keep local */ }
+  }, [settings.branding])
 
   function handleLogo(e) {
     const file = e.target.files?.[0]
@@ -1941,10 +2094,19 @@ function BrandingTab({ settings, setSettings, addToast }) {
     addToast('Logo cropped — remember to Save', 'success')
   }
 
-  function handleSave() {
+  async function handleSave() {
+    setSaving(true)
+    // Persist to localStorage immediately so the login/footer pick it up app-wide.
     try { localStorage.setItem(BRANDING_KEY, JSON.stringify(branding)) } catch { /* ignore */ }
     setHotelName(settings.name)
-    addToast('Branding saved', 'success')
+    try {
+      await settingsApi.update({ hotel: { name: settings.name, branding: JSON.stringify(branding) } })
+      addToast('Branding saved', 'success')
+    } catch (e) {
+      addToast(e.response?.data?.message || 'Failed to save branding', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const initials = (settings.name || 'QV').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
@@ -2007,7 +2169,7 @@ function BrandingTab({ settings, setSettings, addToast }) {
         </div>
       </div>
 
-      <SaveButton onClick={handleSave} />
+      <SaveButton onClick={handleSave} saving={saving} />
     </div>
   )
 }
@@ -2025,16 +2187,35 @@ const initPreferences = {
   autoLogout:   true,
 }
 
-function PreferencesTab({ addToast }) {
+function PreferencesTab({ settings, addToast }) {
   const [prefs, setPrefs] = useState(() => {
     try { const r = localStorage.getItem(PREFS_KEY); return r ? { ...initPreferences, ...JSON.parse(r) } : initPreferences }
     catch { return initPreferences }
   })
+  const [saving, setSaving] = useState(false)
   const set = (patch) => setPrefs(p => ({ ...p, ...patch }))
 
-  function handleSave() {
+  // Hydrate from the persisted preferences blob (backend wins over local cache).
+  useEffect(() => {
+    if (!settings?.preferences) return
+    try {
+      const p = typeof settings.preferences === 'string' ? JSON.parse(settings.preferences) : settings.preferences
+      setPrefs(prev => ({ ...prev, ...p }))
+      try { localStorage.setItem(PREFS_KEY, JSON.stringify({ ...initPreferences, ...p })) } catch { /* ignore */ }
+    } catch { /* keep local */ }
+  }, [settings?.preferences])
+
+  async function handleSave() {
+    setSaving(true)
     try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)) } catch { /* ignore */ }
-    addToast('Preferences saved', 'success')
+    try {
+      await settingsApi.update({ hotel: { preferences: JSON.stringify(prefs) } })
+      addToast('Preferences saved', 'success')
+    } catch (e) {
+      addToast(e.response?.data?.message || 'Failed to save preferences', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -2095,7 +2276,7 @@ function PreferencesTab({ addToast }) {
         </div>
       </div>
 
-      <SaveButton onClick={handleSave} />
+      <SaveButton onClick={handleSave} saving={saving} />
     </div>
   )
 }
@@ -2234,13 +2415,13 @@ export default function Settings({ onRunSetup }) {
           <NotificationsTab addToast={addToast} />
         </div>
         <div data-tab-id="appearance">
-          <AppearanceTab addToast={addToast} />
+          <AppearanceTab settings={settings} addToast={addToast} />
         </div>
         <div data-tab-id="branding">
           <BrandingTab settings={settings} setSettings={setSettings} addToast={addToast} />
         </div>
         <div data-tab-id="preferences">
-          <PreferencesTab addToast={addToast} />
+          <PreferencesTab settings={settings} addToast={addToast} />
         </div>
         <div data-tab-id="properties">
           <PropertiesTab settings={settings} setSettings={setSettings} addToast={addToast} />

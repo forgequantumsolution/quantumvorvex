@@ -188,6 +188,52 @@ const HOUSEKEEPING = [
   { id: uid('hk6'), roomNumber: '401', status: 'clean',    assignedTo: 'Meena Nair', lastCleaned: d(0), notes: '' },
 ]
 
+// ── Frontend-only feature mocks (ledger / cash register / occupancy / etc.) ─────
+const LEDGER_ENTRIES = [
+  { date: d(40).split('T')[0], type: 'Debit',  desc: 'Room Rent — Mar 2026 (INV-2026-001)', amount: 9000,  balance: -9000  },
+  { date: d(40).split('T')[0], type: 'Debit',  desc: 'GST (12%)',                            amount: 1080,  balance: -10080 },
+  { date: d(10).split('T')[0], type: 'Credit', desc: 'Payment Received — UPI',               amount: 10080, balance: 0      },
+]
+
+const CASH_TXNS = [
+  { time: '09:15', type: 'collection', method: 'cash', desc: 'Collection — INV-2026-001 — Anil Sharma', cashIn: 7280,  cashOut: 0    },
+  { time: '11:30', type: 'advance',    method: 'upi',  desc: 'Advance — Rajesh Kumar',                  cashIn: 5000,  cashOut: 0    },
+  { time: '16:45', type: 'refund',     method: 'cash', desc: 'Refund — Kavya Reddy',                    cashIn: 0,     cashOut: 2000 },
+]
+
+const OCCUPANCY = {
+  totalRooms: ROOMS.length,
+  avgRate: 64.5,
+  byDay: Array.from({ length: 14 }, (_, i) => ({
+    date: d(13 - i).split('T')[0],
+    occupied: 6 + (i % 4),
+    total: ROOMS.length,
+    rate: parseFloat((((6 + (i % 4)) / ROOMS.length) * 100).toFixed(1)),
+  })),
+  byRoomType: [
+    { roomType: 'Standard',  total: 4, occupied: 1, rate: 25.0 },
+    { roomType: 'Deluxe',    total: 3, occupied: 1, rate: 33.3 },
+    { roomType: 'Suite',     total: 3, occupied: 2, rate: 66.7 },
+    { roomType: 'Executive', total: 2, occupied: 0, rate: 0.0  },
+  ],
+}
+
+const GUEST_COMMS = [
+  { id: uid('comm1'), channel: 'whatsapp', direction: 'outbound', subject: null, content: 'Welcome message sent.',      staff: 'Front Desk', createdAt: d(3) },
+  { id: uid('comm2'), channel: 'call',     direction: 'outbound', subject: null, content: 'Confirmed late checkout.',    staff: 'Sita Sharma', createdAt: d(1) },
+]
+
+const COMPETITORS = [
+  { id: uid('comp1'), name: 'Hotel Taj',     roomType: 'Deluxe', theirRate: 4500, recordedDate: d(2) },
+  { id: uid('comp2'), name: 'Grand Plaza',   roomType: 'Suite',  theirRate: 6800, recordedDate: d(5) },
+]
+
+const REMINDER_TEMPLATES = [
+  { id: uid('tpl1'), trigger: 'welcome',       content: 'Welcome {{name}}! Your room is ready.', active: true },
+  { id: uid('tpl2'), trigger: 'checkout_due',  content: 'Hi {{name}}, checkout is at 11 AM.',    active: true },
+  { id: uid('tpl3'), trigger: 'payment_due',   content: 'Reminder: payment of {{amount}} due.',  active: false },
+]
+
 // ── Route matcher ─────────────────────────────────────────────────────────────
 const delay = (ms) => new Promise(r => setTimeout(r, ms))
 
@@ -211,12 +257,17 @@ export async function getMockResponse(method, url) {
   // Guests
   if (path === '/guests' && m === 'get')  return { guests: GUESTS, total: GUESTS.length }
   if (path === '/guests' && m === 'post') return { guest: { id: uid('g-new'), status: 'checked_in' }, message: 'Guest checked in.' }
+  if (path.match(/^\/guests\/[^/]+\/checkout$/))       return { message: 'Checked out successfully.' }
+  if (path.match(/^\/guests\/[^/]+\/renew$/))          return { guest: { ...GUESTS[0], stayCount: 2 }, message: 'Stay renewed successfully.' }
+  if (path.match(/^\/guests\/[^/]+\/communications$/) && m === 'get')  return { communications: GUEST_COMMS }
+  if (path.match(/^\/guests\/[^/]+\/communications$/) && m === 'post') return { communication: { id: uid('comm-new'), channel: 'note', direction: 'outbound', content: 'Logged.', createdAt: d(0) } }
   if (path.match(/^\/guests\/[^/]+$/) && m === 'get')  return { guest: GUESTS[0] }
   if (path.match(/^\/guests\/[^/]+$/) && m === 'put')  return { guest: GUESTS[0], message: 'Updated.' }
-  if (path.match(/^\/guests\/[^/]+\/checkout$/))       return { message: 'Checked out successfully.' }
 
   // Billing
   if (path === '/billing' && m === 'get')          return { invoices: INVOICES, total: INVOICES.length }
+  if (path === '/billing/ledger')        return { guest: { id: GUESTS[0].id, name: GUESTS[0].name, docId: 'DOC-0001' }, entries: LEDGER_ENTRIES, closingBalance: LEDGER_ENTRIES.length ? LEDGER_ENTRIES[LEDGER_ENTRIES.length - 1].balance : 0 }
+  if (path === '/billing/cash-register') return { date: d(0).split('T')[0], transactions: CASH_TXNS, totalIn: CASH_TXNS.reduce((s, t) => s + t.cashIn, 0), totalOut: CASH_TXNS.reduce((s, t) => s + t.cashOut, 0), net: CASH_TXNS.reduce((s, t) => s + t.cashIn - t.cashOut, 0) }
   if (path === '/billing/generate' && m === 'post') return { invoice: INVOICES[0], message: 'Invoice generated.' }
   if (path.match(/^\/billing\/[^/]+\/collect$/))   return { invoice: { ...INVOICES[0], status: 'paid' }, message: 'Payment collected.' }
   if (path.match(/^\/billing\/[^/]+\/pdf$/))        return new Blob(['Mock PDF'], { type: 'application/pdf' })
@@ -239,7 +290,9 @@ export async function getMockResponse(method, url) {
   if (path === '/reports/dashboard') return DASHBOARD
   if (path === '/reports/revenue')   return REVENUE
   if (path === '/reports/gst')       return GST_REPORT
+  if (path === '/reports/occupancy') return OCCUPANCY
   if (path === '/reports/export/csv') return new Blob(['mock,csv,data'], { type: 'text/csv' })
+  if (path === '/reports/export/pdf') return new Blob(['Mock PDF'], { type: 'application/pdf' })
 
   // Settings
   if (path === '/settings' && m === 'get') return {
@@ -275,6 +328,8 @@ export async function getMockResponse(method, url) {
   // Staff
   if (path === '/staff' && m === 'get')  return { staff: STAFF_USERS.filter(u => u.role !== 'owner') }
   if (path === '/staff' && m === 'post') return { staff: STAFF_USERS[2], message: 'Created.' }
+  if (path.match(/^\/staff\/[^/]+\/sessions$/)) return [{ id: uid('sess1'), createdAt: d(0), expiresAt: d(-1) }]
+  if (path.match(/^\/staff\/[^/]+\/logout$/))   return { success: true, terminated: 1 }
 
   // Pricing / room types
   if (path === '/pricing' && m === 'get')  return { roomTypes: [
@@ -283,9 +338,16 @@ export async function getMockResponse(method, url) {
     { id: uid('rt3'), name: 'Suite',     baseRate: 5500, monthlyRate: 138000 },
     { id: uid('rt4'), name: 'Executive', baseRate: 8000, monthlyRate: 200000 },
   ]}
+  if (path === '/pricing/competitors' && m === 'get')  return COMPETITORS
+  if (path === '/pricing/competitors' && m === 'post') return { id: uid('comp-new'), name: 'New Competitor', roomType: 'Deluxe', theirRate: 4000, recordedDate: d(0) }
+  if (path.match(/^\/pricing\/competitors\/[^/]+$/) && m === 'put')    return { id: uid('comp1'), name: 'Updated', roomType: 'Deluxe', theirRate: 4200, recordedDate: d(0) }
+  if (path.match(/^\/pricing\/competitors\/[^/]+$/) && m === 'delete') return { success: true }
 
   // Reminders / channels
   if (path === '/reminders') return { reminders: [] }
+  if (path === '/reminders/templates' && m === 'get')  return REMINDER_TEMPLATES
+  if (path === '/reminders/templates' && m === 'post') return { id: uid('tpl-new'), trigger: 'custom', content: 'New template', active: true }
+  if (path.match(/^\/reminders\/templates\/[^/]+$/) && m === 'put') return { id: uid('tpl1'), trigger: 'welcome', content: 'Updated', active: true }
   if (path === '/channels')  return { channels: [] }
 
   // Fallback

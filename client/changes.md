@@ -6,6 +6,85 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-13 · Settings tabs — real persistence for all tabs
+
+## Summary
+Audited all 13 Settings tabs. 8 already persisted (Hotel Profile, Room Config, Facilities, Food Plans,
+Tax & Pricing, Pricing Rules, Notifications, Users & Access). The remaining 5 only toasted "saved" —
+now wired to persist through `settingsApi` (backed by new `hotel` JSON columns). Each tab hydrates from
+the loaded settings and saves with loading/error states.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- **Documents tab** — KYC checklist + expiry-reminder days now load from / save to
+  `hotel.documentsConfig` (JSON). Save button calls `settingsApi.update`.
+- **Branding tab** — tagline / login title / footer / logo persist to `hotel.branding` (JSON) in
+  addition to the existing localStorage cache (so the login screen still picks them up); hydrates
+  backend → localStorage on load.
+- **Preferences tab** — regional + notification/session prefs persist to `hotel.preferences` (JSON);
+  same backend-wins-over-cache hydration. Now receives `settings` prop.
+- **Appearance tab** — accent / density / corner-radius persist to `hotel.appearance` (JSON) on Save
+  (still applies live as you tweak); hydrates + re-skins from the saved blob. Now receives `settings`.
+- **Properties tab** — "Save Property" now persists the editable hotel fields via `settingsApi.update`
+  (+ updates the store's hotel/owner name) instead of a no-op toast. (Multi-property table is still the
+  intentional "Upgrade to Pro" paywall — left gated.)
+- All five `SaveButton`/buttons now show a `Saving…` state.
+
+---
+
+# Session — 2026-06-13 · Frontend-only features wired to new backend APIs
+
+## Summary
+The 9 "missing backend endpoint" features from `docs/FRONTEND_API_PLAN.md` (working UI on mock/local
+data) are now wired to real endpoints. Added API helpers + mock entries, then swapped each UI from
+local data to the API.
+
+## File changes
+
+### `src/api/client.js`
+- `billingApi`: `getLedger`, `getCashRegister`.
+- `guestsApi`: `renew`, `getCommunications`, `addCommunication`.
+- `reportsApi`: `getOccupancy`, `exportPdf`.
+- `staffApi`: `getSessions`, `forceLogout`.
+- `pricingApi`: `getCompetitors`, `createCompetitor`, `updateCompetitor`, `deleteCompetitor`.
+- `remindersApi`: `createTemplate`.
+
+### `src/api/mockData.js`
+- Added mock data + route handlers for ledger, cash-register, occupancy, PDF export, guest
+  communications, guest renew, staff sessions/logout, pricing competitors, and reminder templates.
+
+### `src/components/modules/billing/Billing.jsx`
+- **Ledger tab** — guest dropdown now from `guestsApi.getAll`; ledger from `billingApi.getLedger`
+  (was hardcoded `MOCK_LEDGER`). **Cash Register tab** — fetches `billingApi.getCashRegister(date)`
+  (was `MOCK_CASH_TXN`). Removed the now-dead mock constants; added loading/empty states.
+
+### `src/components/modules/reports/Reports.jsx`
+- **Occupancy tab** — added a live daily-occupancy trend chart + by-room-type table from
+  `reportsApi.getOccupancy` (falls back to deriving from rooms). **Export tab** — added PDF export
+  buttons alongside CSV via `reportsApi.exportPdf`.
+
+### `src/components/modules/staff/Staff.jsx`
+- Loads real active-session counts per member; **Force Logout** calls `staffApi.forceLogout` (was a
+  local-only indicator clear).
+
+### `src/components/modules/guests/Guests.jsx`
+- **Communications tab** — fetches `guestsApi.getCommunications` and logs entries via
+  `addCommunication` (channel picker + composer); was a hardcoded empty `commLog`.
+- **Renew** button now calls `guestsApi.renew` (was a toast-only stub).
+
+### `src/components/modules/settings/Settings.jsx`
+- **Pricing Rules tab** — Competitor Rate Benchmarking now loads/creates/updates/deletes via
+  `pricingApi.*competitor*` (persist on blur/change; add/delete hit the API); was local-only.
+- **Notifications tab** — message templates load from `remindersApi.getTemplates` (seeds the default
+  set on first run if empty), edit persists via `updateTemplate`, active toggle persists; was local.
+
+### `package.json`
+- Installed the already-declared-but-missing `qrcode.react` dependency (Rooms.jsx import was breaking
+  the production build).
+
+---
+
 # Session — 2026-06-12 · Guest Maintenance Tickets via In-Room QR Code
 
 ## Summary

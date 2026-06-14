@@ -5,6 +5,71 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-13 · Settings tab persistence (config blobs)
+
+## Summary
+Five Settings tabs had working UI but only toasted "saved" — they never persisted. Added JSON
+config columns to the `Hotel` record so Documents, Branding, Preferences, Appearance, and the
+Properties "Current Property" form now save through the existing generic `PUT /settings`. No new
+endpoints or controllers were needed — the update controller already forwards `hotel` fields to Prisma.
+
+## File changes
+
+### `prisma/schema.prisma`
+- `Hotel` — added four nullable JSON-string columns: `documentsConfig`, `branding`, `preferences`,
+  `appearance`. Applied via `prisma db push` (additive, no data loss).
+
+### (no controller changes)
+- `updateSettings` already passes `req.body.hotel` straight to `prisma.hotel.update`, so the new
+  columns persist with no code change. `getSettings` returns them as part of `hotel`.
+
+---
+
+# Session — 2026-06-13 · Frontend-only features → real backend endpoints
+
+## Summary
+The `docs/FRONTEND_API_PLAN.md` "Missing backend endpoints" list (9 features with working UI but no
+API) is now fully built and wired. Added one Prisma model + migration (guest communications); the
+other 8 reuse existing models or compute from existing data.
+
+## File changes
+
+### `prisma/schema.prisma`
+- Added `GuestCommunication` model (id, guestId→Guest cascade, channel, direction, subject, content,
+  staff, createdAt) and the `communications GuestCommunication[]` relation on `Guest`. Applied via
+  `prisma db push`. The push also synced pre-existing drift (Room.qrToken, User.sessionVersion,
+  BookingDocument.verified were in migrations but missing from the dev DB) — all additive.
+
+### `src/controllers/pricingController.js` + `src/routes/pricing.js`
+- Competitor rate CRUD: `getCompetitors` / `createCompetitor` / `updateCompetitor` /
+  `deleteCompetitor` → `GET/POST/PUT/DELETE /pricing/competitors` (uses existing `CompetitorRate`).
+
+### `src/controllers/remindersController.js` + `src/routes/reminders.js`
+- `createTemplate` → `POST /reminders/templates` (was GET/PUT only; 409 on duplicate trigger).
+
+### `src/controllers/staffController.js` + `src/routes/staff.js`
+- `getStaffSessions` → `GET /staff/:id/sessions` (active, non-expired) and `forceLogoutStaff` →
+  `POST /staff/:id/logout` (deletes all sessions). Uses existing `StaffSession`.
+
+### `src/controllers/guestsController.js` + `src/routes/guests.js`
+- `renewGuestStay` → `POST /guests/:id/renew` (extends monthly by N months / pushes daily checkout,
+  bumps `stayCount`).
+- `getGuestCommunications` / `createGuestCommunication` → `GET/POST /guests/:id/communications`.
+
+### `src/controllers/reportsController.js` + `src/routes/reports.js`
+- `getOccupancy` → `GET /reports/occupancy?from=&to=` (daily occupancy series from bookings +
+  current by-room-type snapshot + avg rate).
+- `exportPdf` → `GET /reports/export/pdf?type=guests|billing|gst` (HTML→PDF via existing
+  `utils/pdf.js` puppeteer renderer).
+
+### `src/controllers/billingController.js` + `src/routes/billing.js`
+- `getLedger` → `GET /billing/ledger?guestId=` (per-guest debit/credit entries + running balance,
+  computed from invoices + payments).
+- `getCashRegister` → `GET /billing/cash-register?date=` (day's payments grouped into
+  collections/advances/refunds with cash-in/out + totals).
+
+---
+
 # Session — 2026-06-12 · Guest Maintenance Tickets via In-Room QR Code
 
 ## Summary

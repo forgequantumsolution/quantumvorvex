@@ -33,6 +33,28 @@ export const updateStaff = async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }) }
 }
 
+// GET /staff/:id/sessions — active (non-expired) sessions for a staff member
+export const getStaffSessions = async (req, res) => {
+  try {
+    const { id } = req.params
+    const sessions = await prisma.staffSession.findMany({
+      where: { staffId: id, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, createdAt: true, expiresAt: true },
+    })
+    res.json(sessions)
+  } catch (e) { res.status(500).json({ error: e.message }) }
+}
+
+// POST /staff/:id/logout — terminate all sessions (force logout)
+export const forceLogoutStaff = async (req, res) => {
+  try {
+    const { id } = req.params
+    const result = await prisma.staffSession.deleteMany({ where: { staffId: id } })
+    res.json({ success: true, terminated: result.count })
+  } catch (e) { res.status(500).json({ error: e.message }) }
+}
+
 export const getActivity = async (req, res) => {
   try {
     const { staffId, module, from, to } = req.query

@@ -26,29 +26,6 @@ function normalizeInvoice(inv) {
   }
 }
 
-// Used only by the (backend-less) Ledger tab mock below.
-const GUEST_OPTIONS = ['Rahul Sharma', 'Priya Patel', 'Ankit Singh', 'Neha Gupta', 'Vijay Kumar']
-
-// ─── Ledger mock data ─────────────────────────────────────────────────────────
-const MOCK_LEDGER = {
-  'Rahul Sharma': [
-    { date: '2026-03-01', type: 'Debit',  desc: 'Room Rent - Mar 2026',      amount: 9000,  balance: -9000  },
-    { date: '2026-03-01', type: 'Debit',  desc: 'Food Plan - Mar 2026',      amount: 2500,  balance: -11500 },
-    { date: '2026-03-01', type: 'Debit',  desc: 'Amenities - Mar 2026',      amount: 800,   balance: -12300 },
-    { date: '2026-03-01', type: 'Debit',  desc: 'GST (12%)',                 amount: 1476,  balance: -13776 },
-    { date: '2026-04-02', type: 'Credit', desc: 'Payment Received - UPI',    amount: 13776, balance: 0      },
-    { date: '2026-04-01', type: 'Debit',  desc: 'Room Rent - Apr 2026',      amount: 9000,  balance: -9000  },
-  ],
-}
-
-// ─── Cash register mock data ──────────────────────────────────────────────────
-const MOCK_CASH_TXN = [
-  { time: '09:15', type: 'collection', desc: 'INV-001 - Rahul Sharma',      cashIn: 13776, cashOut: 0    },
-  { time: '11:30', type: 'advance',    desc: 'Advance - BK-2026-002',       cashIn: 10000, cashOut: 0    },
-  { time: '14:00', type: 'refund',     desc: 'Deposit Refund - DOC-0005',   cashIn: 0,     cashOut: 4200 },
-  { time: '16:45', type: 'collection', desc: 'INV-002 - Priya Patel',       cashIn: 9016,  cashOut: 0    },
-]
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function statusBadgeType(status) {
   if (status === 'Paid')    return 'green'
@@ -463,16 +440,42 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
 
 // ─── Ledger Tab ───────────────────────────────────────────────────────────────
 function LedgerTab() {
+  const addToast = useToast()
   const [guestSearch, setGuestSearch] = useState('')
-  const [selectedGuest, setSelectedGuest] = useState('')
+  const [selectedGuest, setSelectedGuest] = useState('')   // guest display name
+  const [selectedGuestId, setSelectedGuestId] = useState('')
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [guests, setGuests] = useState([])
+  const [ledgerRows, setLedgerRows] = useState([])
+  const [closingBalance, setClosingBalance] = useState(null)
+  const [loading, setLoading] = useState(false)
 
-  const filteredGuests = GUEST_OPTIONS.filter(g =>
-    g.toLowerCase().includes(guestSearch.toLowerCase())
+  // Load the guest list once for the selector.
+  useEffect(() => {
+    guestsApi.getAll()
+      .then(res => setGuests(res.data.guests || []))
+      .catch(() => setGuests([]))
+  }, [])
+
+  // Fetch the ledger from the API whenever a guest is selected.
+  const loadLedger = useCallback(async () => {
+    if (!selectedGuestId) { setLedgerRows([]); setClosingBalance(null); return }
+    setLoading(true)
+    try {
+      const res = await billingApi.getLedger(selectedGuestId)
+      setLedgerRows(res.data.entries || [])
+      setClosingBalance(res.data.closingBalance ?? null)
+    } catch {
+      addToast('Failed to load ledger', 'error'); setLedgerRows([])
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedGuestId, addToast])
+  useEffect(() => { loadLedger() }, [loadLedger])
+
+  const filteredGuests = guests.filter(g =>
+    g.name.toLowerCase().includes(guestSearch.toLowerCase())
   )
-
-  const ledgerRows = selectedGuest ? (MOCK_LEDGER[selectedGuest] || []) : []
-  const closingBalance = ledgerRows.length > 0 ? ledgerRows[ledgerRows.length - 1].balance : null
 
   const monoStyle = { fontFamily: 'var(--font-mono)' }
 
@@ -485,20 +488,20 @@ function LedgerTab() {
           className="form-input w-full"
           placeholder="Search guest…"
           value={selectedGuest || guestSearch}
-          onFocus={() => { setDropdownOpen(true); if (selectedGuest) { setGuestSearch(''); setSelectedGuest('') } }}
-          onChange={e => { setGuestSearch(e.target.value); setSelectedGuest(''); setDropdownOpen(true) }}
+          onFocus={() => { setDropdownOpen(true); if (selectedGuest) { setGuestSearch(''); setSelectedGuest(''); setSelectedGuestId('') } }}
+          onChange={e => { setGuestSearch(e.target.value); setSelectedGuest(''); setSelectedGuestId(''); setDropdownOpen(true) }}
         />
         {dropdownOpen && filteredGuests.length > 0 && (
-          <div className="absolute top-full left-0 right-0 bg-surface border border-line rounded-md mt-0.5 z-[100] shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
+          <div className="absolute top-full left-0 right-0 bg-surface border border-line rounded-md mt-0.5 z-[100] shadow-[0_4px_16px_rgba(0,0,0,0.3)] max-h-[260px] overflow-y-auto">
             {filteredGuests.map(g => (
               <div
-                key={g}
-                onClick={() => { setSelectedGuest(g); setGuestSearch(g); setDropdownOpen(false) }}
+                key={g.id}
+                onClick={() => { setSelectedGuest(g.name); setSelectedGuestId(g.id); setGuestSearch(g.name); setDropdownOpen(false) }}
                 className="t-sm px-[14px] py-[9px] cursor-pointer border-b border-line transition-[background] duration-100"
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                {g}
+                {g.name}{g.room?.number ? ` · Room ${g.room.number}` : ''}
               </div>
             ))}
           </div>
@@ -506,9 +509,11 @@ function LedgerTab() {
       </div>
 
       {/* Ledger table */}
-      {selectedGuest && (
+      {selectedGuestId && (
         <>
-          {ledgerRows.length === 0 ? (
+          {loading ? (
+            <div className="empty-state"><p className="t-sm m-0 text-ink3">Loading ledger…</p></div>
+          ) : ledgerRows.length === 0 ? (
             <div className="empty-state">
               <p className="m-0 font-semibold text-ink2">No ledger entries for {selectedGuest}</p>
             </div>
@@ -595,8 +600,22 @@ function CashRegisterTab() {
   const today = new Date().toISOString().slice(0, 10)
   const [date, setDate]             = useState(today)
   const [openingBalance, setOpening] = useState(5000)
+  const [transactions, setTransactions] = useState([])
+  const [loading, setLoading]       = useState(false)
 
-  const transactions = MOCK_CASH_TXN
+  // Fetch the day's cash movements from the API whenever the date changes.
+  const loadCashRegister = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await billingApi.getCashRegister(date)
+      setTransactions(res.data.transactions || [])
+    } catch {
+      addToast('Failed to load cash register', 'error'); setTransactions([])
+    } finally {
+      setLoading(false)
+    }
+  }, [date, addToast])
+  useEffect(() => { loadCashRegister() }, [loadCashRegister])
 
   const totalIn  = transactions.reduce((s, t) => s + t.cashIn,  0)
   const totalOut = transactions.reduce((s, t) => s + t.cashOut, 0)
@@ -659,6 +678,13 @@ function CashRegisterTab() {
             </tr>
           </thead>
           <tbody>
+            {(loading || transactions.length === 0) && (
+              <tr className="border-t border-line">
+                <td colSpan={5} className="t-sm px-[14px] py-6 text-center text-ink3">
+                  {loading ? 'Loading…' : 'No cash transactions for this date'}
+                </td>
+              </tr>
+            )}
             {transactions.map((txn, i) => {
               const badge = cashTypeBadge(txn.type)
               return (
