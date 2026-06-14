@@ -58,30 +58,6 @@ function issueAuthToken(res, user) {
   return token
 }
 
-// Seed default admin user if none exists (silent, no credentials logged)
-export const seedAdminUser = async () => {
-  try {
-    const count = await prisma.user.count()
-    if (count === 0) {
-      const hashed = await bcrypt.hash('admin123', 12)
-      // Ensure an Owner role exists (full access) and link the bootstrap admin to it.
-      const ownerRole = await prisma.role.upsert({
-        where:  { name: 'Owner' },
-        update: { isSystem: true, isOwner: true },
-        create: { name: 'Owner', description: 'Full access to everything.', isSystem: true, isOwner: true },
-      })
-      await prisma.user.create({
-        data: { name: 'Admin', email: 'admin@hotel.com', password: hashed, roleId: ownerRole.id },
-      })
-      logger.info('Default admin account created — change credentials immediately', {
-        event: 'SYSTEM',
-      })
-    }
-  } catch (err) {
-    logger.error('Failed to seed admin user', { error: err.message, event: 'SYSTEM' })
-  }
-}
-
 // POST /auth/login
 export const login = async (req, res) => {
   const ip = req.ip || req.connection?.remoteAddress || 'unknown'
