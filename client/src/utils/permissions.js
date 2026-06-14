@@ -7,20 +7,6 @@
  * the user's real access. The backend still enforces every request — this is UX only.
  */
 
-export const ROLE_LABELS = {
-  owner:   'Owner',
-  manager: 'Manager',
-  staff:   'Staff',
-  admin:   'Owner',
-}
-
-export const ROLE_COLORS = {
-  owner:   '#c9a84c',
-  manager: '#4c9ac9',
-  staff:   '#6bb56b',
-  admin:   '#c9a84c',
-}
-
 const LEVEL_RANK = { NONE: 0, VIEW: 1, MANAGE: 2 }
 
 // Each sidebar panel → the backend module that governs it. `today` and `cancellations`
@@ -45,7 +31,7 @@ export const PANEL_MODULE = {
 export const ALL_PANELS = Object.keys(PANEL_MODULE)
 
 function isOwnerUser(user) {
-  return !!(user && (user.isOwner || user.role === 'owner' || user.role === 'admin'))
+  return !!(user && user.isOwner)
 }
 
 /**

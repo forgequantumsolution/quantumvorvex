@@ -12,7 +12,6 @@ const SAFE_SELECT = {
   name: true,
   email: true,
   phone: true,
-  role: true,
   roleId: true,
   status: true,
   mustChangePassword: true,
@@ -21,29 +20,9 @@ const SAFE_SELECT = {
   roleRef: { select: { id: true, name: true, isOwner: true } },
 }
 
-// Keep the legacy `role` string roughly in sync with the assigned Role so the JWT /
-// static sidebar keep working until the frontend reads permissions dynamically.
-function legacyRoleFor(role) {
-  if (!role) return 'staff'
-  if (role.isOwner) return 'owner'
-  if (role.name === 'Manager') return 'manager'
-  if (role.name === 'Staff') return 'staff'
-  return 'staff'
-}
-
 // Count of active users whose role grants owner (isOwner) — used to protect the last owner.
 function activeOwnerCount() {
   return prisma.user.count({ where: { status: 'active', roleRef: { isOwner: true } } })
-}
-
-// Resolve a Role from either an explicit roleId (preferred) or the legacy role string
-// (so the older Settings → Users tab, which sends 'owner'/'manager'/'staff', keeps working).
-async function resolveRole({ roleId, role }) {
-  if (roleId) return prisma.role.findUnique({ where: { id: roleId } })
-  if (role === 'owner')   return prisma.role.findFirst({ where: { isOwner: true } })
-  if (role === 'manager') return prisma.role.findFirst({ where: { name: 'Manager' } })
-  if (role === 'staff')   return prisma.role.findFirst({ where: { name: 'Staff' } })
-  return null
 }
 
 // GET /api/v1/users
@@ -62,18 +41,19 @@ export const getUsers = async (req, res) => {
 // POST /api/v1/users
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, roleId, role: legacyRole, phone, status } = req.body
+    const { name, email, password, roleId, phone, status } = req.body
     if (!name || !email) {
       return res.status(400).json({ error: 'Name and email are required.' })
     }
 
-    // Resolve the role: explicit roleId / legacy role string, else fall back to Staff.
-    let role = await resolveRole({ roleId, role: legacyRole })
+    // Resolve the role from roleId; fall back to the Staff role when none given.
+    let role = roleId
+      ? await prisma.role.findUnique({ where: { id: roleId } })
+      : await prisma.role.findFirst({ where: { name: 'Staff' } })
     if (roleId && !role) return res.status(400).json({ error: 'Selected role does not exist.' })
-    if (!role) role = await prisma.role.findFirst({ where: { name: 'Staff' } })
 
     // Only an owner can mint another owner-level account.
-    if (role?.isOwner && req.user.role !== 'owner') {
+    if (role?.isOwner && !req._access?.isOwner) {
       return res.status(403).json({ error: 'Only an owner can assign the Owner role.' })
     }
 
@@ -85,7 +65,6 @@ export const createUser = async (req, res) => {
         email,
         password: hash,
         roleId: role?.id || null,
-        role: legacyRoleFor(role),
         phone: phone || null,
         status: status || 'active',
         mustChangePassword: usedDefault,
@@ -106,18 +85,17 @@ export const createUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params
-    const { name, email, phone, roleId, role: legacyRole, status, password } = req.body
+    const { name, email, phone, roleId, status, password } = req.body
 
     const target = await prisma.user.findUnique({ where: { id }, include: { roleRef: true } })
     if (!target) return res.status(404).json({ error: 'User not found.' })
 
-    // A role change is requested if either roleId or the legacy role string is present.
-    const roleChangeRequested = roleId !== undefined || legacyRole !== undefined
+    const roleChangeRequested = roleId !== undefined
     let newRole = target.roleRef
     if (roleChangeRequested) {
-      newRole = await resolveRole({ roleId, role: legacyRole })
+      newRole = roleId ? await prisma.role.findUnique({ where: { id: roleId } }) : null
       if (roleId && !newRole) return res.status(400).json({ error: 'Selected role does not exist.' })
-      if (newRole?.isOwner && req.user.role !== 'owner') {
+      if (newRole?.isOwner && !req._access?.isOwner) {
         return res.status(403).json({ error: 'Only an owner can assign the Owner role.' })
       }
     }
@@ -140,10 +118,7 @@ export const updateUser = async (req, res) => {
     if (phone !== undefined)  data.phone  = phone
     if (status !== undefined) data.status = status
     if (password)             data.password = await bcrypt.hash(password, 12)
-    if (roleChangeRequested) {
-      data.roleId = newRole?.id || null
-      data.role   = legacyRoleFor(newRole)
-    }
+    if (roleChangeRequested)  data.roleId = newRole?.id || null
 
     const user = await prisma.user.update({ where: { id }, data, select: SAFE_SELECT })
     bustUser(id)   // role reassignment / deactivation takes effect on the next request

@@ -16,7 +16,7 @@ async function authUserPayload(user) {
     name: user.name,
     email: user.email,
     phone: user.phone,
-    role: user.role,
+    roleName: access?.roleName || null,   // display label (Role.name)
     isOwner: access?.isOwner || false,
     permissions: access?.perms || {},
   }
@@ -79,7 +79,7 @@ const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex'
  * Returns the raw token so it can also be sent in the JSON body.
  */
 function issueAuthToken(res, user) {
-  const payload = { userId: user.id, email: user.email, role: user.role, sessionVersion: user.sessionVersion }
+  const payload = { userId: user.id, email: user.email, sessionVersion: user.sessionVersion }
   const token   = jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn:  '7d',
     algorithm:  'HS256',
@@ -96,8 +96,14 @@ export const seedAdminUser = async () => {
     const count = await prisma.user.count()
     if (count === 0) {
       const hashed = await bcrypt.hash('admin123', 12)
+      // Ensure an Owner role exists (full access) and link the bootstrap admin to it.
+      const ownerRole = await prisma.role.upsert({
+        where:  { name: 'Owner' },
+        update: { isSystem: true, isOwner: true },
+        create: { name: 'Owner', description: 'Full access to everything.', isSystem: true, isOwner: true },
+      })
       await prisma.user.create({
-        data: { name: 'Admin', email: 'admin@hotel.com', password: hashed, role: 'owner' },
+        data: { name: 'Admin', email: 'admin@hotel.com', password: hashed, roleId: ownerRole.id },
       })
       logger.info('Default admin account created — change credentials immediately', {
         event: 'SYSTEM',
@@ -128,7 +134,7 @@ export const login = async (req, res) => {
     // Lookup user — always run bcrypt even on miss to prevent timing attacks
     const user = await prisma.user.findUnique({
       where: { email },
-      select: { id: true, name: true, email: true, role: true, status: true, password: true },
+      select: { id: true, name: true, email: true, status: true, password: true },
     })
 
     const DUMMY_HASH = '$2a$12$invalidhashinvalidhashinvalidhashx'
@@ -193,7 +199,7 @@ export const me = async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where:  { id: req.user.userId },
-      select: { id: true, name: true, email: true, phone: true, role: true, createdAt: true },
+      select: { id: true, name: true, email: true, phone: true, createdAt: true },
     })
     if (!user) return res.status(404).json({ error: 'User not found.', code: 'ERR_NOT_FOUND' })
     return res.status(200).json({ user: { ...(await authUserPayload(user)), createdAt: user.createdAt } })
@@ -213,7 +219,7 @@ export const changePassword = async (req, res) => {
 
     const user = await prisma.user.findUnique({
       where:  { id: req.user.userId },
-      select: { id: true, name: true, email: true, role: true, password: true, sessionVersion: true },
+      select: { id: true, name: true, email: true, password: true, sessionVersion: true },
     })
     if (!user) return res.status(404).json({ error: 'User not found.', code: 'ERR_NOT_FOUND' })
 
@@ -378,7 +384,7 @@ export const verifyOtp = async (req, res) => {
     // Correct code — consume it and load the user.
     const user = await prisma.user.findUnique({
       where:  { email },
-      select: { id: true, name: true, email: true, role: true, status: true },
+      select: { id: true, name: true, email: true, status: true },
     })
 
     if (!user || user.status === 'inactive') {

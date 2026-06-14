@@ -5,6 +5,50 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-14 · RBAC Phase 4 — Drop legacy User.role
+
+## Summary
+Final cleanup: removed the legacy `User.role` string column (the dual source of truth kept during
+the migration). Identity is now purely `User.roleId → Role`; display + owner checks use the role's
+name and `isOwner`. Also removed the dead role middleware. No behavior change — the access matrix
+is unchanged; this just deletes the deprecated coupling. Also fixed the create-user form to stop
+browser autofill (frontend — see `../client/CHANGES.md`).
+
+## File changes
+
+### `prisma/schema.prisma`
+- Removed `role String @default("staff")` from `User`. Migration
+  `20260614120000_drop_legacy_user_role` (hand-authored `ALTER TABLE "User" DROP COLUMN "role"`,
+  applied via `prisma migrate deploy` — `migrate dev` refuses non-interactive data-loss drops).
+
+### `src/utils/permissionCache.js`
+- `loadRole`/`getUserAccess` now also surface the role **name** (`roleName`).
+
+### `src/controllers/authController.js`
+- `authUserPayload` returns `{ id, name, email, phone, roleName, isOwner, permissions }` (dropped the
+  legacy `role`). Removed `role` from the JWT payload and from the login/me/change-password/otp selects.
+- `seedAdminUser` upserts an `Owner` role and links the bootstrap admin via `roleId` (was `role:'owner'`).
+
+### `src/controllers/usersController.js`
+- Removed `legacyRoleFor` and the legacy-string branch of role resolution; create/update resolve the
+  role from `roleId` only. Owner-assignment checks now use the resolved `req._access.isOwner` instead
+  of `req.user.role`. `SAFE_SELECT` no longer selects `role`.
+
+### `src/middleware/auth.js`
+- Removed the now-unused `requireRole`, `requireMinRole`, and `ROLE_RANK` (all callers were replaced
+  by `requirePermission`/`requireOwner` in Phase 2).
+
+### `src/middleware/validate.js`
+- Dropped the legacy `role` enum from `createUser` / `updateUser` (only `roleId` remains).
+
+### `src/utils/seed.js`
+- User upserts no longer set `role`; they link via `roleId` only.
+
+### Verification
+- Login returns `roleName` + `isOwner` (legacy `role` undefined); full RBAC suite green (13/13).
+
+---
+
 # Session — 2026-06-14 · RBAC Phase 3 — Dynamic frontend permissions (backend touches)
 
 ## Summary

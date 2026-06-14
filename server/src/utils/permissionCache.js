@@ -31,25 +31,25 @@ async function loadUser(userId) {
 async function loadRole(roleId) {
   const r = await prisma.role.findUnique({
     where: { id: roleId },
-    select: { isOwner: true, permissions: { select: { module: true, level: true } } },
+    select: { name: true, isOwner: true, permissions: { select: { module: true, level: true } } },
   })
   const role = r
-    ? { isOwner: r.isOwner, perms: Object.fromEntries(r.permissions.map((p) => [p.module, p.level])) }
-    : { isOwner: false, perms: {} }
+    ? { name: r.name, isOwner: r.isOwner, perms: Object.fromEntries(r.permissions.map((p) => [p.module, p.level])) }
+    : { name: null, isOwner: false, perms: {} }
   roleCache.set(roleId, role)
   return role
 }
 
 /**
- * Returns { status, roleId, isOwner, perms } for a user, or null if the user is gone.
+ * Returns { status, roleId, roleName, isOwner, perms } for a user, or null if gone.
  */
 export async function getUserAccess(userId) {
   if (!userId) return null
   const u = userCache.get(userId) || (await loadUser(userId))
   if (!u) return null
-  let role = { isOwner: false, perms: {} }
+  let role = { name: null, isOwner: false, perms: {} }
   if (u.roleId) role = roleCache.get(u.roleId) || (await loadRole(u.roleId))
-  return { status: u.status, roleId: u.roleId, isOwner: role.isOwner, perms: role.perms }
+  return { status: u.status, roleId: u.roleId, roleName: role.name, isOwner: role.isOwner, perms: role.perms }
 }
 
 export function bustUser(userId) { if (userId) userCache.delete(userId) }

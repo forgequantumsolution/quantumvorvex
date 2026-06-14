@@ -6,6 +6,39 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-14 · RBAC Phase 4 — Drop legacy role + create-user autofill fix
+
+## Summary
+Removed all reliance on the legacy `currentUser.role` string (backend dropped the column) — display
+and owner checks now use `roleName` + `isOwner`. Also fixed the "Add User" form: the password field
+was being autofilled by the browser with saved credentials.
+
+## File changes
+
+### `src/components/modules/users/UsersRoles.jsx` (autofill fix)
+- The **create** form no longer renders a password field (the server applies the `Welcome@123`
+  default); it shows a note instead. A password field appears **only when editing** (optional reset)
+  with `autoComplete="new-password"`. Form + name/email/phone set `autoComplete="off"`.
+- `canManageRoles` is now `!!currentUser?.isOwner` (was `role === 'owner'`).
+
+### `src/utils/permissions.js`
+- Removed `ROLE_LABELS` / `ROLE_COLORS`; `isOwnerUser` checks `user.isOwner` only.
+
+### `src/components/layout/Sidebar.jsx`
+- Role badge uses `currentUser.roleName` + an `isOwner`-based color (dropped the role→label/color maps).
+
+### `src/components/modules/settings/Settings.jsx`
+- Uses `currentUser.isOwner` for the owner-only "Run Setup" control (was `role === 'owner'`).
+
+### `src/api/mockData.js`
+- `MOCK_USER` now carries `roleName` + `isOwner` + `permissions` (was `role: 'owner'`).
+
+### `tests/users-roles.spec.js`
+- Create-user test now asserts there is **no** `input[name="password"]` on create and that the
+  default-password note is shown.
+
+---
+
 # Session — 2026-06-14 · RBAC Phase 3 — Dynamic frontend permissions
 
 ## Summary

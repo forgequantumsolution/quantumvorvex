@@ -97,7 +97,6 @@ export const schemas = {
                 .regex(/[0-9]/, 'Must contain a number')
                 .optional(),
     roleId:   z.string().cuid('Invalid role').optional().nullable(),
-    role:     z.enum(['owner', 'manager', 'staff']).optional(),
     phone:    z.string().max(20).optional().nullable(),
     status:   z.enum(['active', 'inactive']).default('active'),
   }),
@@ -110,7 +109,6 @@ export const schemas = {
                 .regex(/[0-9]/, 'Must contain a number')
                 .optional(),
     roleId:   z.string().cuid('Invalid role').optional().nullable(),
-    role:     z.enum(['owner', 'manager', 'staff']).optional(),
     phone:    z.string().max(20).optional().nullable(),
     status:   z.enum(['active', 'inactive']).optional(),
   }),

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { LuPower, LuChevronsLeft, LuChevronsRight, LuKeyRound } from 'react-icons/lu'
 import { useAppSelector, useUiActions, useAuthActions } from '../../store/hooks'
-import { getAllowedPanels, ROLE_LABELS, ROLE_COLORS } from '../../utils/permissions'
+import { getAllowedPanels } from '../../utils/permissions'
 import { NAV_SECTIONS } from '../../utils/navigation'
 import ChangePasswordModal from '../ui/ChangePasswordModal'
 
@@ -44,10 +44,9 @@ export default function Sidebar() {
   const collapsed = sidebarCollapsed && isDesktop
   const [showChangePassword, setShowChangePassword] = useState(false)
 
-  const role          = currentUser?.role || 'staff'
   const allowedPanels = getAllowedPanels(currentUser)
-  const roleLabel     = ROLE_LABELS[role] || role
-  const roleColor     = ROLE_COLORS[role] || '#888'
+  const roleLabel     = currentUser?.roleName || 'User'
+  const roleColor     = currentUser?.isOwner ? '#c9a84c' : '#4c9ac9'
 
   const { head, tail } = splitHotelName(hotelName)
   const userInitials   = getInitials(currentUser?.name || 'Admin')

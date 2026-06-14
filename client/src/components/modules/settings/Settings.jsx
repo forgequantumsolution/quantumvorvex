@@ -7,7 +7,7 @@ import { useAppSelector, useHotelActions, useUiActions } from '../../../store/ho
 import { useToast } from '../../../hooks/useToast'
 import api, { settingsApi, pricingApi, remindersApi } from '../../../api/client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { ROLE_LABELS, ROLE_COLORS, canAccessSettingsTab } from '../../../utils/permissions'
+import { canAccessSettingsTab } from '../../../utils/permissions'
 import {
   ACCENT_PRESETS, RADIUS_PRESETS, getAppearance, saveAppearance, applyAppearance,
 } from '../../../utils/theme'
@@ -2045,7 +2045,7 @@ export default function Settings({ onRunSetup }) {
   }, [])
   const { setHotelName, setOwnerName } = useHotelActions()
   const currentUser  = useAppSelector(s => s.auth.currentUser)
-  const role         = currentUser?.role || 'staff'
+  const isOwner      = !!currentUser?.isOwner
 
   // Filter tabs based on the user's resolved permissions
   const tabs = ALL_TABS.filter(t => canAccessSettingsTab(currentUser, t.id))
@@ -2087,7 +2087,7 @@ export default function Settings({ onRunSetup }) {
             Configure hotel profile, room types, pricing, and system preferences
           </p>
         </div>
-        {onRunSetup && (role === 'owner' || role === 'admin') && (
+        {onRunSetup && isOwner && (
           <button
             className="btn btn-outline btn-sm shrink-0"
             onClick={onRunSetup}

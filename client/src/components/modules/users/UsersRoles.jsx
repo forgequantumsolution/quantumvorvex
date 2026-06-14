@@ -73,11 +73,11 @@ function UserModal({ isOpen, onClose, user, roles, onSave }) {
             </>
           }
         >
-          <Form className="flex flex-col gap-3.5">
-            <FormikField name="name" label="Full Name" required placeholder="e.g. Ramesh Gupta" />
+          <Form className="flex flex-col gap-3.5" autoComplete="off">
+            <FormikField name="name" label="Full Name" required placeholder="e.g. Ramesh Gupta" autoComplete="off" />
             <div className="grid grid-cols-2 gap-3">
-              <FormikField name="email" label="Email" type="email" required placeholder="user@hotel.com" />
-              <FormikField name="phone" label="Phone" placeholder="10-digit mobile" />
+              <FormikField name="email" label="Email" type="email" required placeholder="user@hotel.com" autoComplete="off" />
+              <FormikField name="phone" label="Phone" placeholder="10-digit mobile" autoComplete="off" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <FormikField name="roleId" label="Role" required as="select">
@@ -90,17 +90,20 @@ function UserModal({ isOpen, onClose, user, roles, onSave }) {
                 <option value="inactive">Inactive</option>
               </FormikField>
             </div>
-            <FormikField
-              name="password"
-              label={isEdit ? 'New Password (optional)' : 'Password (optional)'}
-              type="password"
-              placeholder={isEdit ? 'Leave blank to keep current' : 'Leave blank for Welcome@123'}
-            />
-            {!isEdit && (
-              <p className="mt-[-6px] mb-0 text-[11px] text-ink3">
-                If left blank, the user is created with the default password{' '}
-                <strong className="text-ink2">Welcome@123</strong>. They can change it later in Settings.
-              </p>
+            {isEdit ? (
+              <FormikField
+                name="password"
+                label="Reset Password (optional)"
+                type="password"
+                autoComplete="new-password"
+                placeholder="Leave blank to keep current"
+              />
+            ) : (
+              <div className="text-[12px] text-ink3 bg-surface2 rounded-lg px-3 py-2.5 leading-[1.5]">
+                The user is created with the default password{' '}
+                <strong className="text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>Welcome@123</strong>.
+                They can change it from <strong className="text-ink2">Change Password</strong> after signing in.
+              </div>
             )}
           </Form>
         </Modal>
@@ -311,7 +314,7 @@ function RolesTab({ roles, modules, canManage, onAdd, onEdit, onDelete }) {
 export default function UsersRoles() {
   const currentUser = useAppSelector((s) => s.auth.currentUser)
   const canManageUsers = useCan('users', 'MANAGE')                 // user CRUD needs users:manage
-  const canManageRoles = !!(currentUser?.isOwner || currentUser?.role === 'owner') // roles are owner-only
+  const canManageRoles = !!currentUser?.isOwner // role management is owner-only
   const addToast = useToast()
 
   const [activeTab, setActiveTab] = useState('users')

@@ -12,7 +12,9 @@ export const MOCK_USER = {
   id: uid('user-1'),
   name: 'Ramesh Gupta',
   email: 'owner@quantumvorvex.com',
-  role: 'owner',
+  roleName: 'Owner',
+  isOwner: true,   // mock owner — full access in mock mode
+  permissions: {},
   phone: '+91 98765 43210',
   status: 'active',
 }

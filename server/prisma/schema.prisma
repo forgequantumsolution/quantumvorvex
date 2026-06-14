@@ -251,9 +251,6 @@ model User {
   name           String
   email          String   @unique
   password       String
-  // Legacy string role — kept during the RBAC migration for a safe cutover.
-  // New source of truth is `roleId` → Role. Dropped in the final cleanup phase.
-  role           String   @default("staff")
   roleId         String?
   roleRef        Role?    @relation(fields: [roleId], references: [id])
   status         String   @default("active")
