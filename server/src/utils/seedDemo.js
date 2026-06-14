@@ -43,10 +43,6 @@ async function resetDemo() {
   await prisma.roomInspection.deleteMany()
   await prisma.linenRecord.deleteMany()
   await prisma.housekeepingStatus.deleteMany()
-  await prisma.staffSession.deleteMany()
-  await prisma.activityLog.deleteMany()
-  await prisma.staffProperty.deleteMany()
-  await prisma.staff.deleteMany()
   await prisma.competitorRate.deleteMany()
   await prisma.pricingRule.deleteMany()
   await prisma.messageTemplate.deleteMany()
@@ -125,68 +121,12 @@ async function main() {
   })
   console.log('✓ Pricing rules, competitors, templates, maintenance schedules')
 
-  // One property + staff (multi-property join table)
-  const property = await prisma.property.create({
-    data: { name: 'Quantum Vorvex — Main', address: '123, Hotel Street, Mumbai 400001', phone: '9876543210', gstin: hotel?.gstin || null, status: 'active' },
-  })
-
-  // Staff (separate from User; roles match the frontend permissions matrix)
-  const staffHash = await bcrypt.hash('Welcome@123', 12)
-  const staffSeed = [
-    { name: 'Priya Sharma', phone: '9876543211', email: 'priya.staff@quantumvorvex.com', role: 'manager',      lastLogin: daysAgo(0) },
-    { name: 'Arjun Patel',  phone: '9876543212', email: 'arjun.staff@quantumvorvex.com', role: 'front_desk',   lastLogin: daysAgo(0) },
-    { name: 'Meena Nair',   phone: '9876543213', email: 'meena.staff@quantumvorvex.com', role: 'housekeeping', lastLogin: daysAgo(1) },
-    { name: 'Ravi Kumar',   phone: '9876543214', email: 'ravi.staff@quantumvorvex.com',  role: 'maintenance',  lastLogin: daysAgo(2) },
-    { name: 'Sara Khan',    phone: '9876543215', email: 'sara.staff@quantumvorvex.com',  role: 'accountant',   lastLogin: daysAgo(3) },
-  ]
-  const staff = []
-  for (const s of staffSeed) {
-    staff.push(await prisma.staff.create({ data: { ...s, passwordHash: staffHash } }))
-  }
-  // Link a couple of staff to the property
-  await prisma.staffProperty.createMany({
-    data: [
-      { staffId: staff[0].id, propertyId: property.id },
-      { staffId: staff[1].id, propertyId: property.id },
-    ],
-  })
-  // Active sessions for 2 staff → Force Logout demo has something to terminate
-  await prisma.staffSession.createMany({
-    data: [
-      { staffId: staff[0].id, token: tokenHex(), expiresAt: daysFromNow(1) },
-      { staffId: staff[1].id, token: tokenHex(), expiresAt: daysFromNow(1) },
-    ],
-  })
-  console.log(`✓ Staff (${staff.length}) + property + sessions`)
-
-  // Permission matrix (mirrors the Staff → Permissions tab; skips 'none')
-  const MATRIX = {
-    super_admin:  { Dashboard:'Full', Rooms:'Full', 'Check-In':'Full', Guests:'Full', Bookings:'Full', Billing:'Full', Reports:'Full', Settings:'Full', Maintenance:'Full', Housekeeping:'Full', Staff:'Full' },
-    manager:      { Dashboard:'Full', Rooms:'Full', 'Check-In':'Full', Guests:'Full', Bookings:'Full', Billing:'Full', Reports:'Full', Settings:'Edit', Maintenance:'Full', Housekeeping:'Full', Staff:'View' },
-    front_desk:   { Dashboard:'View', Rooms:'Edit', 'Check-In':'Full', Guests:'Edit', Bookings:'Edit', Billing:'View', Reports:'View', Maintenance:'Create', Housekeeping:'View' },
-    housekeeping: { Dashboard:'View', Rooms:'Edit', 'Check-In':'View', Guests:'View', Reports:'View', Maintenance:'Create', Housekeeping:'Full' },
-    accountant:   { Dashboard:'View', Rooms:'View', 'Check-In':'View', Guests:'View', Bookings:'View', Billing:'Full', Reports:'Full' },
-  }
-  const permRows = []
-  for (const [role, mods] of Object.entries(MATRIX)) {
-    for (const [module, level] of Object.entries(mods)) permRows.push({ role, module, level })
-  }
-  for (const p of permRows) {
-    await prisma.permission.upsert({ where: { role_module: { role: p.role, module: p.module } }, update: { level: p.level }, create: p })
-  }
-
-  // Activity log
-  const actActions = ['login', 'created booking', 'checked in guest', 'collected payment', 'updated room', 'closed ticket', 'logged out']
-  const actModules = ['Auth', 'Bookings', 'Check-In', 'Billing', 'Rooms', 'Maintenance']
-  const actLogs = Array.from({ length: 15 }, (_, i) => {
-    const member = pick(staff)
-    return {
-      staffId: member.id, action: pick(actActions), module: pick(actModules),
-      recordId: `REC-${1000 + i}`, detail: null, ipAddress: `192.168.1.${10 + i}`, createdAt: daysAgo(i % 14),
-    }
-  })
-  await prisma.activityLog.createMany({ data: actLogs })
-  console.log('✓ Permissions matrix + activity log')
+  // The Staff module was removed (identity unified on User + Role); the demo no
+  // longer seeds Staff / sessions / the legacy permission matrix / activity logs.
+  // Room inspections reference a real User id (RoomInspection.staffId is a
+  // free-form string with no FK).
+  const inspector = await prisma.user.findFirst({ where: { status: 'active' }, select: { id: true } })
+  const inspectorId = inspector?.id ?? 'system'
 
   // ─── TIER 2: Guests (room-aware) ────────────────────────────────────────────────
   // Host active guests on the first N rooms and mark those rooms 'occupied' so room
@@ -446,7 +386,7 @@ async function main() {
   }
   for (let i = 0; i < 3; i++) {
     await prisma.roomInspection.create({
-      data: { roomId: rooms[i].id, staffId: staff[2].id, checklist: J([
+      data: { roomId: rooms[i].id, staffId: inspectorId, checklist: J([
         { item: 'Bedsheets clean', ok: true }, { item: 'Bathroom sanitized', ok: true },
         { item: 'Minibar stocked', ok: i !== 1 }, { item: 'AC working', ok: true },
       ]), createdAt: daysAgo(i) },

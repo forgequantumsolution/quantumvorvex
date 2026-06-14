@@ -1,10 +1,10 @@
 import express from 'express'
 import { getRooms, createRoom, updateRoom, deleteRoom } from '../controllers/roomsController.js'
-import { verifyToken } from '../middleware/auth.js'
+import { verifyToken, requirePermission } from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.use(verifyToken)
+router.use(verifyToken, requirePermission('rooms'))
 
 router.get('/', getRooms)
 router.post('/', createRoom)

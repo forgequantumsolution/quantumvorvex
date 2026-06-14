@@ -63,6 +63,16 @@ export const schemas = {
                 .regex(/[0-9]/, 'Must contain a number'),
   }),
 
+  // Change password (authenticated) — current + strong new password
+  changePassword: z.object({
+    currentPassword: z.string().min(1, 'Current password is required').max(128),
+    newPassword: z.string()
+                .min(8, 'Password must be at least 8 characters')
+                .max(128)
+                .regex(/[A-Z]/, 'Must contain an uppercase letter')
+                .regex(/[0-9]/, 'Must contain a number'),
+  }),
+
   // Passwordless OTP — request a code
   requestOtp: z.object({
     email: z.string().email('Invalid email address').toLowerCase().trim(),
@@ -74,6 +84,9 @@ export const schemas = {
     code:  z.string().regex(/^\d{6}$/, 'Code must be 6 digits'),
   }),
 
+  // Password is optional — when omitted the server assigns the shared default
+  // (Welcome@123). A user is assigned a Role via roleId. The legacy `role` string
+  // is still accepted for back-compat but roleId takes precedence.
   createUser: z.object({
     name:     z.string().min(2).max(100).trim(),
     email:    z.string().email().toLowerCase().trim(),
@@ -81,8 +94,9 @@ export const schemas = {
                 .min(8, 'Password must be at least 8 characters')
                 .max(128)
                 .regex(/[A-Z]/, 'Must contain uppercase letter')
-                .regex(/[0-9]/, 'Must contain a number'),
-    role:     z.enum(['owner', 'manager', 'staff']).default('staff'),
+                .regex(/[0-9]/, 'Must contain a number')
+                .optional(),
+    roleId:   z.string().cuid('Invalid role').optional().nullable(),
     phone:    z.string().max(20).optional().nullable(),
     status:   z.enum(['active', 'inactive']).default('active'),
   }),
@@ -94,9 +108,29 @@ export const schemas = {
                 .regex(/[A-Z]/, 'Must contain uppercase letter')
                 .regex(/[0-9]/, 'Must contain a number')
                 .optional(),
-    role:     z.enum(['owner', 'manager', 'staff']).optional(),
+    roleId:   z.string().cuid('Invalid role').optional().nullable(),
     phone:    z.string().max(20).optional().nullable(),
     status:   z.enum(['active', 'inactive']).optional(),
+  }),
+
+  // Roles (RBAC). Module/level pairs are additionally validated against the central
+  // MODULES list in the controller. permissions may be an array or a {module:level} map.
+  createRole: z.object({
+    name:        z.string().min(2, 'Role name is required').max(50).trim(),
+    description: z.string().max(200).optional().nullable(),
+    permissions: z.array(z.object({
+      module: z.string().min(1).max(40),
+      level:  z.enum(['NONE', 'VIEW', 'MANAGE']),
+    })).optional(),
+  }),
+
+  updateRole: z.object({
+    name:        z.string().min(2).max(50).trim().optional(),
+    description: z.string().max(200).optional().nullable(),
+    permissions: z.array(z.object({
+      module: z.string().min(1).max(40),
+      level:  z.enum(['NONE', 'VIEW', 'MANAGE']),
+    })).optional(),
   }),
 
   // Rooms

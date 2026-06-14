@@ -27,7 +27,7 @@ import reportsRoutes from './routes/reports.js'
 import foodPlansRoutes from './routes/foodPlans.js'
 import maintenanceRoutes from './routes/maintenance.js'
 import housekeepingRoutes from './routes/housekeeping.js'
-import staffRoutes from './routes/staff.js'
+import rolesRoutes from './routes/roles.js'
 import pricingRoutes from './routes/pricing.js'
 import remindersRoutes from './routes/reminders.js'
 import usersRoutes from './routes/users.js'
@@ -102,7 +102,8 @@ const authLimiter = rateLimit({
 })
 
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, max: 200,
+  // Strict in production; generous in dev/test so local E2E runs aren't throttled.
+  windowMs: 15 * 60 * 1000, max: process.env.NODE_ENV === 'production' ? 200 : 5000,
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Rate limit exceeded.', code: 'ERR_RATE_LIMIT' },
 })
@@ -163,7 +164,7 @@ app.use('/api/v1/reports',       apiLimiter, reportsRoutes)
 app.use('/api/v1/maintenance',   apiLimiter, maintenanceRoutes)
 app.use('/api/v1',               apiLimiter, foodPlansRoutes)
 app.use('/api/v1/housekeeping',  apiLimiter, housekeepingRoutes)
-app.use('/api/v1/staff',         apiLimiter, staffRoutes)
+app.use('/api/v1/roles',         apiLimiter, rolesRoutes)
 app.use('/api/v1/pricing',       apiLimiter, pricingRoutes)
 app.use('/api/v1/reminders',     apiLimiter, remindersRoutes)
 app.use('/api/v1/users',         apiLimiter, usersRoutes)

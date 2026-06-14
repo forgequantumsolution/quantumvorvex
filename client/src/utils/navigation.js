@@ -41,7 +41,7 @@ export const NAV_SECTIONS = [
   {
     label: 'Administration',
     items: [
-      { id: 'staff',         label: 'Staff',         Icon: LuUserCog },
+      { id: 'users',         label: 'Users & Roles', Icon: LuUserCog },
       { id: 'settings',      label: 'Settings',      Icon: LuSettings },
     ],
   },

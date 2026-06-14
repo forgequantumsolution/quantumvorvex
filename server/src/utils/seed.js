@@ -5,6 +5,7 @@
  */
 import prisma from './prisma.js'
 import bcrypt from 'bcryptjs'
+import { MODULES } from '../config/modules.js'
 
 async function seed() {
   console.log('🌱 Seeding Quantum Vorvex database...')
@@ -121,32 +122,81 @@ async function seed() {
   }
   console.log('✓ Amenities')
 
-  // Users — owner, manager, staff
+  // ── RBAC roles + per-module permission matrix ───────────────────────────────
+  // Mirrors the legacy owner/manager/staff behavior so nothing changes on upgrade.
+  const M = (level) => Object.fromEntries(MODULES.map((m) => [m, level]))
+  const roleDefs = [
+    {
+      name: 'Owner',
+      description: 'Full access to everything, including users and roles.',
+      isSystem: true,
+      isOwner: true,
+      perms: M('MANAGE'),
+    },
+    {
+      name: 'Manager',
+      description: 'Operational and finance access; cannot manage users or roles.',
+      isSystem: true,
+      isOwner: false,
+      perms: { ...M('MANAGE'), users: 'NONE' },
+    },
+    {
+      name: 'Staff',
+      description: 'Front-desk and operations only.',
+      isSystem: true,
+      isOwner: false,
+      perms: {
+        ...M('NONE'),
+        bookings: 'MANAGE', maintenance: 'MANAGE', guests: 'MANAGE',
+        rooms: 'MANAGE', housekeeping: 'MANAGE',
+      },
+    },
+  ]
+
+  const roleIds = {}
+  for (const def of roleDefs) {
+    const role = await prisma.role.upsert({
+      where: { name: def.name },
+      update: { description: def.description, isSystem: def.isSystem, isOwner: def.isOwner },
+      create: { name: def.name, description: def.description, isSystem: def.isSystem, isOwner: def.isOwner },
+    })
+    roleIds[def.name] = role.id
+    for (const [module, level] of Object.entries(def.perms)) {
+      await prisma.rolePermission.upsert({
+        where: { roleId_module: { roleId: role.id, module } },
+        update: { level },
+        create: { roleId: role.id, module, level },
+      })
+    }
+  }
+  console.log('✓ Roles seeded: Owner, Manager, Staff')
+
+  // Users — owner, manager, staff (linked to the roles above)
   const ownerHash   = await bcrypt.hash('owner123',   12)
   const managerHash = await bcrypt.hash('manager123', 12)
   const staffHash   = await bcrypt.hash('staff123',   12)
 
   await prisma.user.upsert({
     where: { email: 'owner@quantumvorvex.com' },
-    update: { role: 'owner' },
-    create: { name: 'Ramesh Gupta', email: 'owner@quantumvorvex.com', password: ownerHash, role: 'owner', phone: '9876543210' },
+    update: { roleId: roleIds.Owner },
+    create: { name: 'Ramesh Gupta', email: 'owner@quantumvorvex.com', password: ownerHash, roleId: roleIds.Owner, phone: '9876543210' },
   })
   await prisma.user.upsert({
     where: { email: 'manager@quantumvorvex.com' },
-    update: { role: 'manager' },
-    create: { name: 'Priya Sharma', email: 'manager@quantumvorvex.com', password: managerHash, role: 'manager', phone: '9876543211' },
+    update: { roleId: roleIds.Manager },
+    create: { name: 'Priya Sharma', email: 'manager@quantumvorvex.com', password: managerHash, roleId: roleIds.Manager, phone: '9876543211' },
   })
   await prisma.user.upsert({
     where: { email: 'staff@quantumvorvex.com' },
-    update: { role: 'staff' },
-    create: { name: 'Arjun Patel', email: 'staff@quantumvorvex.com', password: staffHash, role: 'staff', phone: '9876543212' },
+    update: { roleId: roleIds.Staff },
+    create: { name: 'Arjun Patel', email: 'staff@quantumvorvex.com', password: staffHash, roleId: roleIds.Staff, phone: '9876543212' },
   })
-  // Keep legacy admin user but upgrade to owner role
+  // Legacy admin login — also an Owner.
   const legacyHash = await bcrypt.hash('admin123', 12)
   await prisma.user.upsert({
     where: { email: 'admin@hotel.com' },
-    update: { role: 'owner' },
-    create: { name: 'Ramesh Gupta', email: 'admin@hotel.com', password: legacyHash, role: 'owner' },
+    update: { roleId: roleIds.Owner },
+    create: { name: 'Ramesh Gupta', email: 'admin@hotel.com', password: legacyHash, roleId: roleIds.Owner },
   })
   console.log('✓ Users seeded:')
   console.log('   Owner:   owner@quantumvorvex.com / owner123')

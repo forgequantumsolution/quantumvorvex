@@ -3,6 +3,7 @@ import {
   login,
   logout,
   me,
+  changePassword,
   forgotPassword,
   resetPassword,
   requestOtp,
@@ -16,6 +17,7 @@ const router = express.Router()
 router.post('/login',  validate(schemas.login), login)
 router.post('/logout', logout)
 router.get('/me',      verifyToken, me)
+router.post('/change-password', verifyToken, validate(schemas.changePassword), changePassword)
 
 // Password reset (email link)
 router.post('/forgot-password', validate(schemas.forgotPassword), forgotPassword)

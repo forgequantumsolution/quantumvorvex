@@ -50,6 +50,13 @@ api.interceptors.response.use(
         window.dispatchEvent(new CustomEvent('auth:unauthorized'))
       }
     }
+    // A 403 from the RBAC layer means the user's access may have changed (e.g. role
+    // edited). Nudge the app to resync the live permission map so the sidebar updates.
+    if (err.response?.status === 403 && err.response?.data?.code === 'ERR_FORBIDDEN' && !isAuthCall) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:forbidden'))
+      }
+    }
     return Promise.reject(err)
   }
 )
@@ -160,22 +167,19 @@ export const housekeepingApi = {
   submitInspection: (data)         => api.post('/housekeeping/inspection', data),
 }
 
-export const staffApi = {
-  getAll:            ()         => api.get('/staff'),
-  create:            (data)     => api.post('/staff', data),
-  update:            (id, data) => api.put(`/staff/${id}`, data),
-  getActivity:       (params)   => api.get('/staff/activity', { params }),
-  getPermissions:    ()         => api.get('/staff/permissions'),
-  updatePermissions: (data)     => api.put('/staff/permissions', data),
-  getSessions:       (id)       => api.get(`/staff/${id}/sessions`),
-  forceLogout:       (id)       => api.post(`/staff/${id}/logout`),
-}
-
 export const usersApi = {
   getAll: ()         => api.get('/users'),
   create: (data)     => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
   remove: (id)       => api.delete(`/users/${id}`),
+}
+
+export const rolesApi = {
+  getAll:     ()         => api.get('/roles'),
+  getModules: ()         => api.get('/roles/modules'),
+  create:     (data)     => api.post('/roles', data),       // { name, description, permissions: [{module, level}] }
+  update:     (id, data) => api.put(`/roles/${id}`, data),
+  remove:     (id)       => api.delete(`/roles/${id}`),
 }
 
 export const pricingApi = {
@@ -199,6 +203,7 @@ export const authApi = {
   login:          (data) => api.post('/auth/login', data),
   logout:         ()     => api.post('/auth/logout'),
   me:             ()     => api.get('/auth/me'),
+  changePassword: (data) => api.post('/auth/change-password', data),
   forgotPassword: (data) => api.post('/auth/forgot-password', data),
   resetPassword:  (data) => api.post('/auth/reset-password', data),
   requestOtp:     (data) => api.post('/auth/otp/request', data),

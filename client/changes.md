@@ -6,6 +6,280 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-14 · Reusable ConfirmModal (replace native delete alerts)
+
+## Summary
+Replaced the native `window.confirm()` dialogs on the Users & Roles delete actions with a styled
+in-app confirmation modal.
+
+## File changes
+
+### `src/components/ui/ConfirmModal.jsx` (new)
+- Reusable confirm dialog built on `Modal`: `title` / `message` / `confirmLabel` / `cancelLabel`,
+  a `danger` variant (red confirm button), and a `busy` state (disables buttons, shows "Working…").
+
+### `src/components/modules/users/UsersRoles.jsx`
+- User and role deletes now open `ConfirmModal` instead of `window.confirm`. A single `runDelete()`
+  handles either kind via a `{ kind, item }` state, with a `deleting` busy flag and error toasts.
+
+### `tests/rbac-frontend.spec.js`
+- Added a test: deleting a role opens the in-app confirm modal and completes — with a
+  `page.on('dialog')` guard asserting no native browser dialog fires.
+
+---
+
+# Session — 2026-06-14 · RBAC Phase 4 — Drop legacy role + create-user autofill fix
+
+## Summary
+Removed all reliance on the legacy `currentUser.role` string (backend dropped the column) — display
+and owner checks now use `roleName` + `isOwner`. Also fixed the "Add User" form: the password field
+was being autofilled by the browser with saved credentials.
+
+## File changes
+
+### `src/components/modules/users/UsersRoles.jsx` (autofill fix)
+- The **create** form no longer renders a password field (the server applies the `Welcome@123`
+  default); it shows a note instead. A password field appears **only when editing** (optional reset)
+  with `autoComplete="new-password"`. Form + name/email/phone set `autoComplete="off"`.
+- `canManageRoles` is now `!!currentUser?.isOwner` (was `role === 'owner'`).
+
+### `src/utils/permissions.js`
+- Removed `ROLE_LABELS` / `ROLE_COLORS`; `isOwnerUser` checks `user.isOwner` only.
+
+### `src/components/layout/Sidebar.jsx`
+- Role badge uses `currentUser.roleName` + an `isOwner`-based color (dropped the role→label/color maps).
+
+### `src/components/modules/settings/Settings.jsx`
+- Uses `currentUser.isOwner` for the owner-only "Run Setup" control (was `role === 'owner'`).
+
+### `src/api/mockData.js`
+- `MOCK_USER` now carries `roleName` + `isOwner` + `permissions` (was `role: 'owner'`).
+
+### `tests/users-roles.spec.js`
+- Create-user test now asserts there is **no** `input[name="password"]` on create and that the
+  default-password note is shown.
+
+---
+
+# Session — 2026-06-14 · RBAC Phase 3 — Dynamic frontend permissions
+
+## Summary
+The frontend now reads the live permission map (`currentUser.permissions` + `isOwner`, delivered by
+the backend on login / `/auth/me`) instead of a hardcoded role→panels table. Sidebar visibility,
+panel access, and action gating are permission-driven, so custom roles render correctly. Added
+self-service password change (available to every user, including staff) and a 403 resync.
+
+## File changes
+
+### `src/utils/permissions.js` (rewritten)
+- Replaced the static `ROLE_PANELS`/`ROLE_SETTINGS_TABS` tables with a `PANEL_MODULE` map +
+  `hasModule(user, module, level)`, `canAccess(user, panel)`, `getAllowedPanels(user)`, and
+  `canAccessSettingsTab(user, tab)`. Exported `ALL_PANELS`. `today`/`cancellations` derive from the
+  `bookings` module; Settings sub-tabs derive from settings access. Kept `ROLE_LABELS`/`ROLE_COLORS`.
+
+### `src/store/slices/uiSlice.js`
+- `panelFromUrl` now validates against `ALL_PANELS` (was `ROLE_PANELS.owner`).
+
+### `src/components/layout/Sidebar.jsx`
+- `getAllowedPanels(currentUser)` (was role string). Added a **Change Password** control in the user
+  footer (always available) that opens `ChangePasswordModal`.
+
+### `src/App.jsx`
+- `canAccess(currentUser, activePanel)` for the access gate. Added a boot effect that refreshes
+  `/auth/me` (resyncs permissions) and listens for `auth:forbidden` to resync after a live access change.
+
+### `src/api/client.js`
+- Response interceptor now also handles `403 ERR_FORBIDDEN`: dispatches an `auth:forbidden` window
+  event so the app resyncs the permission map / sidebar.
+
+### `src/components/modules/settings/Settings.jsx`
+- Settings tabs filtered via `canAccessSettingsTab(currentUser, …)`.
+
+### `src/components/modules/users/UsersRoles.jsx`
+- User CRUD gated by `useCan('users', 'MANAGE')`; role CRUD remains owner-only.
+
+### `src/hooks/useCan.js` (new)
+- `useCan(module, level='MANAGE')` — reads the live permission map for action gating.
+
+### `src/components/ui/ChangePasswordModal.jsx` (new)
+- Formik + Yup modal hitting `authApi.changePassword`; on success swaps in the reissued token
+  without disrupting the session. Launched from the sidebar (not gated by any module).
+
+### `tests/rbac-frontend.spec.js` (new)
+- Playwright (4 tests): staff sidebar shows front-desk/ops only; owner sees finance + admin;
+  any user can change their password via the sidebar; a custom `billing:VIEW` role sees Billing but
+  not Reports/Settings/Guests.
+
+---
+
+# Session — 2026-06-14 · RBAC Phase 2 — enforcement (client touches)
+
+## Summary
+Phase 2 was backend-heavy (see `../server/CHANGES.md`). On the client: added the change-password
+API helper and end-to-end enforcement tests. The sidebar still gates by the legacy role string —
+making it read the live permission map (+ a 403 interceptor) is Phase 3.
+
+## File changes
+
+### `src/api/client.js`
+- Added `authApi.changePassword(data)` → `POST /auth/change-password`.
+
+### `tests/rbac-enforcement.spec.js` (new)
+- Playwright (4 tests, hits the API at `:5001`): access matrix for staff/manager/owner; role
+  reassignment + deactivation take effect on the same token; change-password (new works / old fails);
+  non-owner cannot create/delete roles.
+
+---
+
+# Session — 2026-06-14 · RBAC Phase 1 — Users & Roles panel (Staff module removed)
+
+## Summary
+Replaced the dead **Staff** module with a dedicated **Users & Roles** panel backed by the new
+backend Role / RolePermission API. The sidebar's "Staff" slot is now "Users & Roles": a Users tab
+(create/edit/deactivate/delete with a role dropdown; password optional → defaults to `Welcome@123`)
+and a Roles tab (create/edit roles with a per-module **None/View/Manage** matrix; Owner read-only,
+system roles protected). Role management is owner-only. Also removed the now-duplicate Settings →
+"Users & Access" tab. **Permissions are not yet enforced per-route** (Phase 2) — the sidebar still
+gates by the legacy role string for now. Backend logged in `../server/CHANGES.md`.
+
+## File changes
+
+### `src/components/modules/users/UsersRoles.jsx` (new)
+- The Users & Roles panel. Tabs: **Users** (table + add/edit modal via Formik, role dropdown, optional
+  password with a `Welcome@123` hint; toasts the default password on create) and **Roles** (role cards
+  with their module badges + a create/edit modal containing the module×level matrix). Owner-only
+  controls (`canManage = currentUser.role === 'owner'`); Owner role shown read-only.
+
+### `src/validation/userSchema.js` (new)
+- Yup schema for the user form — password optional (blank → server default), strength-checked when set.
+
+### `src/api/client.js`
+- Removed `staffApi`. Added `rolesApi` (`getAll`, `getModules`, `create`, `update`, `remove`).
+
+### `src/utils/navigation.js`
+- Renamed the Administration nav item `staff` → `users` ("Users & Roles", same `LuUserCog` icon).
+
+### `src/utils/permissions.js`
+- `ADMIN_PANELS` `['staff']` → `['users']`. Removed the `users` Settings tab from `ROLE_SETTINGS_TABS`
+  (user/role management now lives in the dedicated panel, not Settings).
+
+### `src/App.jsx`
+- Swapped the lazy `Staff` import + `PANEL_MAP` entry for `UsersRoles` under the `users` key.
+
+### `src/hooks/useKeyboardShortcuts.js`
+- Shift+S now navigates to the `users` panel (was `staff`).
+
+### `src/components/modules/settings/Settings.jsx`
+- Removed the **"Users & Access"** tab: dropped it from `ALL_TABS`, removed its render block, and deleted
+  the `UsersAccessTab` component + `EMPTY_USER_FORM` (~280 lines). Bundle ~95 kB → ~86 kB.
+
+### `tests/users-roles.spec.js` (new)
+- Playwright coverage (5 tests): owner sees "Users & Roles" (no "Staff"); panel lists seeded users +
+  roles; owner creates a role then a user (sees the `Welcome@123` default); staff can't see the panel;
+  Settings no longer has "Users & Access".
+
+### Deleted
+- `src/components/modules/staff/Staff.jsx`, `src/validation/staffSchema.js`.
+
+---
+
+# Session — 2026-06-12 · Guest Maintenance Tickets via In-Room QR Code
+
+## Summary
+Guests can now report a maintenance issue by scanning a QR code in their room — no login, no app.
+Each room has a unique `qrToken`; the QR points to `/report?t=<token>`, a standalone public page that
+resolves the room, lets the guest pick a category and describe the issue, and files a ticket straight
+into the existing staff Maintenance dashboard (flagged `Guest – Room <n>`). Staff generate/print the
+per-room QR sticker from the Rooms module.
+
+## File changes
+
+### `src/components/modules/maintenance/GuestMaintenanceForm.jsx` (new)
+- Mobile-first public page reached at `/report?t=<token>`. Reads the token from the URL, calls
+  `maintenanceApi.getPublicRoom` to confirm the room, then submits via `maintenanceApi.createPublic`.
+  Shows a thank-you screen with the ticket reference. No auth, rendered outside the app shell.
+
+### `src/App.jsx`
+- Added a `reportRoute` early-return (mirrors the existing `resetRoute` pattern) so `/report` renders
+  `GuestMaintenanceForm` before any authentication gate.
+
+### `src/api/client.js`
+- Added `maintenanceApi.getPublicRoom(token)` and `maintenanceApi.createPublic(data)` hitting the new
+  public `/maintenance/public/*` endpoints.
+
+### `src/components/modules/rooms/Rooms.jsx`
+- Added a **Maintenance QR** action in the room detail modal that opens a printable sticker
+  (`QRCodeSVG` from `qrcode.react`) encoding `<origin>/report?t=<qrToken>`, with a print-sticker button.
+- `normalizeRoom` now carries `qrToken` through from the API.
+
+### `package.json`
+- Added `qrcode.react` dependency.
+
+---
+
+# Session — 2026-06-12 · Fold Check-In & Check-Out into Bookings + Today
+
+## Summary
+The Front Desk nav had three separate items — **Bookings**, **Check-In**, **Check-Out** — but Check-In
+and Check-Out were just filtered views of the bookings list (`status ∈ {Confirmed, Pending}` and
+`status = CheckedIn`) using actions the Bookings table already exposes inline, and the **Today** board
+already surfaced the same arrivals/departures. Removed the two redundant screens. Bookings is now the
+single reservation surface; Today is the daily front-desk board and deep-links into the relevant
+Bookings status tab. New model: **Today = "what do I do now," Bookings = the reservation record.**
+
+## File changes
+
+### `src/store/slices/uiSlice.js`
+- Added `activePanelParams` to state and a `navigateTo({ panel, params })` action that switches panel
+  while handing params (e.g. `{ tab: 'CheckedIn' }`) to the incoming page. Plain `setActivePanel` now
+  clears the params so a direct nav resets to defaults.
+
+### `src/store/hooks.js`
+- Bound `navigateTo` in `useUiActions`.
+
+### `src/utils/navigation.js`
+- Removed the `checkin` and `checkout` Front Desk items (and the now-unused `LuLogIn` / `LuLogOut`
+  imports). Front Desk is now `Bookings · Cancellations · Maintenance`.
+
+### `src/utils/permissions.js`
+- Dropped `checkin` / `checkout` from `FRONT_DESK_PANELS` (old `/checkin` URLs now fall back to Today).
+
+### `src/App.jsx`
+- Removed the `CheckIn` / `CheckOut` lazy imports and their `PANEL_MAP` entries.
+
+### `src/components/layout/Topbar.jsx`
+- Removed the `checkin` / `checkout` contextual primary actions.
+
+### `src/components/modules/today/Today.jsx`
+- Added a `goBookings(tab)` helper (via `navigateTo`). KPI strip, the Arrivals/Departures column
+  "view" links, the per-row Check-in/Check-out actions, and the "Overdue checkouts" attention row now
+  deep-link to Bookings (`Upcoming` for arrivals, `CheckedIn` for departures/in-house) instead of the
+  standalone desks.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- Reads `activePanelParams.tab` (validated against the tab ids) to seed the active tab and follows it
+  via an effect, so a deep-link from Today/Guests lands on the right status tab.
+
+### `src/components/modules/guests/Guests.jsx`
+- "+ Check-In" button now `navigateTo`s Bookings `Upcoming` instead of the removed `checkin` panel.
+
+### `src/hooks/useKeyboardShortcuts.js`
+- Repointed the `C` shortcut from `checkin` → `bookings` (updated the legend comment too).
+
+### `src/components/ui/GlobalSearch.jsx`
+- Removed the `Check-In` quick-nav entry.
+
+### Deleted
+- `src/components/modules/checkin/CheckIn.jsx`, `src/components/modules/checkin/ArrivalCard.jsx`,
+  `src/components/modules/checkout/CheckOut.jsx`. Kept `checkout/CheckOutModal.jsx` — Bookings uses it.
+
+## Notes
+- `npm run build` passes; the CheckIn/CheckOut chunks are gone, Bookings remains.
+- Watch point: Today's *Departures* derive from `guests` (status `checked_in`) while the Bookings
+  `CheckedIn` tab derives from `bookings` — same real-world set, two data sources, so they can drift.
+
+---
+
 # Session — 2026-06-13 · Settings tabs — real persistence for all tabs
 
 ## Summary

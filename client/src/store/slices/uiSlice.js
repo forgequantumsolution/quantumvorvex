@@ -1,8 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit'
-import { ROLE_PANELS } from '../../utils/permissions'
-
-// Every routable panel id (the owner role can access all of them).
-const ALL_PANELS = ROLE_PANELS.owner
+import { ALL_PANELS } from '../../utils/permissions'
 
 // Resolve the panel encoded in the current URL path (e.g. /rooms → 'rooms').
 // Returns `fallback` when the path isn't a known panel.

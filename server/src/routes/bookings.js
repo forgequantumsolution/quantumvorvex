@@ -14,12 +14,12 @@ import {
   getBookingInvoice,
   uploadDocs,
 } from '../controllers/bookingsController.js'
-import { verifyToken, requireMinRole } from '../middleware/auth.js'
+import { verifyToken, requirePermission } from '../middleware/auth.js'
 import { validate, schemas } from '../middleware/validate.js'
 
 const router = express.Router()
 
-router.use(verifyToken)
+router.use(verifyToken, requirePermission('bookings'))
 
 router.get('/',    getBookings)
 router.get('/:id', getBooking)
@@ -39,7 +39,7 @@ router.post('/:id/check-out', validate(schemas.checkOutBooking), checkOutBooking
 router.post('/:id/cancel',    validate(schemas.cancelBooking),   cancelBooking)
 router.post('/:id/no-show',   noShowBooking)
 
-// Hard delete — managers and owners only
-router.delete('/:id', requireMinRole('manager'), deleteBooking)
+// Hard delete — requires manage on bookings (RBAC-enforced at the router)
+router.delete('/:id', deleteBooking)
 
 export default router
