@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -113,6 +113,7 @@ model Guest {
   invoices        Invoice[]
   payments        Payment[]
   reminders       Reminder[]
+  bookings        Booking[]
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 }
@@ -164,22 +165,71 @@ model Payment {
 model Booking {
   id                  String    @id @default(cuid())
   bookingNo           String    @unique
+
+  // ── Guest details (inline) + optional link to a Guest record ──
   guestName           String
+  guestPhone          String?
+  guestEmail          String?
+  guestAddress        String?
+  nationality         String?
+  idType              String?
+  idNumber            String?
+  adults              Int       @default(1)
+  children            Int       @default(0)
+  guestId             String?
+  guest               Guest?    @relation(fields: [guestId], references: [id])
+
+  // ── Room + stay ──
   roomId              String
   room                Room      @relation(fields: [roomId], references: [id])
-  stayType            String    @default("daily")
+  stayType            String    @default("daily")     // daily | monthly
   fromDate            DateTime
   toDate              DateTime?
   months              Int?
-  amount              Float
+  nights              Int?
+
+  // ── Pricing breakdown ──
+  roomRate            Float     @default(0)
+  subtotal            Float     @default(0)
+  discount            Float     @default(0)
+  taxRate             Float     @default(0)
+  taxAmount           Float     @default(0)
+  extraCharges        Float     @default(0)
+  amount              Float                            // grand total
   advance             Float     @default(0)
+  balance             Float     @default(0)
+  paymentStatus       String    @default("unpaid")     // unpaid | partial | paid
+
+  // ── Meta + lifecycle ──
   notes               String?
-  source              String    @default("walk_in")
+  specialRequests     String?
+  source              String    @default("walk_in")    // walk_in | phone | website | ota | referral | corporate
+  status              String    @default("Pending")    // Pending | Confirmed | CheckedIn | CheckedOut | Cancelled | NoShow
+  confirmedAt         DateTime?
+  checkedInAt         DateTime?
+  checkedOutAt        DateTime?
+  cancelledAt         DateTime?
+  cancelReason        String?
+
   selfCheckinToken    String?
   selfCheckinComplete Boolean   @default(false)
-  status              String    @default("Pending")
   propertyId          String?
+  documents           BookingDocument[]
   createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+// ID / KYC documents captured at booking time (Aadhaar front/back, PAN, etc.)
+model BookingDocument {
+  id         String   @id @default(cuid())
+  bookingId  String
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  docType    String
+  url        String
+  verified   Boolean  @default(false)
+  uploadedAt DateTime @default(now())
+
+  @@index([bookingId])
 }
 
 model Notification {
@@ -191,15 +241,40 @@ model Notification {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      String   @default("staff")
-  status    String   @default("active")
-  phone     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  email          String   @unique
+  password       String
+  role           String   @default("staff")
+  status         String   @default("active")
+  phone          String?
+  sessionVersion Int      @default(0)   // bumped on every login; tokens carrying a stale value are rejected → one active session per user
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ─── AUTH: password reset + passwordless OTP login ──────────────────────────────
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String                       // sha256 of the raw token (raw value only ever sent in email)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model LoginOtp {
+  id        String    @id @default(cuid())
+  email     String
+  codeHash  String                       // sha256 of the 6-digit code
+  expiresAt DateTime
+  attempts  Int       @default(0)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email])
 }
 
 model FoodPlan {
@@ -265,17 +340,21 @@ model MessageTemplate {
 
 model MaintenanceRequest {
   id          String            @id @default(cuid())
+  ticketNo    String            @unique
   roomId      String
   room        Room              @relation(fields: [roomId], references: [id])
-  issueType   String
-  description String
-  priority    String            @default("Medium")
-  reportedBy  String
+  category    String            @default("Other")   // Plumbing | Electrical | HVAC | Furniture | Housekeeping | Other
+  title       String
+  issueType   String?                                // legacy alias for category
+  description String?
+  priority    String            @default("Medium")   // Low | Medium | High | Urgent
+  reportedBy  String            @default("Front Desk")
   assignedTo  String?
-  status      String            @default("Open")
+  status      String            @default("Open")     // Open | In Progress | Resolved
   photoUrl    String?
   notes       MaintenanceNote[]
   createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
   resolvedAt  DateTime?
 }
 

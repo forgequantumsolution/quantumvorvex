@@ -103,26 +103,20 @@ export default function FileUpload({
           ref={inputRef}
           type="file"
           accept={accept}
-          style={{ display: 'none' }}
+          className="hidden"
           onChange={handleChange}
         />
 
         {localPreview ? (
           /* Image preview */
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+          <div className="flex flex-col items-center gap-2.5">
             <img
               src={localPreview}
               alt="Preview"
-              style={{
-                maxHeight: '100px',
-                maxWidth: '100%',
-                borderRadius: '6px',
-                objectFit: 'cover',
-                border: '1px solid var(--border)',
-              }}
+              className="max-h-[100px] max-w-full rounded-md object-cover border border-line"
             />
             {fileName && (
-              <span style={{ fontSize: '12px', color: 'var(--text2)' }}>{fileName}</span>
+              <span className="text-[12px] text-ink2">{fileName}</span>
             )}
             <button
               type="button"
@@ -134,9 +128,9 @@ export default function FileUpload({
           </div>
         ) : fileName ? (
           /* Doc icon for non-image files */
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '32px' }}>📄</span>
-            <span style={{ fontSize: '12px', color: 'var(--text2)', wordBreak: 'break-all' }}>
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-[32px]">📄</span>
+            <span className="text-[12px] text-ink2 break-all">
               {fileName}
             </span>
             <button
@@ -149,18 +143,12 @@ export default function FileUpload({
           </div>
         ) : (
           /* Default upload prompt */
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '28px', opacity: 0.5 }}>📁</span>
-            <span
-              style={{
-                fontSize: '13px',
-                fontWeight: 500,
-                color: 'var(--text2)',
-              }}
-            >
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-[28px] opacity-50">📁</span>
+            <span className="text-[13px] font-medium text-ink2">
               {label}
             </span>
-            <span style={{ fontSize: '11.5px', color: 'var(--text3)' }}>
+            <span className="text-[11.5px] text-ink3">
               {accept
                 .split(',')
                 .map((t) => t.trim().replace('.', '').toUpperCase())
@@ -172,15 +160,7 @@ export default function FileUpload({
       </div>
 
       {error && (
-        <span
-          style={{
-            display: 'block',
-            marginTop: '5px',
-            fontSize: '11.5px',
-            color: 'var(--red-text)',
-            fontWeight: 500,
-          }}
-        >
+        <span className="block mt-[5px] text-[11.5px] text-danger-text font-medium">
           {error}
         </span>
       )}

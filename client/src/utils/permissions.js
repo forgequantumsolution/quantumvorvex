@@ -22,34 +22,28 @@ export const ROLE_COLORS = {
   admin:   '#c9a84c',
 }
 
-// Panels each role can access
+// Panels each role can access. Panels are added here as their modules are
+// wired to the real backend (see docs/FRONTEND_API_PLAN.md).
+const FRONT_DESK_PANELS = ['today', 'bookings', 'checkin', 'checkout', 'cancellations', 'maintenance']
+const OPERATIONS_PANELS = ['guests', 'rooms', 'housekeeping']
+// Owner/manager panels (staff excluded).
+const MANAGER_PANELS = ['documents', 'food', 'billing', 'reports', 'settings']
+// Owner/admin-only administrative panels.
+const ADMIN_PANELS = ['staff']
+
 export const ROLE_PANELS = {
-  owner: [
-    'dashboard', 'rooms', 'floorplan', 'calendar', 'checkin', 'guests', 'bookings',
-    'documents', 'food', 'billing', 'reports', 'settings',
-    'maintenance', 'housekeeping', 'staff', 'channels', 'nightaudit',
-  ],
-  manager: [
-    'dashboard', 'rooms', 'floorplan', 'calendar', 'checkin', 'guests', 'bookings',
-    'documents', 'food', 'billing', 'reports', 'settings',
-    'maintenance', 'housekeeping', 'channels', 'nightaudit',
-  ],
-  staff: [
-    'dashboard', 'rooms', 'calendar', 'checkin', 'guests', 'housekeeping', 'maintenance',
-  ],
-  admin: [
-    'dashboard', 'rooms', 'floorplan', 'calendar', 'checkin', 'guests', 'bookings',
-    'documents', 'food', 'billing', 'reports', 'settings',
-    'maintenance', 'housekeeping', 'staff', 'channels', 'nightaudit',
-  ],
+  owner:   [...FRONT_DESK_PANELS, ...OPERATIONS_PANELS, ...MANAGER_PANELS, ...ADMIN_PANELS],
+  manager: [...FRONT_DESK_PANELS, ...OPERATIONS_PANELS, ...MANAGER_PANELS],
+  staff:   [...FRONT_DESK_PANELS, ...OPERATIONS_PANELS],
+  admin:   [...FRONT_DESK_PANELS, ...OPERATIONS_PANELS, ...MANAGER_PANELS, ...ADMIN_PANELS],
 }
 
 // Settings tabs each role can see
 export const ROLE_SETTINGS_TABS = {
-  owner:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'properties', 'users'],
-  manager: ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'notifications'],
+  owner:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'appearance', 'branding', 'preferences', 'properties', 'users'],
+  manager: ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'notifications', 'appearance', 'preferences'],
   staff:   [],
-  admin:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'properties', 'users'],
+  admin:   ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'appearance', 'branding', 'preferences', 'properties', 'users'],
 }
 
 export function canAccess(role, panel) {

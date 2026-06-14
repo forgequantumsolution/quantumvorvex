@@ -7,27 +7,18 @@ export default function FormField({
   className = '',
 }) {
   return (
-    <div
-      className={className}
-      style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}
-    >
+    <div className={`flex flex-col gap-[5px] ${className}`}>
       {label && (
         <label className="form-label">
           {label}
           {required && (
-            <span style={{ color: 'var(--red)', marginLeft: '3px' }}>*</span>
+            <span className="text-danger ml-[3px]">*</span>
           )}
         </label>
       )}
       {children}
       {error && (
-        <span
-          style={{
-            fontSize: '11.5px',
-            color: 'var(--red-text)',
-            fontWeight: 500,
-          }}
-        >
+        <span className="text-[11.5px] text-danger-text font-medium">
           {error}
         </span>
       )}

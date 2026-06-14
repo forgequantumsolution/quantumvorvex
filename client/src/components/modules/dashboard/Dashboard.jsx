@@ -9,7 +9,7 @@ import {
   LineChart,
   Line,
 } from 'recharts'
-import { useStore } from '../../../store/useStore'
+import { useAppSelector, useUiActions } from '../../../store/hooks'
 import { useToast } from '../../../hooks/useToast'
 import { formatCurrency, formatCurrencyCompact, statusColor } from '../../../utils/format'
 import StatCard from '../../ui/StatCard'
@@ -93,18 +93,9 @@ function DarkTooltip({ active, payload, label, formatter }) {
   if (!active || !payload?.length) return null
   const val = payload[0]?.value
   return (
-    <div
-      style={{
-        background: '#1a1a1a',
-        border: '1px solid #333',
-        borderRadius: 6,
-        padding: '8px 12px',
-        fontSize: 12,
-        color: '#fff',
-      }}
-    >
-      <div style={{ color: '#888', marginBottom: 2 }}>{label}</div>
-      <div style={{ fontWeight: 600, color: 'var(--gold)' }}>
+    <div className="bg-[#1a1a1a] border border-[#333] rounded-md px-3 py-2 text-[12px] text-white">
+      <div className="text-[#888] mb-0.5">{label}</div>
+      <div className="font-semibold text-gold">
         {formatter ? formatter(val) : val}
       </div>
     </div>
@@ -137,8 +128,8 @@ const SHORTCUTS = [
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const hotelName    = useStore((s) => s.hotelName)
-  const setActivePanel = useStore((s) => s.setActivePanel)
+  const hotelName    = useAppSelector((s) => s.hotel.hotelName)
+  const { setActivePanel } = useUiActions()
   const addToast     = useToast()
 
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
@@ -163,44 +154,24 @@ export default function Dashboard() {
 
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+    <div className="flex flex-col gap-[22px]">
 
       {/* ── Page Header ── */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 12,
-          flexWrap: 'wrap',
-        }}
-      >
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
           <h1
-            style={{
-              fontFamily: "'Syne', sans-serif",
-              fontSize: 21,
-              fontWeight: 800,
-              color: 'var(--text)',
-              letterSpacing: '-0.03em',
-              margin: 0,
-              lineHeight: 1.2,
-            }}
+            className="t-h1 tracking-[-0.03em] m-0 leading-[1.2]"
           >
             Dashboard
           </h1>
           <p
-            style={{
-              fontSize: 13,
-              color: 'var(--text3)',
-              margin: '3px 0 0',
-            }}
+            className="t-sm text-ink3 mt-[3px] mx-0 mb-0"
           >
             {hotelName} — Overview
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        <div className="flex items-center gap-2 shrink-0">
           <button
             className="btn btn-outline btn-sm"
             onClick={() => setShortcutsOpen(true)}
@@ -217,20 +188,14 @@ export default function Dashboard() {
       </div>
 
       {/* ── Stats Row ── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(165px, 1fr))',
-          gap: 14,
-        }}
-      >
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(165px,1fr))] gap-3.5">
         <StatCard label="Total Rooms" value={stats.total} color="gold" sub="All room inventory" />
 
         <StatCard label="Available" value={stats.available} color="green" sub={`${availablePct}% of total`}>
           <div className="prog-bar">
             <div
-              className="prog-fill"
-              style={{ width: `${availablePct}%`, background: 'var(--green)' }}
+              className="prog-fill bg-success"
+              style={{ width: `${availablePct}%` }}
             />
           </div>
         </StatCard>
@@ -238,8 +203,8 @@ export default function Dashboard() {
         <StatCard label="Occupied" value={stats.occupied} color="red" sub={`${occupiedPct}% of total`}>
           <div className="prog-bar">
             <div
-              className="prog-fill"
-              style={{ width: `${occupiedPct}%`, background: 'var(--red)' }}
+              className="prog-fill bg-danger"
+              style={{ width: `${occupiedPct}%` }}
             />
           </div>
         </StatCard>
@@ -264,15 +229,15 @@ export default function Dashboard() {
       {/* ── Mid Row: Charts + Notifications ── */}
       <div className="dash-mid-grid">
         {/* Left: Charts */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="flex flex-col gap-4">
 
           {/* Revenue Bar Chart */}
           <div className="card">
             <div className="card-header">
               <span className="card-title">Monthly Revenue</span>
-              <span style={{ fontSize: 11.5, color: 'var(--text3)' }}>Last 6 months</span>
+              <span className="text-[11.5px] text-ink3">Last 6 months</span>
             </div>
-            <div className="card-body" style={{ paddingTop: 8 }}>
+            <div className="card-body pt-2">
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart
                   data={mockRevenue}
@@ -281,13 +246,13 @@ export default function Dashboard() {
                 >
                   <XAxis
                     dataKey="month"
-                    tick={{ fontSize: 11, fill: 'var(--text3)', fontFamily: 'Inter' }}
+                    tick={{ fontSize: 11, fill: 'var(--text3)' }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
                     tickFormatter={(v) => formatCurrencyCompact(v)}
-                    tick={{ fontSize: 10, fill: 'var(--text3)', fontFamily: 'Inter' }}
+                    tick={{ fontSize: 10, fill: 'var(--text3)' }}
                     axisLine={false}
                     tickLine={false}
                     width={52}
@@ -308,9 +273,9 @@ export default function Dashboard() {
           <div className="card">
             <div className="card-header">
               <span className="card-title">Occupancy Trend</span>
-              <span style={{ fontSize: 11.5, color: 'var(--text3)' }}>Last 6 months</span>
+              <span className="text-[11.5px] text-ink3">Last 6 months</span>
             </div>
-            <div className="card-body" style={{ paddingTop: 8 }}>
+            <div className="card-body pt-2">
               <ResponsiveContainer width="100%" height={150}>
                 <LineChart
                   data={mockOccupancy}
@@ -318,14 +283,14 @@ export default function Dashboard() {
                 >
                   <XAxis
                     dataKey="month"
-                    tick={{ fontSize: 11, fill: 'var(--text3)', fontFamily: 'Inter' }}
+                    tick={{ fontSize: 11, fill: 'var(--text3)' }}
                     axisLine={false}
                     tickLine={false}
                   />
                   <YAxis
                     domain={[0, 100]}
                     tickFormatter={(v) => `${v}%`}
-                    tick={{ fontSize: 10, fill: 'var(--text3)', fontFamily: 'Inter' }}
+                    tick={{ fontSize: 10, fill: 'var(--text3)' }}
                     axisLine={false}
                     tickLine={false}
                     width={36}
@@ -351,62 +316,34 @@ export default function Dashboard() {
         </div>
 
         {/* Right: Notifications + Room Type Occupancy */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="flex flex-col gap-4">
 
           {/* Notifications */}
           <div className="card">
             <div className="card-header">
               <span className="card-title">Notifications</span>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: 'var(--gold)',
-                  background: 'var(--gold-bg)',
-                  border: '1px solid var(--gold-border)',
-                  borderRadius: 20,
-                  padding: '2px 8px',
-                }}
-              >
+              <span className="text-[11px] font-semibold text-gold bg-[var(--gold-bg)] border border-[var(--gold-border)] rounded-[20px] px-2 py-0.5">
                 {mockNotifs.length} new
               </span>
             </div>
-            <div
-              className="card-body"
-              style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 14 }}
-            >
+            <div className="card-body flex flex-col gap-2 pt-3.5">
               {mockNotifs.map((n) => (
                 <div key={n.id} className={`notif notif-${n.type}`}>
                   <span
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      flexShrink: 0,
-                      background:
-                        n.type === 'warn'    ? 'var(--amber-bg)'  :
-                        n.type === 'info'    ? 'var(--blue-bg)'   :
-                        n.type === 'success' ? 'var(--green-bg)'  :
-                                               'var(--red-bg)',
-                      color:
-                        n.type === 'warn'    ? 'var(--amber-text)' :
-                        n.type === 'info'    ? 'var(--blue-text)'  :
-                        n.type === 'success' ? 'var(--green-text)' :
-                                               'var(--red-text)',
-                    }}
+                    className={`w-[22px] h-[22px] rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
+                      n.type === 'warn'    ? 'bg-warning-bg text-warning-text' :
+                      n.type === 'info'    ? 'bg-info-bg text-info-text'       :
+                      n.type === 'success' ? 'bg-success-bg text-success-text' :
+                                             'bg-danger-bg text-danger-text'
+                    }`}
                   >
                     {n.icon}
                   </span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, color: 'var(--text)', lineHeight: 1.4 }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12.5px] text-ink leading-[1.4]">
                       {n.msg}
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+                    <div className="text-[11px] text-ink3 mt-0.5">
                       {n.time}
                     </div>
                   </div>
@@ -420,10 +357,7 @@ export default function Dashboard() {
             <div className="card-header">
               <span className="card-title">Occupancy by Room Type</span>
             </div>
-            <div
-              className="card-body"
-              style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
-            >
+            <div className="card-body flex flex-col gap-3.5">
               {mockRoomTypes.map((rt) => {
                 const pct = Math.round((rt.occupied / rt.total) * 100)
                 const barColor =
@@ -432,20 +366,13 @@ export default function Dashboard() {
                                'var(--green)'
                 return (
                   <div key={rt.label}>
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: 5,
-                      }}
-                    >
-                      <span style={{ fontSize: 12.5, color: 'var(--text)', fontWeight: 500 }}>
+                    <div className="flex justify-between items-center mb-[5px]">
+                      <span className="text-[12.5px] text-ink font-medium">
                         {rt.label}
                       </span>
-                      <span style={{ fontSize: 11.5, color: 'var(--text3)' }}>
+                      <span className="text-[11.5px] text-ink3">
                         {rt.occupied}/{rt.total} &nbsp;
-                        <span style={{ color: barColor, fontWeight: 600 }}>{pct}%</span>
+                        <span className="font-semibold" style={{ color: barColor }}>{pct}%</span>
                       </span>
                     </div>
                     <div className="prog-bar">
@@ -475,7 +402,7 @@ export default function Dashboard() {
               View all
             </button>
           </div>
-          <div style={{ overflowX: 'auto' }}>
+          <div className="overflow-x-auto">
             <table>
               <thead>
                 <tr>
@@ -491,28 +418,17 @@ export default function Dashboard() {
                 {mockGuests.map((g) => (
                   <tr key={g.id}>
                     <td>
-                      <div
-                        style={{
-                          fontWeight: 500,
-                          color: 'var(--text)',
-                          fontSize: 13,
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
+                      <div className="t-sm text-ink whitespace-nowrap">
                         {g.name}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>
+                      <div className="text-[11px] text-ink3 mt-px">
                         Since {g.checkIn}
                       </div>
                     </td>
                     <td>
                       <span
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 12.5,
-                          fontWeight: 500,
-                          color: 'var(--text)',
-                        }}
+                        className="text-[12.5px] font-medium text-ink"
+                        style={{ fontFamily: 'var(--font-mono)' }}
                       >
                         {g.room}
                       </span>
@@ -525,10 +441,10 @@ export default function Dashboard() {
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      <div className="flex gap-1 flex-wrap">
                         {g.tags.length > 0
                           ? g.tags.map((t) => <GuestTag key={t} tag={t} />)
-                          : <span style={{ color: 'var(--text3)', fontSize: 11 }}>—</span>
+                          : <span className="text-ink3 text-[11px]">—</span>
                         }
                       </div>
                     </td>
@@ -537,9 +453,8 @@ export default function Dashboard() {
                     </td>
                     <td>
                       <button
-                        className="btn btn-outline btn-xs"
+                        className="btn btn-outline btn-xs whitespace-nowrap"
                         onClick={() => handleCheckout(g)}
-                        style={{ whiteSpace: 'nowrap' }}
                       >
                         Checkout
                       </button>
@@ -562,7 +477,7 @@ export default function Dashboard() {
               View all
             </button>
           </div>
-          <div style={{ overflowX: 'auto' }}>
+          <div className="overflow-x-auto">
             <table>
               <thead>
                 <tr>
@@ -576,40 +491,31 @@ export default function Dashboard() {
                 {mockCheckouts.map((c, i) => (
                   <tr key={i}>
                     <td>
-                      <span
-                        style={{ fontWeight: 500, color: 'var(--text)', fontSize: 13 }}
-                      >
+                      <span className="t-sm text-ink">
                         {c.name}
                       </span>
                     </td>
                     <td>
                       <span
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 12.5,
-                          fontWeight: 500,
-                          color: 'var(--text)',
-                        }}
+                        className="text-[12.5px] font-medium text-ink"
+                        style={{ fontFamily: 'var(--font-mono)' }}
                       >
                         {c.room}
                       </span>
                     </td>
                     <td>
                       <span
-                        style={{
-                          fontSize: 12.5,
-                          fontWeight: 500,
-                          color:
-                            c.date === 'Today'    ? 'var(--red-text)'   :
-                            c.date === 'Tomorrow' ? 'var(--amber-text)' :
-                                                    'var(--text2)',
-                        }}
+                        className={`text-[12.5px] font-medium ${
+                          c.date === 'Today'    ? 'text-danger-text'  :
+                          c.date === 'Tomorrow' ? 'text-warning-text' :
+                                                  'text-ink2'
+                        }`}
                       >
                         {c.date}
                       </span>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 5 }}>
+                      <div className="flex gap-[5px]">
                         <button
                           className="btn btn-outline btn-xs"
                           onClick={() => handleCheckout(c)}
@@ -633,48 +539,48 @@ export default function Dashboard() {
       </div>
 
       {/* ── Today's Timeline ── */}
-      <div className="card" style={{ marginTop: 20 }}>
+      <div className="card mt-5">
         <div className="card-header">
           <span className="card-title">Today's Timeline</span>
-          <span style={{ fontSize: 11.5, color: 'var(--text3)' }}>
+          <span className="text-[11.5px] text-ink3">
             {todayTimeline.filter(t => t.done).length}/{todayTimeline.length} events done
           </span>
         </div>
-        <div style={{ padding: '8px 16px 16px', position: 'relative' }}>
+        <div className="pt-2 px-4 pb-4 relative">
           {/* Vertical line */}
-          <div style={{ position: 'absolute', left: 40, top: 8, bottom: 8, width: 1, background: 'var(--border)' }} />
+          <div className="absolute left-10 top-2 bottom-2 w-px bg-line" />
           {todayTimeline.map((item, i) => {
             const colors = TIMELINE_COLORS[item.type] || TIMELINE_COLORS.audit
             return (
-              <div key={i} style={{ display: 'flex', gap: 14, marginBottom: 12, alignItems: 'flex-start', position: 'relative' }}>
+              <div key={i} className="flex gap-3.5 mb-3 items-start relative">
                 {/* Time */}
-                <div style={{ width: 34, flexShrink: 0, textAlign: 'right', fontSize: 10.5, fontWeight: 600, color: 'var(--text3)', fontFamily: "'JetBrains Mono', monospace", paddingTop: 6 }}>
+                <div className="w-[34px] shrink-0 text-right text-[10.5px] font-semibold text-ink3 pt-1.5" style={{ fontFamily: 'var(--font-mono)' }}>
                   {item.time}
                 </div>
                 {/* Dot */}
-                <div style={{
-                  width: 14, height: 14, borderRadius: '50%', flexShrink: 0,
-                  background: item.done ? colors.bg : 'var(--surface)',
-                  border: `2px solid ${item.done ? colors.text : 'var(--border)'}`,
-                  marginTop: 5, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }} />
+                <div
+                  className="w-3.5 h-3.5 rounded-full shrink-0 mt-[5px] z-[1] flex items-center justify-center"
+                  style={{
+                    background: item.done ? colors.bg : 'var(--surface)',
+                    border: `2px solid ${item.done ? colors.text : 'var(--border)'}`,
+                  }}
+                />
                 {/* Event */}
-                <div style={{
-                  flex: 1, padding: '6px 10px', borderRadius: 7,
-                  background: item.done ? 'var(--surface2)' : colors.bg,
-                  border: `1px solid ${item.done ? 'var(--border)' : colors.text + '33'}`,
-                  opacity: item.done ? 0.65 : 1,
-                  transition: 'all 0.15s',
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{ fontSize: 13 }}>{item.icon}</span>
-                    <span style={{
-                      fontSize: 12.5, fontWeight: item.done ? 400 : 600,
-                      color: item.done ? 'var(--text3)' : colors.text,
-                      textDecoration: item.done ? 'line-through' : 'none',
-                    }}>{item.event}</span>
-                    {item.done && <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--green-text)', fontWeight: 600 }}>✓</span>}
-                    {!item.done && item.type === 'urgent' && <span style={{ marginLeft: 'auto', fontSize: 10, background: 'var(--red-bg)', color: 'var(--red-text)', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>URGENT</span>}
+                <div
+                  className={`flex-1 px-2.5 py-1.5 rounded-[7px] transition-all duration-[150ms] ${item.done ? 'opacity-[0.65]' : 'opacity-100'}`}
+                  style={{
+                    background: item.done ? 'var(--surface2)' : colors.bg,
+                    border: `1px solid ${item.done ? 'var(--border)' : colors.text + '33'}`,
+                  }}
+                >
+                  <div className="flex items-center gap-[7px]">
+                    <span className="t-sm">{item.icon}</span>
+                    <span
+                      className={`text-[12.5px] ${item.done ? 'font-normal line-through' : 'font-semibold no-underline'}`}
+                      style={{ color: item.done ? 'var(--text3)' : colors.text }}
+                    >{item.event}</span>
+                    {item.done && <span className="ml-auto text-[11px] text-success-text font-semibold">✓</span>}
+                    {!item.done && item.type === 'urgent' && <span className="ml-auto text-[10px] bg-danger-bg text-danger-text px-1.5 py-0.5 rounded-md font-bold">URGENT</span>}
                   </div>
                 </div>
               </div>
@@ -690,39 +596,18 @@ export default function Dashboard() {
         title="Keyboard Shortcuts"
         maxWidth="440px"
       >
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '10px 20px',
-          }}
-        >
+        <div className="grid grid-cols-2 gap-x-5 gap-y-2.5">
           {SHORTCUTS.map((s) => (
             <div
               key={s.key}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '8px 10px',
-                borderRadius: 6,
-                background: 'var(--surface2)',
-                border: '1px solid var(--border)',
-              }}
+              className="flex items-center justify-between px-2.5 py-2 rounded-md bg-surface2 border border-line"
             >
-              <span style={{ fontSize: 12.5, color: 'var(--text2)' }}>{s.label}</span>
+              <span className="text-[12.5px] text-ink2">{s.label}</span>
               <kbd className="kbd">{s.key}</kbd>
             </div>
           ))}
         </div>
-        <p
-          style={{
-            marginTop: 16,
-            fontSize: 11.5,
-            color: 'var(--text3)',
-            textAlign: 'center',
-          }}
-        >
+        <p className="mt-4 text-[11.5px] text-ink3 text-center">
           Shortcuts only fire when not focused on an input field.
         </p>
       </Modal>

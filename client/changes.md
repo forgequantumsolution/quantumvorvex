@@ -6,6 +6,378 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-10 · Invoice preview modal + PDF download
+
+## Summary
+The Bookings invoice button blindly opened the invoice HTML in a new tab (or downloaded `.html` when
+pop-ups were blocked). Replaced it with an in-app preview modal that shows the invoice in an iframe and
+offers Print + Download — and the download is now a real **PDF** rendered by the backend (see
+`../server/CHANGES.md`), not raw HTML.
+
+## File changes
+
+### `src/components/modules/bookings/InvoiceModal.jsx` (new)
+- Fetches the invoice HTML via `bookingsApi.getInvoice(id)` (authenticated blob) and previews it in an
+  `<iframe>` using a blob object URL; revokes the URL on close.
+- **Print** — calls `contentWindow.print()` on the loaded preview (same-origin blob, no pop-up needed).
+- **Download PDF** — fetches `getInvoice(id, { format: 'pdf' })` and saves `invoice-<bookingNo>.pdf`,
+  with a "Preparing PDF…" button state and a toast on failure.
+- Shared `errorMessage()` helper parses the API's blob error bodies into a readable message.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- Removed the old `handleInvoice` (new-tab/HTML-download). The invoice button now opens the modal
+  (`onInvoice={setInvoiceTarget}`); rendered `<InvoiceModal>` alongside the other modals.
+
+### `src/components/ui-tw/Modal.jsx`
+- Added an `xl` size (`max-w-5xl`) so the invoice preview has room.
+
+## Notes
+- Preview is fast HTML-in-iframe; only the Download fetches the (slower) server-rendered PDF on click.
+- Replaces the unauthenticated `invoiceUrl` open path — preview/print/download all go through the
+  authenticated API client now.
+
+---
+
+# Session — 2026-06-10 · URL-based routing for Settings tabs
+
+## Summary
+The Settings sub-tabs were local state, so they weren't addressable and a refresh always dropped back
+to Hotel Profile. Each tab is now reflected in the URL as a query param (e.g. `/settings?tab=rooms`),
+so tabs are deep-linkable, shareable, and survive a refresh.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- Added `tabFromUrl()` (reads/validates `?tab=` against the known tab ids) and seeded `activeTab` from
+  it instead of the hardcoded `'profile'`.
+- Effect keeps `?tab=` in sync with the active tab using **`replaceState`** — keeps the page
+  addressable without spamming back-button history (back leaves Settings to the previous panel).
+- `popstate` listener re-reads the tab on browser back/forward.
+- Invalid / role-inaccessible / missing tab normalizes to the first allowed tab (reuses the existing
+  `validActiveTab` fallback) and rewrites the URL to match.
+
+### `tests/settings-tabs.spec.js`
+- New test: deep-link `/settings?tab=tax` opens Tax; switching to Room Config updates the URL to
+  `?tab=rooms`; refresh restores it; bare `/settings` normalizes to `?tab=profile`.
+
+## Notes
+- Chose a **query param** over a path segment (`/settings/rooms`) deliberately: the app's panel router
+  keys off `location.pathname` only (always `/settings` here) and its sync effect early-returns when
+  the pathname already matches — so a query param is invisible to it and needs **no change to the
+  global panel navigation**. A path segment would have required reworking `panelFromUrl` + the App URL
+  effect for every panel.
+
+---
+
+# Session — 2026-06-10 · Check-out: payment method, reference + screenshot, shared modal
+
+## Summary
+The check-out form only let staff add extra charges and a collection amount — it didn't record **how**
+the guest paid or let them attach proof. Added a payment-method selector, a reference field, and an
+optional payment-screenshot upload to the check-out modal. Also fixed the Bookings page, where the
+**Check-out** button bypassed the modal and checked out directly — it now opens the same modal.
+
+## File changes
+
+### `src/components/modules/checkout/CheckOutModal.jsx`
+- Added a **Payment method** dropdown (Cash / Card / UPI / Bank transfer / Cheque / Other), disabled
+  until a collection amount is entered, defaulting to Cash and resetting per booking.
+- Added a **Reference / txn no.** field shown only for non-cash methods while collecting.
+- Added an optional **Payment screenshot / proof** upload (image or PDF) with a 10MB client guard
+  matching the server limit, a selected-file chip with a Remove action, and an inline error.
+- `onConfirm` payload now carries `paymentMethod`, `paymentReference`, and `proofFile`.
+
+### `src/components/modules/checkout/CheckOut.jsx`
+- `handleCheckOut` now forwards `paymentMethod` / `paymentReference` to `bookingsApi.checkOut`, and
+  uploads the screenshot first (as a `payment_proof` booking document) so a failed upload aborts the
+  check-out instead of orphaning the proof.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- The table's **Check-out** button now opens `CheckOutModal` (`onCheckOut={setCheckOutTarget}`) instead
+  of calling the API immediately.
+- Rewrote `handleCheckOut` to consume the modal payload (upload proof → `checkOut` → update the row in
+  place so it moves to the Checked Out tab). Rendered `<CheckOutModal>` with `submitting` tied to `busyId`.
+
+## Notes
+- Reuses the existing `POST /bookings/:id/documents` route for the screenshot — no new client API.
+- Payment proofs land in the local `uploads/` disk like other docs (pending the planned S3 migration).
+
+---
+
+# Session — 2026-06-10 · Wire Settings tabs to the real API + logo cropping
+
+## Summary
+The Settings page was mostly UI scaffolding — only Pricing Rules and Users & Access talked to the
+backend; the rest saved to in-memory state or `localStorage`. Wired every tab whose backend model
+already exists (Hotel Profile, Tax & Pricing, Room Config, Food Plans, Facilities/amenities) plus
+logo upload to the existing `settingsApi`. Also fixed the logo disappearing on refresh and added a
+proper crop step (pan/zoom, 1:1) before uploading — on both Hotel Profile and Branding.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- **Load contract fixed:** the mount effect read `data.settings`, but the controller returns
+  `{ hotel, roomTypes, foodPlans, amenities }` — so nothing loaded against the real server. Now reads
+  the real shape via `settingsApi.get()` and distributes it.
+- **Lifted shared state:** `roomTypes` / `foodPlans` / `amenities` now live in the `Settings` root and
+  pass down to their tabs, so rows carry real DB `cuid`s.
+- **Field renames to match Prisma** (state keys, handlers, JSX): `hotelName→name`,
+  `peakDaily→peakDailyRate`, `peakMonthly→peakMonthlyRate`, `oneTime→oneTimeRate`,
+  `weekly→weeklyRate`, `desc→description`, `daily→dailyRate`, `monthly→monthlyRate`.
+- **Save handlers wired** for Hotel Profile / Tax & Pricing / Room Config / Food Plans / Facilities →
+  `settingsApi.update(slice)` with success/error toasts; shared `SaveButton` shows a "Saving…" state.
+- **`stripForSave` / `isPersistedId`:** an id is sent only when it's a real cuid (so new rows and the
+  local seed defaults upsert by name instead of failing an update-by-id); drops UI-only fields (`count`).
+  New rows get a temporary `new-…` id used only as the React key.
+- UI-only fields with no DB column kept local: `totalRooms`, `floors`, `seasonalPricing`, the
+  Facilities free-text chip list.
+- **Logo persistence fix:** preview was seeded once via `useState(settings.logoUrl)` before the async
+  GET resolved, so it vanished on refresh. Now renders `logoPreview || settings.logoUrl`.
+- **Cropper:** added a reusable `LogoCropModal` (pan/zoom, 1:1, configurable shape/labels, keyed by
+  `src` to reset per image). Hotel Profile uploads the cropped square to `POST /settings/logo`;
+  Branding crops to a base64 data URL stored in `localStorage` (unchanged persistence model).
+
+### `src/api/mockData.js`
+- Reshaped the flat `SETTINGS` into `SETTINGS_HOTEL` + `SETTINGS_ROOM_TYPES` / `_FOOD_PLANS` /
+  `_AMENITIES` with DB field names; `GET /settings` now returns `{ hotel, roomTypes, foodPlans,
+  amenities }` and `PUT /settings` returns the success message — keeps `VITE_MOCK=true` consistent.
+
+### `src/utils/cropImage.js` (new)
+- `getCroppedBlob(src, pixelCrop)` — canvas crop → normalized 512×512 PNG Blob.
+- `blobToDataUrl(blob)` — Blob → base64 data URL (for the localStorage-stored Branding logo).
+
+### `tests/settings-tabs.spec.js` (new) + `tests/helpers.js`
+- New Playwright suite (real backend): edit round-trips with restore for each wired tab, logo
+  upload+crop+reload persistence, Branding local crop, and an add/delete flow exercising the temp-id
+  handling. Round-trips assert against the fresh `GET /settings` body (deterministic, avoids
+  controlled-input timing flakes).
+- `helpers.js` — scoped `login()`/`openPanel()` selectors to `#sidebar`; the new topbar also renders a
+  "Front Desk" label, which broke the old `getByText` (strict-mode, two matches).
+
+## Notes
+- Added dependency: **`react-easy-crop`** (`package.json`/lockfile).
+- Pairs with the server delete-diff change (see `../server/CHANGES.md`) so removing a row persists.
+- Hotel Profile and Branding still hold **two separate logos** (server `logoUrl` vs localStorage
+  base64). Consolidating onto one server logo is a possible follow-up.
+
+---
+
+# Session — 2026-06-10 · Proxy /uploads so document links resolve in dev
+
+## Summary
+Document/logo links (`/uploads/...`) resolved against the Vite dev server (5173), which has no such
+files, so opening a document 404'd. The Vite proxy only forwarded `/api` to the backend.
+
+## File changes
+
+### `vite.config.js`
+- Added a `/uploads` proxy entry pointing at the backend (`http://localhost:5001`, `changeOrigin`),
+  mirroring the existing `/api` proxy. Now uploaded files served by the backend's
+  `express.static('/uploads')` resolve in dev.
+
+## Notes
+- Requires a Vite dev-server restart (proxy config isn't hot-reloaded).
+- Also fixes logo uploads, which use the same `/uploads/...` path scheme.
+- Production: only works if frontend and backend share an origin. If split across domains, return
+  absolute upload URLs instead. See the object-storage migration follow-up.
+
+---
+
+# Session — 2026-06-10 · Topbar breadcrumb (remove duplicate page heading)
+
+## Summary
+- Every page showed its title twice — a big topbar title plus the module's own in-page heading
+  (e.g. "reports" above "Reports & Analytics"). The topbar title is now a compact breadcrumb
+  (`Section › Page`, e.g. `Finance › Reports`), leaving each page with a single real heading.
+- Also fixes the topbar showing the raw panel id (lowercase "reports") — its old label map only
+  covered the six front-desk panels.
+
+## File changes
+
+### `src/utils/navigation.js` (new)
+- `NAV_SECTIONS` moved here from `Sidebar.jsx` — single source of truth for the nav structure
+  (sections, panel ids, labels, icons).
+- `PANEL_META` derived from it: panel id → `{ label, section }` lookup for the breadcrumb.
+
+### `src/components/layout/Sidebar.jsx`
+- Imports the shared `NAV_SECTIONS` instead of its own local copy (no visual change).
+
+### `src/components/layout/Topbar.jsx`
+- Removed the local 6-panel `PANEL_LABELS` map; uses `PANEL_META` (all panels) instead.
+- Replaced the `t-h2` page title with a breadcrumb: muted section name › current page
+  (slightly heavier text), date below as before. The section crumb is plain text (sections
+  aren't pages). Panels outside the nav structure fall back to a capitalized page name with
+  no section crumb.
+
+## Notes
+- Sidebar and breadcrumb can no longer drift apart when adding a panel (shared structure).
+- Verified with a green `npm run build`.
+
+---
+
+# Session — 2026-06-10 · URL-based panel navigation (refresh keeps the page)
+
+## Summary
+- Panels were pure Redux state (`ui.activePanel`) — the URL never changed, so a refresh always
+  reset to the default panel. Each panel now has its own path (`/bookings`, `/rooms`, …):
+  refresh restores the page, back/forward work, and panel links are shareable/bookmarkable.
+  No react-router adoption needed — all navigation already funnels through `setActivePanel`.
+
+## File changes
+
+### `src/store/slices/uiSlice.js`
+- New exported helper `panelFromUrl(fallback)` — maps `window.location.pathname` to a panel id
+  (e.g. `/rooms` → `rooms`), validated against the full panel list (`ROLE_PANELS.owner` from
+  `utils/permissions.js`); returns `fallback` for unknown paths.
+- `initialState.activePanel` now initializes from `panelFromUrl('today')` instead of the
+  hardcoded `'today'` — this is the actual refresh fix.
+
+### `src/App.jsx`
+- State → URL effect: whenever `activePanel` changes (authenticated only, and not on the
+  `/reset-password` deep link), the address bar is updated to `/<panel>` — `replaceState` when
+  normalizing a non-panel path like `/` (no junk history entry), `pushState` otherwise.
+- URL → state effect: `popstate` listener dispatches `setActivePanel(panelFromUrl('today'))` so
+  browser back/forward switch panels.
+
+### `src/store/slices/authSlice.js`
+- `login` thunk — previously always forced `setActivePanel('bookings')`; now
+  `setActivePanel(panelFromUrl('bookings'))`, so a deep link opened while logged out
+  (e.g. `/rooms`) is honoured after sign-in.
+
+## Notes
+- Role checks unchanged — a staff user opening `/billing` still gets the Access Restricted screen.
+- Vite dev server already falls back to `index.html` for panel paths; the **production** host
+  needs an SPA fallback (serve `index.html` for unknown paths) or refreshing on `/rooms` 404s.
+- Verified with a green `npm run build`.
+
+# Session — 2026-06-10 · Single-session 401 handling (logged-in-elsewhere notice)
+
+## Summary
+Frontend half of the "one active session per user" feature (backend logged in
+[../server/CHANGES.md](../server/CHANGES.md)). When the server signs a device out because the
+account logged in elsewhere, the user now sees an explanatory banner on the login screen instead
+of a silent logout.
+
+## File changes
+
+### `src/api/client.js`
+- 401 response interceptor — for session-specific codes (`ERR_SESSION_SUPERSEDED` = logged in
+  elsewhere, or `ERR_SESSION_EXPIRED` = old/migrated token needing a fresh login), stash the
+  server's reason message in `sessionStorage` (`qv_logout_reason`) before triggering the existing
+  `auth:unauthorized` logout flow. Other 401s behave exactly as before.
+
+### `src/components/auth/LoginPage.jsx`
+- Read `qv_logout_reason` once via a lazy `useState` initializer (read-and-clear; avoids a
+  `set-state-in-effect` lint violation and avoids persisting the notice in Redux).
+- Render an amber notice banner (Tailwind) at the top of the login card when a reason is present:
+  "You were signed out because your account logged in on another device."
+
+## Notes
+- The interceptor already exempts `/auth/*` calls, so a wrong password on the login form still
+  surfaces as a field error, not the logout banner.
+
+# Session — 2026-06-10 · Collapsed-sidebar tooltips
+
+## Summary
+- The collapsed (desktop) sidebar showed only icons with no indication of which tab was which —
+  the native `title` tooltip was unreliable/slow. Added an instant custom tooltip showing the
+  tab label on hover.
+
+## File changes
+
+### `src/components/layout/Sidebar.jsx`
+- `NavItem` — replaced the native `title` attribute with a custom styled tooltip rendered on
+  hover when `collapsed`:
+  - Dark pill (`#1f1f1f`, white 12px label, subtle border + shadow) with a small arrow pointing
+    at the icon, matching the sidebar's dark/gold theme.
+  - Uses `position: fixed` with coordinates measured via `getBoundingClientRect()` on
+    mouse-enter — required because the sidebar has `overflow-x-hidden`, which would clip an
+    absolutely-positioned tooltip.
+  - Added `aria-label={item.label}` on collapsed items so screen readers still announce the tab
+    name (the icon has no visible text when collapsed).
+- The footer "Sign Out" button and avatar keep their existing native `title` tooltips (unchanged).
+
+---
+
+# Session — 2026-06-04 · Real-backend integration + Playwright E2E
+
+Backend-specific changes for this session are logged in [../server/CHANGES.md](../server/CHANGES.md).
+Paths below are relative to `client/`.
+
+## Summary
+- Connected **9 orphaned modules** from local/mock data to the **real backend** (no mock mode),
+  mounted them in the sidebar with role-based access, and covered each with Playwright E2E tests
+  against the live stack (frontend :5173 + backend :5000).
+- Set up the **Playwright** harness from scratch — **27 E2E tests pass**; production build green.
+
+## 1. New API client helpers — `src/api/client.js`
+- `housekeepingApi` — `getBoard`, `updateStatus`, `getDaily`, `getLinen`, `markLinen`, `submitInspection`
+- `staffApi` — `getAll`, `create`, `update`, `getActivity`, `getPermissions`, `updatePermissions`
+- `usersApi` — `getAll`, `create`, `update`, `remove`
+- `pricingApi` — `getRules`, `saveRules`, `compute`
+- `remindersApi` — `send`, `getTemplates`, `updateTemplate`
+- `foodApi` — added `createPlan`, `updatePlan`, `deletePlan`
+- `maintenanceApi` — added `createSchedule`
+
+## 2. Modules wired to the real API (mock → real)
+| Module | File | Real wiring |
+|---|---|---|
+| Housekeeping | `src/components/modules/housekeeping/Housekeeping.jsx` | board read, room status PUT, linen, inspection submit |
+| Guests | `src/components/modules/guests/Guests.jsx` | list, profile detail fetch, edit (sanitized payload), checkout |
+| Rooms | `src/components/modules/rooms/Rooms.jsx` | list, create, status change PUT |
+| Documents | `src/components/modules/documents/Documents.jsx` | KYC list, multipart upload, per-document verify |
+| Food | `src/components/modules/food/Food.jsx` | plan create/toggle/delete, orders from active guests |
+| Billing | `src/components/modules/billing/Billing.jsx` | invoice list, generate (real guestId), collect, remind |
+| Reports | `src/components/modules/reports/Reports.jsx` | dashboard KPIs, revenue-by-day, GST, CSV export, occupancy from live rooms (replaced random mock) |
+| Staff | `src/components/modules/staff/Staff.jsx` | list, create, update, status toggle, activity, permissions |
+| Settings | `src/components/modules/settings/Settings.jsx` | hotel settings load, Pricing-rules load/save (Users tab already real) |
+
+Each module now fetches on mount, shows loading/error states, and persists via the API.
+
+## 3. App shell / navigation / permissions
+- `src/App.jsx` — lazy imports + `PANEL_MAP` entries for `housekeeping`, `staff`, `guests`,
+  `rooms`, `billing`, `documents`, `food`, `reports`, `settings`.
+- `src/components/layout/Sidebar.jsx` — new nav sections **Operations**, **Finance**,
+  **Administration** (Front Desk section unchanged).
+- `src/utils/permissions.js` — restructured `ROLE_PANELS` into `FRONT_DESK_PANELS` +
+  `OPERATIONS_PANELS` + `MANAGER_PANELS` (owner/manager) + `ADMIN_PANELS` (owner).
+
+## 4. Bug fixes (frontend)
+- `src/store/slices/authSlice.js` — post-login `activePanel` was `dashboard` (out of scope →
+  "Access Restricted"). Changed to `bookings`.
+- `src/components/modules/staff/Staff.jsx` — toast calls used the wrong object form
+  (`addToast({type, message})`); corrected to `addToast(message, type)`.
+
+## 5. Playwright test harness (new)
+- Installed `@playwright/test` 1.60.0 + Chromium.
+- `playwright.config.js` — targets `http://localhost:5173`, uses the running dev stack;
+  `testDir: ./tests`.
+- `tests/` (gitignored) — `helpers.js` (UI login, backend-ready check, `ensureGuest` seeding)
+  + specs: `smoke`, `housekeeping`, `staff`, `guests`, `rooms`, `billing`, `documents`, `food`,
+  `reports`, `settings`. **27 tests passing.**
+- `package.json` — scripts `test:e2e`, `test:e2e:ui`, `test:e2e:report`.
+- `.gitignore` — ignore `tests/`, `playwright-report/`, `test-results/`.
+
+## 6. Docs
+- `docs/FRONTEND_API_PLAN.md` — created (backend-API-vs-frontend analysis + phased plan),
+  then updated with an implementation log + known backend gaps.
+
+## Known gaps (UI present, no backend endpoint — left local/illustrative)
+- Billing **Ledger** & **Cash Register** tabs; Settings **Notifications/Templates** (unseeded
+  table, no create endpoint); Pricing **competitor benchmarking**; Staff **force-logout/sessions**;
+  Maintenance **preventive-schedule** UI (helper added, no tab yet).
+
+## How to run
+```bash
+# from client/ — backend running with Postgres up + seeded
+npm run test:e2e      # 27 E2E tests against the real stack
+npm run build         # production build
+```
+
+---
+
+# Session — Login page redesign (earlier)
+
 ## Objective
 
 1. Disable the marketing landing page and make the login page the default view for unauthenticated users.

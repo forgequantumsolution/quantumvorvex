@@ -1,22 +1,16 @@
 import { useState } from 'react'
-import { useStore } from '../../store/useStore'
+import { Formik, Form, Field, ErrorMessage } from 'formik'
+import { useAuthActions } from '../../store/hooks'
 import { authApi } from '../../api/client'
-import hotelBg from '../../assets/hotel-bg.jpg'
+import { loginSchema, loginInitialValues } from '../../validation/authSchema'
+import { MailIcon, LockIcon, EyeIcon, EyeOffIcon, AlertIcon } from './authIcons'
+import OtpLoginForm from './OtpLoginForm'
+import ForgotPasswordForm from './ForgotPasswordForm'
 import goldenLogo from '../../assets/golden_blue_logo.png'
 import './LoginPage.css'
 
-/* Inline Lucide-style icons */
-const Icon = ({ size = 14, children }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
-       fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    {children}
-  </svg>
-)
-const MailIcon = () => (<Icon><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></Icon>)
-const LockIcon = () => (<Icon><rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></Icon>)
-const EyeIcon = () => (<Icon><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></Icon>)
-const EyeOffIcon = () => (<Icon><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" /><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" /><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" /><line x1="2" x2="22" y1="2" y2="22" /></Icon>)
-const AlertIcon = () => (<Icon><circle cx="12" cy="12" r="10" /><line x1="12" x2="12" y1="8" y2="12" /><line x1="12" x2="12.01" y1="16" y2="16" /></Icon>)
+// Background lives in /public so it's served from the site root
+const BANNER_BG = '/Banner.webp'
 
 const PILLS = ['Check-In', 'Billing', 'Housekeeping', 'Reports', 'AI Insights']
 
@@ -26,22 +20,19 @@ const DEMO_ACCOUNTS = [
   { role: 'staff',   label: 'Staff',   email: 'staff@quantumvorvex.com',   pass: 'staff123'   },
 ]
 
-export default function LoginPage() {
-  const login = useStore((s) => s.login)
+// ── Password sign-in form (the original flow) ──────────────────────────────────
+function PasswordLoginForm({ onForgot }) {
+  const { login } = useAuthActions()
+  const [showPw, setShowPw] = useState(false)
+  const [error, setError]   = useState('')
 
-  const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
-  const [showPw, setShowPw]     = useState(false)
-  const [error, setError]       = useState('')
-  const [loading, setLoading]   = useState(false)
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const handleSubmit = async (values, { setSubmitting }) => {
     setError('')
-    if (!email || !password) { setError('Email and password are required.'); return }
-    setLoading(true)
     try {
-      const { data } = await authApi.login({ email, password })
+      const { data } = await authApi.login({
+        email: values.email.trim(),
+        password: values.password,
+      })
       login(data.token, data.user)
     } catch (err) {
       const data = err.response?.data
@@ -54,12 +45,99 @@ export default function LoginPage() {
          'Cannot reach server. Make sure the backend is running.')
       )
     } finally {
-      setLoading(false)
+      setSubmitting(false)
     }
   }
 
   return (
-    <div className="login-page" style={{ backgroundImage: `url(${hotelBg})` }}>
+    <>
+      {error && (
+        <div className="login-error">
+          <span className="shrink-0 mt-px inline-flex"><AlertIcon /></span>
+          {error}
+        </div>
+      )}
+
+      <Formik initialValues={loginInitialValues} validationSchema={loginSchema} onSubmit={handleSubmit}>
+        {({ isSubmitting, setFieldValue }) => (
+          <>
+            <Form>
+              <div className="login-field">
+                <label className="login-field-label">Email address</label>
+                <div className="login-field-wrap">
+                  <span className="login-field-icon"><MailIcon /></span>
+                  <Field type="email" name="email" placeholder="you@hotel.com"
+                         className="login-input" autoComplete="email" />
+                </div>
+                <ErrorMessage name="email" component="div" className="login-field-error" />
+              </div>
+
+              <div className="login-field">
+                <label className="login-field-label">Password</label>
+                <div className="login-field-wrap">
+                  <span className="login-field-icon"><LockIcon /></span>
+                  <Field type={showPw ? 'text' : 'password'} name="password" placeholder="••••••••"
+                         className="login-input pr-10" autoComplete="current-password" />
+                  <button type="button" className="login-pw-toggle" onClick={() => setShowPw(!showPw)} tabIndex={-1}>
+                    {showPw ? <EyeOffIcon /> : <EyeIcon />}
+                  </button>
+                </div>
+                <ErrorMessage name="password" component="div" className="login-field-error" />
+              </div>
+
+              <div className="login-meta-row">
+                <button type="button" className="login-link" onClick={onForgot}>
+                  Forgot password?
+                </button>
+              </div>
+
+              <button type="submit" disabled={isSubmitting} className="login-submit">
+                {isSubmitting && <span className="login-spinner" />}
+                {isSubmitting ? 'Signing in…' : 'Sign In'}
+              </button>
+            </Form>
+
+            <div className="login-demo-section">
+              <span className="login-demo-label">Demo Accounts — Click to Fill</span>
+              <div className="login-demo-chips">
+                {DEMO_ACCOUNTS.map(({ role, label, email: e, pass }) => (
+                  <button key={role} type="button" className="login-demo-chip"
+                          onClick={() => {
+                            setFieldValue('email', e)
+                            setFieldValue('password', pass)
+                            setError('')
+                          }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </Formik>
+    </>
+  )
+}
+
+export default function LoginPage() {
+  // view: 'login' (with method tabs) | 'forgot'
+  const [view, setView]     = useState('login')
+  const [method, setMethod] = useState('password')   // 'password' | 'otp'
+
+  // Surface a logout reason left by the API client (read once at mount, then clear).
+  const [notice] = useState(() => {
+    const reason = sessionStorage.getItem('qv_logout_reason')
+    if (reason) sessionStorage.removeItem('qv_logout_reason')
+    return reason || ''
+  })
+
+  const title =
+    view === 'forgot' ? 'Reset Password' :
+    method === 'otp'  ? 'Sign In with Code' :
+                        'Sign In'
+
+  return (
+    <div className="login-page" style={{ backgroundImage: `url(${BANNER_BG})` }}>
       <div className="login-overlay" />
 
       <div className="login-brand">
@@ -79,9 +157,7 @@ export default function LoginPage() {
         </p>
 
         <div className="login-brand-pills">
-          {PILLS.map((p) => (
-            <span key={p} className="login-brand-pill">{p}</span>
-          ))}
+          {PILLS.map((p) => (<span key={p} className="login-brand-pill">{p}</span>))}
         </div>
       </div>
 
@@ -89,90 +165,47 @@ export default function LoginPage() {
         <div className="login-card">
           <div className="login-card-top">
             <img src={goldenLogo} alt="Quantum Vorvex" className="login-card-logo" />
-            <div className="login-card-product">
-              Quantum <span>Vorvex</span>
-            </div>
+            <div className="login-card-product">Quantum <span>Vorvex</span></div>
           </div>
 
           <div className="login-card-body">
+            {notice && (
+              <div className="flex items-start gap-2 mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                <span className="shrink-0 mt-0.5 inline-flex"><AlertIcon /></span>
+                <span>{notice}</span>
+              </div>
+            )}
+
             <div className="login-card-title-row">
-              <h2 className="login-card-title">Sign In</h2>
+              <h2 className="login-card-title">{title}</h2>
               <div className="login-status">
                 <span className="login-status-dot" />
                 System Online
               </div>
             </div>
 
-            {error && (
-              <div className="login-error">
-                <span style={{ flexShrink: 0, marginTop: 1, display: 'inline-flex' }}><AlertIcon /></span>
-                {error}
-              </div>
+            {view === 'forgot' ? (
+              <ForgotPasswordForm onBack={() => setView('login')} />
+            ) : (
+              <>
+                <div className="login-tabs">
+                  <button type="button"
+                          className={`login-tab ${method === 'password' ? 'active' : ''}`}
+                          onClick={() => setMethod('password')}>
+                    Password
+                  </button>
+                  <button type="button"
+                          className={`login-tab ${method === 'otp' ? 'active' : ''}`}
+                          onClick={() => setMethod('otp')}>
+                    Email OTP
+                  </button>
+                </div>
+
+                {method === 'password'
+                  ? <PasswordLoginForm onForgot={() => setView('forgot')} />
+                  : <OtpLoginForm />}
+              </>
             )}
-
-            <form onSubmit={handleSubmit}>
-              <div className="login-field">
-                <label className="login-field-label">Email address</label>
-                <div className="login-field-wrap">
-                  <span className="login-field-icon"><MailIcon /></span>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="you@hotel.com"
-                    className="login-input"
-                    autoComplete="email"
-                  />
-                </div>
-              </div>
-
-              <div className="login-field">
-                <label className="login-field-label">Password</label>
-                <div className="login-field-wrap">
-                  <span className="login-field-icon"><LockIcon /></span>
-                  <input
-                    type={showPw ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="••••••••"
-                    className="login-input"
-                    style={{ paddingRight: 40 }}
-                    autoComplete="current-password"
-                  />
-                  <button
-                    type="button"
-                    className="login-pw-toggle"
-                    onClick={() => setShowPw(!showPw)}
-                    tabIndex={-1}
-                  >
-                    {showPw ? <EyeOffIcon /> : <EyeIcon />}
-                  </button>
-                </div>
-              </div>
-
-              <button type="submit" disabled={loading} className="login-submit">
-                {loading && <span className="login-spinner" />}
-                {loading ? 'Signing in…' : 'Sign In'}
-              </button>
-            </form>
-
-            <div className="login-demo-section">
-              <span className="login-demo-label">Demo Accounts — Click to Fill</span>
-              <div className="login-demo-chips">
-                {DEMO_ACCOUNTS.map(({ role, label, email: e, pass }) => (
-                  <button
-                    key={role}
-                    type="button"
-                    className="login-demo-chip"
-                    onClick={() => { setEmail(e); setPassword(pass); setError('') }}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
 
           <div className="login-card-footer">

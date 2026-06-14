@@ -1,64 +1,47 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useStore } from '../../store/useStore'
-
-const PANEL_LABELS = {
-  dashboard:   'Dashboard',
-  rooms:       'Rooms',
-  floorplan:   'Floor Plan',
-  reports:     'Reports',
-  checkin:     'Check-In',
-  guests:      'All Guests',
-  bookings:    'Bookings',
-  documents:   'Documents',
-  food:        'Food Options',
-  billing:     'Billing',
-  settings:    'Settings',
-  maintenance: 'Maintenance',
-  housekeeping:'Housekeeping',
-  staff:       'Staff',
-  channels:    'Channels',
-  calendar:    'Room Calendar',
-  nightaudit:  'Night Audit',
-}
+import { useState, useEffect, useRef } from 'react'
+import { LuMenu, LuSearch, LuBell, LuPlus, LuChevronRight } from 'react-icons/lu'
+import { useAppSelector, useUiActions } from '../../store/hooks'
+import { PANEL_META } from '../../utils/navigation'
 
 const MOCK_NOTIFS = [
-  { id: 1, type: 'danger',  icon: '!', title: 'Overdue Invoice',          msg: 'INV-005 — Kavya Reddy (₹12,096)',        time: '2h ago',  read: false },
-  { id: 2, type: 'warn',    icon: '⚠', title: 'Checkout Due',             msg: 'Sneha Rao — Room 118 due today',          time: '3h ago',  read: false },
-  { id: 3, type: 'info',    icon: 'ℹ', title: 'Maintenance Ticket',       msg: 'Room 105 AC servicing overdue 3 days',    time: '5h ago',  read: false },
-  { id: 4, type: 'success', icon: '✓', title: 'Payment Received',         msg: 'INV-002 — Priya Mehta paid ₹83,440',     time: 'Yesterday', read: true },
-  { id: 5, type: 'info',    icon: 'ℹ', title: 'New Booking',              msg: 'Anjali Singh — Room 103, Apr 9-11',       time: 'Yesterday', read: true },
+  { id: 1, type: 'danger',  icon: '!', title: 'Overdue Invoice',    msg: 'INV-005 — Kavya Reddy (₹12,096)',      time: '2h ago',    read: false },
+  { id: 2, type: 'warn',    icon: '⚠', title: 'Checkout Due',       msg: 'Sneha Rao — Room 118 due today',        time: '3h ago',    read: false },
+  { id: 3, type: 'info',    icon: 'ℹ', title: 'Maintenance Ticket', msg: 'Room 105 AC servicing overdue 3 days',  time: '5h ago',    read: false },
+  { id: 4, type: 'success', icon: '✓', title: 'Payment Received',   msg: 'INV-002 — Priya Mehta paid ₹83,440',    time: 'Yesterday', read: true  },
+  { id: 5, type: 'info',    icon: 'ℹ', title: 'New Booking',        msg: 'Anjali Singh — Room 103, Apr 9-11',     time: 'Yesterday', read: true  },
 ]
 
 const NOTIF_COLORS = {
-  danger:  { bg: 'var(--red-bg)',   text: 'var(--red-text)',   dot: 'var(--red)'   },
-  warn:    { bg: 'var(--amber-bg)', text: 'var(--amber-text)', dot: 'var(--amber)' },
-  info:    { bg: 'var(--blue-bg)',  text: 'var(--blue-text)',  dot: 'var(--blue)'  },
-  success: { bg: 'var(--green-bg)', text: 'var(--green-text)', dot: 'var(--green)' },
+  danger:  { bg: 'var(--red-bg)',   text: 'var(--red-text)'   },
+  warn:    { bg: 'var(--amber-bg)', text: 'var(--amber-text)' },
+  info:    { bg: 'var(--blue-bg)',  text: 'var(--blue-text)'  },
+  success: { bg: 'var(--green-bg)', text: 'var(--green-text)' },
 }
 
-function pad(n) { return String(n).padStart(2, '0') }
-function formatTime(d) { return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}` }
-function formatDate(d) { return d.toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' }) }
+function todayLabel() {
+  return new Date().toLocaleDateString('en-IN', { weekday: 'long', month: 'short', day: 'numeric' })
+}
+
+// Contextual primary action per page — label + the panel whose action it triggers.
+const PRIMARY_ACTIONS = {
+  today:         { label: 'New Booking',   target: 'bookings'      },
+  bookings:      { label: 'New Booking',   target: 'bookings'      },
+  checkin:       { label: 'Check In',      target: 'checkin'       },
+  checkout:      { label: 'Check Out',     target: 'checkout'      },
+  cancellations: { label: 'Cancel Booking', target: 'cancellations' },
+  maintenance:   { label: 'New Ticket',    target: 'maintenance'   },
+}
+const DEFAULT_ACTION = { label: 'New Booking', target: 'bookings' }
 
 export default function Topbar() {
-  const activePanel    = useStore((s) => s.activePanel)
-  const setActivePanel = useStore((s) => s.setActivePanel)
-  const toggleSidebar  = useStore((s) => s.toggleSidebar)
-  const darkMode       = useStore((s) => s.darkMode)
-  const toggleDarkMode = useStore((s) => s.toggleDarkMode)
-  const setSearchOpen  = useStore((s) => s.setSearchOpen)
+  const activePanel = useAppSelector((s) => s.ui.activePanel)
+  const { setActivePanel, toggleSidebar, setSearchOpen, requestPrimaryAction } = useUiActions()
 
-  const [time, setTime]                     = useState(new Date())
-  const [searchFocused, setSearchFocused]   = useState(false)
-  const [searchValue,   setSearchValue]     = useState('')
-  const [notifOpen,     setNotifOpen]       = useState(false)
-  const [notifs,        setNotifs]          = useState(MOCK_NOTIFS)
+  const primaryAction = PRIMARY_ACTIONS[activePanel] || DEFAULT_ACTION
+
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifs,    setNotifs]    = useState(MOCK_NOTIFS)
   const notifRef = useRef(null)
-
-  useEffect(() => {
-    const id = setInterval(() => setTime(new Date()), 1000)
-    return () => clearInterval(id)
-  }, [])
 
   // Close notif panel on outside click
   useEffect(() => {
@@ -69,188 +52,111 @@ export default function Topbar() {
     return () => document.removeEventListener('mousedown', handler)
   }, [notifOpen])
 
-  const handleSearchChange = useCallback((e) => {
-    setSearchValue(e.target.value)
-    setSearchOpen(e.target.value.length > 0)
-  }, [setSearchOpen])
-
-  const unreadCount = notifs.filter(n => !n.read).length
-
+  const unreadCount  = notifs.filter(n => !n.read).length
   const markAllRead  = () => setNotifs(ns => ns.map(n => ({ ...n, read: true })))
   const dismissNotif = (id) => setNotifs(ns => ns.filter(n => n.id !== id))
 
-  const pageTitle = PANEL_LABELS[activePanel] || activePanel
+  const panelMeta = PANEL_META[activePanel]
+  // Fallback for panels outside the nav structure: capitalize the raw id.
+  const pageLabel = panelMeta?.label
+    || activePanel.charAt(0).toUpperCase() + activePanel.slice(1)
+
+  const iconBtnClass = 'bg-transparent border border-line2 rounded-lg w-9 h-9 flex items-center justify-center cursor-pointer text-ink2 shrink-0 transition-all duration-[140ms]'
+  const hoverGold = {
+    onMouseEnter: e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold)' },
+    onMouseLeave: e => { e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.color = 'var(--text2)' },
+  }
 
   return (
-    <div id="topbar" style={{
-      height: 54, minHeight: 54,
-      background: 'var(--surface)',
-      borderBottom: '1px solid var(--border)',
-      display: 'flex', alignItems: 'center',
-      padding: '0 16px', gap: 8, flexShrink: 0,
-      overflow: 'hidden',
-    }}>
+    <div id="topbar" className="h-[60px] min-h-[60px] bg-surface border-b border-line flex items-center px-[18px] gap-2.5 shrink-0">
 
-      {/* Hamburger */}
-      <button onClick={toggleSidebar} className="tb-hamburger" style={{
-        background: 'none',
-        border: '1px solid var(--border)',
-        borderRadius: 6, width: 34, height: 34,
-        alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer', color: 'var(--text2)',
-        flexShrink: 0, fontSize: 16,
-      }} aria-label="Menu">☰</button>
+      {/* Hamburger — mobile only */}
+      <button onClick={toggleSidebar} className={`tb-hamburger ${iconBtnClass}`} aria-label="Menu">
+        <LuMenu size={18} />
+      </button>
 
-      {/* Page title */}
-      <div style={{
-        fontFamily: "'Syne', sans-serif",
-        fontSize: 16, fontWeight: 700,
-        color: 'var(--text)', letterSpacing: '-0.02em',
-        flex: 1, whiteSpace: 'nowrap',
-        overflow: 'hidden', textOverflow: 'ellipsis',
-        minWidth: 0,
-      }}>{pageTitle}</div>
-
-      {/* Status pills */}
-      <div className="tb-pills" style={{ alignItems: 'center', gap: 6, flexShrink: 0 }}>
-        {[
-          { label: '12 available', bg: 'var(--green-bg)',  fg: 'var(--green-text)',  dot: 'var(--green)' },
-          { label: '5 due today',  bg: 'var(--amber-bg)',  fg: 'var(--amber-text)',  dot: 'var(--amber)' },
-          { label: '2 overdue',    bg: 'var(--red-bg)',    fg: 'var(--red-text)',    dot: 'var(--red)'   },
-        ].map(p => (
-          <span key={p.label} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '3px 9px', borderRadius: 20,
-            fontSize: 11.5, fontWeight: 500, whiteSpace: 'nowrap',
-            background: p.bg, color: p.fg,
-          }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: p.dot, display: 'inline-block' }} />
-            {p.label}
-          </span>
-        ))}
+      {/* Breadcrumb (section › page) + today's date — the page renders its own
+          full heading, so the topbar only provides lightweight orientation */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1 whitespace-nowrap overflow-hidden">
+          {panelMeta?.section && (
+            <>
+              <span className="text-[12px] text-ink3 font-medium">{panelMeta.section}</span>
+              <LuChevronRight size={12} className="text-ink3 shrink-0" />
+            </>
+          )}
+          <span className="text-[13px] text-ink font-semibold overflow-hidden text-ellipsis">{pageLabel}</span>
+        </div>
+        <div className="text-[11.5px] text-ink3 font-medium mt-px">
+          {todayLabel()}
+        </div>
       </div>
 
-      {/* Search */}
-      <div className="tb-search" style={{
-        position: 'relative', flexShrink: 0,
-        transition: 'width 0.18s ease',
-        width: searchFocused ? 240 : 180,
-      }}>
-        <span style={{
-          position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)',
-          color: 'var(--text3)', fontSize: 14, pointerEvents: 'none', lineHeight: 1,
-        }}>⌕</span>
-        <input
-          type="text" value={searchValue}
-          onChange={handleSearchChange}
-          onFocus={() => setSearchFocused(true)}
-          onBlur={() => setSearchFocused(false)}
-          placeholder="Search… (Ctrl+K)"
-          style={{
-            width: '100%', paddingLeft: 28, paddingRight: 10,
-            paddingTop: 6, paddingBottom: 6, borderRadius: 20,
-            border: `1px solid ${searchFocused ? 'var(--gold)' : 'var(--border)'}`,
-            background: 'var(--surface2)', color: 'var(--text)',
-            fontSize: 12.5, fontFamily: "'Inter', sans-serif",
-            outline: 'none',
-            boxShadow: searchFocused ? '0 0 0 3px var(--gold-bg)' : 'none',
-            transition: 'border-color 0.14s, box-shadow 0.14s',
-          }}
-        />
-      </div>
+      {/* Search — opens the global Ctrl+K search */}
+      <button onClick={() => setSearchOpen(true)} className={iconBtnClass} {...hoverGold} aria-label="Search" title="Search (Ctrl+K)">
+        <LuSearch size={17} />
+      </button>
 
       {/* Notification bell */}
-      <div ref={notifRef} style={{ position: 'relative', flexShrink: 0 }}>
+      <div ref={notifRef} className="relative shrink-0">
         <button
           onClick={() => setNotifOpen(o => !o)}
-          style={{
-            background: notifOpen ? 'var(--gold-bg)' : 'none',
-            border: `1px solid ${notifOpen ? 'var(--gold)' : 'var(--border2)'}`,
-            borderRadius: 6, width: 34, height: 34,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', color: notifOpen ? 'var(--gold)' : 'var(--text2)',
-            flexShrink: 0, fontSize: 15, transition: 'all 0.14s',
-            position: 'relative',
-          }}
+          className={`relative bg-transparent border rounded-lg w-9 h-9 flex items-center justify-center cursor-pointer shrink-0 transition-all duration-[140ms] ${notifOpen ? 'bg-[var(--gold-bg)] border-gold text-gold' : 'border-line2 text-ink2'}`}
           onMouseEnter={e => { if (!notifOpen) { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold)' } }}
           onMouseLeave={e => { if (!notifOpen) { e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.color = 'var(--text2)' } }}
           aria-label="Notifications"
         >
-          🔔
+          <LuBell size={17} />
           {unreadCount > 0 && (
-            <span style={{
-              position: 'absolute', top: 4, right: 4,
-              width: 8, height: 8, borderRadius: '50%',
-              background: 'var(--red)', border: '2px solid var(--surface)',
-            }} />
+            <span className="absolute top-[5px] right-[5px] min-w-[15px] h-[15px] px-[3px] rounded-lg bg-danger text-[#fff] text-[9px] font-bold flex items-center justify-center border-2 border-surface leading-none">{unreadCount}</span>
           )}
         </button>
 
         {/* Notification dropdown */}
         {notifOpen && (
-          <div style={{
-            position: 'absolute', top: 40, right: 0,
-            width: 340, background: 'var(--surface)',
-            border: '1px solid var(--border)',
-            borderRadius: 10, boxShadow: 'var(--shadow-md)',
-            zIndex: 500, overflow: 'hidden',
-          }}>
-            {/* Header */}
-            <div style={{
-              padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              borderBottom: '1px solid var(--border)', background: 'var(--surface)',
-            }}>
+          <div className="absolute top-[44px] right-0 w-[340px] bg-surface border border-line rounded-[10px] shadow-[var(--shadow-md)] z-[500] overflow-hidden">
+            <div className="px-4 py-3 flex justify-between items-center border-b border-line">
               <div>
-                <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Notifications</span>
+                <span className="t-title">Notifications</span>
                 {unreadCount > 0 && (
-                  <span style={{ marginLeft: 8, background: 'var(--red-bg)', color: 'var(--red-text)', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 10 }}>{unreadCount} new</span>
+                  <span className="t-label ml-2 bg-danger-bg text-danger-text px-[7px] py-0.5 rounded-[10px]">{unreadCount} new</span>
                 )}
               </div>
               {unreadCount > 0 && (
-                <button onClick={markAllRead} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11.5, color: 'var(--gold)', fontWeight: 600 }}>
+                <button onClick={markAllRead} className="bg-transparent border-none cursor-pointer text-[11.5px] text-gold font-semibold">
                   Mark all read
                 </button>
               )}
             </div>
 
-            {/* Notifications list */}
-            <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+            <div className="max-h-[360px] overflow-y-auto">
               {notifs.length === 0 ? (
-                <div style={{ padding: '32px 16px', textAlign: 'center', color: 'var(--text3)', fontSize: 13 }}>All caught up ✓</div>
+                <div className="t-sm px-4 py-8 text-center text-ink3">All caught up ✓</div>
               ) : notifs.map(n => {
                 const colors = NOTIF_COLORS[n.type] || NOTIF_COLORS.info
                 return (
-                  <div key={n.id} style={{
-                    padding: '12px 16px',
-                    borderBottom: '1px solid var(--border)',
-                    background: n.read ? 'transparent' : 'var(--surface2)',
-                    display: 'flex', gap: 10, alignItems: 'flex-start',
-                    transition: 'background 0.1s',
-                  }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%',
-                      background: colors.bg, color: colors.text,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: 12, fontWeight: 700, flexShrink: 0,
-                    }}>{n.icon}</div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12.5, fontWeight: n.read ? 500 : 700, color: 'var(--text)', marginBottom: 2 }}>{n.title}</div>
-                      <div style={{ fontSize: 11.5, color: 'var(--text3)', lineHeight: 1.4 }}>{n.msg}</div>
-                      <div style={{ fontSize: 10.5, color: 'var(--text3)', marginTop: 4 }}>{n.time}</div>
+                  <div
+                    key={n.id}
+                    className={`px-4 py-3 border-b border-line flex gap-2.5 items-start ${n.read ? 'bg-transparent' : 'bg-surface2'}`}
+                  >
+                    <div className="t-xs w-7 h-7 rounded-full flex items-center justify-center font-bold shrink-0" style={{ background: colors.bg, color: colors.text }}>{n.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-[12.5px] text-ink mb-0.5 ${n.read ? 'font-medium' : 'font-bold'}`}>{n.title}</div>
+                      <div className="text-[11.5px] text-ink3 leading-[1.4]">{n.msg}</div>
+                      <div className="text-[10.5px] text-ink3 mt-1">{n.time}</div>
                     </div>
                     <button
                       onClick={() => dismissNotif(n.id)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 14, padding: 0, flexShrink: 0, lineHeight: 1 }}
+                      className="t-body bg-transparent border-none cursor-pointer text-ink3 p-0 shrink-0 leading-none"
                     >×</button>
                   </div>
                 )
               })}
             </div>
 
-            {/* Footer */}
-            <div style={{ padding: '10px 16px', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
-              <button onClick={() => { setNotifOpen(false); setActivePanel('dashboard') }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--gold)', fontWeight: 600 }}>
+            <div className="px-4 py-2.5 border-t border-line text-center">
+              <button onClick={() => { setNotifOpen(false); setActivePanel('today') }}
+                className="t-xs bg-transparent border-none cursor-pointer text-gold font-semibold">
                 View all activity →
               </button>
             </div>
@@ -258,32 +164,9 @@ export default function Topbar() {
         )}
       </div>
 
-      {/* Dark mode toggle */}
-      <button onClick={toggleDarkMode} style={{
-        background: 'none', border: '1px solid var(--border2)',
-        borderRadius: 6, width: 34, height: 34,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer', color: 'var(--text2)',
-        flexShrink: 0, fontSize: 15, transition: 'all 0.14s',
-      }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold)' }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.color = 'var(--text2)' }}
-        title={darkMode ? 'Light mode' : 'Dark mode'}
-      >{darkMode ? '☀' : '🌙'}</button>
-
-      {/* Live clock */}
-      <div className="tb-clock" style={{ flexShrink: 0, textAlign: 'right', minWidth: 68 }}>
-        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 500, color: 'var(--text)', lineHeight: 1.3 }}>
-          {formatTime(time)}
-        </div>
-        <div style={{ fontFamily: "'Inter', sans-serif", fontSize: 10, color: 'var(--text3)', lineHeight: 1.3 }}>
-          {formatDate(time)}
-        </div>
-      </div>
-
-      {/* Check-In CTA */}
-      <button onClick={() => setActivePanel('checkin')} className="btn btn-primary btn-sm" style={{ flexShrink: 0 }}>
-        +<span className="tb-checkin-text"> Check-In</span>
+      {/* Primary action — contextual to the current page */}
+      <button onClick={() => requestPrimaryAction(primaryAction.target)} className="btn btn-primary btn-sm shrink-0 gap-[5px]">
+        <LuPlus size={15} /><span className="tb-checkin-text">{primaryAction.label}</span>
       </button>
     </div>
   )

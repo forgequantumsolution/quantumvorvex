@@ -1,26 +1,13 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { Formik, Form } from 'formik'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
+import FormikField from '../../ui/FormikField'
 import { useToast } from '../../../hooks/useToast'
+import { staffSchema } from '../../../validation/staffSchema'
+import { staffApi } from '../../../api/client'
 import { formatDateTime, timeAgo } from '../../../utils/format'
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_STAFF = [
-  { id: '1', name: 'Ramesh Gupta',  phone: '9876543210', email: 'ramesh@hotel.com', role: 'super_admin',  status: 'active',   lastLogin: '2026-04-06T08:30:00Z', sessions: 1 },
-  { id: '2', name: 'Priya Sharma',  phone: '9123456789', email: 'priya@hotel.com',  role: 'manager',      status: 'active',   lastLogin: '2026-04-06T07:15:00Z', sessions: 1 },
-  { id: '3', name: 'Ankit Verma',   phone: '9988776655', email: 'ankit@hotel.com',  role: 'front_desk',   status: 'active',   lastLogin: '2026-04-05T20:00:00Z', sessions: 0 },
-  { id: '4', name: 'Sunita Rao',    phone: '9654321098', email: 'sunita@hotel.com', role: 'housekeeping', status: 'active',   lastLogin: '2026-04-06T06:00:00Z', sessions: 1 },
-  { id: '5', name: 'Deepak CA',     phone: '9543210987', email: 'deepak@hotel.com', role: 'accountant',   status: 'inactive', lastLogin: '2026-03-20T10:00:00Z', sessions: 0 },
-]
-
-const ACTIVITY_LOGS = [
-  { id: '1', staffId: '1', staff: 'Ramesh Gupta',  action: 'Guest Checked In',    module: 'Check-In', record: 'DOC-0001',      ip: '192.168.1.1', createdAt: '2026-04-06T08:45:00Z' },
-  { id: '2', staffId: '2', staff: 'Priya Sharma',  action: 'Invoice Generated',   module: 'Billing',  record: 'INV-006',       ip: '192.168.1.2', createdAt: '2026-04-06T08:30:00Z' },
-  { id: '3', staffId: '3', staff: 'Ankit Verma',   action: 'Room Status Updated', module: 'Rooms',    record: 'Room 104',      ip: '192.168.1.3', createdAt: '2026-04-05T22:00:00Z' },
-  { id: '4', staffId: '1', staff: 'Ramesh Gupta',  action: 'Settings Updated',    module: 'Settings', record: 'Tax & Pricing', ip: '192.168.1.1', createdAt: '2026-04-05T15:00:00Z' },
-  { id: '5', staffId: '2', staff: 'Priya Sharma',  action: 'Guest Checked Out',   module: 'Guests',   record: 'DOC-0005',      ip: '192.168.1.2', createdAt: '2026-04-05T12:30:00Z' },
-]
 
 const ROLE_META = {
   super_admin:  { label: 'Super Admin', badgeType: 'gold'   },
@@ -93,14 +80,14 @@ function generatePassword() {
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 function Avatar({ name, role, size = 34 }) {
   return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%',
-      background: ROLE_AVATAR_COLORS[role] || '#6b7280',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontFamily: "'Syne', sans-serif", fontWeight: 700,
-      fontSize: size * 0.35, color: '#fff', flexShrink: 0,
-      letterSpacing: '0.02em',
-    }}>
+    <div
+      className="rounded-full flex items-center justify-center font-bold text-white shrink-0 tracking-[0.02em]"
+      style={{
+        width: size, height: size,
+        background: ROLE_AVATAR_COLORS[role] || '#6b7280',
+        fontSize: size * 0.35,
+      }}
+    >
       {getInitials(name)}
     </div>
   )
@@ -109,20 +96,15 @@ function Avatar({ name, role, size = 34 }) {
 // ─── Add / Edit Staff Modal ───────────────────────────────────────────────────
 function StaffModal({ isOpen, onClose, staff, onSave }) {
   const isEdit = !!staff
-  const [form, setForm] = useState(staff ? {
-    name: staff.name, phone: staff.phone, email: staff.email, role: staff.role,
-  } : { name: '', phone: '', email: '', role: 'front_desk' })
   const [generatedPwd, setGeneratedPwd] = useState(() => isEdit ? '' : generatePassword())
   const [copied, setCopied] = useState(false)
-  const addToast = useToast()
 
-  function handleChange(field, val) {
-    setForm(f => ({ ...f, [field]: val }))
-  }
+  const initialValues = staff
+    ? { name: staff.name, phone: staff.phone, email: staff.email, role: staff.role }
+    : { name: '', phone: '', email: '', role: 'front_desk' }
 
   function handleResetPassword() {
-    const pwd = generatePassword()
-    setGeneratedPwd(pwd)
+    setGeneratedPwd(generatePassword())
   }
 
   function handleCopy(pwd) {
@@ -132,105 +114,74 @@ function StaffModal({ isOpen, onClose, staff, onSave }) {
     })
   }
 
-  function handleSubmit() {
-    if (!form.name.trim() || !form.email.trim()) {
-      addToast({ type: 'error', message: 'Name and email are required.' })
-      return
-    }
-    onSave({ ...form })
-  }
-
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={isEdit ? `Edit Staff — ${staff.name}` : '+ Add Staff Member'}
-      footer={
-        <>
-          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleSubmit}>
-            {isEdit ? 'Save Changes' : 'Create Staff'}
-          </button>
-        </>
-      }
+    <Formik
+      initialValues={initialValues}
+      validationSchema={staffSchema}
+      enableReinitialize
+      onSubmit={(values) => onSave({ ...values, ...(generatedPwd ? { password: generatedPwd } : {}) })}
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <div>
-          <label className="form-label">Full Name</label>
-          <input
-            className="form-input"
-            value={form.name}
-            onChange={e => handleChange('name', e.target.value)}
-            placeholder="e.g. Ramesh Gupta"
-          />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <label className="form-label">Phone</label>
-            <input
-              className="form-input"
-              value={form.phone}
-              onChange={e => handleChange('phone', e.target.value)}
-              placeholder="10-digit mobile"
-            />
-          </div>
-          <div>
-            <label className="form-label">Email</label>
-            <input
-              className="form-input"
-              type="email"
-              value={form.email}
-              onChange={e => handleChange('email', e.target.value)}
-              placeholder="staff@hotel.com"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="form-label">Role</label>
-          <select
-            className="form-select"
-            value={form.role}
-            onChange={e => handleChange('role', e.target.value)}
-          >
-            {Object.entries(ROLE_META).map(([key, { label }]) => (
-              <option key={key} value={key}>{label}</option>
-            ))}
-          </select>
-        </div>
+      {({ submitForm, isSubmitting }) => (
+        <Modal
+          isOpen={isOpen}
+          onClose={onClose}
+          title={isEdit ? `Edit Staff — ${staff.name}` : '+ Add Staff Member'}
+          footer={
+            <>
+              <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+              <button className="btn btn-primary" onClick={submitForm} disabled={isSubmitting}>
+                {isEdit ? 'Save Changes' : 'Create Staff'}
+              </button>
+            </>
+          }
+        >
+          <Form className="flex flex-col gap-3.5">
+            <FormikField name="name" label="Full Name" required placeholder="e.g. Ramesh Gupta" />
+            <div className="grid grid-cols-2 gap-3">
+              <FormikField name="phone" label="Phone" required placeholder="10-digit mobile" />
+              <FormikField name="email" label="Email" type="email" required placeholder="staff@hotel.com" />
+            </div>
+            <FormikField name="role" label="Role" required as="select">
+              {Object.entries(ROLE_META).map(([key, { label }]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </FormikField>
 
-        {/* Password section */}
-        <div>
-          <label className="form-label">{isEdit ? 'Reset Password' : 'Auto-Generated Password'}</label>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input
-              className="form-input"
-              readOnly
-              value={generatedPwd || '••••••••••'}
-              style={{ fontFamily: 'monospace', flex: 1 }}
-            />
-            {isEdit && (
-              <button className="btn btn-outline btn-sm" onClick={handleResetPassword} type="button">
-                Regenerate
-              </button>
-            )}
-            {generatedPwd && (
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={() => handleCopy(generatedPwd)}
-                type="button"
-              >
-                {copied ? '✓ Copied' : 'Copy'}
-              </button>
-            )}
-          </div>
-          {!isEdit && (
-            <p style={{ margin: '5px 0 0', fontSize: 11, color: 'var(--text3)' }}>
-              Share this password with the staff member securely. They can change it after first login.
-            </p>
-          )}
-        </div>
-      </div>
-    </Modal>
+            {/* Password section */}
+            <div>
+              <label className="form-label">{isEdit ? 'Reset Password' : 'Auto-Generated Password'}</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  className="form-input flex-1"
+                  readOnly
+                  value={generatedPwd || '••••••••••'}
+                  style={{ fontFamily: 'var(--font-mono)' }}
+                />
+                {isEdit && (
+                  <button className="btn btn-outline btn-sm" onClick={handleResetPassword} type="button">
+                    Regenerate
+                  </button>
+                )}
+                {generatedPwd && (
+                  <button
+                    className="btn btn-outline btn-sm"
+                    onClick={() => handleCopy(generatedPwd)}
+                    type="button"
+                  >
+                    {copied ? '✓ Copied' : 'Copy'}
+                  </button>
+                )}
+              </div>
+              {!isEdit && (
+                <p className="mt-[5px] mb-0 text-[11px] text-ink3">
+                  Share this password with the staff member securely. They can change it after first login.
+                </p>
+              )}
+            </div>
+          </Form>
+        </Modal>
+      )}
+    </Formik>
   )
 }
 
@@ -248,9 +199,9 @@ function ForceLogoutModal({ isOpen, staff, onClose, onConfirm }) {
         </>
       }
     >
-      <p style={{ margin: 0, color: 'var(--text2)', lineHeight: 1.6 }}>
+      <p className="m-0 text-ink2 leading-[1.6]">
         Are you sure you want to force logout{' '}
-        <strong style={{ color: 'var(--text)' }}>{staff?.name}</strong>?
+        <strong className="text-ink">{staff?.name}</strong>?
         Their active session will be immediately terminated.
       </p>
     </Modal>
@@ -261,7 +212,7 @@ function ForceLogoutModal({ isOpen, staff, onClose, onConfirm }) {
 function AllStaffTab({ staff, onAdd, onEdit, onForceLogout, onToggleStatus }) {
   return (
     <div>
-      <div style={{ overflowX: 'auto' }}>
+      <div className="overflow-x-auto">
         <table>
           <thead>
             <tr>
@@ -278,19 +229,19 @@ function AllStaffTab({ staff, onAdd, onEdit, onForceLogout, onToggleStatus }) {
             {staff.map(member => (
               <tr key={member.id}>
                 <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div className="flex items-center gap-2.5">
                     <Avatar name={member.name} role={member.role} />
                     <div>
-                      <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: 13 }}>
+                      <div className="t-title">
                         {member.name}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>
+                      <div className="text-[11px] text-ink3 mt-px">
                         {member.email}
                       </div>
                     </div>
                   </div>
                 </td>
-                <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{member.phone}</td>
+                <td className="text-[12px]" style={{ fontFamily: 'var(--font-mono)' }}>{member.phone}</td>
                 <td>
                   <Badge type={ROLE_META[member.role]?.badgeType || 'grey'}>
                     {ROLE_META[member.role]?.label || member.role}
@@ -301,23 +252,22 @@ function AllStaffTab({ staff, onAdd, onEdit, onForceLogout, onToggleStatus }) {
                     {member.status === 'active' ? 'Active' : 'Inactive'}
                   </Badge>
                 </td>
-                <td style={{ fontSize: 12, color: 'var(--text2)' }}>
+                <td className="t-xs">
                   {timeAgo(member.lastLogin)}
                 </td>
-                <td style={{ fontFamily: 'monospace', fontSize: 12, textAlign: 'center' }}>
-                  <span style={{
-                    background: member.sessions > 0 ? 'var(--green-bg)' : 'var(--surface2)',
-                    color: member.sessions > 0 ? 'var(--green-text)' : 'var(--text3)',
-                    padding: '2px 8px',
-                    borderRadius: 4,
-                    fontSize: 11,
-                    fontWeight: 600,
-                  }}>
+                <td className="text-[12px] text-center" style={{ fontFamily: 'var(--font-mono)' }}>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                      member.sessions > 0
+                        ? 'bg-success-bg text-success-text'
+                        : 'bg-surface2 text-ink3'
+                    }`}
+                  >
                     {member.sessions}
                   </span>
                 </td>
                 <td>
-                  <div style={{ display: 'flex', gap: 5, flexWrap: 'nowrap' }}>
+                  <div className="flex gap-[5px] flex-nowrap">
                     <button className="btn btn-xs btn-outline" onClick={() => onEdit(member)}>
                       Edit
                     </button>
@@ -383,11 +333,8 @@ function ActivityLogTab({ logs, staffList }) {
   return (
     <div>
       {/* Filter Row */}
-      <div style={{
-        display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end',
-        marginBottom: 16,
-      }}>
-        <div style={{ flex: '1 1 160px' }}>
+      <div className="flex gap-2.5 flex-wrap items-end mb-4">
+        <div className="flex-[1_1_160px]">
           <label className="form-label">Staff</label>
           <select className="form-select" value={filterStaff} onChange={e => setFilterStaff(e.target.value)}>
             <option value="">All Staff</option>
@@ -396,14 +343,14 @@ function ActivityLogTab({ logs, staffList }) {
             ))}
           </select>
         </div>
-        <div style={{ flex: '1 1 140px' }}>
+        <div className="flex-[1_1_140px]">
           <label className="form-label">Module</label>
           <select className="form-select" value={filterModule} onChange={e => setFilterModule(e.target.value)}>
             <option value="">All Modules</option>
             {uniqueModules.map(m => <option key={m} value={m}>{m}</option>)}
           </select>
         </div>
-        <div style={{ flex: '1 1 130px' }}>
+        <div className="flex-[1_1_130px]">
           <label className="form-label">From</label>
           <input
             type="date"
@@ -412,7 +359,7 @@ function ActivityLogTab({ logs, staffList }) {
             onChange={e => setFilterFrom(e.target.value)}
           />
         </div>
-        <div style={{ flex: '1 1 130px' }}>
+        <div className="flex-[1_1_130px]">
           <label className="form-label">To</label>
           <input
             type="date"
@@ -432,7 +379,7 @@ function ActivityLogTab({ logs, staffList }) {
       {filtered.length === 0 ? (
         <div className="empty-state">No activity logs match the selected filters.</div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <div className="overflow-x-auto">
           <table>
             <thead>
               <tr>
@@ -447,18 +394,18 @@ function ActivityLogTab({ logs, staffList }) {
             <tbody>
               {filtered.map(log => (
                 <tr key={log.id}>
-                  <td style={{ fontSize: 12, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                  <td className="t-xs whitespace-nowrap">
                     {formatDateTime(log.createdAt)}
                   </td>
-                  <td style={{ fontWeight: 600, fontSize: 13 }}>{log.staff}</td>
-                  <td style={{ fontSize: 13 }}>{log.action}</td>
+                  <td className="t-title">{log.staff}</td>
+                  <td className="t-sm">{log.action}</td>
                   <td>
                     <Badge type={MODULE_BADGE_COLORS[log.module] || 'grey'}>
                       {log.module}
                     </Badge>
                   </td>
-                  <td style={{ fontSize: 12 }}>{log.record}</td>
-                  <td style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text3)' }}>
+                  <td className="t-xs">{log.record}</td>
+                  <td className="text-[11px] text-ink3" style={{ fontFamily: 'var(--font-mono)' }}>
                     {log.ip}
                   </td>
                 </tr>
@@ -474,30 +421,60 @@ function ActivityLogTab({ logs, staffList }) {
 // ─── Permissions Tab ──────────────────────────────────────────────────────────
 function PermissionsTab() {
   const [perms, setPerms] = useState(DEFAULT_PERMISSIONS)
+  const [saving, setSaving] = useState(false)
   const addToast = useToast()
   const roles = Object.keys(ROLE_META)
+
+  // Load saved permissions and overlay them on the sensible defaults.
+  useEffect(() => {
+    staffApi.getPermissions()
+      .then(({ data }) => {
+        const rows = Array.isArray(data) ? data : (data.permissions || [])
+        if (!rows.length) return
+        setPerms(prev => {
+          const next = structuredClone(prev)
+          for (const { role, module: mod, level } of rows) {
+            if (!next[role]) next[role] = {}
+            next[role][mod] = level
+          }
+          return next
+        })
+      })
+      .catch(() => { /* fall back to defaults */ })
+  }, [])
 
   function handleChange(role, mod, val) {
     setPerms(p => ({ ...p, [role]: { ...p[role], [mod]: val } }))
   }
 
-  function handleSave() {
-    addToast({ type: 'success', message: 'Permissions saved successfully.' })
+  async function handleSave() {
+    setSaving(true)
+    const permissions = roles.flatMap(role =>
+      MODULES_LIST.map(mod => ({ role, module: mod, level: perms[role]?.[mod] || '—' })),
+    )
+    try {
+      await staffApi.updatePermissions({ permissions })
+      addToast('Permissions saved successfully.', 'success')
+    } catch {
+      addToast('Could not save permissions.', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <div>
-      <p style={{ margin: '0 0 16px', color: 'var(--text2)', fontSize: 13 }}>
+      <p className="t-sm mb-4 mt-0 text-ink2">
         Configure what each role can access across all modules.
       </p>
 
-      <div style={{ overflowX: 'auto' }}>
+      <div className="overflow-x-auto">
         <table>
           <thead>
             <tr>
-              <th style={{ minWidth: 140 }}>Module</th>
+              <th className="min-w-[140px]">Module</th>
               {roles.map(role => (
-                <th key={role} style={{ minWidth: 120, textAlign: 'center' }}>
+                <th key={role} className="min-w-[120px] text-center">
                   <Badge type={ROLE_META[role].badgeType}>
                     {ROLE_META[role].label}
                   </Badge>
@@ -508,12 +485,11 @@ function PermissionsTab() {
           <tbody>
             {MODULES_LIST.map(mod => (
               <tr key={mod}>
-                <td style={{ fontWeight: 600, fontSize: 13 }}>{mod}</td>
+                <td className="t-title">{mod}</td>
                 {roles.map(role => (
-                  <td key={role} style={{ textAlign: 'center', padding: '6px 8px' }}>
+                  <td key={role} className="text-center px-2 py-1.5">
                     <select
-                      className="form-select"
-                      style={{ fontSize: 12, padding: '4px 6px', minWidth: 80, textAlign: 'center' }}
+                      className="form-select t-xs px-1.5 py-1 min-w-[80px] text-center"
                       value={perms[role]?.[mod] || '—'}
                       onChange={e => handleChange(role, mod, e.target.value)}
                     >
@@ -529,9 +505,9 @@ function PermissionsTab() {
         </table>
       </div>
 
-      <div style={{ marginTop: 20, display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="btn btn-primary" onClick={handleSave}>
-          Save Permissions
+      <div className="mt-5 flex justify-end">
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving…' : 'Save Permissions'}
         </button>
       </div>
     </div>
@@ -541,44 +517,89 @@ function PermissionsTab() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Staff() {
   const [activeTab, setActiveTab] = useState('staff')
-  const [staffList, setStaffList] = useState(MOCK_STAFF)
+  const [staffList, setStaffList] = useState([])
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingStaff, setEditingStaff] = useState(null)
   const [forceLogoutTarget, setForceLogoutTarget] = useState(null)
   const addToast = useToast()
 
-  function handleAddSave(form) {
-    const newMember = {
-      id: String(Date.now()),
-      ...form,
-      status: 'active',
-      lastLogin: null,
-      sessions: 0,
+  const loadStaff = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const { data } = await staffApi.getAll()
+      setStaffList(Array.isArray(data) ? data : (data.staff || []))
+    } catch {
+      setError('Could not load staff. Make sure the backend is running.')
+    } finally {
+      setLoading(false)
     }
-    setStaffList(s => [...s, newMember])
-    setShowAddModal(false)
-    addToast({ type: 'success', message: `${form.name} added to staff.` })
+  }, [])
+
+  const loadActivity = useCallback(async () => {
+    try {
+      const { data } = await staffApi.getActivity()
+      const rows = Array.isArray(data) ? data : (data.logs || [])
+      setLogs(rows.map(l => ({
+        id: l.id,
+        staffId: l.staffId,
+        staff: l.staff?.name || '—',
+        action: l.action,
+        module: l.module,
+        record: l.recordId || l.detail || '—',
+        ip: l.ipAddress || '—',
+        createdAt: l.createdAt,
+      })))
+    } catch {
+      /* activity is non-critical */
+    }
+  }, [])
+
+  useEffect(() => { loadStaff(); loadActivity() }, [loadStaff, loadActivity])
+
+  async function handleAddSave(form) {
+    try {
+      await staffApi.create(form)
+      setShowAddModal(false)
+      addToast(`${form.name} added to staff.`, 'success')
+      loadStaff()
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Could not add staff member.', 'error')
+    }
   }
 
-  function handleEditSave(form) {
-    setStaffList(s => s.map(m => m.id === editingStaff.id ? { ...m, ...form } : m))
-    setEditingStaff(null)
-    addToast({ type: 'success', message: 'Staff details updated.' })
+  async function handleEditSave(form) {
+    const id = editingStaff.id
+    try {
+      await staffApi.update(id, form)
+      setEditingStaff(null)
+      addToast('Staff details updated.', 'success')
+      loadStaff()
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Could not update staff member.', 'error')
+    }
   }
 
   function handleForceLogout() {
+    // No server-side session store yet — clear the local indicator only.
     setStaffList(s => s.map(m => m.id === forceLogoutTarget.id ? { ...m, sessions: 0 } : m))
-    addToast({ type: 'success', message: `Session terminated for ${forceLogoutTarget.name}.` })
+    addToast(`Session terminated for ${forceLogoutTarget.name}.`, 'success')
     setForceLogoutTarget(null)
   }
 
-  function handleToggleStatus(member) {
+  async function handleToggleStatus(member) {
     const newStatus = member.status === 'active' ? 'inactive' : 'active'
+    const prev = staffList
     setStaffList(s => s.map(m => m.id === member.id ? { ...m, status: newStatus } : m))
-    addToast({
-      type: 'success',
-      message: `${member.name} has been ${newStatus === 'active' ? 'reactivated' : 'deactivated'}.`,
-    })
+    try {
+      await staffApi.update(member.id, { status: newStatus })
+      addToast(`${member.name} has been ${newStatus === 'active' ? 'reactivated' : 'deactivated'}.`, 'success')
+    } catch {
+      setStaffList(prev)
+      addToast('Could not update status.', 'error')
+    }
   }
 
   const tabs = [
@@ -590,18 +611,12 @@ export default function Staff() {
   return (
     <div>
       {/* Page Header */}
-      <div style={{
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-        marginBottom: 20, gap: 12, flexWrap: 'wrap',
-      }}>
+      <div className="flex items-start justify-between mb-5 gap-3 flex-wrap">
         <div>
-          <h1 style={{
-            margin: 0, fontFamily: "'Syne', sans-serif", fontSize: 22,
-            fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em',
-          }}>
+          <h1 className="t-h1 m-0 tracking-[-0.02em]">
             👤 Staff Management
           </h1>
-          <p style={{ margin: '3px 0 0', color: 'var(--text3)', fontSize: 13 }}>
+          <p className="t-sm mt-[3px] mb-0 text-ink3">
             Team accounts &amp; permissions
           </p>
         </div>
@@ -609,6 +624,15 @@ export default function Staff() {
           + Add Staff
         </button>
       </div>
+
+      {error && (
+        <div className="t-sm mb-4 px-[14px] py-2.5 rounded-lg bg-danger-bg text-danger-text">
+          {error}
+        </div>
+      )}
+      {loading && staffList.length === 0 && !error && (
+        <p className="t-sm text-ink3 mb-3">Loading staff…</p>
+      )}
 
       {/* Tabs */}
       <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab}>
@@ -622,7 +646,7 @@ export default function Staff() {
           />
         </div>
         <div data-tab-id="activity">
-          <ActivityLogTab logs={ACTIVITY_LOGS} staffList={staffList} />
+          <ActivityLogTab logs={logs} staffList={staffList} />
         </div>
         <div data-tab-id="permissions">
           <PermissionsTab />

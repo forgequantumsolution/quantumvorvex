@@ -51,12 +51,9 @@ const INVOICES = [
   { id: uid('inv5'), invoiceNumber: 'INV-2026-005', guestId: uid('g6'), guestName: 'Kavya Reddy',      roomNumber: '101', stayType: 'daily',   period: '5 days',   rentAmount: 9000,  foodAmount: 1500, amenitiesAmount: 300, gstRate: 12, gstAmount: 1296, totalAmount: 12096, status: 'overdue', createdAt: d(30) },
 ]
 
-const BOOKINGS = [
-  { id: uid('b1'), guestName: 'Deepak Nair',    phone: '9812345678', roomNumber: '301', roomType: 'Executive', checkIn: d(-2), checkOut: d(-7),  adults: 2, children: 0, status: 'confirmed', advance: 5000,  source: 'Direct',   createdAt: d(5) },
-  { id: uid('b2'), guestName: 'Anjali Singh',   phone: '9823456789', roomNumber: '103', roomType: 'Standard',  checkIn: d(-1), checkOut: d(-3),  adults: 1, children: 0, status: 'confirmed', advance: 2000,  source: 'OTA',      createdAt: d(3) },
-  { id: uid('b3'), guestName: 'Farhan Ahmed',   phone: '9834567890', roomNumber: '201', roomType: 'Deluxe',    checkIn: d(-5), checkOut: d(-10), adults: 2, children: 1, status: 'pending',   advance: 0,     source: 'Phone',    createdAt: d(2) },
-  { id: uid('b4'), guestName: 'Neha Joshi',     phone: '9845678901', roomNumber: '302', roomType: 'Executive', checkIn: d(-7), checkOut: d(-14), adults: 2, children: 0, status: 'confirmed', advance: 10000, source: 'Website',  createdAt: d(1) },
-]
+// Seed booking data removed — bookings now come from the real API/database.
+// (Only used if VITE_MOCK=true; left empty so no demo bookings ever appear.)
+const BOOKINGS = []
 
 const NOTIFICATIONS = [
   { id: uid('n1'), type: 'warn',    title: 'Room 105 Maintenance Due',  message: 'AC servicing overdue by 3 days.',          createdAt: d(0), dismissed: false },
@@ -78,19 +75,39 @@ const FOOD_ORDERS = [
   { id: uid('fo3'), guestName: 'Rajesh Kumar', roomNumber: '202', planName: 'No Meals',        date: d(0), status: 'n/a' },
 ]
 
-const SETTINGS = {
-  hotelName: 'Quantum Vorvex',
+// Shaped to match the real GET /settings response: a Hotel record plus the
+// related RoomType / FoodPlan / Amenity collections.
+const SETTINGS_HOTEL = {
+  id: uid('hotel'),
+  name: 'Quantum Vorvex',
   ownerName: 'Ramesh Gupta',
   phone: '+91 98765 43210',
   email: 'contact@quantumvorvex.com',
   address: '12, MG Road, Bengaluru, Karnataka 560001',
   gstin: '29AADCB2230M1ZP',
-  checkInTime: '12:00',
-  checkOutTime: '11:00',
-  currency: 'INR',
-  taxRate: 12,
+  licenseNo: 'KA-2024-HOTEL-001',
   logoUrl: null,
+  gstRate: 12,
+  gstType: 'CGST+SGST',
+  gstApplyOn: 'All',
+  lateFeeRate: 5,
+  gracePeriod: 3,
 }
+
+const SETTINGS_ROOM_TYPES = [
+  { id: uid('rt'), name: 'Single', dailyRate: 500,  monthlyRate: 9000,  peakDailyRate: 700,  peakMonthlyRate: 13000, maxOccupancy: 1 },
+  { id: uid('rt'), name: 'Double', dailyRate: 800,  monthlyRate: 14000, peakDailyRate: 1100, peakMonthlyRate: 20000, maxOccupancy: 2 },
+]
+
+const SETTINGS_FOOD_PLANS = [
+  { id: uid('fp'), name: 'Breakfast Only', oneTimeRate: 120, weeklyRate: 700,  monthlyRate: 2500, description: 'Morning meal' },
+  { id: uid('fp'), name: 'All Meals',      oneTimeRate: 350, weeklyRate: 2100, monthlyRate: 8000, description: 'Full board'    },
+]
+
+const SETTINGS_AMENITIES = [
+  { id: uid('am'), name: 'Mini Fridge',     dailyRate: 50, monthlyRate: 800,  chargeable: true },
+  { id: uid('am'), name: 'Washing Machine', dailyRate: 80, monthlyRate: 1200, chargeable: true },
+]
 
 const DOCUMENTS = [
   { id: uid('d1'), guestId: uid('g1'), guestName: 'Anil Sharma',  type: 'Aadhaar', fileName: 'aadhaar_anil.pdf',  verified: true,  uploadedAt: d(3) },
@@ -206,7 +223,7 @@ export async function getMockResponse(method, url) {
 
   // Bookings
   if (path === '/bookings' && m === 'get')  return { bookings: BOOKINGS, total: BOOKINGS.length }
-  if (path === '/bookings' && m === 'post') return { booking: BOOKINGS[0], message: 'Booking created.' }
+  if (path === '/bookings' && m === 'post') return { booking: { id: uid('bnew'), status: 'Confirmed' }, message: 'Booking created.' }
   if (path.match(/^\/bookings\/[^/]+$/) && m === 'put') return { booking: BOOKINGS[0], message: 'Updated.' }
 
   // Documents
@@ -225,8 +242,13 @@ export async function getMockResponse(method, url) {
   if (path === '/reports/export/csv') return new Blob(['mock,csv,data'], { type: 'text/csv' })
 
   // Settings
-  if (path === '/settings' && m === 'get') return { settings: SETTINGS }
-  if (path === '/settings' && m === 'put') return { settings: SETTINGS, message: 'Settings saved.' }
+  if (path === '/settings' && m === 'get') return {
+    hotel: SETTINGS_HOTEL,
+    roomTypes: SETTINGS_ROOM_TYPES,
+    foodPlans: SETTINGS_FOOD_PLANS,
+    amenities: SETTINGS_AMENITIES,
+  }
+  if (path === '/settings' && m === 'put') return { message: 'Settings updated successfully.' }
   if (path === '/settings/logo')           return { logoUrl: '/logo-mock.png', message: 'Logo uploaded.' }
 
   // Notifications

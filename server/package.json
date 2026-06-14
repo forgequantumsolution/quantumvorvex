@@ -29,6 +29,7 @@
     "multer": "^2.1.1",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.4",
+    "puppeteer": "^25.1.0",
     "winston": "^3.19.0",
     "zod": "^4.3.6"
   },

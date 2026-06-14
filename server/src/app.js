@@ -40,7 +40,7 @@ const __dirname  = path.dirname(__filename)
 
 const app = express()
 
-// ── Trust proxy (correct IP behind nginx / Vercel edge) ───────────────────────
+// ── Trust proxy (correct client IP when running behind a reverse proxy) ───────
 app.set('trust proxy', 1)
 
 // ── Security headers ─────────────────────────────────────────────────────────
@@ -94,7 +94,8 @@ app.use(cors({
 
 // ── Rate limiters ─────────────────────────────────────────────────────────────
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, max: 10,
+  // Strict in production; generous in dev/test so local E2E runs aren't locked out.
+  windowMs: 15 * 60 * 1000, max: process.env.NODE_ENV === 'production' ? 10 : 1000,
   standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many auth requests. Try again in 15 minutes.', code: 'ERR_RATE_LIMIT' },
   skip: (req) => req.path === '/logout',
@@ -117,7 +118,9 @@ app.use(cookieParser())
 app.use(requestLogger)
 
 // ── Static uploads ────────────────────────────────────────────────────────────
-app.use('/uploads', express.static(path.join(__dirname, '..', '..', 'uploads')))
+// Files are written to <server>/uploads (cwd-relative in multer config), so
+// serve from there — __dirname is <server>/src, one '..' up.
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')))
 
 // ── Health endpoints ──────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

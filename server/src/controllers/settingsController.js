@@ -63,7 +63,9 @@ export const updateSettings = async (req, res) => {
       }
     }
 
-    // Batch update room types
+    // Batch update room types. The submitted array is treated as the full
+    // desired set: rows absent from it are deleted (only when no Room references
+    // them, to avoid an FK violation).
     if (Array.isArray(roomTypes)) {
       results.roomTypes = await Promise.all(
         roomTypes.map((rt) => {
@@ -77,9 +79,13 @@ export const updateSettings = async (req, res) => {
           })
         })
       )
+      const keepNames = roomTypes.map((rt) => rt.name)
+      await prisma.roomType.deleteMany({
+        where: { name: { notIn: keepNames }, rooms: { none: {} } },
+      })
     }
 
-    // Batch update food plans
+    // Batch update food plans (deletes rows absent from the submitted set).
     if (Array.isArray(foodPlans)) {
       results.foodPlans = await Promise.all(
         foodPlans.map((fp) => {
@@ -93,9 +99,12 @@ export const updateSettings = async (req, res) => {
           })
         })
       )
+      await prisma.foodPlan.deleteMany({
+        where: { name: { notIn: foodPlans.map((fp) => fp.name) } },
+      })
     }
 
-    // Batch update amenities
+    // Batch update amenities (deletes rows absent from the submitted set).
     if (Array.isArray(amenities)) {
       results.amenities = await Promise.all(
         amenities.map((am) => {
@@ -109,6 +118,9 @@ export const updateSettings = async (req, res) => {
           })
         })
       )
+      await prisma.amenity.deleteMany({
+        where: { name: { notIn: amenities.map((am) => am.name) } },
+      })
     }
 
     return res.status(200).json({ message: 'Settings updated successfully.', ...results })

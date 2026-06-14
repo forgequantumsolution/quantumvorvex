@@ -1,11 +1,13 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import { useToast } from '../../../hooks/useToast'
+import { useAppSelector } from '../../../store/hooks'
+import { housekeepingApi } from '../../../api/client'
 import { formatDate, timeAgo } from '../../../utils/format'
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── Status config ──────────────────────────────────────────────────────────
 const HK_STATUSES = {
   clean_available:     { label: 'Clean',       color: 'var(--green)',     bg: 'var(--green-bg)',  text: 'var(--green-text)' },
   dirty_available:     { label: 'Dirty',       color: 'var(--amber)',     bg: 'var(--amber-bg)',  text: 'var(--amber-text)' },
@@ -15,25 +17,6 @@ const HK_STATUSES = {
   maintenance:         { label: 'Maintenance', color: 'var(--grey-text)', bg: 'var(--grey-bg)',   text: 'var(--grey-text)' },
 }
 
-const MOCK_HK_ROOMS = [
-  { id:'1',  number:'101', floor:1, status:'clean_available',      assignedTo:null },
-  { id:'2',  number:'102', floor:1, status:'occupied',             assignedTo:null },
-  { id:'3',  number:'103', floor:1, status:'maintenance',          assignedTo:null },
-  { id:'4',  number:'104', floor:1, status:'dirty_available',      assignedTo:'Priya Desai' },
-  { id:'5',  number:'105', floor:1, status:'clean_available',      assignedTo:null },
-  { id:'6',  number:'106', floor:1, status:'cleaning_in_progress', assignedTo:'Meena Kumari' },
-  { id:'7',  number:'107', floor:1, status:'checkout_pending',     assignedTo:null },
-  { id:'8',  number:'108', floor:1, status:'clean_available',      assignedTo:null },
-  { id:'9',  number:'201', floor:2, status:'dirty_available',      assignedTo:'Priya Desai' },
-  { id:'10', number:'202', floor:2, status:'occupied',             assignedTo:null },
-  { id:'11', number:'203', floor:2, status:'clean_available',      assignedTo:null },
-  { id:'12', number:'204', floor:2, status:'occupied',             assignedTo:null },
-  { id:'13', number:'205', floor:2, status:'dirty_available',      assignedTo:'Meena Kumari' },
-  { id:'14', number:'206', floor:2, status:'clean_available',      assignedTo:null },
-  { id:'15', number:'207', floor:2, status:'maintenance',          assignedTo:null },
-  { id:'16', number:'208', floor:2, status:'cleaning_in_progress', assignedTo:'Sunita Rao' },
-]
-
 const HK_STAFF = ['Priya Desai', 'Meena Kumari', 'Sunita Rao', 'Rekha Singh', 'Anita Joshi']
 
 const CHECKLIST_ITEMS = [
@@ -41,28 +24,26 @@ const CHECKLIST_ITEMS = [
   'Bathroom clean', 'Bed made', 'Fresh towels', 'Floor mopped', 'Dustbin emptied',
 ]
 
-// Derive linen data from rooms (lastChanged 3-7 days ago, nextDue 7 days after)
-function buildLinenData(rooms) {
-  return rooms.map((r, i) => {
-    const daysAgo = 3 + (i % 5)
-    const lastChanged = new Date(Date.now() - daysAgo * 86400000).toISOString()
-    const nextDue = new Date(new Date(lastChanged).getTime() + 7 * 86400000).toISOString()
-    const changedBy = HK_STAFF[i % HK_STAFF.length]
-    return { roomId: r.id, roomNumber: r.number, lastChanged, nextDue, changedBy }
-  })
-}
-
-// Mock inspection history per room (3 per room)
-function buildInspectionHistory(rooms) {
-  const hist = {}
-  rooms.forEach(r => {
-    hist[r.id] = [
-      { id: `${r.id}-h1`, date: '2026-03-28', staff: HK_STAFF[0], pass: 8, fail: 1, total: 9 },
-      { id: `${r.id}-h2`, date: '2026-03-14', staff: HK_STAFF[1], pass: 9, fail: 0, total: 9 },
-      { id: `${r.id}-h3`, date: '2026-02-28', staff: HK_STAFF[2], pass: 7, fail: 2, total: 9 },
-    ]
-  })
-  return hist
+// Map a raw API room (with its housekeepingStatus relation) to the flat shape
+// the board/tables render. Falls back to the room's own status when no
+// housekeeping record exists yet.
+function mapBoardRoom(room) {
+  const hk = room.housekeepingStatus
+  let status = hk?.status
+  if (!status) {
+    if (room.status === 'occupied') status = 'occupied'
+    else if (room.status === 'maintenance') status = 'maintenance'
+    else status = 'clean_available'
+  }
+  return {
+    id: room.id,
+    number: room.number,
+    floor: room.floor,
+    status,
+    assignedTo: hk?.assignedTo || null,
+    startedAt: hk?.startedAt || null,
+    completedAt: hk?.completedAt || null,
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -84,7 +65,6 @@ function linenDueColor(nextDue) {
   if (!nextDue) return 'var(--text3)'
   const diff = Math.floor((new Date(nextDue) - Date.now()) / 86400000)
   if (diff < 0)  return 'var(--red-text)'
-  if (diff <= 1) return 'var(--amber-text)'
   if (diff <= 7) return 'var(--amber-text)'
   return 'var(--green-text)'
 }
@@ -93,7 +73,6 @@ function linenDueBadge(nextDue) {
   if (!nextDue) return 'grey'
   const diff = Math.floor((new Date(nextDue) - Date.now()) / 86400000)
   if (diff < 0)  return 'red'
-  if (diff <= 1) return 'amber'
   if (diff <= 7) return 'amber'
   return 'green'
 }
@@ -103,7 +82,6 @@ function linenDueLabel(nextDue) {
   const diff = Math.floor((new Date(nextDue) - Date.now()) / 86400000)
   if (diff < 0)  return 'Overdue'
   if (diff === 0) return 'Due Today'
-  if (diff <= 7) return `${diff}d`
   return `${diff}d`
 }
 
@@ -130,9 +108,9 @@ function AssignRoomModal({ room, onClose, onSave }) {
         </>
       }
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div className="flex flex-col gap-[14px]">
         <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Status</label>
+          <label className="form-label block mb-[5px]">Status</label>
           <select className="form-select" value={status} onChange={e => setStatus(e.target.value)}>
             {Object.entries(HK_STATUSES).map(([key, val]) => (
               <option key={key} value={key}>{val.label}</option>
@@ -140,7 +118,7 @@ function AssignRoomModal({ room, onClose, onSave }) {
           </select>
         </div>
         <div>
-          <label className="form-label" style={{ display: 'block', marginBottom: 5 }}>Assign Staff</label>
+          <label className="form-label block mb-[5px]">Assign Staff</label>
           <select className="form-select" value={assignedTo} onChange={e => setAssignedTo(e.target.value)}>
             <option value="">— Unassigned —</option>
             {HK_STAFF.map(s => <option key={s} value={s}>{s}</option>)}
@@ -158,11 +136,11 @@ function BoardTab({ rooms, onRoomClick }) {
   return (
     <div>
       {/* Legend */}
-      <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 20, padding: '10px 14px', background: 'var(--surface2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+      <div className="flex gap-[14px] flex-wrap mb-5 px-[14px] py-2.5 bg-surface2 rounded-lg border border-line">
         {Object.entries(HK_STATUSES).map(([key, val]) => (
-          <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-            <span style={{ width: 10, height: 10, borderRadius: '50%', background: val.color, display: 'inline-block', flexShrink: 0 }} />
-            <span style={{ fontSize: 11.5, color: 'var(--text2)' }}>{val.label}</span>
+          <div key={key} className="flex items-center gap-[5px]">
+            <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ background: val.color }} />
+            <span className="text-[11.5px] text-ink2">{val.label}</span>
           </div>
         ))}
       </div>
@@ -170,23 +148,11 @@ function BoardTab({ rooms, onRoomClick }) {
       {floors.map(floor => {
         const floorRooms = rooms.filter(r => r.floor === floor)
         return (
-          <div key={floor} style={{ marginBottom: 24 }}>
-            <p style={{
-              margin: '0 0 10px',
-              fontFamily: "'Syne', sans-serif",
-              fontSize: 13,
-              fontWeight: 700,
-              color: 'var(--text)',
-              letterSpacing: '-0.01em',
-              textTransform: 'uppercase',
-            }}>
+          <div key={floor} className="mb-6">
+            <p className="t-title m-0 mb-2.5 tracking-[-0.01em] uppercase">
               Floor {floor}
             </p>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(8, 1fr)',
-              gap: 8,
-            }}>
+            <div className="grid grid-cols-8 gap-2">
               {floorRooms.map(room => {
                 const st = HK_STATUSES[room.status] || HK_STATUSES.clean_available
                 return (
@@ -194,15 +160,10 @@ function BoardTab({ rooms, onRoomClick }) {
                     key={room.id}
                     onClick={() => onRoomClick(room)}
                     title={`Room ${room.number} — ${st.label}${room.assignedTo ? ` (${room.assignedTo})` : ''}`}
+                    className="rounded-[7px] px-1.5 pt-[9px] pb-2 text-center cursor-pointer transition-[transform,box-shadow] duration-[130ms] select-none"
                     style={{
                       background: st.bg,
                       border: `1px solid ${st.color}30`,
-                      borderRadius: 7,
-                      padding: '9px 6px 8px',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      transition: 'transform 0.13s, box-shadow 0.13s',
-                      userSelect: 'none',
                     }}
                     onMouseEnter={e => {
                       e.currentTarget.style.transform = 'scale(1.04)'
@@ -213,25 +174,15 @@ function BoardTab({ rooms, onRoomClick }) {
                       e.currentTarget.style.boxShadow = 'none'
                     }}
                   >
-                    <p style={{ margin: 0, fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 700, color: st.text }}>{room.number}</p>
-                    <p style={{ margin: '2px 0 0', fontSize: 9.5, fontWeight: 500, color: st.text, opacity: 0.75 }}>
+                    <p className="m-0 text-[12px] font-bold" style={{ fontFamily: 'var(--font-mono)', color: st.text }}>{room.number}</p>
+                    <p className="mt-0.5 text-[9.5px] font-medium opacity-75" style={{ color: st.text }}>
                       {st.label.slice(0, 4)}
                     </p>
                     {room.assignedTo && (
-                      <div style={{
-                        marginTop: 4,
-                        width: 20,
-                        height: 20,
-                        borderRadius: '50%',
-                        background: st.color,
-                        color: '#fff',
-                        fontSize: 8,
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '4px auto 0',
-                      }}>
+                      <div
+                        className="w-5 h-5 rounded-full text-white text-[8px] font-bold flex items-center justify-center mt-1 mx-auto mb-0"
+                        style={{ background: st.color }}
+                      >
                         {getInitials(room.assignedTo)}
                       </div>
                     )}
@@ -251,7 +202,6 @@ function DailyListTab({ rooms, onUpdateRoom }) {
   const addToast = useToast()
   const [staffFilter, setStaffFilter] = useState('All')
   const [floorFilter, setFloorFilter] = useState('All')
-  const [timestamps, setTimestamps] = useState({}) // { roomId: { startedAt, completedAt } }
 
   const filtered = useMemo(() => rooms.filter(r => {
     const staffOk = staffFilter === 'All' || r.assignedTo === staffFilter
@@ -259,19 +209,13 @@ function DailyListTab({ rooms, onUpdateRoom }) {
     return staffOk && floorOk
   }), [rooms, staffFilter, floorFilter])
 
-  function getTs(roomId) { return timestamps[roomId] || {} }
-
   function handleStart(room) {
-    const now = new Date().toISOString()
-    setTimestamps(t => ({ ...t, [room.id]: { ...getTs(room.id), startedAt: now } }))
-    onUpdateRoom(room.id, { status: 'cleaning_in_progress' })
+    onUpdateRoom(room.id, { status: 'cleaning_in_progress', startedAt: new Date().toISOString() })
     addToast(`Room ${room.number} cleaning started`, 'info')
   }
 
   function handleDone(room) {
-    const now = new Date().toISOString()
-    setTimestamps(t => ({ ...t, [room.id]: { ...getTs(room.id), completedAt: now } }))
-    onUpdateRoom(room.id, { status: 'clean_available' })
+    onUpdateRoom(room.id, { status: 'clean_available', completedAt: new Date().toISOString() })
     addToast(`Room ${room.number} marked clean`, 'success')
   }
 
@@ -291,17 +235,17 @@ function DailyListTab({ rooms, onUpdateRoom }) {
   return (
     <div>
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Staff</label>
-          <select className="form-select" value={staffFilter} onChange={e => setStaffFilter(e.target.value)} style={{ width: 160 }}>
+      <div className="flex gap-2.5 mb-4 flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <label className="form-label whitespace-nowrap">Staff</label>
+          <select className="form-select w-40" value={staffFilter} onChange={e => setStaffFilter(e.target.value)}>
             <option value="All">All Staff</option>
             {HK_STAFF.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Floor</label>
-          <select className="form-select" value={floorFilter} onChange={e => setFloorFilter(e.target.value)} style={{ width: 110 }}>
+        <div className="flex items-center gap-1.5">
+          <label className="form-label whitespace-nowrap">Floor</label>
+          <select className="form-select w-[110px]" value={floorFilter} onChange={e => setFloorFilter(e.target.value)}>
             <option value="All">All Floors</option>
             {floors.map(f => <option key={f} value={String(f)}>Floor {f}</option>)}
           </select>
@@ -310,11 +254,11 @@ function DailyListTab({ rooms, onUpdateRoom }) {
 
       {filtered.length === 0 ? (
         <div className="empty-state">
-          <p style={{ fontSize: 30, margin: '0 0 6px' }}>🔍</p>
-          <p style={{ margin: 0, fontWeight: 600, color: 'var(--text2)' }}>No rooms match filters</p>
+          <p className="t-display m-0 mb-1.5">🔍</p>
+          <p className="m-0 font-semibold text-ink2">No rooms match filters</p>
         </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <div className="overflow-x-auto">
           <table>
             <thead>
               <tr>
@@ -329,41 +273,39 @@ function DailyListTab({ rooms, onUpdateRoom }) {
             </thead>
             <tbody>
               {filtered.map(room => {
-                const ts = getTs(room.id)
                 const st = HK_STATUSES[room.status] || HK_STATUSES.clean_available
                 return (
                   <tr key={room.id}>
                     <td>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 12.5, color: 'var(--text)' }}>
+                      <span className="font-bold text-[12.5px] text-ink" style={{ fontFamily: 'var(--font-mono)' }}>
                         {room.number}
                       </span>
-                      <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 5 }}>F{room.floor}</span>
+                      <span className="t-label ml-[5px]">F{room.floor}</span>
                     </td>
                     <td>
                       <Badge type={statusBadgeType(room.status)}>{st.label}</Badge>
                     </td>
                     <td>
                       <select
-                        className="form-select"
+                        className="form-select w-[150px] px-2 py-1 text-[12px]"
                         value={room.assignedTo || ''}
                         onChange={e => handleAssign(room.id, e.target.value)}
-                        style={{ width: 150, padding: '4px 8px', fontSize: 12 }}
                       >
                         <option value="">— Unassigned —</option>
                         {HK_STAFF.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
-                    <td style={{ fontSize: 12, color: 'var(--text3)' }}>
-                      {ts.startedAt ? timeAgo(ts.startedAt) : '—'}
+                    <td className="t-xs text-ink3">
+                      {room.startedAt ? timeAgo(room.startedAt) : '—'}
                     </td>
-                    <td style={{ fontSize: 12, color: 'var(--text3)' }}>
-                      {ts.completedAt ? timeAgo(ts.completedAt) : '—'}
+                    <td className="t-xs text-ink3">
+                      {room.completedAt ? timeAgo(room.completedAt) : '—'}
                     </td>
-                    <td style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>
-                      {calcDuration(ts.startedAt, ts.completedAt)}
+                    <td className="text-[12px] text-ink2 font-semibold">
+                      {calcDuration(room.startedAt, room.completedAt)}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div className="flex gap-1">
                         {room.status !== 'cleaning_in_progress' && room.status !== 'clean_available' && (
                           <button className="btn btn-outline btn-xs" onClick={() => handleStart(room)}>Start</button>
                         )}
@@ -384,23 +326,9 @@ function DailyListTab({ rooms, onUpdateRoom }) {
 }
 
 // ─── Linen Tracker Tab ────────────────────────────────────────────────────────
-function LinenTrackerTab({ rooms }) {
-  const addToast = useToast()
-  const [linen, setLinen] = useState(() => buildLinenData(rooms))
-
-  function handleMarkChanged(roomId) {
-    const now = new Date().toISOString()
-    const nextDue = new Date(Date.now() + 7 * 86400000).toISOString()
-    setLinen(ls => ls.map(l => l.roomId === roomId
-      ? { ...l, lastChanged: now, nextDue, changedBy: 'Front Desk' }
-      : l
-    ))
-    const room = rooms.find(r => r.id === roomId)
-    addToast(`Linen changed for Room ${room?.number}`, 'success')
-  }
-
+function LinenTrackerTab({ rooms, linenByRoom, onMarkChanged }) {
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div className="overflow-x-auto">
       <table>
         <thead>
           <tr>
@@ -414,28 +342,30 @@ function LinenTrackerTab({ rooms }) {
           </tr>
         </thead>
         <tbody>
-          {linen.map(l => {
-            const diff = Math.floor((new Date(l.nextDue) - Date.now()) / 86400000)
+          {rooms.map(room => {
+            const rec = linenByRoom[room.id]
+            const nextDue = rec?.nextDue || null
+            const diff = nextDue ? Math.floor((new Date(nextDue) - Date.now()) / 86400000) : null
             return (
-              <tr key={l.roomId}>
+              <tr key={room.id}>
                 <td>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, fontSize: 12.5, color: 'var(--text)' }}>
-                    {l.roomNumber}
+                  <span className="font-bold text-[12.5px] text-ink" style={{ fontFamily: 'var(--font-mono)' }}>
+                    {room.number}
                   </span>
                 </td>
-                <td style={{ fontSize: 12, color: 'var(--text3)' }}>{formatDate(l.lastChanged)}</td>
-                <td style={{ fontSize: 12.5, fontWeight: 600, color: linenDueColor(l.nextDue) }}>
-                  {formatDate(l.nextDue)}
+                <td className="t-xs text-ink3">{rec ? formatDate(rec.lastChanged) : '—'}</td>
+                <td className="text-[12.5px] font-semibold" style={{ color: linenDueColor(nextDue) }}>
+                  {nextDue ? formatDate(nextDue) : '—'}
                 </td>
-                <td style={{ fontSize: 12.5, fontWeight: 700, color: linenDueColor(l.nextDue) }}>
-                  {diff < 0 ? `${Math.abs(diff)}d overdue` : diff === 0 ? 'Today' : `${diff}d`}
+                <td className="text-[12.5px] font-bold" style={{ color: linenDueColor(nextDue) }}>
+                  {diff === null ? '—' : diff < 0 ? `${Math.abs(diff)}d overdue` : diff === 0 ? 'Today' : `${diff}d`}
                 </td>
                 <td>
-                  <Badge type={linenDueBadge(l.nextDue)}>{linenDueLabel(l.nextDue)}</Badge>
+                  <Badge type={linenDueBadge(nextDue)}>{linenDueLabel(nextDue)}</Badge>
                 </td>
-                <td style={{ fontSize: 12.5 }}>{l.changedBy}</td>
+                <td className="text-[12.5px]">{rec?.changedBy || '—'}</td>
                 <td>
-                  <button className="btn btn-outline btn-xs" onClick={() => handleMarkChanged(l.roomId)}>
+                  <button className="btn btn-outline btn-xs" onClick={() => onMarkChanged(room)}>
                     Mark Changed
                   </button>
                 </td>
@@ -449,11 +379,15 @@ function LinenTrackerTab({ rooms }) {
 }
 
 // ─── Inspection Tab ───────────────────────────────────────────────────────────
-function InspectionTab({ rooms }) {
-  const addToast = useToast()
+function InspectionTab({ rooms, onSubmit }) {
   const [selectedRoomId, setSelectedRoomId] = useState(rooms[0]?.id || '')
   const [checklist, setChecklist] = useState({}) // { item: 'pass' | 'fail' | null }
-  const [history, setHistory] = useState(() => buildInspectionHistory(rooms))
+  const [history, setHistory] = useState({})     // session-only; no GET endpoint exists
+
+  // Keep a valid selection as rooms load in.
+  useEffect(() => {
+    if (!selectedRoomId && rooms[0]) setSelectedRoomId(rooms[0].id)
+  }, [rooms, selectedRoomId])
 
   const selectedRoom = rooms.find(r => r.id === selectedRoomId)
   const roomHistory = history[selectedRoomId] || []
@@ -469,20 +403,21 @@ function InspectionTab({ rooms }) {
   const passCount = CHECKLIST_ITEMS.filter(item => checklist[item] === 'pass').length
   const failCount = CHECKLIST_ITEMS.filter(item => checklist[item] === 'fail').length
 
-  function handleSubmit() {
-    if (!allChecked) return
+  async function handleSubmit() {
+    if (!allChecked || !selectedRoom) return
+    const checklistPayload = CHECKLIST_ITEMS.map(item => ({ item, result: checklist[item] }))
+    const ok = await onSubmit(selectedRoom, checklistPayload, { passCount, failCount })
+    if (!ok) return
     const result = {
-      id: `${selectedRoomId}-h${Date.now()}`,
+      id: `${selectedRoomId}-h${passCount}-${failCount}-${roomHistory.length}`,
       date: new Date().toISOString().split('T')[0],
-      staff: 'Front Desk',
+      staff: 'You',
       pass: passCount,
       fail: failCount,
       total: CHECKLIST_ITEMS.length,
     }
     setHistory(h => ({ ...h, [selectedRoomId]: [result, ...(h[selectedRoomId] || [])] }))
     setChecklist({})
-    const score = Math.round((passCount / CHECKLIST_ITEMS.length) * 100)
-    addToast(`Inspection saved — Score: ${score}%`, score >= 80 ? 'success' : 'warning')
   }
 
   function handleRoomChange(id) {
@@ -491,16 +426,15 @@ function InspectionTab({ rooms }) {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, alignItems: 'start' }}>
+    <div className="grid grid-cols-2 gap-5 items-start">
       {/* Left: Checklist */}
       <div>
-        <div style={{ marginBottom: 16 }}>
-          <label className="form-label" style={{ display: 'block', marginBottom: 6 }}>Select Room</label>
+        <div className="mb-4">
+          <label className="form-label block mb-1.5">Select Room</label>
           <select
-            className="form-select"
+            className="form-select max-w-[200px]"
             value={selectedRoomId}
             onChange={e => handleRoomChange(e.target.value)}
-            style={{ maxWidth: 200 }}
           >
             {rooms.map(r => <option key={r.id} value={r.id}>Room {r.number}</option>)}
           </select>
@@ -509,50 +443,27 @@ function InspectionTab({ rooms }) {
         <div className="card">
           <div className="card-header">
             <span className="card-title">Inspection Checklist — Room {selectedRoom?.number}</span>
-            <span style={{ fontSize: 11.5, color: 'var(--text3)' }}>
+            <span className="text-[11.5px] text-ink3">
               {CHECKLIST_ITEMS.filter(i => checklist[i]).length} / {CHECKLIST_ITEMS.length}
             </span>
           </div>
-          <div style={{ padding: '10px 0' }}>
+          <div className="px-0 py-2.5">
             {CHECKLIST_ITEMS.map(item => {
               const val = checklist[item] || null
               return (
-                <div key={item} style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '9px 16px',
-                  borderBottom: '1px solid var(--border)',
-                  gap: 10,
-                }}>
-                  <span style={{ fontSize: 13, color: 'var(--text2)' }}>{item}</span>
-                  <div style={{ display: 'flex', gap: 5 }}>
+                <div key={item} className="flex items-center justify-between px-4 py-[9px] border-b border-line gap-2.5">
+                  <span className="t-sm text-ink2">{item}</span>
+                  <div className="flex gap-[5px]">
                     <button
                       type="button"
+                      className={`t-title w-7 h-7 rounded-md border-none cursor-pointer transition-all duration-[130ms] flex items-center justify-center ${val === 'pass' ? 'bg-success-bg text-success-text outline outline-2 outline-success' : 'bg-surface2 text-ink3 outline-none'}`}
                       onClick={() => toggleItem(item, 'pass')}
-                      style={{
-                        width: 28, height: 28, borderRadius: 6, border: 'none',
-                        background: val === 'pass' ? 'var(--green-bg)' : 'var(--surface2)',
-                        color: val === 'pass' ? 'var(--green-text)' : 'var(--text3)',
-                        cursor: 'pointer', fontSize: 14,
-                        fontWeight: 700, transition: 'all 0.13s',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        outline: val === 'pass' ? '2px solid var(--green)' : 'none',
-                      }}
                       title="Pass"
                     >✓</button>
                     <button
                       type="button"
+                      className={`t-title w-7 h-7 rounded-md border-none cursor-pointer transition-all duration-[130ms] flex items-center justify-center ${val === 'fail' ? 'bg-danger-bg text-danger-text outline outline-2 outline-danger' : 'bg-surface2 text-ink3 outline-none'}`}
                       onClick={() => toggleItem(item, 'fail')}
-                      style={{
-                        width: 28, height: 28, borderRadius: 6, border: 'none',
-                        background: val === 'fail' ? 'var(--red-bg)' : 'var(--surface2)',
-                        color: val === 'fail' ? 'var(--red-text)' : 'var(--text3)',
-                        cursor: 'pointer', fontSize: 14,
-                        fontWeight: 700, transition: 'all 0.13s',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        outline: val === 'fail' ? '2px solid var(--red)' : 'none',
-                      }}
                       title="Fail"
                     >✕</button>
                   </div>
@@ -562,11 +473,11 @@ function InspectionTab({ rooms }) {
           </div>
 
           {/* Score preview */}
-          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
-              <span style={{ color: 'var(--green-text)', fontWeight: 600 }}>Pass: {passCount}</span>
-              <span style={{ color: 'var(--red-text)', fontWeight: 600 }}>Fail: {failCount}</span>
-              <span style={{ color: 'var(--text3)' }}>Unchecked: {CHECKLIST_ITEMS.length - passCount - failCount}</span>
+          <div className="px-4 py-3 border-t border-line">
+            <div className="t-xs flex justify-between mb-1.5">
+              <span className="text-success-text font-semibold">Pass: {passCount}</span>
+              <span className="text-danger-text font-semibold">Fail: {failCount}</span>
+              <span className="text-ink3">Unchecked: {CHECKLIST_ITEMS.length - passCount - failCount}</span>
             </div>
             <div className="prog-bar">
               <div
@@ -579,17 +490,16 @@ function InspectionTab({ rooms }) {
             </div>
           </div>
 
-          <div style={{ padding: '10px 16px 16px' }}>
+          <div className="px-4 pt-2.5 pb-4">
             <button
-              className="btn btn-primary"
-              style={{ width: '100%', justifyContent: 'center', opacity: allChecked ? 1 : 0.5 }}
+              className={`btn btn-primary w-full justify-center ${allChecked ? 'opacity-100' : 'opacity-50'}`}
               onClick={handleSubmit}
               disabled={!allChecked}
             >
               Submit Inspection
             </button>
             {!allChecked && (
-              <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--text3)', textAlign: 'center' }}>
+              <p className="t-xs mt-1.5 text-ink3 text-center">
                 Check all items before submitting
               </p>
             )}
@@ -597,17 +507,17 @@ function InspectionTab({ rooms }) {
         </div>
       </div>
 
-      {/* Right: History */}
+      {/* Right: History (this session) */}
       <div>
-        <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <p className="t-label m-0 mb-2.5">
           Inspection History — Room {selectedRoom?.number}
         </p>
         {roomHistory.length === 0 ? (
           <div className="empty-state">
-            <p style={{ margin: 0, fontSize: 13, color: 'var(--text3)' }}>No inspections yet for this room.</p>
+            <p className="t-sm m-0 text-ink3">No inspections submitted this session.</p>
           </div>
         ) : (
-          <div className="card" style={{ overflow: 'hidden' }}>
+          <div className="card overflow-hidden">
             <table>
               <thead>
                 <tr>
@@ -623,13 +533,13 @@ function InspectionTab({ rooms }) {
                   const score = Math.round((h.pass / h.total) * 100)
                   return (
                     <tr key={h.id}>
-                      <td style={{ fontSize: 12 }}>{formatDate(h.date)}</td>
-                      <td style={{ fontSize: 12 }}>{h.staff}</td>
+                      <td className="t-xs">{formatDate(h.date)}</td>
+                      <td className="t-xs">{h.staff}</td>
                       <td>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--green-text)' }}>{h.pass}</span>
+                        <span className="text-[12px] font-semibold text-success-text">{h.pass}</span>
                       </td>
                       <td>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: h.fail > 0 ? 'var(--red-text)' : 'var(--text3)' }}>
+                        <span className={`text-[12px] font-semibold ${h.fail > 0 ? 'text-danger-text' : 'text-ink3'}`}>
                           {h.fail}
                         </span>
                       </td>
@@ -653,38 +563,100 @@ function InspectionTab({ rooms }) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Housekeeping() {
   const addToast = useToast()
-  const [rooms, setRooms] = useState(MOCK_HK_ROOMS)
+  const currentUser = useAppSelector(s => s.auth.currentUser)
+  const [rooms, setRooms] = useState([])
+  const [linenByRoom, setLinenByRoom] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const [activeTab, setActiveTab] = useState('board')
   const [assignRoomTarget, setAssignRoomTarget] = useState(null)
 
+  const loadBoard = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const { data } = await housekeepingApi.getBoard()
+      const list = Array.isArray(data) ? data : (data.rooms || [])
+      setRooms(list.map(mapBoardRoom))
+    } catch {
+      setError('Could not load housekeeping board. Make sure the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const loadLinen = useCallback(async () => {
+    try {
+      const { data } = await housekeepingApi.getLinen()
+      const records = Array.isArray(data) ? data : (data.records || [])
+      // Keep the most-recently-changed record per room.
+      const byRoom = {}
+      for (const rec of records) {
+        const prev = byRoom[rec.roomId]
+        if (!prev || new Date(rec.lastChanged) > new Date(prev.lastChanged)) byRoom[rec.roomId] = rec
+      }
+      setLinenByRoom(byRoom)
+    } catch {
+      /* linen is non-critical; leave empty on failure */
+    }
+  }, [])
+
+  useEffect(() => { loadBoard(); loadLinen() }, [loadBoard, loadLinen])
+
   // Stat counts
-  const cleanCount   = rooms.filter(r => r.status === 'clean_available').length
-  const dirtyCount   = rooms.filter(r => r.status === 'dirty_available' || r.status === 'checkout_pending').length
+  const cleanCount    = rooms.filter(r => r.status === 'clean_available').length
+  const dirtyCount    = rooms.filter(r => r.status === 'dirty_available' || r.status === 'checkout_pending').length
   const cleaningCount = rooms.filter(r => r.status === 'cleaning_in_progress').length
 
-  function handleUpdateRoom(id, patch) {
+  // Persist a room status/assignment change, with optimistic UI.
+  const handleUpdateRoom = useCallback(async (id, patch) => {
+    const prev = rooms
     setRooms(rs => rs.map(r => r.id === id ? { ...r, ...patch } : r))
-  }
+    try {
+      await housekeepingApi.updateStatus(id, patch)
+    } catch {
+      setRooms(prev)
+      addToast('Could not save room update', 'error')
+    }
+  }, [rooms, addToast])
 
-  function handleAssignSave(id, patch) {
-    handleUpdateRoom(id, patch)
+  async function handleAssignSave(id, patch) {
+    await handleUpdateRoom(id, patch)
     const room = rooms.find(r => r.id === id)
     addToast(`Room ${room?.number} updated`, 'success')
     setAssignRoomTarget(null)
   }
 
-  function handleMarkCheckoutsDirty() {
-    const checkouts = rooms.filter(r => r.status === 'checkout_pending')
-    if (checkouts.length === 0) { addToast('No checkout rooms found', 'info'); return }
-    setRooms(rs => rs.map(r => r.status === 'checkout_pending' ? { ...r, status: 'dirty_available' } : r))
-    addToast(`${checkouts.length} room(s) marked Dirty`, 'success')
+  async function handleBulk(fromStatus, toStatus, label) {
+    const targets = rooms.filter(r => (Array.isArray(fromStatus) ? fromStatus.includes(r.status) : r.status === fromStatus))
+    if (targets.length === 0) { addToast('No matching rooms found', 'info'); return }
+    await Promise.all(targets.map(r => handleUpdateRoom(r.id, { status: toStatus })))
+    addToast(`${targets.length} room(s) ${label}`, 'success')
   }
 
-  function handleMarkDirtyInProgress() {
-    const dirty = rooms.filter(r => r.status === 'dirty_available')
-    if (dirty.length === 0) { addToast('No dirty rooms found', 'info'); return }
-    setRooms(rs => rs.map(r => r.status === 'dirty_available' ? { ...r, status: 'cleaning_in_progress' } : r))
-    addToast(`${dirty.length} room(s) marked Cleaning In Progress`, 'success')
+  async function handleMarkLinenChanged(room) {
+    try {
+      await housekeepingApi.markLinen(room.id, { changedBy: currentUser?.name || 'Front Desk', frequency: 7 })
+      addToast(`Linen changed for Room ${room.number}`, 'success')
+      loadLinen()
+    } catch {
+      addToast('Could not record linen change', 'error')
+    }
+  }
+
+  async function handleSubmitInspection(room, checklistPayload, { passCount }) {
+    try {
+      await housekeepingApi.submitInspection({
+        roomId: room.id,
+        staffId: currentUser?.id || 'front-desk',
+        checklist: JSON.stringify(checklistPayload),
+      })
+      const score = Math.round((passCount / CHECKLIST_ITEMS.length) * 100)
+      addToast(`Inspection saved — Score: ${score}%`, score >= 80 ? 'success' : 'warning')
+      return true
+    } catch {
+      addToast('Could not save inspection', 'error')
+      return false
+    }
   }
 
   const tabs = [
@@ -695,52 +667,61 @@ export default function Housekeeping() {
   ]
 
   return (
-    <div style={{ padding: '24px 28px', overflowY: 'auto', height: '100%' }}>
+    <div className="overflow-y-auto h-full">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, gap: 12, flexWrap: 'wrap' }}>
+      <div className="flex items-start justify-between mb-6 gap-3 flex-wrap">
         <div>
-          <h1 style={{ margin: 0, fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.03em' }}>
+          <h1 className="t-h1 m-0 tracking-[-0.03em]">
             🧹 Housekeeping
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text3)' }}>
+          <p className="t-sm mt-1 text-ink3">
             Manage room status, staff assignments, and inspections
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button className="btn btn-outline btn-sm" onClick={handleMarkCheckoutsDirty}>
+        <div className="flex gap-2 flex-wrap">
+          <button className="btn btn-outline btn-sm" onClick={loadBoard} disabled={loading}>↻ Refresh</button>
+          <button className="btn btn-outline btn-sm" onClick={() => handleBulk('checkout_pending', 'dirty_available', 'marked Dirty')}>
             Mark Checkouts as Dirty
           </button>
-          <button className="btn btn-outline btn-sm" onClick={handleMarkDirtyInProgress}>
+          <button className="btn btn-outline btn-sm" onClick={() => handleBulk('dirty_available', 'cleaning_in_progress', 'marked Cleaning')}>
             Mark All Dirty → In Progress
           </button>
         </div>
       </div>
 
+      {error && (
+        <div className="t-sm mb-4 px-[14px] py-2.5 rounded-lg bg-danger-bg text-danger-text">
+          {error}
+        </div>
+      )}
+
       {/* Stat Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 24 }}>
+      <div className="grid grid-cols-3 gap-[14px] mb-6">
         <div className="stat-card stat-bar-green">
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Clean Available</p>
-          <p style={{ margin: '6px 0 0', fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, color: 'var(--green-text)', letterSpacing: '-0.03em' }}>{cleanCount}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text3)' }}>Ready for check-in</p>
+          <p className="t-label m-0">Clean Available</p>
+          <p className="t-display mt-1.5 text-success-text tracking-[-0.03em]">{cleanCount}</p>
+          <p className="t-xs mt-0.5 text-ink3">Ready for check-in</p>
         </div>
         <div className="stat-card stat-bar-amber">
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Dirty / Needs Cleaning</p>
-          <p style={{ margin: '6px 0 0', fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, color: 'var(--amber-text)', letterSpacing: '-0.03em' }}>{dirtyCount}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text3)' }}>Dirty + checkout pending</p>
+          <p className="t-label m-0">Dirty / Needs Cleaning</p>
+          <p className="t-display mt-1.5 text-warning-text tracking-[-0.03em]">{dirtyCount}</p>
+          <p className="t-xs mt-0.5 text-ink3">Dirty + checkout pending</p>
         </div>
         <div className="stat-card stat-bar-blue">
-          <p style={{ margin: 0, fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cleaning In Progress</p>
-          <p style={{ margin: '6px 0 0', fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, color: 'var(--blue-text)', letterSpacing: '-0.03em' }}>{cleaningCount}</p>
-          <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--text3)' }}>Currently being cleaned</p>
+          <p className="t-label m-0">Cleaning In Progress</p>
+          <p className="t-display mt-1.5 text-info-text tracking-[-0.03em]">{cleaningCount}</p>
+          <p className="t-xs mt-0.5 text-ink3">Currently being cleaned</p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="card">
-        <div style={{ padding: '0 18px' }}>
+        <div className="px-[18px] py-0">
           <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab}>
             <div data-tab-id="board">
-              <BoardTab rooms={rooms} onRoomClick={setAssignRoomTarget} />
+              {loading && rooms.length === 0
+                ? <div className="empty-state"><p className="m-0 text-ink3">Loading board…</p></div>
+                : <BoardTab rooms={rooms} onRoomClick={setAssignRoomTarget} />}
             </div>
 
             <div data-tab-id="daily">
@@ -748,11 +729,11 @@ export default function Housekeeping() {
             </div>
 
             <div data-tab-id="linen">
-              <LinenTrackerTab rooms={rooms} />
+              <LinenTrackerTab rooms={rooms} linenByRoom={linenByRoom} onMarkChanged={handleMarkLinenChanged} />
             </div>
 
             <div data-tab-id="inspection">
-              <InspectionTab rooms={rooms} />
+              <InspectionTab rooms={rooms} onSubmit={handleSubmitInspection} />
             </div>
           </Tabs>
         </div>

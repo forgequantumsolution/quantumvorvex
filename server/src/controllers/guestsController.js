@@ -105,7 +105,7 @@ export const createGuest = async (req, res) => {
           nationality,
           idType,
           idNumber,
-          tags: tags || [],
+          tags: JSON.stringify(tags || []),
           notes,
           address,
           emergencyName,
@@ -120,8 +120,8 @@ export const createGuest = async (req, res) => {
           occupants: occupants || 1,
           specialRequests,
           foodPlan,
-          amenities: amenities || [],
-          facilities: facilities || [],
+          amenities: JSON.stringify(amenities || []),
+          facilities: JSON.stringify(facilities || []),
           status: 'Active',
         },
         include: { room: { include: { type: true } } },
@@ -153,6 +153,11 @@ export const updateGuest = async (req, res) => {
     if (data.dob) data.dob = new Date(data.dob)
     if (data.checkInDate) data.checkInDate = new Date(data.checkInDate)
     if (data.checkOutDate) data.checkOutDate = new Date(data.checkOutDate)
+
+    // tags/amenities/facilities are JSON-string columns — stringify arrays
+    if (Array.isArray(data.tags)) data.tags = JSON.stringify(data.tags)
+    if (Array.isArray(data.amenities)) data.amenities = JSON.stringify(data.amenities)
+    if (Array.isArray(data.facilities)) data.facilities = JSON.stringify(data.facilities)
 
     // Remove relation fields that shouldn't be set directly
     delete data.room

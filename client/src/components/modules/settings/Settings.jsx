@@ -1,15 +1,20 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import Cropper from 'react-easy-crop'
 import Tabs from '../../ui/Tabs'
 import Modal from '../../ui/Modal'
-import { useStore } from '../../../store/useStore'
+import { getCroppedBlob, blobToDataUrl } from '../../../utils/cropImage'
+import { useAppSelector, useHotelActions, useUiActions } from '../../../store/hooks'
 import { useToast } from '../../../hooks/useToast'
-import api from '../../../api/client'
+import api, { settingsApi } from '../../../api/client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { ROLE_LABELS, ROLE_COLORS, canAccessSettingsTab } from '../../../utils/permissions'
+import {
+  ACCENT_PRESETS, RADIUS_PRESETS, getAppearance, saveAppearance, applyAppearance,
+} from '../../../utils/theme'
 
 // ─── Initial State ────────────────────────────────────────────────────────────
 const initSettings = {
-  hotelName:  'Quantum Vorvex',
+  name:       'Quantum Vorvex',
   ownerName:  'Ramesh Gupta',
   phone:      '9876543210',
   email:      'manager@quantumvorvex.com',
@@ -30,26 +35,42 @@ const initSettings = {
 const initFacilities = ['AC', 'WiFi', 'TV', 'Geyser', 'Hot Water', 'Parking', 'Balcony', 'CCTV']
 
 const initAmenities = [
-  { id: 'a1', name: 'Mini Fridge',        daily: 50,  monthly: 800  },
-  { id: 'a2', name: 'Washing Machine',    daily: 80,  monthly: 1200 },
-  { id: 'a3', name: 'Parking (Premium)',  daily: 100, monthly: 1500 },
-  { id: 'a4', name: 'Gym Access',         daily: 150, monthly: 2000 },
-  { id: 'a5', name: 'Laundry Service',    daily: 200, monthly: 0    },
+  { id: 'a1', name: 'Mini Fridge',        dailyRate: 50,  monthlyRate: 800  },
+  { id: 'a2', name: 'Washing Machine',    dailyRate: 80,  monthlyRate: 1200 },
+  { id: 'a3', name: 'Parking (Premium)',  dailyRate: 100, monthlyRate: 1500 },
+  { id: 'a4', name: 'Gym Access',         dailyRate: 150, monthlyRate: 2000 },
+  { id: 'a5', name: 'Laundry Service',    dailyRate: 200, monthlyRate: 0    },
 ]
 
 const initRoomTypes = [
-  { id: '1', name: 'Single', dailyRate: 500,  monthlyRate: 9000,  peakDaily: 700,  peakMonthly: 13000, count: 12, maxOccupancy: 1 },
-  { id: '2', name: 'Double', dailyRate: 800,  monthlyRate: 14000, peakDaily: 1100, peakMonthly: 20000, count: 10, maxOccupancy: 2 },
-  { id: '3', name: 'Suite',  dailyRate: 1500, monthlyRate: 28000, peakDaily: 2200, peakMonthly: 40000, count: 6,  maxOccupancy: 3 },
-  { id: '4', name: 'Deluxe', dailyRate: 1200, monthlyRate: 22000, peakDaily: 1800, peakMonthly: 32000, count: 4,  maxOccupancy: 2 },
+  { id: '1', name: 'Single', dailyRate: 500,  monthlyRate: 9000,  peakDailyRate: 700,  peakMonthlyRate: 13000, count: 12, maxOccupancy: 1 },
+  { id: '2', name: 'Double', dailyRate: 800,  monthlyRate: 14000, peakDailyRate: 1100, peakMonthlyRate: 20000, count: 10, maxOccupancy: 2 },
+  { id: '3', name: 'Suite',  dailyRate: 1500, monthlyRate: 28000, peakDailyRate: 2200, peakMonthlyRate: 40000, count: 6,  maxOccupancy: 3 },
+  { id: '4', name: 'Deluxe', dailyRate: 1200, monthlyRate: 22000, peakDailyRate: 1800, peakMonthlyRate: 32000, count: 4,  maxOccupancy: 2 },
 ]
 
 const initFoodPlans = [
-  { id: '1', name: 'Breakfast Only', oneTime: 120, weekly: 700,  monthly: 2500, desc: 'Morning meal'    },
-  { id: '2', name: 'All Meals',      oneTime: 350, weekly: 2100, monthly: 8000, desc: 'Full board'       },
-  { id: '3', name: 'Dinner Only',    oneTime: 180, weekly: 1050, monthly: 3500, desc: 'Evening meal'     },
-  { id: '4', name: 'Lunch Only',     oneTime: 150, weekly: 900,  monthly: 3000, desc: 'Afternoon meal'   },
+  { id: '1', name: 'Breakfast Only', oneTimeRate: 120, weeklyRate: 700,  monthlyRate: 2500, description: 'Morning meal'    },
+  { id: '2', name: 'All Meals',      oneTimeRate: 350, weeklyRate: 2100, monthlyRate: 8000, description: 'Full board'       },
+  { id: '3', name: 'Dinner Only',    oneTimeRate: 180, weeklyRate: 1050, monthlyRate: 3500, description: 'Evening meal'     },
+  { id: '4', name: 'Lunch Only',     oneTimeRate: 150, weeklyRate: 900,  monthlyRate: 3000, description: 'Afternoon meal'   },
 ]
+
+// Rows added in the UI carry a temporary `new-…` id used only as a React key;
+// the local seed defaults use short fake ids ('1', 'a1', …). Only real persisted
+// rows carry a cuid. At save time we keep the id only when it's a cuid (so the
+// server updates by id) and otherwise drop it (so the server upserts by name),
+// plus we drop UI-only fields that have no DB column.
+let _newRowSeq = 0
+const newRowId = () => `new-${_newRowSeq++}`
+const isPersistedId = (id) => typeof id === 'string' && /^c[a-z0-9]{20,}$/i.test(id)
+
+function stripForSave(row, uiOnlyFields = []) {
+  const out = { ...row }
+  if (!isPersistedId(out.id)) delete out.id
+  for (const f of uiOnlyFields) delete out[f]
+  return out
+}
 
 const initKycDocs = [
   { id: 'front', label: 'ID Front',            required: true,  maxMB: 5, enabled: true },
@@ -61,8 +82,8 @@ const initKycDocs = [
 // ─── Reusable field components ────────────────────────────────────────────────
 function Field({ label, children, fullWidth }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 5, gridColumn: fullWidth ? '1 / -1' : undefined }}>
-      <label className="form-label" style={{ fontSize: 12, fontWeight: 600 }}>{label}</label>
+    <div className={`flex flex-col gap-[5px] ${fullWidth ? 'col-[1/-1]' : ''}`}>
+      <label className="form-label text-[12px] font-semibold">{label}</label>
       {children}
     </div>
   )
@@ -75,95 +96,201 @@ function InlineInput({ value, onChange, type = 'text', min, style }) {
       value={value}
       onChange={e => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
       min={min}
-      style={{
-        width: 80,
-        padding: '3px 6px',
-        fontSize: 12,
-        background: 'var(--surface2)',
-        border: '1px solid var(--border)',
-        borderRadius: 4,
-        color: 'var(--text)',
-        ...style,
-      }}
+      className="w-20 px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
+      style={style}
     />
   )
 }
 
-function SaveButton({ onClick }) {
+function SaveButton({ onClick, saving }) {
   return (
-    <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', marginTop: 8 }}>
-      <button className="btn btn-primary" onClick={onClick}>
-        Save Changes
+    <div className="pt-4 border-t border-line mt-2">
+      <button className="btn btn-primary" onClick={onClick} disabled={saving}>
+        {saving ? 'Saving…' : 'Save Changes'}
       </button>
     </div>
+  )
+}
+
+// Reusable crop modal: pan + zoom a picked image to a 1:1 square, then hand the
+// cropped Blob to `onComplete`. Open when `src` (a data URL) is set.
+function LogoCropModal({
+  src, onCancel, onComplete, busy = false,
+  title = 'Crop image', cropShape = 'round',
+  confirmLabel = 'Crop & Save', busyLabel = 'Saving…',
+}) {
+  // Callers pass key={src} so this remounts (resetting pan/zoom) per image.
+  const [crop, setCrop] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1)
+  const [areaPixels, setAreaPixels] = useState(null)
+
+  const onCropComplete = useCallback((_, a) => setAreaPixels(a), [])
+
+  async function confirm() {
+    if (!areaPixels) return
+    const blob = await getCroppedBlob(src, areaPixels)
+    await onComplete(blob)
+  }
+
+  return (
+    <Modal
+      isOpen={!!src}
+      onClose={busy ? () => {} : onCancel}
+      title={title}
+      footer={
+        <>
+          <button className="btn btn-outline" onClick={onCancel} disabled={busy}>Cancel</button>
+          <button className="btn btn-primary" onClick={confirm} disabled={busy || !areaPixels}>
+            {busy ? busyLabel : confirmLabel}
+          </button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <div className="relative w-full h-[300px] bg-surface2 rounded-lg overflow-hidden">
+          {src && (
+            <Cropper
+              image={src}
+              crop={crop}
+              zoom={zoom}
+              aspect={1}
+              cropShape={cropShape}
+              showGrid={false}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onCropComplete={onCropComplete}
+            />
+          )}
+        </div>
+        <label className="flex items-center gap-3">
+          <span className="t-sm text-ink3 shrink-0">Zoom</span>
+          <input
+            type="range" min={1} max={3} step={0.01}
+            value={zoom}
+            onChange={e => setZoom(Number(e.target.value))}
+            className="w-full accent-[var(--gold)]"
+          />
+        </label>
+      </div>
+    </Modal>
   )
 }
 
 // ─── Tab 1: Hotel Profile ─────────────────────────────────────────────────────
 function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwnerName }) {
   const [logoPreview, setLogoPreview] = useState(null)
+  const [saving, setSaving] = useState(false)
   const fileRef = useRef(null)
 
-  function handleLogoChange(e) {
+  // The picked file is read into `cropSrc` to open the crop modal; the cropped
+  // square is then uploaded.
+  const [cropSrc, setCropSrc] = useState(null)
+  const [uploading, setUploading] = useState(false)
+
+  // Local preview wins (just-uploaded); otherwise fall back to the saved logo,
+  // which arrives asynchronously from GET /settings — so it shows after reload.
+  const logoSrc = logoPreview || settings.logoUrl || null
+
+  function handleFileSelect(e) {
     const file = e.target.files[0]
     if (!file) return
-    const url = URL.createObjectURL(file)
-    setLogoPreview(url)
+    const reader = new FileReader()
+    reader.onload = () => setCropSrc(reader.result)
+    reader.readAsDataURL(file)
+    e.target.value = '' // allow re-selecting the same file
   }
 
-  function handleSave() {
-    setHotelName(settings.hotelName)
-    setOwnerName(settings.ownerName)
-    addToast('Settings saved successfully', 'success')
+  async function uploadCropped(blob) {
+    setUploading(true)
+    try {
+      const form = new FormData()
+      form.append('logo', blob, 'logo.png')
+      const { data } = await settingsApi.uploadLogo(form)
+      if (data.logoUrl) {
+        setLogoPreview(data.logoUrl)
+        setSettings(s => ({ ...s, logoUrl: data.logoUrl }))
+      }
+      addToast('Logo uploaded', 'success')
+      setCropSrc(null)
+    } catch {
+      addToast('Logo upload failed', 'error')
+    } finally {
+      setUploading(false)
+    }
   }
 
-  const initials = settings.hotelName
-    ? settings.hotelName.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await settingsApi.update({
+        hotel: {
+          name:      settings.name,
+          ownerName: settings.ownerName,
+          phone:     settings.phone,
+          email:     settings.email,
+          gstin:     settings.gstin,
+          licenseNo: settings.licenseNo,
+          address:   settings.address,
+        },
+      })
+      setHotelName(settings.name)
+      setOwnerName(settings.ownerName)
+      addToast('Settings saved successfully', 'success')
+    } catch {
+      addToast('Failed to save settings', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const initials = settings.name
+    ? settings.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
     : 'HM'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="flex flex-col gap-6">
       {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <div className="flex items-center gap-4">
         <div
           onClick={() => fileRef.current?.click()}
-          style={{
-            width: 80,
-            height: 80,
-            borderRadius: '50%',
-            background: logoPreview ? 'transparent' : 'var(--gold-bg, #3a2e0a)',
-            border: '2px solid var(--gold)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            overflow: 'hidden',
-            flexShrink: 0,
-          }}
+          className="w-20 h-20 rounded-full border-2 border-gold flex items-center justify-center cursor-pointer overflow-hidden shrink-0"
+          style={{ background: logoSrc ? 'transparent' : 'var(--gold-bg, #3a2e0a)' }}
           title="Click to upload logo"
         >
-          {logoPreview ? (
-            <img src={logoPreview} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          {logoSrc ? (
+            <img src={logoSrc} alt="Logo" className="w-full h-full object-cover" />
           ) : (
-            <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--gold)', fontFamily: "'Syne', sans-serif" }}>
+            <span className="t-h1 text-gold">
               {initials}
             </span>
           )}
         </div>
         <div>
-          <button className="btn btn-outline" style={{ fontSize: 12 }} onClick={() => fileRef.current?.click()}>
+          <button className="btn btn-outline text-[12px]" onClick={() => fileRef.current?.click()}>
             Upload Logo
           </button>
-          <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text3)' }}>PNG, JPG up to 2MB</p>
-          <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleLogoChange} />
+          <p className="mt-1 mb-0 text-[11px] text-ink3">PNG, JPG up to 2MB · you can crop after selecting</p>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
         </div>
       </div>
 
+      <LogoCropModal
+        key={cropSrc || 'closed'}
+        src={cropSrc}
+        busy={uploading}
+        title="Crop logo"
+        cropShape="round"
+        confirmLabel="Crop & Upload"
+        busyLabel="Uploading…"
+        onCancel={() => setCropSrc(null)}
+        onComplete={uploadCropped}
+      />
+
       {/* Form grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="grid grid-cols-2 gap-4">
         <Field label="Hotel Name">
-          <input className="form-input" value={settings.hotelName}
-            onChange={e => setSettings(s => ({ ...s, hotelName: e.target.value }))} />
+          <input className="form-input" value={settings.name}
+            onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
         </Field>
         <Field label="Owner Name">
           <input className="form-input" value={settings.ownerName}
@@ -186,37 +313,48 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
             onChange={e => setSettings(s => ({ ...s, licenseNo: e.target.value }))} />
         </Field>
         <Field label="Address" fullWidth>
-          <textarea className="form-textarea" rows={3} value={settings.address}
-            onChange={e => setSettings(s => ({ ...s, address: e.target.value }))}
-            style={{ resize: 'vertical' }} />
+          <textarea className="form-textarea resize-y" rows={3} value={settings.address}
+            onChange={e => setSettings(s => ({ ...s, address: e.target.value }))} />
         </Field>
       </div>
 
-      <SaveButton onClick={handleSave} />
+      <SaveButton onClick={handleSave} saving={saving} />
     </div>
   )
 }
 
 // ─── Tab 2: Room Config ───────────────────────────────────────────────────────
-function RoomConfigTab({ settings, setSettings, addToast }) {
-  const [roomTypes, setRoomTypes] = useState(initRoomTypes)
+function RoomConfigTab({ settings, setSettings, roomTypes, setRoomTypes, addToast }) {
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [saving, setSaving] = useState(false)
 
   function updateRoom(id, field, value) {
     setRoomTypes(rows => rows.map(r => r.id === id ? { ...r, [field]: value } : r))
   }
 
   function addRoom() {
-    const newId = String(Date.now())
     setRoomTypes(rows => [...rows, {
-      id: newId, name: 'New Type', dailyRate: 500, monthlyRate: 9000,
-      peakDaily: 700, peakMonthly: 13000, count: 1, maxOccupancy: 1,
+      id: newRowId(), name: 'New Type', dailyRate: 500, monthlyRate: 9000,
+      peakDailyRate: 700, peakMonthlyRate: 13000, count: 1, maxOccupancy: 1,
     }])
   }
 
   function deleteRoom(id) {
     setRoomTypes(rows => rows.filter(r => r.id !== id))
     setConfirmDelete(null)
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      // `count` has no DB column — strip it (and temp ids) before sending.
+      await settingsApi.update({ roomTypes: roomTypes.map(r => stripForSave(r, ['count'])) })
+      addToast('Settings saved successfully', 'success')
+    } catch {
+      addToast('Failed to save room types', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const thStyle = {
@@ -229,19 +367,19 @@ function RoomConfigTab({ settings, setSettings, addToast }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       {/* Capacity row */}
       <div className="card">
         <div className="card-header"><span className="card-title">Hotel Capacity</span></div>
         <div className="card-body">
-          <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+          <div className="flex gap-6 flex-wrap">
             <Field label="Total Rooms">
-              <input className="form-input" type="number" min={1} style={{ width: 100 }}
+              <input className="form-input w-[100px]" type="number" min={1}
                 value={settings.totalRooms}
                 onChange={e => setSettings(s => ({ ...s, totalRooms: Number(e.target.value) }))} />
             </Field>
             <Field label="Number of Floors">
-              <input className="form-input" type="number" min={1} style={{ width: 100 }}
+              <input className="form-input w-[100px]" type="number" min={1}
                 value={settings.floors}
                 onChange={e => setSettings(s => ({ ...s, floors: Number(e.target.value) }))} />
             </Field>
@@ -251,14 +389,14 @@ function RoomConfigTab({ settings, setSettings, addToast }) {
 
       {/* Room types table */}
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Room Types</span>
-          <button className="btn btn-primary" style={{ fontSize: 12, padding: '5px 14px' }} onClick={addRoom}>
+          <button className="btn btn-primary text-[12px] px-[14px] py-[5px]" onClick={addRoom}>
             + Add Room Type
           </button>
         </div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="card-body overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
                 {['Name', 'Daily ₹', 'Monthly ₹', 'Peak Daily ₹', 'Peak Monthly ₹', 'Count', 'Max Occ.', ''].map(h => (
@@ -268,17 +406,17 @@ function RoomConfigTab({ settings, setSettings, addToast }) {
             </thead>
             <tbody>
               {roomTypes.map(row => (
-                <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                <tr key={row.id} className="border-b border-line">
                   {[
                     { field: 'name',         val: row.name,         type: 'text',   w: 100 },
                     { field: 'dailyRate',     val: row.dailyRate,     type: 'number', w: 75 },
                     { field: 'monthlyRate',   val: row.monthlyRate,   type: 'number', w: 80 },
-                    { field: 'peakDaily',     val: row.peakDaily,     type: 'number', w: 80 },
-                    { field: 'peakMonthly',   val: row.peakMonthly,   type: 'number', w: 90 },
-                    { field: 'count',         val: row.count,         type: 'number', w: 60 },
+                    { field: 'peakDailyRate',   val: row.peakDailyRate,   type: 'number', w: 80 },
+                    { field: 'peakMonthlyRate', val: row.peakMonthlyRate, type: 'number', w: 90 },
+                    { field: 'count',         val: row.count ?? 0,    type: 'number', w: 60 },
                     { field: 'maxOccupancy',  val: row.maxOccupancy,  type: 'number', w: 60 },
                   ].map(({ field, val, type, w }) => (
-                    <td key={field} style={{ padding: '7px 10px' }}>
+                    <td key={field} className="px-2.5 py-[7px]">
                       <InlineInput
                         value={val}
                         type={type}
@@ -288,17 +426,17 @@ function RoomConfigTab({ settings, setSettings, addToast }) {
                       />
                     </td>
                   ))}
-                  <td style={{ padding: '7px 10px' }}>
+                  <td className="px-2.5 py-[7px]">
                     {confirmDelete === row.id ? (
-                      <span style={{ display: 'flex', gap: 6 }}>
-                        <button style={{ fontSize: 11, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}
+                      <span className="flex gap-1.5">
+                        <button className="text-[11px] text-[#ef4444] bg-none border-none cursor-pointer"
                           onClick={() => deleteRoom(row.id)}>Confirm</button>
-                        <button style={{ fontSize: 11, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer' }}
+                        <button className="text-[11px] text-ink3 bg-none border-none cursor-pointer"
                           onClick={() => setConfirmDelete(null)}>Cancel</button>
                       </span>
                     ) : (
                       <button
-                        style={{ fontSize: 13, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                        className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
                         onClick={() => setConfirmDelete(row.id)}
                         title="Delete room type"
                       >
@@ -313,16 +451,17 @@ function RoomConfigTab({ settings, setSettings, addToast }) {
         </div>
       </div>
 
-      <SaveButton onClick={() => addToast('Settings saved successfully', 'success')} />
+      <SaveButton onClick={handleSave} saving={saving} />
     </div>
   )
 }
 
 // ─── Tab 3: Facilities ────────────────────────────────────────────────────────
-function FacilitiesTab({ addToast }) {
+function FacilitiesTab({ amenities, setAmenities, addToast }) {
+  // Free-text facility chips stay client-side — there is no DB model for them.
   const [facilities, setFacilities] = useState(initFacilities)
   const [newFacility, setNewFacility]   = useState('')
-  const [amenities, setAmenities]       = useState(initAmenities)
+  const [saving, setSaving] = useState(false)
 
   function addFacility() {
     const trimmed = newFacility.trim()
@@ -340,43 +479,41 @@ function FacilitiesTab({ addToast }) {
   }
 
   function addAmenity() {
-    setAmenities(rows => [...rows, { id: String(Date.now()), name: 'New Amenity', daily: 0, monthly: 0 }])
+    setAmenities(rows => [...rows, { id: newRowId(), name: 'New Amenity', dailyRate: 0, monthlyRate: 0 }])
   }
 
   function removeAmenity(id) {
     setAmenities(rows => rows.filter(r => r.id !== id))
   }
 
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await settingsApi.update({ amenities: amenities.map(r => stripForSave(r)) })
+      addToast('Settings saved successfully', 'success')
+    } catch {
+      addToast('Failed to save amenities', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="flex flex-col gap-6">
       {/* Standard facilities */}
       <div className="card">
         <div className="card-header"><span className="card-title">Standard Facilities</span></div>
         <div className="card-body">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+          <div className="flex flex-wrap gap-2 mb-[14px]">
             {facilities.map(f => (
               <span
                 key={f}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '4px 10px',
-                  borderRadius: 20,
-                  background: 'var(--gold-bg, #3a2e0a)',
-                  border: '1px solid var(--gold)',
-                  color: 'var(--gold)',
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
+                className="t-xs inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[20px] bg-[var(--gold-bg,#3a2e0a)] border border-gold text-gold"
               >
                 {f}
                 <button
                   onClick={() => removeFacility(f)}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--gold)', fontSize: 14, lineHeight: 1, padding: 0, marginLeft: 2,
-                  }}
+                  className="t-body bg-none border-none cursor-pointer text-gold leading-[1] p-0 ml-0.5"
                   title={`Remove ${f}`}
                 >
                   ×
@@ -384,16 +521,15 @@ function FacilitiesTab({ addToast }) {
               </span>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="flex gap-2">
             <input
-              className="form-input"
+              className="form-input max-w-[200px]"
               placeholder="Add facility..."
               value={newFacility}
               onChange={e => setNewFacility(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && addFacility()}
-              style={{ maxWidth: 200 }}
             />
-            <button className="btn btn-outline" style={{ fontSize: 12 }} onClick={addFacility}>
+            <button className="btn btn-outline text-[12px]" onClick={addFacility}>
               + Add
             </button>
           </div>
@@ -402,22 +538,18 @@ function FacilitiesTab({ addToast }) {
 
       {/* Chargeable amenities */}
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Chargeable Amenities</span>
-          <button className="btn btn-primary" style={{ fontSize: 12, padding: '5px 14px' }} onClick={addAmenity}>
+          <button className="btn btn-primary text-[12px] px-[14px] py-[5px]" onClick={addAmenity}>
             + Add Amenity
           </button>
         </div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="card-body overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
                 {['Amenity', 'Daily Rate ₹', 'Monthly Rate ₹', ''].map(h => (
-                  <th key={h} style={{
-                    padding: '8px 12px', borderBottom: '1px solid var(--border)',
-                    color: 'var(--text3)', fontWeight: 600, fontSize: 11,
-                    textAlign: h === 'Amenity' ? 'left' : 'center',
-                  }}>
+                  <th key={h} className={`px-3 py-2 border-b border-line text-ink3 font-semibold text-[11px] ${h === 'Amenity' ? 'text-left' : 'text-center'}`}>
                     {h}
                   </th>
                 ))}
@@ -425,20 +557,20 @@ function FacilitiesTab({ addToast }) {
             </thead>
             <tbody>
               {amenities.map(row => (
-                <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '7px 12px' }}>
+                <tr key={row.id} className="border-b border-line">
+                  <td className="px-3 py-[7px]">
                     <InlineInput value={row.name} type="text" style={{ width: 160 }} onChange={v => updateAmenity(row.id, 'name', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
-                    <InlineInput value={row.daily} type="number" min={0} onChange={v => updateAmenity(row.id, 'daily', v)} />
+                  <td className="px-3 py-[7px] text-center">
+                    <InlineInput value={row.dailyRate} type="number" min={0} onChange={v => updateAmenity(row.id, 'dailyRate', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
-                    <InlineInput value={row.monthly} type="number" min={0} onChange={v => updateAmenity(row.id, 'monthly', v)} />
+                  <td className="px-3 py-[7px] text-center">
+                    <InlineInput value={row.monthlyRate} type="number" min={0} onChange={v => updateAmenity(row.id, 'monthlyRate', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
+                  <td className="px-3 py-[7px] text-center">
                     <button
                       onClick={() => removeAmenity(row.id)}
-                      style={{ fontSize: 13, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                      className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
                     >
                       ×
                     </button>
@@ -450,46 +582,54 @@ function FacilitiesTab({ addToast }) {
         </div>
       </div>
 
-      <SaveButton onClick={() => addToast('Settings saved successfully', 'success')} />
+      <SaveButton onClick={handleSave} saving={saving} />
     </div>
   )
 }
 
 // ─── Tab 4: Food Plans ────────────────────────────────────────────────────────
-function FoodPlansTab({ addToast }) {
-  const [plans, setPlans] = useState(initFoodPlans)
+function FoodPlansTab({ plans, setPlans, addToast }) {
+  const [saving, setSaving] = useState(false)
 
   function updatePlan(id, field, value) {
     setPlans(rows => rows.map(r => r.id === id ? { ...r, [field]: value } : r))
   }
 
   function addPlan() {
-    setPlans(rows => [...rows, { id: String(Date.now()), name: 'New Plan', oneTime: 0, weekly: 0, monthly: 0, desc: '' }])
+    setPlans(rows => [...rows, { id: newRowId(), name: 'New Plan', oneTimeRate: 0, weeklyRate: 0, monthlyRate: 0, description: '' }])
   }
 
   function removePlan(id) {
     setPlans(rows => rows.filter(r => r.id !== id))
   }
 
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await settingsApi.update({ foodPlans: plans.map(r => stripForSave(r)) })
+      addToast('Settings saved successfully', 'success')
+    } catch {
+      addToast('Failed to save food plans', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Food / Meal Plans</span>
-          <button className="btn btn-primary" style={{ fontSize: 12, padding: '5px 14px' }} onClick={addPlan}>
+          <button className="btn btn-primary text-[12px] px-[14px] py-[5px]" onClick={addPlan}>
             + Add Meal Plan
           </button>
         </div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="card-body overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
                 {['Meal Name', 'One-time ₹', 'Weekly ₹', 'Monthly ₹', 'Description', ''].map(h => (
-                  <th key={h} style={{
-                    padding: '8px 12px', borderBottom: '1px solid var(--border)',
-                    color: 'var(--text3)', fontWeight: 600, fontSize: 11,
-                    textAlign: h === 'Meal Name' || h === 'Description' ? 'left' : 'center',
-                  }}>
+                  <th key={h} className={`px-3 py-2 border-b border-line text-ink3 font-semibold text-[11px] ${h === 'Meal Name' || h === 'Description' ? 'text-left' : 'text-center'}`}>
                     {h}
                   </th>
                 ))}
@@ -497,26 +637,26 @@ function FoodPlansTab({ addToast }) {
             </thead>
             <tbody>
               {plans.map(row => (
-                <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '7px 12px' }}>
+                <tr key={row.id} className="border-b border-line">
+                  <td className="px-3 py-[7px]">
                     <InlineInput value={row.name} type="text" style={{ width: 130 }} onChange={v => updatePlan(row.id, 'name', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
-                    <InlineInput value={row.oneTime} type="number" min={0} onChange={v => updatePlan(row.id, 'oneTime', v)} />
+                  <td className="px-3 py-[7px] text-center">
+                    <InlineInput value={row.oneTimeRate} type="number" min={0} onChange={v => updatePlan(row.id, 'oneTimeRate', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
-                    <InlineInput value={row.weekly} type="number" min={0} onChange={v => updatePlan(row.id, 'weekly', v)} />
+                  <td className="px-3 py-[7px] text-center">
+                    <InlineInput value={row.weeklyRate} type="number" min={0} onChange={v => updatePlan(row.id, 'weeklyRate', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
-                    <InlineInput value={row.monthly} type="number" min={0} onChange={v => updatePlan(row.id, 'monthly', v)} />
+                  <td className="px-3 py-[7px] text-center">
+                    <InlineInput value={row.monthlyRate} type="number" min={0} onChange={v => updatePlan(row.id, 'monthlyRate', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px' }}>
-                    <InlineInput value={row.desc} type="text" style={{ width: 140 }} onChange={v => updatePlan(row.id, 'desc', v)} />
+                  <td className="px-3 py-[7px]">
+                    <InlineInput value={row.description} type="text" style={{ width: 140 }} onChange={v => updatePlan(row.id, 'description', v)} />
                   </td>
-                  <td style={{ padding: '7px 12px', textAlign: 'center' }}>
+                  <td className="px-3 py-[7px] text-center">
                     <button
                       onClick={() => removePlan(row.id)}
-                      style={{ fontSize: 13, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                      className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
                     >
                       ×
                     </button>
@@ -528,21 +668,44 @@ function FoodPlansTab({ addToast }) {
         </div>
       </div>
 
-      <SaveButton onClick={() => addToast('Settings saved successfully', 'success')} />
+      <SaveButton onClick={handleSave} saving={saving} />
     </div>
   )
 }
 
 // ─── Tab 5: Tax & Pricing ─────────────────────────────────────────────────────
 function TaxPricingTab({ settings, setSettings, addToast }) {
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await settingsApi.update({
+        hotel: {
+          gstRate:     settings.gstRate,
+          gstType:     settings.gstType,
+          gstin:       settings.gstin,
+          gstApplyOn:  settings.gstApplyOn,
+          lateFeeRate: settings.lateFeeRate,
+          gracePeriod: settings.gracePeriod,
+        },
+      })
+      addToast('Settings saved successfully', 'success')
+    } catch {
+      addToast('Failed to save settings', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       <div className="card">
         <div className="card-header"><span className="card-title">GST Settings</span></div>
         <div className="card-body">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="grid grid-cols-2 gap-4">
             <Field label="GST Rate %">
-              <input className="form-input" type="number" min={0} max={28} style={{ maxWidth: 120 }}
+              <input className="form-input max-w-[120px]" type="number" min={0} max={28}
                 value={settings.gstRate}
                 onChange={e => setSettings(s => ({ ...s, gstRate: Number(e.target.value) }))} />
             </Field>
@@ -572,14 +735,14 @@ function TaxPricingTab({ settings, setSettings, addToast }) {
       <div className="card">
         <div className="card-header"><span className="card-title">Late Fee & Grace Period</span></div>
         <div className="card-body">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div className="grid grid-cols-2 gap-4">
             <Field label="Late Fee Rate %">
-              <input className="form-input" type="number" min={0} style={{ maxWidth: 120 }}
+              <input className="form-input max-w-[120px]" type="number" min={0}
                 value={settings.lateFeeRate}
                 onChange={e => setSettings(s => ({ ...s, lateFeeRate: Number(e.target.value) }))} />
             </Field>
             <Field label="Grace Period (days)">
-              <input className="form-input" type="number" min={0} style={{ maxWidth: 120 }}
+              <input className="form-input max-w-[120px]" type="number" min={0}
                 value={settings.gracePeriod}
                 onChange={e => setSettings(s => ({ ...s, gracePeriod: Number(e.target.value) }))} />
             </Field>
@@ -590,24 +753,24 @@ function TaxPricingTab({ settings, setSettings, addToast }) {
       <div className="card">
         <div className="card-header"><span className="card-title">Seasonal Pricing</span></div>
         <div className="card-body">
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
             <input
               type="checkbox"
               checked={settings.seasonalPricing}
               onChange={e => setSettings(s => ({ ...s, seasonalPricing: e.target.checked }))}
-              style={{ width: 16, height: 16, accentColor: 'var(--gold)' }}
+              className="w-4 h-4 accent-[var(--gold)]"
             />
-            <span style={{ fontSize: 14 }}>Enable seasonal / peak pricing for room types</span>
+            <span className="t-body">Enable seasonal / peak pricing for room types</span>
           </label>
           {settings.seasonalPricing && (
-            <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--text3)' }}>
+            <p className="t-xs mt-2.5 mb-0 text-ink3">
               Peak rates defined per room type will be applied during marked peak periods.
             </p>
           )}
         </div>
       </div>
 
-      <SaveButton onClick={() => addToast('Settings saved successfully', 'success')} />
+      <SaveButton onClick={handleSave} saving={saving} />
     </div>
   )
 }
@@ -621,43 +784,33 @@ function DocumentsTab({ settings, setSettings, addToast }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       {/* KYC checklist */}
       <div className="card">
         <div className="card-header"><span className="card-title">Required KYC Documents</span></div>
         <div className="card-body">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div className="flex flex-col gap-[14px]">
             {kycDocs.map(doc => (
-              <div key={doc.id} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 14,
-                padding: '10px 14px',
-                background: 'var(--surface2)',
-                borderRadius: 8,
-                border: '1px solid var(--border)',
-                flexWrap: 'wrap',
-              }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1, minWidth: 160 }}>
+              <div key={doc.id} className="flex items-center gap-[14px] px-[14px] py-2.5 bg-surface2 rounded-lg border border-line flex-wrap">
+                <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-[160px]">
                   <input
                     type="checkbox"
                     checked={doc.enabled}
                     onChange={e => toggleDoc(doc.id, 'enabled', e.target.checked)}
-                    style={{ width: 15, height: 15, accentColor: 'var(--gold)' }}
+                    className="w-[15px] h-[15px] accent-[var(--gold)]"
                   />
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{doc.label}</span>
+                  <span className="t-title">{doc.label}</span>
                 </label>
-                <span style={{
-                  fontSize: 11,
-                  padding: '2px 8px',
-                  borderRadius: 10,
-                  background: doc.required ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.2)',
-                  color: doc.required ? '#ef4444' : 'var(--text3)',
-                  fontWeight: 600,
-                }}>
+                <span
+                  className="text-[11px] px-2 py-0.5 rounded-[10px] font-semibold"
+                  style={{
+                    background: doc.required ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.2)',
+                    color: doc.required ? '#ef4444' : 'var(--text3)',
+                  }}
+                >
                   {doc.required ? 'Required' : 'Optional'}
                 </span>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text3)', marginLeft: 'auto' }}>
+                <label className="t-xs flex items-center gap-1.5 text-ink3 ml-auto">
                   Max
                   <input
                     type="number"
@@ -665,15 +818,7 @@ function DocumentsTab({ settings, setSettings, addToast }) {
                     max={50}
                     value={doc.maxMB}
                     onChange={e => toggleDoc(doc.id, 'maxMB', Number(e.target.value))}
-                    style={{
-                      width: 52,
-                      padding: '2px 6px',
-                      fontSize: 12,
-                      background: 'var(--surface)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 4,
-                      color: 'var(--text)',
-                    }}
+                    className="w-[52px] px-1.5 py-0.5 text-[12px] bg-surface border border-line rounded text-ink"
                   />
                   MB
                 </label>
@@ -689,15 +834,14 @@ function DocumentsTab({ settings, setSettings, addToast }) {
         <div className="card-body">
           <Field label="Remind before expiry (days)">
             <input
-              className="form-input"
+              className="form-input max-w-[120px]"
               type="number"
               min={1}
-              style={{ maxWidth: 120 }}
               value={settings.expiryReminderDays}
               onChange={e => setSettings(s => ({ ...s, expiryReminderDays: Number(e.target.value) }))}
             />
           </Field>
-          <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--text3)' }}>
+          <p className="t-xs mt-2 mb-0 text-ink3">
             System will send alerts when guest KYC documents are about to expire within this window.
           </p>
         </div>
@@ -727,6 +871,36 @@ const YOUR_RATES = { Single: 500, Double: 800, Suite: 1500, Deluxe: 1200 }
 function PricingRulesTab({ addToast }) {
   const [rules, setRules]           = useState(initRules)
   const [competitors, setCompetitors] = useState(initCompetitors)
+  const [saving, setSaving]         = useState(false)
+
+  // Load saved dynamic-pricing rules from the backend.
+  useEffect(() => {
+    api.get('/pricing/rules')
+      .then(({ data }) => {
+        const rows = Array.isArray(data) ? data : (data.rules || [])
+        if (rows.length) setRules(rows.map(r => ({
+          id: r.id, name: r.name, triggerType: r.triggerType,
+          threshold: r.threshold, adjustment: r.adjustment, active: r.active,
+        })))
+      })
+      .catch(() => { /* keep defaults */ })
+  }, [])
+
+  const handleSaveRules = async () => {
+    setSaving(true)
+    try {
+      const payload = rules.map(r => ({
+        name: r.name, triggerType: r.triggerType,
+        threshold: Number(r.threshold), adjustment: Number(r.adjustment), active: !!r.active,
+      }))
+      await api.put('/pricing/rules', { rules: payload })
+      addToast('Pricing rules saved', 'success')
+    } catch (e) {
+      addToast(e.response?.data?.error || 'Could not save rules', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const thStyle = {
     padding: '8px 10px',
@@ -778,14 +952,14 @@ function PricingRulesTab({ addToast }) {
   })
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="flex flex-col gap-6">
       {/* Dynamic Pricing Rules */}
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Revenue Engine — Dynamic Pricing Rules</span>
         </div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="card-body overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
                 {['Rule Name', 'Trigger', 'Threshold', 'Adjustment %', 'Active', ''].map(h => (
@@ -799,30 +973,22 @@ function PricingRulesTab({ addToast }) {
                 const adjColor = isPositive ? '#ef4444' : '#22c55e'
                 const adjPrefix = isPositive ? '+' : ''
                 return (
-                  <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <tr key={row.id} className="border-b border-line">
                     {/* Name */}
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <input
                         type="text"
                         value={row.name}
                         onChange={e => updateRule(row.id, 'name', e.target.value)}
-                        style={{
-                          width: 200, padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: 'var(--text)',
-                        }}
+                        className="w-[200px] px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       />
                     </td>
                     {/* Trigger type */}
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <select
                         value={row.triggerType}
                         onChange={e => updateRule(row.id, 'triggerType', e.target.value)}
-                        style={{
-                          padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: 'var(--text)',
-                        }}
+                        className="px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       >
                         <option value="occupancy">Occupancy ≥ %</option>
                         <option value="stay_length">Stay ≥ days</option>
@@ -830,49 +996,42 @@ function PricingRulesTab({ addToast }) {
                       </select>
                     </td>
                     {/* Threshold */}
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <input
                         type="number"
                         value={row.threshold}
                         min={0}
                         onChange={e => updateRule(row.id, 'threshold', Number(e.target.value))}
-                        style={{
-                          width: 70, padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: 'var(--text)',
-                        }}
+                        className="w-[70px] px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       />
                     </td>
                     {/* Adjustment */}
-                    <td style={{ padding: '7px 10px' }}>
-                      <span style={{ fontSize: 12, color: adjColor, fontWeight: 700, marginRight: 2 }}>
+                    <td className="px-2.5 py-[7px]">
+                      <span className="t-xs mr-0.5" style={{ color: adjColor }}>
                         {adjPrefix}
                       </span>
                       <input
                         type="number"
                         value={row.adjustment}
                         onChange={e => updateRule(row.id, 'adjustment', Number(e.target.value))}
-                        style={{
-                          width: 80, padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: adjColor, fontWeight: 700,
-                        }}
+                        className="w-20 px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded font-bold"
+                        style={{ color: adjColor }}
                       />
                     </td>
                     {/* Active toggle */}
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <input
                         type="checkbox"
                         checked={row.active}
                         onChange={e => updateRule(row.id, 'active', e.target.checked)}
-                        style={{ width: 15, height: 15, accentColor: 'var(--gold)', cursor: 'pointer' }}
+                        className="w-[15px] h-[15px] accent-[var(--gold)] cursor-pointer"
                       />
                     </td>
                     {/* Delete */}
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <button
                         onClick={() => deleteRule(row.id)}
-                        style={{ fontSize: 13, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                        className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
                         title="Delete rule"
                       >
                         ×
@@ -883,8 +1042,8 @@ function PricingRulesTab({ addToast }) {
               })}
             </tbody>
           </table>
-          <div style={{ paddingTop: 12 }}>
-            <button className="btn btn-outline" style={{ fontSize: 12, padding: '5px 14px' }} onClick={addRule}>
+          <div className="pt-3">
+            <button className="btn btn-outline text-[12px] px-[14px] py-[5px]" onClick={addRule}>
               + Add Rule
             </button>
           </div>
@@ -893,11 +1052,11 @@ function PricingRulesTab({ addToast }) {
 
       {/* Competitor Rate Benchmarking */}
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Competitor Rate Benchmarking</span>
         </div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
+        <div className="card-body overflow-x-auto">
+          <table className="w-full border-collapse mb-3">
             <thead>
               <tr>
                 {['Competitor Name', 'Room Type', 'Their Daily Rate ₹', 'Your Rate ₹', 'Δ %', ''].map(h => (
@@ -913,57 +1072,45 @@ function PricingRulesTab({ addToast }) {
                 const deltaColor = deltaNum < 0 ? '#22c55e' : '#ef4444'
                 const deltaPrefix = deltaNum > 0 ? '+' : ''
                 return (
-                  <tr key={row.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ padding: '7px 10px' }}>
+                  <tr key={row.id} className="border-b border-line">
+                    <td className="px-2.5 py-[7px]">
                       <input
                         type="text"
                         value={row.name}
                         onChange={e => updateComp(row.id, 'name', e.target.value)}
-                        style={{
-                          width: 160, padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: 'var(--text)',
-                        }}
+                        className="w-40 px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       />
                     </td>
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <select
                         value={row.roomType}
                         onChange={e => updateComp(row.id, 'roomType', e.target.value)}
-                        style={{
-                          padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: 'var(--text)',
-                        }}
+                        className="px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       >
                         {['Single', 'Double', 'Suite', 'Deluxe'].map(t => (
                           <option key={t} value={t}>{t}</option>
                         ))}
                       </select>
                     </td>
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <input
                         type="number"
                         value={row.theirRate}
                         min={0}
                         onChange={e => updateComp(row.id, 'theirRate', Number(e.target.value))}
-                        style={{
-                          width: 90, padding: '3px 6px', fontSize: 12,
-                          background: 'var(--surface2)', border: '1px solid var(--border)',
-                          borderRadius: 4, color: 'var(--text)',
-                        }}
+                        className="w-[90px] px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
                       />
                     </td>
-                    <td style={{ padding: '7px 10px', fontSize: 13, color: 'var(--text3)' }}>
+                    <td className="t-sm px-2.5 py-[7px] text-ink3">
                       ₹{yourRate}
                     </td>
-                    <td style={{ padding: '7px 10px', fontSize: 13, fontWeight: 700, color: deltaColor }}>
+                    <td className="t-title px-2.5 py-[7px]" style={{ color: deltaColor }}>
                       {deltaPrefix}{delta}%
                     </td>
-                    <td style={{ padding: '7px 10px' }}>
+                    <td className="px-2.5 py-[7px]">
                       <button
                         onClick={() => deleteComp(row.id)}
-                        style={{ fontSize: 13, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 6px' }}
+                        className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
                       >
                         ×
                       </button>
@@ -973,12 +1120,12 @@ function PricingRulesTab({ addToast }) {
               })}
             </tbody>
           </table>
-          <button className="btn btn-outline" style={{ fontSize: 12, padding: '5px 14px', marginBottom: 20 }} onClick={addCompetitor}>
+          <button className="btn btn-outline text-[12px] px-[14px] py-[5px] mb-5" onClick={addCompetitor}>
             + Add Competitor
           </button>
 
           {/* Bar chart */}
-          <div style={{ height: 160 }}>
+          <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text3)' }} />
@@ -996,9 +1143,9 @@ function PricingRulesTab({ addToast }) {
         </div>
       </div>
 
-      <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', marginTop: 8 }}>
-        <button className="btn btn-primary" onClick={() => addToast('Pricing rules saved', 'success')}>
-          Save Rules
+      <div className="pt-4 border-t border-line mt-2">
+        <button className="btn btn-primary" onClick={handleSaveRules} disabled={saving}>
+          {saving ? 'Saving…' : 'Save Rules'}
         </button>
       </div>
     </div>
@@ -1090,13 +1237,13 @@ function NotificationsTab({ addToast }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+    <div className="flex flex-col gap-5">
       <div className="card">
         <div className="card-header">
           <span className="card-title">Automated Message Schedule</span>
         </div>
-        <div className="card-body" style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="card-body overflow-x-auto">
+          <table className="w-full border-collapse">
             <thead>
               <tr>
                 {['Trigger / Event', 'Delay', 'Active', 'Template'].map(h => (
@@ -1106,35 +1253,26 @@ function NotificationsTab({ addToast }) {
             </thead>
             <tbody>
               {templates.map(tpl => (
-                <tr key={tpl.id} style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '10px 12px' }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{tpl.label}</span>
+                <tr key={tpl.id} className="border-b border-line">
+                  <td className="px-3 py-2.5">
+                    <span className="t-title">{tpl.label}</span>
                   </td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <span style={{
-                      display: 'inline-block',
-                      padding: '2px 10px',
-                      borderRadius: 20,
-                      background: 'rgba(245,158,11,0.15)',
-                      color: '#f59e0b',
-                      fontSize: 11,
-                      fontWeight: 700,
-                    }}>
+                  <td className="px-3 py-2.5">
+                    <span className="inline-block px-2.5 py-0.5 rounded-[20px] bg-[rgba(245,158,11,0.15)] text-[#f59e0b] text-[11px] font-bold">
                       {tpl.delay}
                     </span>
                   </td>
-                  <td style={{ padding: '10px 12px' }}>
+                  <td className="px-3 py-2.5">
                     <input
                       type="checkbox"
                       checked={tpl.active}
                       onChange={e => toggleActive(tpl.id, e.target.checked)}
-                      style={{ width: 15, height: 15, accentColor: 'var(--gold)', cursor: 'pointer' }}
+                      className="w-[15px] h-[15px] accent-[var(--gold)] cursor-pointer"
                     />
                   </td>
-                  <td style={{ padding: '10px 12px' }}>
+                  <td className="px-3 py-2.5">
                     <button
-                      className="btn btn-outline"
-                      style={{ fontSize: 11, padding: '4px 12px' }}
+                      className="btn btn-outline text-[11px] px-3 py-1"
                       onClick={() => openEdit(tpl)}
                     >
                       Edit Template
@@ -1147,7 +1285,7 @@ function NotificationsTab({ addToast }) {
         </div>
       </div>
 
-      <div style={{ paddingTop: 16, borderTop: '1px solid var(--border)', marginTop: 8 }}>
+      <div className="pt-4 border-t border-line mt-2">
         <button className="btn btn-primary" onClick={() => addToast('Notification schedule saved', 'success')}>
           Save Schedule
         </button>
@@ -1159,42 +1297,23 @@ function NotificationsTab({ addToast }) {
           title={`Edit Template — ${editingTpl.label}`}
           onClose={closeEdit}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div className="flex flex-col gap-3">
             <textarea
               ref={textareaRef}
               rows={5}
               value={editContent}
               onChange={e => setEditContent(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '8px 10px',
-                fontSize: 13,
-                background: 'var(--surface2)',
-                border: '1px solid var(--border)',
-                borderRadius: 6,
-                color: 'var(--text)',
-                resize: 'vertical',
-                fontFamily: 'monospace',
-                boxSizing: 'border-box',
-              }}
+              className="w-full px-2.5 py-2 text-[13px] bg-surface2 border border-line rounded-md text-ink resize-y box-border"
+              style={{ fontFamily: 'var(--font-mono)' }}
             />
             {/* Variable chips */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <div className="flex flex-wrap gap-1.5">
               {TEMPLATE_VARS.map(v => (
                 <button
                   key={v}
                   onClick={() => insertVar(v)}
-                  style={{
-                    padding: '3px 10px',
-                    borderRadius: 20,
-                    background: 'var(--gold-bg, #3a2e0a)',
-                    border: '1px solid var(--gold)',
-                    color: 'var(--gold)',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontFamily: 'monospace',
-                  }}
+                  className="px-2.5 py-[3px] rounded-[20px] bg-[var(--gold-bg,#3a2e0a)] border border-gold text-gold text-[11px] font-bold cursor-pointer"
+                  style={{ fontFamily: 'var(--font-mono)' }}
                   title={`Insert ${v}`}
                 >
                   {v}
@@ -1202,11 +1321,11 @@ function NotificationsTab({ addToast }) {
               ))}
             </div>
             {/* Actions */}
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', paddingTop: 4 }}>
-              <button className="btn btn-outline" style={{ fontSize: 12 }} onClick={closeEdit}>
+            <div className="flex gap-2.5 justify-end pt-1">
+              <button className="btn btn-outline text-[12px]" onClick={closeEdit}>
                 Cancel
               </button>
-              <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={saveTemplate}>
+              <button className="btn btn-primary text-[12px]" onClick={saveTemplate}>
                 Save Template
               </button>
             </div>
@@ -1232,14 +1351,13 @@ function PropertiesTab({ settings, setSettings, addToast }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className="flex flex-col gap-6">
       {/* Current Property Card */}
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Current Property</span>
           <button
-            className="btn btn-outline"
-            style={{ fontSize: 12, padding: '5px 14px' }}
+            className="btn btn-outline text-[12px] px-[14px] py-[5px]"
             onClick={() => setEditingMain(v => !v)}
           >
             {editingMain ? 'Close' : 'Edit'}
@@ -1247,30 +1365,26 @@ function PropertiesTab({ settings, setSettings, addToast }) {
         </div>
         <div className="card-body">
           {!editingMain ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 18, fontWeight: 800, fontFamily: "'Syne', sans-serif", color: 'var(--text)' }}>
-                  {settings.hotelName}
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="t-h2">
+                  {settings.name}
                 </span>
-                <span style={{
-                  padding: '2px 10px', borderRadius: 20,
-                  background: 'rgba(34,197,94,0.15)', color: '#22c55e',
-                  fontSize: 11, fontWeight: 700,
-                }}>
+                <span className="px-2.5 py-0.5 rounded-[20px] bg-[rgba(34,197,94,0.15)] text-[#22c55e] text-[11px] font-bold">
                   Active
                 </span>
               </div>
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--text3)' }}>{settings.address}</p>
-              <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', fontSize: 13 }}>
-                <span><span style={{ color: 'var(--text3)' }}>GSTIN:</span> {settings.gstin}</span>
-                <span><span style={{ color: 'var(--text3)' }}>Rooms:</span> {settings.totalRooms}</span>
+              <p className="t-sm m-0 text-ink3">{settings.address}</p>
+              <div className="t-sm flex gap-6 flex-wrap">
+                <span><span className="text-ink3">GSTIN:</span> {settings.gstin}</span>
+                <span><span className="text-ink3">Rooms:</span> {settings.totalRooms}</span>
               </div>
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="grid grid-cols-2 gap-4">
               <Field label="Hotel Name">
-                <input className="form-input" value={settings.hotelName}
-                  onChange={e => setSettings(s => ({ ...s, hotelName: e.target.value }))} />
+                <input className="form-input" value={settings.name}
+                  onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
               </Field>
               <Field label="Owner Name">
                 <input className="form-input" value={settings.ownerName}
@@ -1293,12 +1407,11 @@ function PropertiesTab({ settings, setSettings, addToast }) {
                   onChange={e => setSettings(s => ({ ...s, totalRooms: Number(e.target.value) }))} />
               </Field>
               <Field label="Address" fullWidth>
-                <textarea className="form-textarea" rows={3} value={settings.address}
-                  onChange={e => setSettings(s => ({ ...s, address: e.target.value }))}
-                  style={{ resize: 'vertical' }} />
+                <textarea className="form-textarea resize-y" rows={3} value={settings.address}
+                  onChange={e => setSettings(s => ({ ...s, address: e.target.value }))} />
               </Field>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <button className="btn btn-primary" style={{ fontSize: 12 }}
+              <div className="col-[1/-1]">
+                <button className="btn btn-primary text-[12px]"
                   onClick={() => { addToast('Property updated', 'success'); setEditingMain(false) }}>
                   Save Property
                 </button>
@@ -1310,11 +1423,10 @@ function PropertiesTab({ settings, setSettings, addToast }) {
 
       {/* Multi-property section */}
       <div className="card">
-        <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div className="card-header flex items-center justify-between">
           <span className="card-title">Multi-Property Management</span>
           <button
-            className="btn btn-primary"
-            style={{ fontSize: 12, padding: '5px 14px', opacity: 0.5, cursor: 'not-allowed' }}
+            className="btn btn-primary text-[12px] px-[14px] py-[5px] opacity-50 cursor-not-allowed"
             onClick={() => addToast('Multi-property feature available in Pro plan', 'info')}
             title="Upgrade to Pro"
           >
@@ -1323,25 +1435,14 @@ function PropertiesTab({ settings, setSettings, addToast }) {
         </div>
         <div className="card-body">
           {/* Info banner */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '10px 14px',
-            borderRadius: 8,
-            background: 'rgba(201,168,76,0.08)',
-            border: '1px solid rgba(201,168,76,0.3)',
-            marginBottom: 16,
-            fontSize: 13,
-            color: 'var(--text3)',
-          }}>
-            <span style={{ fontSize: 16 }}>🔒</span>
+          <div className="t-sm flex items-center gap-2.5 px-[14px] py-2.5 rounded-lg bg-[rgba(201,168,76,0.08)] border border-[rgba(201,168,76,0.3)] mb-4 text-ink3">
+            <span className="t-h3">🔒</span>
             Upgrade to Multi-Property plan to manage multiple hotels from one account.
           </div>
 
           {/* Demo table — greyed out */}
-          <div style={{ opacity: 0.45, pointerEvents: 'none' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="opacity-45 pointer-events-none">
+            <table className="w-full border-collapse">
               <thead>
                 <tr>
                   {['Property', 'Address', 'Rooms', 'Manager', 'Status'].map(h => (
@@ -1350,21 +1451,17 @@ function PropertiesTab({ settings, setSettings, addToast }) {
                 </tr>
               </thead>
               <tbody>
-                <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                <tr className="border-b border-line">
+                  <td className="t-title px-3 py-2.5">
                     Quantum Vorvex — Branch
                   </td>
-                  <td style={{ padding: '10px 12px', fontSize: 13, color: 'var(--text3)' }}>
+                  <td className="t-sm px-3 py-2.5 text-ink3">
                     456, MG Road, Bangalore
                   </td>
-                  <td style={{ padding: '10px 12px', fontSize: 13, color: 'var(--text3)' }}>24</td>
-                  <td style={{ padding: '10px 12px', fontSize: 13, color: 'var(--text3)' }}>Priya Sharma</td>
-                  <td style={{ padding: '10px 12px' }}>
-                    <span style={{
-                      padding: '2px 10px', borderRadius: 20,
-                      background: 'rgba(34,197,94,0.15)', color: '#22c55e',
-                      fontSize: 11, fontWeight: 700,
-                    }}>
+                  <td className="t-sm px-3 py-2.5 text-ink3">24</td>
+                  <td className="t-sm px-3 py-2.5 text-ink3">Priya Sharma</td>
+                  <td className="px-3 py-2.5">
+                    <span className="px-2.5 py-0.5 rounded-[20px] bg-[rgba(34,197,94,0.15)] text-[#22c55e] text-[11px] font-bold">
                       Active
                     </span>
                   </td>
@@ -1382,8 +1479,8 @@ function PropertiesTab({ settings, setSettings, addToast }) {
 const EMPTY_USER_FORM = { name: '', email: '', phone: '', role: 'staff', password: '', status: 'active' }
 
 function UsersAccessTab({ addToast }) {
-  const token       = useStore(s => s.token)
-  const currentUser = useStore(s => s.currentUser)
+  const token       = useAppSelector(s => s.auth.token)
+  const currentUser = useAppSelector(s => s.auth.currentUser)
   const isOwner     = currentUser?.role === 'owner' || currentUser?.role === 'admin'
 
   const [users, setUsers]     = useState([])
@@ -1457,17 +1554,16 @@ function UsersAccessTab({ addToast }) {
     width: '100%', boxSizing: 'border-box',
     padding: '9px 11px',
     background: 'var(--surface2)', border: '1px solid var(--border)',
-    borderRadius: 7, color: 'var(--text)', fontSize: 13,
-    fontFamily: "'Inter', sans-serif", outline: 'none',
+    borderRadius: 7, color: 'var(--text)', fontSize: 13, outline: 'none',
   }
   const labelStyle = { fontSize: 11.5, fontWeight: 600, color: 'var(--text3)', letterSpacing: '0.04em', textTransform: 'uppercase', display: 'block', marginBottom: 5 }
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="flex justify-between items-center mb-5">
         <div>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>Users & Access</h3>
-          <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--text3)' }}>
+          <h3 className="t-h3 m-0">Users & Access</h3>
+          <p className="mt-1 mb-0 text-[12.5px] text-ink3">
             Manage login accounts and their roles
           </p>
         </div>
@@ -1477,96 +1573,86 @@ function UsersAccessTab({ addToast }) {
       </div>
 
       {/* Role legend */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 18, flexWrap: 'wrap' }}>
+      <div className="flex gap-2.5 mb-[18px] flex-wrap">
         {[
           { role: 'owner',   desc: 'Full access to all modules and user management' },
           { role: 'manager', desc: 'Operational access, cannot manage users' },
           { role: 'staff',   desc: 'Front-desk only: check-in, rooms, guests' },
         ].map(({ role, desc }) => (
-          <div key={role} style={{
-            display: 'flex', alignItems: 'flex-start', gap: 8,
-            padding: '10px 14px', background: 'var(--surface2)',
-            border: '1px solid var(--border)', borderRadius: 8,
-            flex: '1 1 180px', minWidth: 160,
-          }}>
-            <div style={{ marginTop: 1 }}>
-              <span style={{
-                display: 'inline-block', fontSize: 10, fontWeight: 700,
-                letterSpacing: '0.06em', textTransform: 'uppercase',
-                color: ROLE_COLORS[role], background: ROLE_COLORS[role] + '1a',
-                padding: '2px 7px', borderRadius: 4,
-              }}>
+          <div key={role} className="flex items-start gap-2 px-[14px] py-2.5 bg-surface2 border border-line rounded-lg flex-[1_1_180px] min-w-[160px]">
+            <div className="mt-px">
+              <span
+                className="t-label inline-block px-[7px] py-0.5 rounded"
+                style={{ color: ROLE_COLORS[role], background: ROLE_COLORS[role] + '1a' }}
+              >
                 {ROLE_LABELS[role]}
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: 11.5, color: 'var(--text3)', lineHeight: 1.5 }}>{desc}</p>
+            <p className="m-0 text-[11.5px] text-ink3 leading-[1.5]">{desc}</p>
           </div>
         ))}
       </div>
 
       {/* Users table */}
       {loading ? (
-        <div style={{ padding: 32, textAlign: 'center', color: 'var(--text3)' }}>Loading users…</div>
+        <div className="p-8 text-center text-ink3">Loading users…</div>
       ) : (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <div className="border border-line rounded-[10px] overflow-hidden">
+          <table className="w-full border-collapse text-[13px]">
             <thead>
-              <tr style={{ background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
+              <tr className="bg-surface2 border-b border-line">
                 {['Name', 'Email', 'Phone', 'Role', 'Status', isOwner ? 'Actions' : ''].filter(Boolean).map(h => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 600, color: 'var(--text3)', fontSize: 11.5, letterSpacing: '0.04em', textTransform: 'uppercase' }}>{h}</th>
+                  <th key={h} className="px-[14px] py-2.5 text-left font-semibold text-ink3 text-[11.5px] tracking-[0.04em] uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {users.map((u, i) => (
-                <tr key={u.id} style={{ borderBottom: i < users.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                  <td style={{ padding: '11px 14px', fontWeight: 500, color: 'var(--text)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                      <div style={{
-                        width: 28, height: 28, borderRadius: '50%',
-                        background: ROLE_COLORS[u.role] || '#888',
-                        color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 10.5, fontWeight: 700, flexShrink: 0,
-                      }}>
+                <tr key={u.id} className={i < users.length - 1 ? 'border-b border-line' : ''}>
+                  <td className="px-[14px] py-[11px] font-medium text-ink">
+                    <div className="flex items-center gap-[9px]">
+                      <div
+                        className="w-7 h-7 rounded-full text-[#000] flex items-center justify-center text-[10.5px] font-bold shrink-0"
+                        style={{ background: ROLE_COLORS[u.role] || '#888' }}
+                      >
                         {u.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
                       </div>
                       {u.name}
                       {u.id === currentUser?.id && (
-                        <span style={{ fontSize: 9.5, color: 'var(--text3)', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 3, padding: '1px 5px' }}>you</span>
+                        <span className="text-[9.5px] text-ink3 bg-surface2 border border-line rounded-[3px] px-[5px] py-px">you</span>
                       )}
                     </div>
                   </td>
-                  <td style={{ padding: '11px 14px', color: 'var(--text2)', fontFamily: "'JetBrains Mono', monospace", fontSize: 12 }}>{u.email}</td>
-                  <td style={{ padding: '11px 14px', color: 'var(--text3)', fontSize: 12 }}>{u.phone || '—'}</td>
-                  <td style={{ padding: '11px 14px' }}>
-                    <span style={{
-                      fontSize: 10.5, fontWeight: 700, letterSpacing: '0.06em',
-                      textTransform: 'uppercase', color: ROLE_COLORS[u.role] || '#888',
-                      background: (ROLE_COLORS[u.role] || '#888') + '1a',
-                      padding: '2px 8px', borderRadius: 4,
-                    }}>
+                  <td className="px-[14px] py-[11px] text-ink2 text-[12px]" style={{ fontFamily: 'var(--font-mono)' }}>{u.email}</td>
+                  <td className="t-xs px-[14px] py-[11px] text-ink3">{u.phone || '—'}</td>
+                  <td className="px-[14px] py-[11px]">
+                    <span
+                      className="text-[10.5px] font-bold tracking-[0.06em] uppercase px-2 py-0.5 rounded"
+                      style={{ color: ROLE_COLORS[u.role] || '#888', background: (ROLE_COLORS[u.role] || '#888') + '1a' }}
+                    >
                       {ROLE_LABELS[u.role] || u.role}
                     </span>
                   </td>
-                  <td style={{ padding: '11px 14px' }}>
-                    <span style={{
-                      fontSize: 11, fontWeight: 600,
-                      color: u.status === 'active' ? '#22c55e' : '#ef4444',
-                      background: u.status === 'active' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-                      padding: '2px 8px', borderRadius: 20,
-                    }}>
+                  <td className="px-[14px] py-[11px]">
+                    <span
+                      className="text-[11px] font-semibold px-2 py-0.5 rounded-[20px]"
+                      style={{
+                        color: u.status === 'active' ? '#22c55e' : '#ef4444',
+                        background: u.status === 'active' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                      }}
+                    >
                       {u.status === 'active' ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   {isOwner && (
-                    <td style={{ padding: '11px 14px' }}>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn btn-outline btn-sm" onClick={() => openEdit(u)} style={{ padding: '3px 10px', fontSize: 11.5 }}>Edit</button>
+                    <td className="px-[14px] py-[11px]">
+                      <div className="flex gap-1.5">
+                        <button className="btn btn-outline btn-sm px-2.5 py-[3px] text-[11.5px]" onClick={() => openEdit(u)}>Edit</button>
                         <button
-                          className="btn btn-sm"
+                          className="btn btn-sm px-2.5 py-[3px] text-[11.5px] bg-[rgba(239,68,68,0.1)] text-[#ef4444] border border-[rgba(239,68,68,0.2)] rounded-md"
                           onClick={() => openDelete(u)}
                           disabled={u.id === currentUser?.id}
-                          style={{ padding: '3px 10px', fontSize: 11.5, background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 6, cursor: u.id === currentUser?.id ? 'not-allowed' : 'pointer', opacity: u.id === currentUser?.id ? 0.4 : 1 }}
+                          style={{ cursor: u.id === currentUser?.id ? 'not-allowed' : 'pointer', opacity: u.id === currentUser?.id ? 0.4 : 1 }}
                         >
                           Delete
                         </button>
@@ -1576,7 +1662,7 @@ function UsersAccessTab({ addToast }) {
                 </tr>
               ))}
               {users.length === 0 && (
-                <tr><td colSpan={6} style={{ padding: 32, textAlign: 'center', color: 'var(--text3)' }}>No users found.</td></tr>
+                <tr><td colSpan={6} className="p-8 text-center text-ink3">No users found.</td></tr>
               )}
             </tbody>
           </table>
@@ -1589,7 +1675,7 @@ function UsersAccessTab({ addToast }) {
           title={modal === 'create' ? 'Add User' : 'Edit User'}
           onClose={() => setModal(null)}
           footer={
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <div className="flex gap-2.5 justify-end">
               <button className="btn btn-outline btn-sm" onClick={() => setModal(null)}>Cancel</button>
               <button className="btn btn-gold btn-sm" onClick={handleSave} disabled={saving}>
                 {saving ? 'Saving…' : modal === 'create' ? 'Create User' : 'Save Changes'}
@@ -1597,7 +1683,7 @@ function UsersAccessTab({ addToast }) {
             </div>
           }
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px 18px' }}>
+          <div className="grid grid-cols-2 gap-x-[18px] gap-y-[14px]">
             <div>
               <label style={labelStyle}>Full Name</label>
               <input style={inputStyle} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ramesh Gupta" />
@@ -1624,7 +1710,7 @@ function UsersAccessTab({ addToast }) {
             </div>
             <div>
               <label style={labelStyle}>{modal === 'edit' ? 'New Password (leave blank to keep)' : 'Password'}</label>
-              <div style={{ position: 'relative' }}>
+              <div className="relative">
                 <input
                   style={{ ...inputStyle, paddingRight: 38 }}
                   type={showPass ? 'text' : 'password'}
@@ -1633,7 +1719,7 @@ function UsersAccessTab({ addToast }) {
                   placeholder={modal === 'edit' ? '(unchanged)' : 'Min 6 characters'}
                 />
                 <button type="button" onClick={() => setShowPass(!showPass)}
-                  style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text3)', fontSize: 13 }}>
+                  className="t-sm absolute right-2 top-1/2 -translate-y-1/2 bg-none border-none cursor-pointer text-ink3">
                   {showPass ? '🙈' : '👁'}
                 </button>
               </div>
@@ -1655,20 +1741,361 @@ function UsersAccessTab({ addToast }) {
       {modal === 'delete' && (
         <Modal title="Delete User" onClose={() => setModal(null)}
           footer={
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+            <div className="flex gap-2.5 justify-end">
               <button className="btn btn-outline btn-sm" onClick={() => setModal(null)}>Cancel</button>
-              <button className="btn btn-sm" onClick={handleDelete} disabled={saving}
-                style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, padding: '6px 16px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+              <button className="btn btn-sm t-title bg-[rgba(239,68,68,0.15)] text-[#ef4444] border border-[rgba(239,68,68,0.3)] rounded-md px-4 py-1.5 cursor-pointer" onClick={handleDelete} disabled={saving}>
                 {saving ? 'Deleting…' : 'Yes, Delete'}
               </button>
             </div>
           }
         >
-          <p style={{ margin: 0, color: 'var(--text)', fontSize: 14 }}>
+          <p className="t-body m-0">
             Are you sure you want to delete <strong>{target?.name}</strong>? This cannot be undone.
           </p>
         </Modal>
       )}
+    </div>
+  )
+}
+
+// ─── Shared controls for the configuration tabs ───────────────────────────────
+function Segmented({ value, options, onChange }) {
+  return (
+    <div className="inline-flex bg-surface2 border border-line rounded-lg p-[3px] gap-[3px] flex-wrap">
+      {options.map(opt => {
+        const active = value === opt.value
+        return (
+          <button
+            key={opt.value}
+            onClick={() => onChange(opt.value)}
+            className={`px-[14px] py-1.5 rounded-md border-none cursor-pointer text-[13px] transition-all duration-[140ms] ${
+              active ? 'font-semibold bg-gold text-[#000]' : 'font-medium bg-transparent text-ink2'
+            }`}
+          >
+            {opt.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function ToggleRow({ label, hint, checked, onChange }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-3 border-b border-line">
+      <div>
+        <div className="text-[13.5px] font-semibold text-ink">{label}</div>
+        {hint && <div className="t-xs text-ink3 mt-0.5">{hint}</div>}
+      </div>
+      <button
+        onClick={() => onChange(!checked)}
+        aria-pressed={checked}
+        className={`w-[42px] h-6 rounded-xl border-none cursor-pointer shrink-0 relative transition-[background] duration-[160ms] ${
+          checked ? 'bg-gold' : 'bg-line2'
+        }`}
+      >
+        <span
+          className={`absolute top-[3px] w-[18px] h-[18px] rounded-full bg-[#fff] transition-[left] duration-[160ms] ${
+            checked ? 'left-[21px]' : 'left-[3px]'
+          }`}
+          style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }}
+        />
+      </button>
+    </div>
+  )
+}
+
+// ─── Tab: Appearance ──────────────────────────────────────────────────────────
+function AppearanceTab({ addToast }) {
+  const darkMode = useAppSelector(s => s.ui.darkMode)
+  const { toggleDarkMode } = useUiActions()
+  const [prefs, setPrefs] = useState(getAppearance)
+
+  // Apply + persist immediately so the whole app re-skins live as you tweak.
+  function update(patch) {
+    const next = { ...prefs, ...patch }
+    setPrefs(next)
+    applyAppearance(next)
+    saveAppearance(next)
+  }
+
+  function setTheme(mode) {
+    if ((mode === 'dark') !== darkMode) toggleDarkMode()
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="card">
+        <div className="card-header"><span className="card-title">Theme</span></div>
+        <div className="card-body flex flex-col gap-2">
+          <label className="form-label text-[12px]">Color mode</label>
+          <Segmented
+            value={darkMode ? 'dark' : 'light'}
+            onChange={setTheme}
+            options={[{ value: 'light', label: '☀ Light' }, { value: 'dark', label: '☾ Dark' }]}
+          />
+          <p className="t-xs text-ink3 mt-1 mb-0">
+            Light keeps the pure white &amp; gold look; dark switches to a warm charcoal palette.
+          </p>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><span className="card-title">Accent Color</span></div>
+        <div className="card-body">
+          <div className="flex gap-3 flex-wrap">
+            {ACCENT_PRESETS.map(a => {
+              const active = prefs.accent === a.id
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => update({ accent: a.id })}
+                  className="flex flex-col items-center gap-1.5 cursor-pointer bg-none border-none p-1"
+                >
+                  <span
+                    className={`w-11 h-11 rounded-full border-[3px] ${active ? 'border-ink' : 'border-transparent'}`}
+                    style={{
+                      background: `linear-gradient(135deg, ${a.gold}, ${a.gold2})`,
+                      boxShadow: active ? '0 0 0 2px var(--surface) inset' : 'none',
+                    }}
+                  />
+                  <span className={`text-[11.5px] ${active ? 'font-bold text-ink' : 'font-medium text-ink3'}`}>
+                    {a.label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><span className="card-title">Layout</span></div>
+        <div className="card-body flex flex-col gap-[18px]">
+          <div className="flex flex-col gap-2">
+            <label className="form-label text-[12px]">Density</label>
+            <Segmented
+              value={prefs.density}
+              onChange={v => update({ density: v })}
+              options={[{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="form-label text-[12px]">Corner Style</label>
+            <Segmented
+              value={prefs.radius}
+              onChange={v => update({ radius: v })}
+              options={RADIUS_PRESETS.map(r => ({ value: r.id, label: r.label }))}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-1">
+        <button className="btn btn-primary" onClick={() => addToast('Appearance saved', 'success')}>
+          Save Appearance
+        </button>
+        <button
+          className="btn btn-outline ml-2.5"
+          onClick={() => { const d = { accent: 'classic', density: 'comfortable', radius: 'soft' }; setPrefs(d); applyAppearance(d); saveAppearance(d); addToast('Reset to defaults', 'info') }}
+        >
+          Reset to Default
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Tab: Branding ────────────────────────────────────────────────────────────
+const BRANDING_KEY = 'qv-branding'
+const initBranding = {
+  tagline:    'Luxury Redefined',
+  loginTitle: 'Welcome to Quantum Vorvex',
+  footerNote: '© Quantum Vorvex. All rights reserved.',
+  logoUrl:    '',
+}
+
+function BrandingTab({ settings, setSettings, addToast }) {
+  const { setHotelName } = useHotelActions()
+  const fileRef = useRef(null)
+  const [cropSrc, setCropSrc] = useState(null)
+  const [branding, setBranding] = useState(() => {
+    try { const r = localStorage.getItem(BRANDING_KEY); return r ? { ...initBranding, ...JSON.parse(r) } : initBranding }
+    catch { return initBranding }
+  })
+
+  function handleLogo(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => setCropSrc(reader.result)
+    reader.readAsDataURL(file)
+    e.target.value = '' // allow re-selecting the same file
+  }
+
+  // Branding logo lives in localStorage as a base64 data URL (no server upload).
+  async function applyCropped(blob) {
+    const dataUrl = await blobToDataUrl(blob)
+    setBranding(b => ({ ...b, logoUrl: dataUrl }))
+    setCropSrc(null)
+    addToast('Logo cropped — remember to Save', 'success')
+  }
+
+  function handleSave() {
+    try { localStorage.setItem(BRANDING_KEY, JSON.stringify(branding)) } catch { /* ignore */ }
+    setHotelName(settings.name)
+    addToast('Branding saved', 'success')
+  }
+
+  const initials = (settings.name || 'QV').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="card">
+        <div className="card-header"><span className="card-title">Logo &amp; Identity</span></div>
+        <div className="card-body flex items-center gap-[18px] flex-wrap">
+          <div
+            onClick={() => fileRef.current?.click()}
+            className="w-[84px] h-[84px] rounded-2xl cursor-pointer overflow-hidden shrink-0 border-2 border-gold flex items-center justify-center"
+            style={{ background: branding.logoUrl ? '#fff' : 'var(--gold-bg)' }}
+            title="Click to upload logo"
+          >
+            {branding.logoUrl
+              ? <img src={branding.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+              : <span className="t-display text-gold">{initials}</span>}
+          </div>
+          <div>
+            <button className="btn btn-outline text-[12px]" onClick={() => fileRef.current?.click()}>Upload Logo</button>
+            {branding.logoUrl && (
+              <button className="btn btn-outline text-[12px] ml-2" onClick={() => setBranding(b => ({ ...b, logoUrl: '' }))}>Remove</button>
+            )}
+            <p className="mt-1.5 mb-0 text-[11px] text-ink3">PNG or SVG with transparent background recommended · crop after selecting.</p>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} />
+          </div>
+        </div>
+      </div>
+
+      <LogoCropModal
+        key={cropSrc || 'closed'}
+        src={cropSrc}
+        title="Crop logo"
+        cropShape="rect"
+        confirmLabel="Crop & Apply"
+        onCancel={() => setCropSrc(null)}
+        onComplete={applyCropped}
+      />
+
+      <div className="card">
+        <div className="card-header"><span className="card-title">Brand Text</span></div>
+        <div className="card-body grid grid-cols-2 gap-4">
+          <Field label="Hotel / Brand Name">
+            <input className="form-input" value={settings.name}
+              onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
+          </Field>
+          <Field label="Tagline">
+            <input className="form-input" value={branding.tagline}
+              onChange={e => setBranding(b => ({ ...b, tagline: e.target.value }))} />
+          </Field>
+          <Field label="Login Screen Title" fullWidth>
+            <input className="form-input" value={branding.loginTitle}
+              onChange={e => setBranding(b => ({ ...b, loginTitle: e.target.value }))} />
+          </Field>
+          <Field label="Footer Note" fullWidth>
+            <input className="form-input" value={branding.footerNote}
+              onChange={e => setBranding(b => ({ ...b, footerNote: e.target.value }))} />
+          </Field>
+        </div>
+      </div>
+
+      <SaveButton onClick={handleSave} />
+    </div>
+  )
+}
+
+// ─── Tab: Preferences ─────────────────────────────────────────────────────────
+const PREFS_KEY = 'qv-preferences'
+const initPreferences = {
+  language:    'en',
+  currency:    'INR',
+  dateFormat:  'DD/MM/YYYY',
+  timeFormat:  '12h',
+  itemsPerPage: 25,
+  soundAlerts:  true,
+  emailDigest:  false,
+  autoLogout:   true,
+}
+
+function PreferencesTab({ addToast }) {
+  const [prefs, setPrefs] = useState(() => {
+    try { const r = localStorage.getItem(PREFS_KEY); return r ? { ...initPreferences, ...JSON.parse(r) } : initPreferences }
+    catch { return initPreferences }
+  })
+  const set = (patch) => setPrefs(p => ({ ...p, ...patch }))
+
+  function handleSave() {
+    try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)) } catch { /* ignore */ }
+    addToast('Preferences saved', 'success')
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="card">
+        <div className="card-header"><span className="card-title">Regional</span></div>
+        <div className="card-body grid grid-cols-2 gap-4">
+          <Field label="Language">
+            <select className="form-select" value={prefs.language} onChange={e => set({ language: e.target.value })}>
+              <option value="en">English</option>
+              <option value="hi">हिन्दी (Hindi)</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="ar">العربية (Arabic)</option>
+            </select>
+          </Field>
+          <Field label="Currency">
+            <select className="form-select" value={prefs.currency} onChange={e => set({ currency: e.target.value })}>
+              <option value="INR">₹ Indian Rupee (INR)</option>
+              <option value="USD">$ US Dollar (USD)</option>
+              <option value="EUR">€ Euro (EUR)</option>
+              <option value="GBP">£ British Pound (GBP)</option>
+              <option value="AED">د.إ UAE Dirham (AED)</option>
+            </select>
+          </Field>
+          <Field label="Date Format">
+            <select className="form-select" value={prefs.dateFormat} onChange={e => set({ dateFormat: e.target.value })}>
+              <option>DD/MM/YYYY</option>
+              <option>MM/DD/YYYY</option>
+              <option>YYYY-MM-DD</option>
+              <option>DD MMM YYYY</option>
+            </select>
+          </Field>
+          <Field label="Time Format">
+            <Segmented
+              value={prefs.timeFormat}
+              onChange={v => set({ timeFormat: v })}
+              options={[{ value: '12h', label: '12-hour' }, { value: '24h', label: '24-hour' }]}
+            />
+          </Field>
+          <Field label="Rows Per Page">
+            <select className="form-select" value={prefs.itemsPerPage} onChange={e => set({ itemsPerPage: Number(e.target.value) })}>
+              {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </Field>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><span className="card-title">Notifications &amp; Session</span></div>
+        <div className="card-body pt-1">
+          <ToggleRow label="Sound alerts" hint="Play a chime for new bookings and check-ins"
+            checked={prefs.soundAlerts} onChange={v => set({ soundAlerts: v })} />
+          <ToggleRow label="Daily email digest" hint="Receive a summary of the day's activity each evening"
+            checked={prefs.emailDigest} onChange={v => set({ emailDigest: v })} />
+          <ToggleRow label="Auto sign-out when idle" hint="Lock the dashboard after 30 minutes of inactivity"
+            checked={prefs.autoLogout} onChange={v => set({ autoLogout: v })} />
+        </div>
+      </div>
+
+      <SaveButton onClick={handleSave} />
     </div>
   )
 }
@@ -1683,17 +2110,44 @@ const ALL_TABS = [
   { id: 'documents',     label: 'Documents'      },
   { id: 'pricing',       label: 'Pricing Rules'  },
   { id: 'notifications', label: 'Notifications'  },
+  { id: 'appearance',    label: 'Appearance'     },
+  { id: 'branding',      label: 'Branding'       },
+  { id: 'preferences',   label: 'Preferences'    },
   { id: 'properties',    label: 'Properties'     },
   { id: 'users',         label: 'Users & Access' },
 ]
 
+const TAB_IDS = ALL_TABS.map(t => t.id)
+
+// Read the active tab from the URL (?tab=…). Falls back when absent/invalid.
+function tabFromUrl(fallback = 'profile') {
+  if (typeof window === 'undefined') return fallback
+  const t = new URLSearchParams(window.location.search).get('tab')
+  return TAB_IDS.includes(t) ? t : fallback
+}
+
 export default function Settings({ onRunSetup }) {
-  const [activeTab, setActiveTab] = useState('profile')
+  const [activeTab, setActiveTab] = useState(tabFromUrl)
   const [settings, setSettings]   = useState(initSettings)
+  const [roomTypes, setRoomTypes] = useState(initRoomTypes)
+  const [foodPlans, setFoodPlans] = useState(initFoodPlans)
+  const [amenities, setAmenities] = useState(initAmenities)
   const addToast     = useToast()
-  const setHotelName = useStore(s => s.setHotelName)
-  const setOwnerName = useStore(s => s.setOwnerName)
-  const currentUser  = useStore(s => s.currentUser)
+
+  // Load the hotel's saved settings so every backed tab reflects real data.
+  // The controller returns { hotel, roomTypes, foodPlans, amenities }.
+  useEffect(() => {
+    settingsApi.get()
+      .then(({ data }) => {
+        if (data.hotel)              setSettings(s => ({ ...s, ...data.hotel }))
+        if (data.roomTypes?.length)  setRoomTypes(data.roomTypes)
+        if (data.foodPlans?.length)  setFoodPlans(data.foodPlans)
+        if (data.amenities?.length)  setAmenities(data.amenities)
+      })
+      .catch(() => { /* keep defaults */ })
+  }, [])
+  const { setHotelName, setOwnerName } = useHotelActions()
+  const currentUser  = useAppSelector(s => s.auth.currentUser)
   const role         = currentUser?.role || 'staff'
 
   // Filter tabs based on role permissions
@@ -1702,31 +2156,45 @@ export default function Settings({ onRunSetup }) {
   // Reset to first allowed tab if current tab is no longer accessible
   const validActiveTab = tabs.find(t => t.id === activeTab) ? activeTab : (tabs[0]?.id || 'profile')
 
+  // Keep the URL's ?tab in sync with the active tab so the page is addressable
+  // and survives a refresh. The app's panel router only reads location.pathname
+  // (always "/settings" here), so this query param never interferes with it.
+  // replaceState (not push) keeps tab switches out of the back-button history.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('tab') === validActiveTab) return
+    params.set('tab', validActiveTab)
+    window.history.replaceState(
+      { ...window.history.state, tab: validActiveTab },
+      '',
+      `${window.location.pathname}?${params}`,
+    )
+  }, [validActiveTab])
+
+  // Browser back/forward (or a programmatic panel change) → re-read the tab.
+  useEffect(() => {
+    const onPop = () => setActiveTab(tabFromUrl())
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
   return (
-    <div style={{ padding: '24px', maxWidth: 900, margin: '0 auto' }}>
+    <div className="p-6">
       {/* Header */}
-      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+      <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 style={{
-            margin: 0,
-            fontFamily: "'Syne', sans-serif",
-            fontSize: 22,
-            fontWeight: 800,
-            color: 'var(--text)',
-            letterSpacing: '-0.02em',
-          }}>
+          <h1 className="t-h1 m-0 tracking-[-0.02em]">
             Settings
           </h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text3)' }}>
+          <p className="t-sm mt-1 mb-0 text-ink3">
             Configure hotel profile, room types, pricing, and system preferences
           </p>
         </div>
         {onRunSetup && (role === 'owner' || role === 'admin') && (
           <button
-            className="btn btn-outline btn-sm"
+            className="btn btn-outline btn-sm shrink-0"
             onClick={onRunSetup}
             title="Re-run the first-time setup wizard"
-            style={{ flexShrink: 0 }}
           >
             ⚙ Re-run Setup
           </button>
@@ -1744,13 +2212,14 @@ export default function Settings({ onRunSetup }) {
           />
         </div>
         <div data-tab-id="rooms">
-          <RoomConfigTab settings={settings} setSettings={setSettings} addToast={addToast} />
+          <RoomConfigTab settings={settings} setSettings={setSettings}
+            roomTypes={roomTypes} setRoomTypes={setRoomTypes} addToast={addToast} />
         </div>
         <div data-tab-id="facilities">
-          <FacilitiesTab addToast={addToast} />
+          <FacilitiesTab amenities={amenities} setAmenities={setAmenities} addToast={addToast} />
         </div>
         <div data-tab-id="food">
-          <FoodPlansTab addToast={addToast} />
+          <FoodPlansTab plans={foodPlans} setPlans={setFoodPlans} addToast={addToast} />
         </div>
         <div data-tab-id="tax">
           <TaxPricingTab settings={settings} setSettings={setSettings} addToast={addToast} />
@@ -1763,6 +2232,15 @@ export default function Settings({ onRunSetup }) {
         </div>
         <div data-tab-id="notifications">
           <NotificationsTab addToast={addToast} />
+        </div>
+        <div data-tab-id="appearance">
+          <AppearanceTab addToast={addToast} />
+        </div>
+        <div data-tab-id="branding">
+          <BrandingTab settings={settings} setSettings={setSettings} addToast={addToast} />
+        </div>
+        <div data-tab-id="preferences">
+          <PreferencesTab addToast={addToast} />
         </div>
         <div data-tab-id="properties">
           <PropertiesTab settings={settings} setSettings={setSettings} addToast={addToast} />

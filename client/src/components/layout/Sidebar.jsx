@@ -1,46 +1,8 @@
-import { useState } from 'react'
-import { useStore } from '../../store/useStore'
+import { useEffect, useRef, useState } from 'react'
+import { LuPower, LuChevronsLeft, LuChevronsRight } from 'react-icons/lu'
+import { useAppSelector, useUiActions, useAuthActions } from '../../store/hooks'
 import { getAllowedPanels, ROLE_LABELS, ROLE_COLORS } from '../../utils/permissions'
-
-const NAV_SECTIONS = [
-  {
-    label: 'Operations',
-    items: [
-      { id: 'dashboard',    label: 'Dashboard',    icon: '▦',  shortcut: 'D' },
-      { id: 'rooms',        label: 'Rooms',         icon: '⊟',  shortcut: 'R' },
-      { id: 'floorplan',   label: 'Floor Plan',    icon: '◫',  shortcut: 'F' },
-      { id: 'calendar',    label: 'Room Calendar', icon: '📅' },
-      { id: 'maintenance', label: 'Maintenance',   icon: '🔧', shortcut: 'M', badge: '3' },
-      { id: 'housekeeping',label: 'Housekeeping',  icon: '🧹', shortcut: 'H', badge: '5' },
-      { id: 'reports',     label: 'Reports',       icon: '◈',  shortcut: 'T' },
-      { id: 'nightaudit',  label: 'Night Audit',   icon: '🌙' },
-    ],
-  },
-  {
-    label: 'Guests',
-    items: [
-      { id: 'checkin',   label: 'Check-In',   icon: '↗',  shortcut: 'C' },
-      { id: 'guests',    label: 'All Guests', icon: '◎',  shortcut: 'G' },
-      { id: 'bookings',  label: 'Bookings',   icon: '◷' },
-      { id: 'channels',  label: 'Channels',   icon: '🔗' },
-      { id: 'documents', label: 'Documents',  icon: '◫' },
-    ],
-  },
-  {
-    label: 'Services',
-    items: [
-      { id: 'food',    label: 'Food Options', icon: '⊕' },
-      { id: 'billing', label: 'Billing',      icon: '◑', shortcut: 'B' },
-    ],
-  },
-  {
-    label: 'System',
-    items: [
-      { id: 'staff',    label: 'Staff',    icon: '👤' },
-      { id: 'settings', label: 'Settings', icon: '◌', shortcut: 'S' },
-    ],
-  },
-]
+import { NAV_SECTIONS } from '../../utils/navigation'
 
 function getInitials(name = '') {
   return name
@@ -60,15 +22,25 @@ function splitHotelName(name = '') {
 }
 
 export default function Sidebar() {
-  const activePanel    = useStore((s) => s.activePanel)
-  const setActivePanel = useStore((s) => s.setActivePanel)
-  const sidebarOpen    = useStore((s) => s.sidebarOpen)
-  const closeSidebar   = useStore((s) => s.closeSidebar)
-  const darkMode       = useStore((s) => s.darkMode)
-  const toggleDarkMode = useStore((s) => s.toggleDarkMode)
-  const hotelName      = useStore((s) => s.hotelName)
-  const currentUser    = useStore((s) => s.currentUser)
-  const logout         = useStore((s) => s.logout)
+  const activePanel      = useAppSelector((s) => s.ui.activePanel)
+  const sidebarOpen      = useAppSelector((s) => s.ui.sidebarOpen)
+  const sidebarCollapsed = useAppSelector((s) => s.ui.sidebarCollapsed)
+  const hotelName        = useAppSelector((s) => s.hotel.hotelName)
+  const currentUser      = useAppSelector((s) => s.auth.currentUser)
+  const { setActivePanel, closeSidebar, toggleSidebarCollapsed } = useUiActions()
+  const { logout } = useAuthActions()
+
+  // Collapse is a desktop-only affordance; the mobile drawer always shows full.
+  const [isDesktop, setIsDesktop] = useState(
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true,
+  )
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth >= 1024)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  const collapsed = sidebarCollapsed && isDesktop
 
   const role          = currentUser?.role || 'staff'
   const allowedPanels = getAllowedPanels(role)
@@ -98,6 +70,8 @@ export default function Sidebar() {
     }))
     .filter(section => section.items.length > 0)
 
+  const width = collapsed ? 72 : 252
+
   return (
     <>
       {/* Mobile overlay — only rendered when sidebar is open */}
@@ -106,86 +80,52 @@ export default function Sidebar() {
       {/* Sidebar */}
       <div
         id="sidebar"
-        style={{
-          width: 252,
-          minWidth: 252,
-          height: '100dvh',
-          background: '#141414',
-          display: 'flex',
-          flexDirection: 'column',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          flexShrink: 0,
-          zIndex: 100,
-        }}
-        className={sidebarOpen ? 'sb-open' : ''}
+        style={{ width, minWidth: width }}
+        className={`h-[100dvh] bg-[#141414] flex flex-col overflow-y-auto overflow-x-hidden shrink-0 z-[100] transition-[width,min-width] duration-200 ease-[ease] ${sidebarOpen ? 'sb-open' : ''}`}
       >
         {/* Logo section */}
-        <div style={{ padding: '20px 18px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-            <div style={{
-              width: 36, height: 36,
-              background: '#c9a84c',
-              borderRadius: 8,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 18, flexShrink: 0,
-            }}>
-              🏨
+        <div className="border-b border-b-[rgba(255,255,255,0.07)]" style={{ padding: collapsed ? '18px 0 14px' : '20px 18px 16px' }}>
+          <div className={`flex items-center gap-[11px] ${collapsed ? 'justify-center' : 'justify-between'}`}>
+            <div className="flex items-center gap-[11px] min-w-0">
+              {!collapsed && (
+                <div className="min-w-0">
+                  <div className="t-h2 text-[#fff] tracking-[-0.02em] leading-[1.2]">
+                    {head && <span>{head} </span>}
+                    <span className="text-[#c9a84c]">{tail}</span>
+                  </div>
+                </div>
+              )}
             </div>
-            <div>
-              <div style={{
-                fontFamily: "'Syne', sans-serif",
-                fontSize: 15, fontWeight: 700,
-                color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.2,
-              }}>
-                {head && <span>{head} </span>}
-                <span style={{ color: '#c9a84c' }}>{tail}</span>
-              </div>
-              <div style={{
-                fontSize: 9.5, color: '#555', marginTop: 2,
-                letterSpacing: '0.04em', textTransform: 'uppercase', fontWeight: 500,
-              }}>
-                Powered by Forge Quantum Solutions
-              </div>
-            </div>
+
+            {/* Collapse toggle — desktop only */}
+            {isDesktop && !collapsed && (
+              <CollapseButton collapsed={collapsed} onClick={toggleSidebarCollapsed} />
+            )}
           </div>
 
-          {/* Dark mode toggle */}
-          <button
-            onClick={toggleDarkMode}
-            style={{
-              marginTop: 13, width: '100%',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 6, padding: '6px 10px',
-              display: 'flex', alignItems: 'center', gap: 7,
-              cursor: 'pointer', color: '#888', fontSize: 11.5,
-              fontFamily: "'Inter', sans-serif", transition: 'all 0.14s',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.4)'; e.currentTarget.style.color = '#c9a84c' }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#888' }}
-          >
-            <span style={{ fontSize: 13 }}>{darkMode ? '☀' : '🌙'}</span>
-            <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
-          </button>
+          {/* Expand toggle (collapsed state) — centered under the logo */}
+          {isDesktop && collapsed && (
+            <div className="flex justify-center mt-3">
+              <CollapseButton collapsed={collapsed} onClick={toggleSidebarCollapsed} />
+            </div>
+          )}
         </div>
 
         {/* Nav sections */}
-        <nav style={{ flex: 1, padding: '8px 0' }}>
+        <nav className="flex-1 py-2">
           {filteredSections.map((section) => (
-            <div key={section.label} style={{ marginBottom: 4 }}>
-              <div style={{
-                fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
-                textTransform: 'uppercase', color: '#3a3a3a',
-                padding: '10px 18px 4px', fontFamily: "'Inter', sans-serif",
-              }}>
-                {section.label}
-              </div>
+            <div key={section.label} className="mb-1">
+              {!collapsed && (
+                <div className="text-[9px] font-bold tracking-[0.1em] uppercase text-[#3a3a3a] pt-2.5 px-[18px] pb-1">
+                  {section.label}
+                </div>
+              )}
               {section.items.map((item) => (
                 <NavItem
                   key={item.id}
                   item={item}
                   isActive={activePanel === item.id}
+                  collapsed={collapsed}
                   onClick={() => handleNavClick(item.id)}
                 />
               ))}
@@ -194,61 +134,50 @@ export default function Sidebar() {
         </nav>
 
         {/* User footer */}
-        <div style={{
-          padding: '12px 14px',
-          borderTop: '1px solid rgba(255,255,255,0.07)',
-          marginTop: 'auto',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: '50%',
-              background: roleColor,
-              color: '#000',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11.5, fontWeight: 700, flexShrink: 0,
-              fontFamily: "'Inter', sans-serif",
-            }}>
+        <div
+          className={`border-t border-t-[rgba(255,255,255,0.07)] mt-auto ${collapsed ? 'py-3' : 'py-3 px-3.5'}`}
+        >
+          <div className={`flex items-center gap-2.5 mb-2.5 ${collapsed ? 'justify-center' : 'justify-start'}`}>
+            <div
+              title={collapsed ? `${userName} · ${roleLabel}` : undefined}
+              className="w-8 h-8 rounded-full text-[#000] flex items-center justify-center text-[11.5px] font-bold shrink-0"
+              style={{ background: roleColor }}
+            >
               {userInitials}
             </div>
-            <div style={{ overflow: 'hidden', flex: 1 }}>
-              <div style={{
-                color: '#fff', fontSize: 12.5, fontWeight: 600,
-                fontFamily: "'Inter', sans-serif",
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-              }}>
-                {userName}
+            {!collapsed && (
+              <div className="overflow-hidden flex-1">
+                <div className="text-[#fff] text-[12.5px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis">
+                  {userName}
+                </div>
+                <div className="flex items-center gap-[5px] mt-0.5">
+                  <span
+                    className="text-[9px] font-bold tracking-[0.06em] uppercase px-[5px] py-px rounded-[3px]"
+                    style={{ color: roleColor, background: roleColor + '1a' }}
+                  >
+                    {roleLabel}
+                  </span>
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                <span style={{
-                  fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
-                  textTransform: 'uppercase', color: roleColor,
-                  background: roleColor + '1a',
-                  padding: '1px 5px', borderRadius: 3,
-                  fontFamily: "'Inter', sans-serif",
-                }}>
-                  {roleLabel}
-                </span>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Logout button */}
           <button
             onClick={handleLogout}
+            title="Sign Out"
             style={{
-              width: '100%',
-              background: 'rgba(220,53,69,0.08)',
-              border: '1px solid rgba(220,53,69,0.2)',
-              borderRadius: 6, padding: '7px 10px',
-              display: 'flex', alignItems: 'center', gap: 7,
-              cursor: 'pointer', color: '#dc5555', fontSize: 12,
-              fontFamily: "'Inter', sans-serif", transition: 'all 0.14s',
+              width: collapsed ? 40 : '100%',
+              marginLeft: collapsed ? 'auto' : 0,
+              marginRight: collapsed ? 'auto' : 0,
+              padding: collapsed ? '8px 0' : '7px 10px',
             }}
+            className={`t-xs bg-[rgba(220,53,69,0.08)] border border-[rgba(220,53,69,0.2)] rounded-md flex items-center gap-[7px] cursor-pointer text-[#dc5555] transition-all duration-[140ms] ${collapsed ? 'justify-center' : 'justify-start'}`}
             onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(220,53,69,0.16)'; e.currentTarget.style.borderColor = 'rgba(220,53,69,0.4)' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(220,53,69,0.08)'; e.currentTarget.style.borderColor = 'rgba(220,53,69,0.2)' }}
           >
-            <span style={{ fontSize: 13 }}>⎋</span>
-            <span>Sign Out</span>
+            <LuPower size={15} />
+            {!collapsed && <span>Sign Out</span>}
           </button>
         </div>
       </div>
@@ -258,53 +187,67 @@ export default function Sidebar() {
   )
 }
 
-function NavItem({ item, isActive, onClick }) {
+function CollapseButton({ collapsed, onClick }) {
   const [hovered, setHovered] = useState(false)
-
   return (
-    <div
+    <button
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '9px 16px', cursor: 'pointer', fontSize: 13.5,
-        color: isActive ? '#fff' : hovered ? '#fff' : '#888',
-        borderLeft: isActive ? '2px solid #c9a84c' : '2px solid transparent',
-        background: isActive
-          ? 'rgba(201,168,76,0.08)'
-          : hovered ? 'rgba(255,255,255,0.04)' : 'transparent',
-        transition: 'all 0.12s', userSelect: 'none',
-        fontFamily: "'Inter', sans-serif",
-        fontWeight: isActive ? 500 : 400,
-      }}
+      title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      className={`w-7 h-7 shrink-0 rounded-md border border-[rgba(255,255,255,0.08)] flex items-center justify-center cursor-pointer transition-all duration-[140ms] ${hovered ? 'bg-[rgba(201,168,76,0.12)] text-[#c9a84c]' : 'bg-[rgba(255,255,255,0.04)] text-[#888]'}`}
     >
-      <span style={{
-        fontSize: 14, width: 18, textAlign: 'center', flexShrink: 0,
-        color: isActive ? '#c9a84c' : 'inherit',
-      }}>
-        {item.icon}
+      {collapsed ? <LuChevronsRight size={16} /> : <LuChevronsLeft size={16} />}
+    </button>
+  )
+}
+
+function NavItem({ item, isActive, collapsed, onClick }) {
+  const [hovered, setHovered] = useState(false)
+  const itemRef = useRef(null)
+  // Viewport coords for the tooltip — fixed positioning escapes the
+  // sidebar's overflow-x-hidden clipping.
+  const [tipPos, setTipPos] = useState({ top: 0, left: 0 })
+
+  const handleMouseEnter = () => {
+    setHovered(true)
+    if (collapsed && itemRef.current) {
+      const rect = itemRef.current.getBoundingClientRect()
+      setTipPos({ top: rect.top + rect.height / 2, left: rect.right + 10 })
+    }
+  }
+
+  return (
+    <div
+      ref={itemRef}
+      onClick={onClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => setHovered(false)}
+      aria-label={collapsed ? item.label : undefined}
+      className={`flex items-center cursor-pointer text-[13.5px] transition-all duration-[120ms] select-none ${collapsed ? 'justify-center gap-0 py-[11px] px-0' : 'justify-start gap-2.5 py-[9px] px-4'} ${
+        isActive
+          ? 'text-[#fff] border-l-2 border-l-[#c9a84c] bg-[rgba(201,168,76,0.08)] font-medium'
+          : `${hovered ? 'text-[#fff] bg-[rgba(255,255,255,0.04)]' : 'text-[#888] bg-transparent'} border-l-2 border-l-transparent font-normal`
+      }`}
+    >
+      <span
+        className={`w-5 flex items-center justify-center shrink-0 transition-[color] duration-[120ms] ${isActive || hovered ? 'text-[#c9a84c]' : 'text-[#8a857a]'}`}
+      >
+        <item.Icon size={17} strokeWidth={isActive ? 2.3 : 1.9} />
       </span>
-      <span style={{ flex: 1 }}>{item.label}</span>
-      {item.badge && (
-        <span style={{
-          background: '#c9a84c', color: '#000', fontSize: 9.5, fontWeight: 700,
-          padding: '2px 6px', borderRadius: 20,
-          fontFamily: "'JetBrains Mono', monospace",
-        }}>
-          {item.badge}
-        </span>
-      )}
-      {item.shortcut && !item.badge && (
-        <span style={{
-          fontSize: 9.5, color: '#3a3a3a',
-          fontFamily: "'JetBrains Mono', monospace",
-          background: 'rgba(255,255,255,0.05)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 3, padding: '1px 4px',
-        }}>
-          {item.shortcut}
-        </span>
+      {!collapsed && <span className="flex-1">{item.label}</span>}
+
+      {/* Tooltip — collapsed state only */}
+      {collapsed && hovered && (
+        <div
+          className="fixed -translate-y-1/2 z-[300] pointer-events-none whitespace-nowrap bg-[#1f1f1f] text-[#fff] text-[12px] font-medium px-2.5 py-1.5 rounded-md border border-[rgba(255,255,255,0.1)] shadow-[0_4px_14px_rgba(0,0,0,0.45)]"
+          style={{ top: tipPos.top, left: tipPos.left }}
+          role="tooltip"
+        >
+          {item.label}
+          <span className="absolute top-1/2 -left-1 -translate-y-1/2 w-2 h-2 rotate-45 bg-[#1f1f1f] border-l border-b border-[rgba(255,255,255,0.1)]" />
+        </div>
       )}
     </div>
   )

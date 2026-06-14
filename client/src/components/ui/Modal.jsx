@@ -24,52 +24,21 @@ export default function Modal({
 
   return (
     <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.4)',
-        backdropFilter: 'blur(4px)',
-        zIndex: 1000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-      }}
+      className="fixed inset-0 bg-[rgba(0,0,0,0.4)] backdrop-blur-[4px] z-[1000] flex items-center justify-center p-5"
       onClick={onClose}
     >
       <div
+        className="bg-surface border border-line rounded-[10px] max-h-[90vh] overflow-y-auto shadow-[var(--shadow-md)] w-full"
         style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: '10px',
-          maxHeight: '90vh',
-          overflowY: 'auto',
-          boxShadow: 'var(--shadow-md)',
-          width: '100%',
           maxWidth: resolvedMaxWidth,
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div
-          style={{
-            position: 'sticky',
-            top: 0,
-            padding: '17px 22px',
-            borderBottom: '1px solid var(--border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            background: 'var(--surface)',
-            zIndex: 1,
-          }}
-        >
+        <div className="sticky top-0 px-[22px] py-[17px] border-b border-line flex items-center justify-between bg-surface z-[1]">
           <span
+            className="t-h3 text-ink"
             style={{
-              fontFamily: "'Syne', sans-serif",
-              fontSize: '16px',
-              fontWeight: 700,
-              color: 'var(--text)',
               letterSpacing: '-0.02em',
             }}
           >
@@ -77,21 +46,7 @@ export default function Modal({
           </span>
           <button
             onClick={onClose}
-            style={{
-              width: '27px',
-              height: '27px',
-              borderRadius: '50%',
-              background: 'var(--surface2)',
-              border: '1px solid var(--border)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '15px',
-              color: 'var(--text2)',
-              transition: 'all 0.14s',
-              flexShrink: 0,
-            }}
+            className="t-h3 w-[27px] h-[27px] rounded-full bg-surface2 border border-line cursor-pointer flex items-center justify-center text-ink2 transition-all duration-[140ms] shrink-0"
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'var(--red-bg)'
               e.currentTarget.style.color = 'var(--red-text)'
@@ -109,21 +64,13 @@ export default function Modal({
         </div>
 
         {/* Body */}
-        <div style={{ padding: '20px 22px' }}>
+        <div className="px-[22px] py-5">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div
-            style={{
-              padding: '14px 22px',
-              borderTop: '1px solid var(--border)',
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '8px',
-            }}
-          >
+          <div className="px-[22px] py-[14px] border-t border-line flex justify-end gap-2">
             {footer}
           </div>
         )}

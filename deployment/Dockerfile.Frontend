@@ -1,0 +1,43 @@
+# =============================================================================
+# Quantum Vorvex — Frontend image (nginx serving the React build, HTTP :80)
+#
+# Builds the React/Vite client and bakes the static bundle into nginx, which
+# serves the SPA and reverse-proxies the API on :80. TLS is terminated by the
+# HOST nginx (see deployment/host-nginx.sample.conf).
+#
+# Build context is the repo root (see docker-compose.yml), so COPY paths are
+# written relative to the repo root, not to this file's location.
+#
+# Stages:
+#   client-build — produce the production Vite bundle (client/dist)
+#   runtime      — nginx serving that bundle + reverse proxy (see default.conf)
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage 1 — build the React client (VITE_MOCK forced off -> real /api/v1)
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS client-build
+WORKDIR /app/client
+
+COPY client/package.json client/package-lock.json ./
+RUN npm ci
+
+COPY client/ ./
+ENV VITE_MOCK=false
+RUN npm run build
+
+# -----------------------------------------------------------------------------
+# Stage 2 — nginx serving the static build + reverse proxy on :80
+# -----------------------------------------------------------------------------
+FROM nginx:1.27-alpine AS runtime
+
+RUN rm -rf /usr/share/nginx/html/*
+COPY --from=client-build /app/client/dist /usr/share/nginx/html
+
+# Keep the image's stock /etc/nginx/nginx.conf; only swap the conf.d default,
+# which is included inside its http{} block.
+COPY deployment/default.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+# nginx:alpine's default entrypoint/CMD already runs nginx in the foreground.

@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Button from '../../ui/Button'
-import { useStore } from '../../../store/useStore'
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const mockRooms = [
@@ -58,37 +57,26 @@ function FloorPlanRoomDetail({ room, onClose }) {
   return (
     <>
       {/* Info grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 18 }}>
+      <div className="grid grid-cols-[1fr_1fr] gap-3 mb-[18px]">
         {[
           ['Room Number', room.number],
           ['Floor',       `Floor ${room.floor}`],
           ['Type',        room.type],
           ['Daily Rate',  `₹${room.dailyRate?.toLocaleString()}`],
         ].map(([label, value]) => (
-          <div key={label} style={{
-            background: 'var(--surface2)',
-            border: '1px solid var(--border)',
-            borderRadius: 8,
-            padding: '10px 14px',
-          }}>
-            <p style={{ margin: 0, fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+          <div key={label} className="bg-surface2 border border-line rounded-lg px-[14px] py-2.5">
+            <p className="t-label m-0">
               {label}
             </p>
-            <p style={{ margin: '4px 0 0', fontSize: 14, fontWeight: 600, color: 'var(--text)', fontFamily: "'Syne', sans-serif" }}>
+            <p className="t-title mt-1">
               {value}
             </p>
           </div>
         ))}
 
         {/* Status spans full width */}
-        <div style={{
-          background: 'var(--surface2)',
-          border: '1px solid var(--border)',
-          borderRadius: 8,
-          padding: '10px 14px',
-          gridColumn: '1 / -1',
-        }}>
-          <p style={{ margin: '0 0 6px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        <div className="bg-surface2 border border-line rounded-lg px-[14px] py-2.5 col-[1/-1]">
+          <p className="t-label mb-1.5">
             Status
           </p>
           <Badge type={badgeType}>{STATUS_LABEL[room.status]}</Badge>
@@ -97,33 +85,23 @@ function FloorPlanRoomDetail({ room, onClose }) {
 
       {/* Guest info if occupied */}
       {room.status === 'occupied' && room.guest && (
-        <div style={{
-          background: 'var(--red-bg)',
-          borderRadius: 8,
-          padding: '13px 16px',
-          marginBottom: 18,
-        }}>
-          <p style={{ margin: '0 0 8px', fontSize: 10, fontWeight: 700, color: 'var(--red-text)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+        <div className="bg-danger-bg rounded-lg px-4 py-[13px] mb-[18px]">
+          <p className="t-label mb-2 text-danger-text">
             Current Occupant
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: '50%',
-              background: 'var(--red-text)', color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: "'Syne', sans-serif", fontSize: 13, fontWeight: 800, flexShrink: 0,
-            }}>
+          <div className="flex items-center gap-3">
+            <div className="t-title w-9 h-9 rounded-full bg-danger-text text-white flex items-center justify-center shrink-0">
               {room.guest.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
             <div>
-              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{room.guest.name}</p>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text2)' }}>{room.guest.phone}</p>
+              <p className="t-title m-0">{room.guest.name}</p>
+              <p className="t-xs mt-0.5">{room.guest.phone}</p>
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div className="flex justify-end">
         <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
       </div>
     </>
@@ -133,33 +111,20 @@ function FloorPlanRoomDetail({ room, onClose }) {
 // ─── Floor Section ────────────────────────────────────────────────────────────
 function FloorSection({ floorNum, rooms, onRoomClick }) {
   return (
-    <div style={{ marginBottom: 32 }}>
+    <div className="mb-8">
       {/* Floor label + rule */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-        <span style={{
-          fontFamily: "'Syne', sans-serif",
-          fontSize: 11,
-          fontWeight: 800,
-          letterSpacing: '0.12em',
-          color: 'var(--text3)',
-          textTransform: 'uppercase',
-          whiteSpace: 'nowrap',
-          flexShrink: 0,
-        }}>
+      <div className="flex items-center gap-3 mb-[14px]">
+        <span className="t-label whitespace-nowrap shrink-0">
           Floor {floorNum}
         </span>
-        <hr style={{ flex: 1, border: 'none', borderTop: '1px solid var(--border)', margin: 0 }} />
-        <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>
+        <hr className="flex-1 border-none border-t border-t-line m-0" />
+        <span className="t-label shrink-0">
           {rooms.length} room{rooms.length !== 1 ? 's' : ''}
         </span>
       </div>
 
       {/* Room grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(8, 1fr)',
-        gap: 8,
-      }}>
+      <div className="grid grid-cols-[repeat(8,1fr)] gap-2">
         {rooms.map(room => (
           <FloorRoomCell key={room.id} room={room} onClick={() => onRoomClick(room)} />
         ))}
@@ -179,39 +144,18 @@ function FloorRoomCell({ room, onClick }) {
       title={`Room ${room.number} — ${room.type} — ${STATUS_LABEL[room.status]}${room.guest ? ` — ${room.guest.name}` : ''}`}
     >
       {/* Room number */}
-      <p style={{
-        margin: 0,
-        fontFamily: "'Syne', sans-serif",
-        fontSize: 14,
-        fontWeight: 800,
-        lineHeight: 1.1,
-        letterSpacing: '-0.02em',
-      }}>
+      <p className="t-title m-0 leading-[1.1] tracking-[-0.02em]">
         {room.number}
       </p>
 
       {/* Type abbreviation */}
-      <p style={{
-        margin: '3px 0 0',
-        fontSize: 9,
-        fontWeight: 500,
-        opacity: 0.7,
-        textTransform: 'uppercase',
-        letterSpacing: '0.04em',
-        lineHeight: 1,
-      }}>
+      <p className="mt-[3px] text-[9px] font-medium opacity-70 uppercase tracking-[0.04em] leading-none">
         {abbr}
       </p>
 
       {/* Occupied indicator dot */}
       {room.status === 'occupied' && (
-        <div style={{
-          width: 5, height: 5,
-          borderRadius: '50%',
-          background: 'var(--red-text)',
-          margin: '4px auto 0',
-          opacity: 0.8,
-        }} />
+        <div className="w-[5px] h-[5px] rounded-full bg-danger-text mx-auto mt-1 opacity-80" />
       )}
     </div>
   )
@@ -219,8 +163,6 @@ function FloorRoomCell({ room, onClick }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function FloorPlan({ rooms: propRooms }) {
-  useStore() // subscribe to global store
-
   const rooms = propRooms ?? mockRooms
 
   const [selectedRoom, setSelectedRoom] = useState(null)
@@ -248,96 +190,66 @@ export default function FloorPlan({ rooms: propRooms }) {
   }), [rooms])
 
   return (
-    <div style={{ padding: '24px 28px', maxWidth: 1400, margin: '0 auto' }}>
+    <div className="px-7 py-6 max-w-[1400px] mx-auto">
 
       {/* ── Page Header ────────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: 22 }}>
-        <h1 style={{
-          fontFamily: "'Syne', sans-serif",
-          fontSize: 26,
-          fontWeight: 800,
-          margin: 0,
-          color: 'var(--text)',
-          letterSpacing: '-0.03em',
-        }}>
+      <div className="mb-[22px]">
+        <h1 className="text-[26px] font-extrabold m-0 text-ink tracking-[-0.03em]">
           Floor Plan
         </h1>
-        <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--text3)' }}>
+        <p className="t-sm mt-[3px] text-ink3">
           Visual room layout by floor
         </p>
       </div>
 
       {/* ── Legend + Summary Bar ────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: 12,
-        marginBottom: 28,
-        background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)',
-        padding: '13px 18px',
-      }}>
+      <div className="flex items-center justify-between flex-wrap gap-3 mb-7 bg-surface border border-line rounded-[var(--radius)] px-[18px] py-[13px]">
         {/* Legend */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+        <div className="flex items-center gap-4 flex-wrap">
+          <span className="t-label">
             Legend
           </span>
           {LEGEND.map(({ status, label, bg, color, dot }) => (
-            <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <div style={{
-                width: 14, height: 14,
-                borderRadius: 3,
-                background: bg,
-                border: `1.5px solid ${dot}`,
-                flexShrink: 0,
-              }} />
-              <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 500 }}>{label}</span>
+            <div key={status} className="flex items-center gap-1.5">
+              <div
+                className="w-[14px] h-[14px] rounded-[3px] shrink-0"
+                style={{ background: bg, border: `1.5px solid ${dot}` }}
+              />
+              <span className="t-xs">{label}</span>
             </div>
           ))}
         </div>
 
         {/* Occupancy summary */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span className="t-label">
             {counts.occupied}/{counts.total} occupied
           </span>
           {/* Mini progress bar */}
-          <div style={{ width: 100, height: 6, background: 'var(--surface2)', borderRadius: 3, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%',
-              width: `${Math.round((counts.occupied / counts.total) * 100)}%`,
-              background: 'var(--red)',
-              borderRadius: 3,
-              transition: 'width 0.4s ease',
-            }} />
+          <div className="w-[100px] h-1.5 bg-surface2 rounded-[3px] overflow-hidden">
+            <div
+              className="h-full bg-danger rounded-[3px] transition-all duration-[400ms] ease-[ease]"
+              style={{ width: `${Math.round((counts.occupied / counts.total) * 100)}%` }}
+            />
           </div>
-          <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600 }}>
+          <span className="t-label">
             {Math.round((counts.occupied / counts.total) * 100)}%
           </span>
         </div>
       </div>
 
       {/* ── Quick stat chips ────────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 28 }}>
+      <div className="flex gap-2 flex-wrap mb-7">
         {LEGEND.map(({ status, label, bg, color }) => (
-          <div key={status} style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-            background: bg,
-            color,
-            padding: '5px 12px',
-            borderRadius: 20,
-            fontSize: 12,
-            fontWeight: 600,
-          }}>
-            <span style={{ fontSize: 15, fontFamily: "'Syne', sans-serif", fontWeight: 800 }}>
+          <div
+            key={status}
+            className="flex items-center gap-1.5 px-3 py-[5px] rounded-[20px] text-[12px] font-semibold"
+            style={{ background: bg, color }}
+          >
+            <span className="t-h3">
               {counts[status]}
             </span>
-            <span style={{ fontWeight: 500, opacity: 0.85 }}>{label}</span>
+            <span className="font-medium opacity-85">{label}</span>
           </div>
         ))}
       </div>
@@ -345,8 +257,8 @@ export default function FloorPlan({ rooms: propRooms }) {
       {/* ── Floor Sections ──────────────────────────────────────────────────── */}
       {floors.length === 0 ? (
         <div className="empty-state">
-          <p style={{ fontSize: 32, margin: '0 0 8px' }}>🏨</p>
-          <p style={{ margin: 0, fontWeight: 600, color: 'var(--text2)' }}>No rooms found</p>
+          <p className="t-display mb-2">🏨</p>
+          <p className="m-0 font-semibold text-ink2">No rooms found</p>
         </div>
       ) : (
         floors.map(({ floorNum, rooms: floorRooms }) => (

@@ -73,3 +73,15 @@ nginx/certs/
 docker-compose.override.yml
 
 .vercel
+
+# ── Playwright artifacts ───────────────────────────────────────
+client/test-results/
+client/playwright-report/
+client/blob-report/
+client/.cache/
+
+# ── Dev-only UI migration helpers (local screenshots + auth) ───
+client/scripts/shot.mjs
+client/scripts/shot-raw.mjs
+client/scripts/shots/
+client/scripts/.auth.json

@@ -1,0 +1,111 @@
+name: Build & Deploy (main)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - shriyansh/frontend
+
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/quantumvorvex
+  CD_PATH: /opt/quantumvorvex
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────────
+  # Build the three images in parallel and push to GHCR
+  # ───────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: backend
+            dockerfile: deployment/Dockerfile.Backend
+            target: runtime
+          - name: frontend
+            dockerfile: deployment/Dockerfile.Frontend
+            target: runtime
+          - name: migrate
+            dockerfile: deployment/Dockerfile.Backend
+            target: migrate
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target }}
+          push: true
+          tags: |
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:latest
+            ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Deploy: ship compose to the server, pull images, migrate, bring stack up
+  # ───────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to server
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Copy docker-compose.yml to the server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: docker-compose.yml
+          target: ${{ env.CD_PATH }}
+
+      - name: Pull, migrate, and bring the stack up
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          envs: GHCR_TOKEN,GHCR_USER,IMAGE_TAG,CD_PATH
+          script_stop: true
+          script: |
+            set -e
+            cd "$CD_PATH"
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            export IMAGE_TAG="$IMAGE_TAG"
+            docker compose pull
+            docker compose up -d --wait postgres
+            docker compose run --rm --no-deps migrate
+            docker compose up -d --no-build
+            docker logout ghcr.io
+            docker image prune -f
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
+          IMAGE_TAG: ${{ github.sha }}
+          CD_PATH: ${{ env.CD_PATH }}

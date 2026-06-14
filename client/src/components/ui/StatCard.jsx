@@ -13,27 +13,27 @@ export default function StatCard({
       const isNegative = trend < 0
       if (isPositive) {
         return (
-          <span style={{ color: 'var(--green)', fontSize: '12px', fontWeight: 500 }}>
+          <span className="t-xs text-success">
             ↑ {trend}%
           </span>
         )
       }
       if (isNegative) {
         return (
-          <span style={{ color: 'var(--red)', fontSize: '12px', fontWeight: 500 }}>
+          <span className="t-xs text-danger">
             ↓ {Math.abs(trend)}%
           </span>
         )
       }
       return (
-        <span style={{ color: 'var(--text3)', fontSize: '12px' }}>
+        <span className="t-xs text-ink3">
           → {trend}%
         </span>
       )
     }
     if (sub) {
       return (
-        <span style={{ color: 'var(--text3)', fontSize: '12px' }}>{sub}</span>
+        <span className="t-xs text-ink3">{sub}</span>
       )
     }
     return null
@@ -41,34 +41,21 @@ export default function StatCard({
 
   return (
     <div className={`stat-card stat-bar-${color}`}>
-      <div
-        style={{
-          fontSize: '11px',
-          fontWeight: 600,
-          color: 'var(--text3)',
-          letterSpacing: '0.04em',
-          textTransform: 'uppercase',
-          marginBottom: '8px',
-        }}
-      >
+      <div className="t-label text-ink3 mb-2">
         {label}
       </div>
       <div
+        className="text-[26px] font-bold text-ink mb-1.5"
         style={{
-          fontFamily: "'Syne', sans-serif",
-          fontSize: '26px',
-          fontWeight: 700,
-          color: 'var(--text)',
           letterSpacing: '-0.03em',
           lineHeight: 1.1,
-          marginBottom: '6px',
         }}
       >
         {value}
       </div>
       {renderFooter()}
       {children && (
-        <div style={{ marginTop: '10px' }}>{children}</div>
+        <div className="mt-2.5">{children}</div>
       )}
     </div>
   )
