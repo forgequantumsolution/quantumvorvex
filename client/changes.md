@@ -6,6 +6,24 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-15 · Free-form password on edit-user
+
+## File changes
+
+### `src/validation/userSchema.js`
+- Removed the password strength rules (min length / uppercase / number) — the password field is now a
+  plain optional string (max 128). Admin password resets on the edit-user form are free-form.
+
+### `src/components/ui/ChangePasswordModal.jsx`
+- Dropped the strength rules from the self-service Change Password form too: `newPassword` is now
+  required + max 128 only (placeholder updated). The confirm-match check stays. Backend
+  `changePassword` relaxed to match. Password strength rules are now gone everywhere a password is set.
+
+### `tests/rbac-frontend.spec.js`
+- Updated the change-password test to the new placeholder ("Enter a new password").
+
+---
+
 # Session — 2026-06-14 · Protected super-admin (UI lock)
 
 ## Summary

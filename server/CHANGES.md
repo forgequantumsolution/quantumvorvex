@@ -5,6 +5,33 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-15 · Non-intrusive auth throttle + free-form admin password reset
+
+## Summary
+Re-added brute-force protection on login in a way that never blocks legitimate users, and removed the
+password strength rules from the admin "edit user" path (free-form reset).
+
+## File changes
+
+### `src/routes/auth.js`
+- `loginThrottle` on `POST /login` — `skipSuccessfulRequests: true`, so only FAILED attempts count.
+  Prod: 20 failures / 10 min per IP; dev/test: 1000 (E2E unaffected). No hard lockout, soft message.
+- `emailThrottle` on `/forgot-password` + `/otp/request` (which always return 200, so every request
+  counts) to prevent inbox spamming — prod 10 / 10 min, dev 1000.
+
+### `src/middleware/validate.js`
+- `updateUser.password` relaxed to `min(1).max(128)` — no strength regex. Admin password resets are
+  free-form.
+- `changePassword.newPassword` also relaxed to `min(1).max(128)` — strength rules dropped from the
+  self-service change-password flow too, so password rules are now gone everywhere a password is set.
+
+### Verification
+- Prod-mode burst (`:5099`): 20 failed logins → 401 then 429 on the 21st; 30 correct logins → all 200
+  (successes never counted). Weak password on edit-user → 200; weak self-service change-password → 200.
+  Full RBAC suite green (15/15).
+
+---
+
 # Session — 2026-06-14 · Remove auth lockout + rate limiting
 
 ## Summary

@@ -9,11 +9,7 @@ import { authApi } from '../../api/client'
 
 const schema = Yup.object({
   currentPassword: Yup.string().required('Enter your current password'),
-  newPassword: Yup.string()
-    .min(8, 'At least 8 characters')
-    .matches(/[A-Z]/, 'Must contain an uppercase letter')
-    .matches(/[0-9]/, 'Must contain a number')
-    .required('Enter a new password'),
+  newPassword: Yup.string().max(128).required('Enter a new password'),
   confirmPassword: Yup.string()
     .oneOf([Yup.ref('newPassword')], 'Passwords do not match')
     .required('Confirm your new password'),
@@ -68,7 +64,7 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
         >
           <Form className="flex flex-col gap-3.5">
             <FormikField name="currentPassword" label="Current Password" type="password" required placeholder="Current password" />
-            <FormikField name="newPassword" label="New Password" type="password" required placeholder="At least 8 chars, 1 uppercase, 1 number" />
+            <FormikField name="newPassword" label="New Password" type="password" required placeholder="Enter a new password" />
             <FormikField name="confirmPassword" label="Confirm New Password" type="password" required placeholder="Re-enter new password" />
           </Form>
         </Modal>

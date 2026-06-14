@@ -63,14 +63,10 @@ export const schemas = {
                 .regex(/[0-9]/, 'Must contain a number'),
   }),
 
-  // Change password (authenticated) — current + strong new password
+  // Change password (authenticated) — free-form (no strength rules)
   changePassword: z.object({
     currentPassword: z.string().min(1, 'Current password is required').max(128),
-    newPassword: z.string()
-                .min(8, 'Password must be at least 8 characters')
-                .max(128)
-                .regex(/[A-Z]/, 'Must contain an uppercase letter')
-                .regex(/[0-9]/, 'Must contain a number'),
+    newPassword: z.string().min(1, 'New password is required').max(128),
   }),
 
   // Passwordless OTP — request a code
@@ -104,10 +100,9 @@ export const schemas = {
   updateUser: z.object({
     name:     z.string().min(2).max(100).trim().optional(),
     email:    z.string().email().toLowerCase().trim().optional(),
-    password: z.string().min(8).max(128)
-                .regex(/[A-Z]/, 'Must contain uppercase letter')
-                .regex(/[0-9]/, 'Must contain a number')
-                .optional(),
+    // Admin password reset: free-form, no strength rules (users harden their own
+    // password via the authenticated change-password flow, which still enforces them).
+    password: z.string().min(1).max(128).optional(),
     roleId:   z.string().cuid('Invalid role').optional().nullable(),
     phone:    z.string().max(20).optional().nullable(),
     status:   z.enum(['active', 'inactive']).optional(),
