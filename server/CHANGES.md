@@ -5,6 +5,75 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-14 · Remove auth lockout + rate limiting
+
+## Summary
+Removed the 15-minute authentication lockouts. Failed logins now simply return 401; auth endpoints
+are no longer throttled. (Trade-off: no brute-force protection on `/auth/*` — intentional per request.)
+
+## File changes
+
+### `src/controllers/authController.js`
+- Deleted the in-memory brute-force tracker (`failedAttempts`, `MAX_ATTEMPTS`, `LOCK_WINDOW_MS`,
+  `isLockedOut` / `recordFailure` / `clearFailures`) and removed the lockout check + the
+  record/clear calls from `login`. No more `429 ERR_ACCOUNT_LOCKED` / "Try again in 15 minutes."
+
+### `src/app.js`
+- Removed the `authLimiter` rate limiter and unmounted it from `/api/v1/auth`. The `apiLimiter` +
+  `apiSlowDown` on the non-auth API routes are unchanged.
+
+### Verification
+- 8 wrong-password attempts → all 401 (no lockout); 20 rapid auth requests → all 401 (no 429);
+  correct password still logs in; full RBAC suite green (15/15).
+
+---
+
+# Session — 2026-06-14 · RBAC bootstrap — deploy self-heal + protected super-admin
+
+## Summary
+Fixed a production lockout and hardened the bootstrap. After deploy, every user was 403'd because
+`prisma migrate deploy` creates the Role tables + nullable `roleId` but does NOT seed roles or link
+users (that lived in `db:seed`, which wasn't run). Now the app self-heals on every boot. Also added
+a permanent, protected **super-admin** that is always seeded (even on a brand-new DB) and whose role/
+status can't be changed and which can't be deleted.
+
+## File changes
+
+### `src/utils/rbac.js` (new)
+- `SYSTEM_ROLES` + `ensureSystemRoles()` — single source of truth for the Owner/Manager/Staff matrix
+  (idempotent upserts), shared by the seed and the bootstrap.
+- `ensureSuperAdmin(ownerRoleId)` — upserts the protected super-admin; forces Owner role +
+  `isSuperAdmin` + active; sets the password only on creation (never overwrites a later change).
+  Credentials default to `info@forgequantumsolution.com` / `Admin@123`, overridable via
+  `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` / `SUPER_ADMIN_NAME`.
+- `ensureRbac()` — runs on every boot: ensures roles, ensures the super-admin, backfills a role for
+  any user with `roleId = null` (known seeded emails → their role; otherwise Staff), and guarantees at
+  least one active Owner (promotes the earliest active user if none). Best-effort, never throws.
+
+### `src/utils/ensureRbac.run.js` (new) + `package.json`
+- `npm run db:rbac` — runs `ensureRbac()` standalone (no demo data). Unlocks a deployment where
+  `migrate deploy` ran but `db:seed` didn't, without a redeploy.
+
+### `src/server.js`
+- Boot now calls `ensureRbac()` (self-heal). Removed the old `seedAdminUser()` auto-seed of the weak
+  `admin@hotel.com` / `admin123` account — the protected super-admin is the guaranteed bootstrap owner.
+
+### `src/utils/seed.js`
+- Role-seeding block replaced with `await ensureSystemRoles()` (no matrix duplication).
+
+### `prisma/schema.prisma`
+- `User.isSuperAdmin Boolean @default(false)`. Migration `20260614130000_add_super_admin` (additive).
+
+### `src/controllers/usersController.js`
+- `SAFE_SELECT` now returns `isSuperAdmin`. `updateUser` blocks role/status/email changes to the
+  super-admin (403); `deleteUser` blocks deleting it (403). Name/phone/password remain editable.
+
+### Verification
+- Super-admin logs in (Owner/isOwner); role-change / deactivate / delete all 403; null-`roleId` user
+  relinked by `db:rbac`; full RBAC suite green (15/15).
+
+---
+
 # Session — 2026-06-14 · RBAC Phase 4 — Drop legacy User.role
 
 ## Summary

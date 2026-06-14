@@ -43,6 +43,7 @@ function Avatar({ name, color = '#6b7280', size = 34 }) {
 // ─── Add / Edit User Modal ──────────────────────────────────────────────────────
 function UserModal({ isOpen, onClose, user, roles, onSave }) {
   const isEdit = !!user
+  const isSuper = !!user?.isSuperAdmin
   const defaultRoleId = roles.find((r) => r.name === 'Staff')?.id || roles[0]?.id || ''
 
   const initialValues = user
@@ -81,16 +82,21 @@ function UserModal({ isOpen, onClose, user, roles, onSave }) {
               <FormikField name="phone" label="Phone" placeholder="10-digit mobile" autoComplete="off" />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <FormikField name="roleId" label="Role" required as="select">
+              <FormikField name="roleId" label="Role" required as="select" disabled={isSuper}>
                 {roles.map((r) => (
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
               </FormikField>
-              <FormikField name="status" label="Status" as="select">
+              <FormikField name="status" label="Status" as="select" disabled={isSuper}>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
               </FormikField>
             </div>
+            {isSuper && (
+              <p className="mt-[-6px] mb-0 text-[11px] text-ink3">
+                This is the protected super-admin — role and status are locked. You can still update the name and password.
+              </p>
+            )}
             {isEdit ? (
               <FormikField
                 name="password"
@@ -141,7 +147,12 @@ function UsersTab({ users, roles, canManage, onAdd, onEdit, onToggleStatus, onDe
                   <div className="flex items-center gap-2.5">
                     <Avatar name={u.name} color={u.roleRef?.isOwner ? '#c9a84c' : '#2563eb'} />
                     <div>
-                      <div className="t-title">{u.name}</div>
+                      <div className="t-title">
+                        {u.name}
+                        {u.isSuperAdmin && (
+                          <span className="ml-1.5 text-[9px] font-bold tracking-[0.06em] uppercase text-[#c9a84c] align-middle">★ Super Admin</span>
+                        )}
+                      </div>
                       <div className="text-[11px] text-ink3 mt-px">{u.email}</div>
                     </div>
                   </div>
@@ -158,13 +169,17 @@ function UsersTab({ users, roles, canManage, onAdd, onEdit, onToggleStatus, onDe
                   <td>
                     <div className="flex gap-[5px] flex-nowrap">
                       <button className="btn btn-xs btn-outline" onClick={() => onEdit(u)}>Edit</button>
-                      <button
-                        className={`btn btn-xs ${u.status === 'active' ? 'btn-outline' : 'btn-success'}`}
-                        onClick={() => onToggleStatus(u)}
-                      >
-                        {u.status === 'active' ? 'Deactivate' : 'Reactivate'}
-                      </button>
-                      <button className="btn btn-xs btn-danger" onClick={() => onDelete(u)}>Delete</button>
+                      {!u.isSuperAdmin && (
+                        <>
+                          <button
+                            className={`btn btn-xs ${u.status === 'active' ? 'btn-outline' : 'btn-success'}`}
+                            onClick={() => onToggleStatus(u)}
+                          >
+                            {u.status === 'active' ? 'Deactivate' : 'Reactivate'}
+                          </button>
+                          <button className="btn btn-xs btn-danger" onClick={() => onDelete(u)}>Delete</button>
+                        </>
+                      )}
                     </div>
                   </td>
                 )}

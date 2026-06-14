@@ -5,7 +5,7 @@
  */
 import prisma from './prisma.js'
 import bcrypt from 'bcryptjs'
-import { MODULES } from '../config/modules.js'
+import { ensureSystemRoles } from './rbac.js'
 
 async function seed() {
   console.log('🌱 Seeding Quantum Vorvex database...')
@@ -122,53 +122,8 @@ async function seed() {
   }
   console.log('✓ Amenities')
 
-  // ── RBAC roles + per-module permission matrix ───────────────────────────────
-  // Mirrors the legacy owner/manager/staff behavior so nothing changes on upgrade.
-  const M = (level) => Object.fromEntries(MODULES.map((m) => [m, level]))
-  const roleDefs = [
-    {
-      name: 'Owner',
-      description: 'Full access to everything, including users and roles.',
-      isSystem: true,
-      isOwner: true,
-      perms: M('MANAGE'),
-    },
-    {
-      name: 'Manager',
-      description: 'Operational and finance access; cannot manage users or roles.',
-      isSystem: true,
-      isOwner: false,
-      perms: { ...M('MANAGE'), users: 'NONE' },
-    },
-    {
-      name: 'Staff',
-      description: 'Front-desk and operations only.',
-      isSystem: true,
-      isOwner: false,
-      perms: {
-        ...M('NONE'),
-        bookings: 'MANAGE', maintenance: 'MANAGE', guests: 'MANAGE',
-        rooms: 'MANAGE', housekeeping: 'MANAGE',
-      },
-    },
-  ]
-
-  const roleIds = {}
-  for (const def of roleDefs) {
-    const role = await prisma.role.upsert({
-      where: { name: def.name },
-      update: { description: def.description, isSystem: def.isSystem, isOwner: def.isOwner },
-      create: { name: def.name, description: def.description, isSystem: def.isSystem, isOwner: def.isOwner },
-    })
-    roleIds[def.name] = role.id
-    for (const [module, level] of Object.entries(def.perms)) {
-      await prisma.rolePermission.upsert({
-        where: { roleId_module: { roleId: role.id, module } },
-        update: { level },
-        create: { roleId: role.id, module, level },
-      })
-    }
-  }
+  // ── RBAC roles + per-module permission matrix (shared with the startup bootstrap) ──
+  const roleIds = await ensureSystemRoles()
   console.log('✓ Roles seeded: Owner, Manager, Staff')
 
   // Users — owner, manager, staff (linked to the roles above)

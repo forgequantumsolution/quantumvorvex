@@ -253,6 +253,8 @@ model User {
   password       String
   roleId         String?
   roleRef        Role?    @relation(fields: [roleId], references: [id])
+  // Protected super-admin (seeded on every boot): role/status immutable, cannot be deleted.
+  isSuperAdmin   Boolean  @default(false)
   status         String   @default("active")
   phone          String?
   // Set when an account is created/reset with the shared default password.
