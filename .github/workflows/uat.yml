@@ -1,28 +1,19 @@
-name: Build & Deploy (main)
+name: Build & Deploy (uat)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-
 
 permissions:
   contents: read
   packages: write
 
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: false
 
 env:
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/quantumvorvex-demo
-  CD_PATH: /home/forge/quantumvorvex/demo
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/quantumvorvex-uat
+  CD_PATH: /home/forge/quantumvorvex/uat
+  APP_REF: shriyansh/frontend          # the branch whose code UAT runs
 
 jobs:
-  # ───────────────────────────────────────────────────────────────────────────
-  # Build the three images in parallel and push to GHCR
-  # ───────────────────────────────────────────────────────────────────────────
   build:
     name: Build ${{ matrix.name }}
     runs-on: ubuntu-latest
@@ -39,19 +30,17 @@ jobs:
             dockerfile: deployment/Dockerfile.Backend
             target: migrate
     steps:
-      - name: Checkout
+      - name: Checkout UAT app code
         uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+        with:
+          ref: ${{ env.APP_REF }}        # build the shriyansh/frontend code
+      - uses: docker/setup-buildx-action@v3
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Build and push ${{ matrix.name }}
         uses: docker/build-push-action@v6
         with:
@@ -62,30 +51,26 @@ jobs:
           tags: |
             ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:latest
             ${{ env.IMAGE_PREFIX }}-${{ matrix.name }}:${{ github.sha }}
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+          cache-from: type=gha,scope=uat-${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=uat-${{ matrix.name }}
 
-  # ───────────────────────────────────────────────────────────────────────────
-  # Deploy: ship compose to the server, pull images, migrate, bring stack up
-  # ───────────────────────────────────────────────────────────────────────────
   deploy:
-    name: Deploy to server
+    name: Deploy to uat
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout (main — for the uat compose)
         uses: actions/checkout@v4
-
-      - name: Copy docker-compose.yml to the server
+      - name: Copy uat compose to the server
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
-          source: docker-compose.yml
+          source: deployment/docker-compose.uat.yml
           target: ${{ env.CD_PATH }}
-
-      - name: Pull, migrate, and bring the stack up
+          strip_components: 1
+      - name: Pull, migrate, bring up
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SERVER_HOST }}
@@ -98,12 +83,10 @@ jobs:
             cd "$CD_PATH"
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             export IMAGE_TAG="$IMAGE_TAG"
-            docker compose pull
-            docker compose up -d --wait postgres
-            docker compose run --rm --no-deps migrate
-            docker compose up -d --no-build
-            docker logout ghcr.io
-            docker image prune -f
+            docker compose -f docker-compose.uat.yml pull
+            docker compose -f docker-compose.uat.yml up -d --wait postgres
+            docker compose -f docker-compose.uat.yml run --rm --no-deps migrate
+            docker compose -f docker-compose.uat.yml up -d
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
