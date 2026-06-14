@@ -1,14 +1,3 @@
-# =============================================================================
-# Quantum Vorvex — DEMO production stack (pull-only)
-#
-# Images are pulled from GHCR — they are built + pushed by CI
-# (.github/workflows/deploy.yml). This file does NOT build anything.
-# Deployed to /home/forge/quantumvorvex/demo on push to `main`.
-#
-# Secrets live in a .env beside this file (see .env.example).
-# The deploy sets IMAGE_TAG=<git sha>; defaults to :latest otherwise.
-# =============================================================================
-
 name: quantumvorvex-demo
 
 networks:
@@ -49,7 +38,7 @@ services:
 
   # ---------------------------------------------------------------------------
   migrate:
-    image: ghcr.io/forgequantumsolution/quantumvorvex-demo-migrate:${IMAGE_TAG:-latest}
+    image: ghcr.io/forgequantumsolution/quantumvorvex-demo-migrate:latest
     restart: "no"
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
@@ -59,8 +48,8 @@ services:
     networks: [qvnet]
 
   # ---------------------------------------------------------------------------
-  app:
-    image: ghcr.io/forgequantumsolution/quantumvorvex-demo-backend:${IMAGE_TAG:-latest}
+  backend:
+    image: ghcr.io/forgequantumsolution/quantumvorvex-demo-backend:latest
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -101,14 +90,14 @@ services:
       options: { max-size: "10m", max-file: "5" }
 
   # ---------------------------------------------------------------------------
-  nginx:
-    image: ghcr.io/forgequantumsolution/quantumvorvex-demo-frontend:${IMAGE_TAG:-latest}
+  frontend:
+    image: ghcr.io/forgequantumsolution/quantumvorvex-demo-frontend:latest
     restart: unless-stopped
     # Host nginx terminates TLS and proxies to this localhost port.
     ports:
-      - "127.0.0.1:8001:80"
+      - "8001:80"
     depends_on:
-      app:
+      backend:
         condition: service_healthy
     networks: [qvnet]
     security_opt: ["no-new-privileges:true"]
