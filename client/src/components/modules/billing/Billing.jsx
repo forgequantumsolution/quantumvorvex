@@ -1123,13 +1123,15 @@ export default function Billing() {
                             </button>
                           )}
 
-                          {/* Remind */}
-                          <button
-                            className="btn btn-outline btn-xs"
-                            onClick={() => setRemindModal(inv)}
-                          >
-                            Remind
-                          </button>
+                          {/* Remind — only if not paid */}
+                          {inv.status !== 'Paid' && (
+                            <button
+                              className="btn btn-outline btn-xs"
+                              onClick={() => setRemindModal(inv)}
+                            >
+                              Remind
+                            </button>
+                          )}
 
                           {/* Invoice */}
                           <button

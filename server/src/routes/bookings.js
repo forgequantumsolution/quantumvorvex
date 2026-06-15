@@ -1,6 +1,7 @@
 import express from 'express'
 import {
   getBookings,
+  getBookingStats,
   getBooking,
   createBooking,
   updateBooking,
@@ -21,8 +22,9 @@ const router = express.Router()
 
 router.use(verifyToken, requirePermission('bookings'))
 
-router.get('/',    getBookings)
-router.get('/:id', getBooking)
+router.get('/',      getBookings)
+router.get('/stats', getBookingStats)
+router.get('/:id',   getBooking)
 
 // Tax invoice (HTML, print-ready) generated from a completed booking
 router.get('/:id/invoice', getBookingInvoice)

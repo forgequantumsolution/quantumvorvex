@@ -78,7 +78,53 @@ export const getDocuments = async (req, res) => {
       return { ...g, documents, _count: { documents: documents.length } }
     })
 
-    return res.status(200).json({ guests })
+    // Documents captured at booking time live in BookingDocument linked only by
+    // bookingId. A booking has no Guest until check-in, so its docs are invisible
+    // to the guest-keyed query above. Surface those orphan bookings (no linked
+    // guest) as guest-like rows so their KYC files show up before check-in.
+    const orphanBookings = await prisma.booking.findMany({
+      where: { guestId: null, documents: { some: {} } },
+      select: {
+        id: true,
+        bookingNo: true,
+        guestName: true,
+        idType: true,
+        idNumber: true,
+        room: { select: { number: true } },
+        documents: {
+          select: { id: true, docType: true, url: true, verified: true, uploadedAt: true },
+          orderBy: { uploadedAt: 'desc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    const orphanGuests = orphanBookings.map((b) => {
+      const documents = b.documents.map((d) => ({
+        id: d.id,
+        bookingId: b.id,
+        docType: d.docType,
+        url: d.url,
+        verified: d.verified,
+        uploadedAt: d.uploadedAt,
+        source: 'booking',
+      }))
+      return {
+        // Prefixed so the client never mistakes this for a real guestId.
+        id: `booking:${b.id}`,
+        docId: b.bookingNo,
+        name: b.guestName,
+        phone: null,
+        status: 'booking',
+        idType: b.idType,
+        idNumber: b.idNumber,
+        room: b.room,
+        documents,
+        _count: { documents: documents.length },
+      }
+    })
+
+    return res.status(200).json({ guests: [...guests, ...orphanGuests] })
   } catch (err) {
     console.error('getDocuments error:', err)
     return res.status(500).json({ message: 'Internal server error.' })

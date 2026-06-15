@@ -6,6 +6,42 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-16 · Bookings: server-side search, filter & pagination
+
+## Summary
+Migrated the Bookings page from client-side in-memory filtering (load all rows, filter with useMemo) to
+server-driven search / status-filter / pagination, backed by a new `/bookings/stats` aggregate endpoint
+(see `../server/CHANGES.md`). This is the reference pattern for the other list pages.
+
+## File changes
+
+### `src/api/client.js`
+- Added `bookingsApi.getStats(params)` → `GET /bookings/stats`.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- Search box is now debounced (300ms) and sent to the API as `q`; the active tab is sent as `status`
+  (including the derived `Upcoming`), and results are paginated (`PAGE_SIZE = 20`). Removed the
+  client-side `filtered`/`stats`/`counts` useMemos — the page now holds only one page of rows.
+- Stat cards and tab counts are fed by `getStats()` (full-dataset), refreshed on mount and after any
+  mutation, so they stay whole-dataset rather than reflecting the current search/page.
+- Changing search or tab resets to page 1; added a Prev/Next pager with "showing X–Y of N".
+- Booking actions (check-in/out, confirm, cancel, create) now reload the list + stats instead of patching
+  a single row in place (a status change can move a row out of the current tab/page).
+- Removed now-unused `useMemo` and `isUpcoming` imports.
+
+---
+
+# Session — 2026-06-15 · Hide Remind button on paid invoices
+
+## File changes
+
+### `src/components/modules/billing/Billing.jsx`
+- The "Remind" button in the invoices table was rendered unconditionally, so it still showed for
+  fully-paid invoices (checkout complete). Gated it on `inv.status !== 'Paid'`, matching the existing
+  "Collect" button's status guard. Remind now only appears for Pending/Overdue invoices.
+
+---
+
 # Session — 2026-06-15 · Free-form password on edit-user
 
 ## File changes

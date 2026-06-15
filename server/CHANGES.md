@@ -5,6 +5,31 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-16 · Server-side search/pagination + aggregates for Bookings
+
+## Summary
+Moved the Bookings page off "load every row and filter in the browser" onto real server-side search,
+status filtering and pagination, with a dedicated aggregate endpoint so the stat cards / tab counts stay
+whole-dataset. Intended as the template for migrating the other list pages (guests, billing, etc.).
+
+## File changes
+
+### `src/controllers/bookingsController.js`
+- `getBookings`: added opt-in pagination (`page`/`pageSize`, max 100) and server-side handling of the
+  derived `status=Upcoming` tab (future-or-today arrival, still Confirmed/Pending). Pagination is opt-in —
+  with no page/pageSize the full matching set is still returned, so existing callers (e.g. Cancellations)
+  are unaffected. Response now always includes `total` (and `page`/`pageSize` when paginated).
+- New `getBookingStats` handler (`GET /bookings/stats`): full-dataset stat-card aggregates
+  (total / confirmed / checkedIn / active value / dues) and per-tab counts, via `groupBy` + `aggregate`,
+  so the UI never loads all rows just to show totals.
+- Added `DEMO_TODAY` (mirrors client `utils/booking.js` TODAY), `ACTIVE_STATUSES`, and a shared
+  `upcomingWhere` clause reused by both the list filter and the count.
+
+### `src/routes/bookings.js`
+- Registered `GET /bookings/stats` before `/:id` so it isn't captured as an id param.
+
+---
+
 # Session — 2026-06-15 · Non-intrusive auth throttle + free-form admin password reset
 
 ## Summary

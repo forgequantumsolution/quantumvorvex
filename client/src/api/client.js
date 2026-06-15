@@ -93,6 +93,7 @@ export const billingApi = {
 
 export const bookingsApi = {
   getAll:   (params)   => api.get('/bookings', { params }),
+  getStats: (params)   => api.get('/bookings/stats', { params }),
   getOne:   (id)       => api.get(`/bookings/${id}`),
   create:   (data)     => api.post('/bookings', data),
   update:   (id, data) => api.put(`/bookings/${id}`, data),
