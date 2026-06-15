@@ -5,6 +5,62 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-16 · Booking-time documents now surface in the Documents tab
+
+## Summary
+Documents uploaded at booking time live in `BookingDocument`, linked only by `bookingId`. A
+booking has no linked `Guest` until check-in, but `getDocuments` fetched everything through
+`Guest → bookings → documents` — so a Confirmed/Pending booking's ID docs were invisible in the
+Documents (KYC) tab until the guest checked in.
+
+## File changes
+
+### `src/controllers/documentsController.js`
+- `getDocuments`: after building the guest-keyed list, added a second pass that fetches **orphan
+  bookings** (`guestId: null` with at least one document) and maps each into a guest-like row the
+  client already renders:
+  - keyed `id: "booking:<bookingId>"` (prefixed so the client never treats it as a real `guestId`),
+    `docId: bookingNo`, `name: guestName`, plus `idType`/`idNumber`/`room`.
+  - each document carries `source: 'booking'` and `bookingId`.
+  - response is now `{ guests: [...guests, ...orphanGuests] }`.
+- The `guestId: null` filter prevents duplication — bookings already linked to a guest still surface
+  through the original guest path.
+
+## Notes / unchanged
+- No schema migration. `BookingDocument` stays booking-scoped (the contained fix).
+- Known limitation: the Documents tab "Upload" action POSTs to `/documents/:guestId`, which requires a
+  real `Guest`, so adding *new* docs to an orphan-booking row isn't possible until check-in (add them
+  from the booking screen instead). Listing and **Verify** both work — `verifyDocument` already falls
+  back to `bookingDocument`.
+
+---
+
+# Session — 2026-06-16 · Server-side search/pagination + aggregates for Guests & Billing
+
+## Summary
+Applied the Bookings pattern (previous entry) to the Guests and Billing list endpoints: opt-in
+pagination, server-side search/filtering already existed and is now actually used, plus dedicated
+full-dataset aggregate endpoints so the summary cards stay whole-dataset.
+
+## File changes
+
+### `src/controllers/guestsController.js`
+- `getGuests`: added opt-in pagination (`page`/`pageSize`, max 100); returns `total` (and
+  `page`/`pageSize` when paginated). No page params → full matching set as before, so existing callers
+  (Today panel, billing guest pickers) are unaffected.
+- New `getGuestStats` (`GET /guests/stats`): full-dataset counts by status (active / due / checkedOut)
+  + total via `groupBy`.
+
+### `src/controllers/billingController.js`
+- `getInvoices`: same opt-in pagination + `total`.
+- New `getInvoiceStats` (`GET /billing/stats`): full-dataset stat-card aggregates — collected total +
+  GST and paid count (status Paid), pending total/count, overdue total/count — via `groupBy` + `aggregate`.
+
+### `src/routes/guests.js`, `src/routes/billing.js`
+- Registered `GET /stats` before the `/:id` (guests) / parameterized (billing) routes.
+
+---
+
 # Session — 2026-06-16 · Server-side search/pagination + aggregates for Bookings
 
 ## Summary

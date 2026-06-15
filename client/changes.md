@@ -6,6 +6,62 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-16 · E2E test for booking-time documents in the Documents tab
+
+## Summary
+Added Playwright coverage for the server fix that surfaces booking-time ID documents in the Documents
+(KYC) tab before check-in (see `../server/CHANGES.md`).
+
+## File changes
+
+### `tests/documents-booking.spec.js` (new)
+- Helper creates a Confirmed booking (no check-in → no linked `Guest`) and uploads an ID doc to it,
+  trying rooms until one is free (some seed rooms have open-ended guests that conflict with any date).
+- **API test**: asserts `GET /documents` returns a guest-like row keyed `booking:<id>` with
+  `docId === bookingNo`, the booking's `name`, and a document carrying `source: 'booking'`.
+- **UI test**: logs in, opens Documents, filters by booking number, and asserts the row + guest name
+  render.
+- Uses `E2E_API_URL` (default `http://localhost:5001/api/v1`) for direct setup calls, since the dev
+  backend + Vite proxy run on **5001** here (the shared `tests/helpers.js` still hardcodes 5000).
+
+## Verification performed
+- Both tests pass against the fix.
+- False-positive guard: temporarily dropped `orphanGuests` from the server response — both tests
+  failed; restoring the fix made them pass again.
+
+---
+
+# Session — 2026-06-16 · Guests & Billing: server-side search, filter & pagination
+
+## Summary
+Rolled the Bookings pattern (previous entry) out to the Guests and Billing pages: debounced server-side
+search, server-side status/stay filtering, pagination, and full-dataset stat cards fed by new
+`/guests/stats` and `/billing/stats` endpoints (see `../server/CHANGES.md`).
+
+## File changes
+
+### `src/api/client.js`
+- Added `guestsApi.getStats(params)` and `billingApi.getStats(params)`.
+
+### `src/components/modules/guests/Guests.jsx`
+- Search debounced (300ms) → `search` param; stay/status selects → `stayType`/`status` params; results
+  paginated (`PAGE_SIZE = 20`). Removed the client-side `filtered` memo and the `activeCount`/`dueCount`/
+  `checkedOutCount` derivations — the page holds only one page of rows.
+- Summary cards now come from `getStats()` (whole-dataset), refreshed on mount and after
+  checkout/renew/edit. Changing search or a filter resets to page 1; added a Prev/Next pager.
+- "Export CSV" now fetches all rows matching the current filters (not just the visible page).
+- Removed the now-unused `useMemo` import.
+
+### `src/components/modules/billing/Billing.jsx`
+- Same treatment for the Invoices tab: debounced `search`, status-pill `status` filter, pagination, and
+  stat cards from `getStats()` (collected/pending/overdue/GST). Record count now shows the server total;
+  added a pager. Collect/Generate reload list + stats; "Export CSV" exports all matching rows.
+- Removed the unused `useMemo` import; converted `RemindModal`'s prefill (previously `setState` inside
+  `useMemo`) to a derived initial state with a per-invoice `key` on the modal — fixes the cascading-render
+  lint error and the original misuse of `useMemo`.
+
+---
+
 # Session — 2026-06-16 · Bookings: server-side search, filter & pagination
 
 ## Summary

@@ -73,6 +73,7 @@ export const roomsApi = {
 
 export const guestsApi = {
   getAll: (params) => api.get('/guests', { params }),
+  getStats: (params) => api.get('/guests/stats', { params }),
   create: (data)   => api.post('/guests', data),
   getOne: (id)     => api.get(`/guests/${id}`),
   update: (id, data) => api.put(`/guests/${id}`, data),
@@ -84,6 +85,7 @@ export const guestsApi = {
 
 export const billingApi = {
   getAll: (params) => api.get('/billing', { params }),
+  getStats: (params) => api.get('/billing/stats', { params }),
   generate: (data) => api.post('/billing/generate', data),
   collect: (id)    => api.put(`/billing/${id}/collect`),
   getPdf: (id)     => api.get(`/billing/${id}/pdf`, { responseType: 'blob' }),

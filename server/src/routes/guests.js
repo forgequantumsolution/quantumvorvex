@@ -1,6 +1,7 @@
 import express from 'express'
 import {
   getGuests,
+  getGuestStats,
   getGuest,
   createGuest,
   updateGuest,
@@ -16,6 +17,7 @@ const router = express.Router()
 router.use(verifyToken, requirePermission('guests'))
 
 router.get('/', getGuests)
+router.get('/stats', getGuestStats)
 router.post('/', createGuest)
 router.get('/:id', getGuest)
 router.put('/:id', updateGuest)

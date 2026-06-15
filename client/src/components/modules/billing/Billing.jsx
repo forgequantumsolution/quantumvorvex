@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import { useToast } from '../../../hooks/useToast'
@@ -236,17 +236,13 @@ function CollectModal({ invoice, onClose, onConfirm }) {
 // ─── Remind Modal ─────────────────────────────────────────────────────────────
 function RemindModal({ invoice, onClose, onSend }) {
   const [channel, setChannel] = useState('WhatsApp')
-  const [message, setMessage] = useState('')
-
-  // Pre-fill message whenever invoice changes
-  useMemo(() => {
-    if (invoice) {
-      setMessage(
-        `Dear ${invoice.guest}, Your payment of ${formatCurrency(invoice.total)} for Room ${invoice.room} is due. Please contact us at the earliest.`
-      )
-      setChannel('WhatsApp')
-    }
-  }, [invoice])
+  // Pre-filled from the invoice. The parent keys this modal by invoice id, so it
+  // remounts per invoice and this initializer re-runs with the right values.
+  const [message, setMessage] = useState(() =>
+    invoice
+      ? `Dear ${invoice.guest}, Your payment of ${formatCurrency(invoice.total)} for Room ${invoice.room} is due. Please contact us at the earliest.`
+      : ''
+  )
 
   if (!invoice) return null
 
@@ -774,6 +770,8 @@ const TAB_CLASS_ACTIVE = 'font-semibold bg-[var(--gold-bg)] border border-gold t
 const TAB_CLASS_INACTIVE = 'font-medium bg-surface border border-line text-ink2'
 
 // ─── Main Component ───────────────────────────────────────────────────────────
+const PAGE_SIZE = 20
+
 export default function Billing() {
   const addToast = useToast()
 
@@ -782,53 +780,72 @@ export default function Billing() {
   const [loading, setLoading]               = useState(true)
   const [error, setError]                   = useState('')
   const [search, setSearch]                 = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter]     = useState('All')
+  const [page, setPage]                     = useState(1)
+  const [total, setTotal]                   = useState(0)
+  // Full-dataset aggregates for the stat cards (independent of search/filter/page).
+  const [stats, setStats] = useState({
+    collected: 0, gstCollected: 0, paidCount: 0,
+    pendingTotal: 0, pendingCount: 0, overdueTotal: 0, overdueCount: 0,
+  })
   const [invoiceModal, setInvoiceModal]     = useState(null)   // invoice obj
   const [collectModal, setCollectModal]     = useState(null)   // invoice obj
   const [remindModal, setRemindModal]       = useState(null)   // invoice obj
   const [showGenerate, setShowGenerate]     = useState(false)
 
-  const load = useCallback(async () => {
+  // Query params shared by the list fetch and the "export all" action.
+  const listParams = useCallback((extra = {}) => ({
+    search: debouncedSearch || undefined,
+    status: statusFilter !== 'All' ? statusFilter : undefined,
+    ...extra,
+  }), [debouncedSearch, statusFilter])
+
+  // Debounce the search box; a new query resets to the first page.
+  useEffect(() => {
+    const id = setTimeout(() => { setDebouncedSearch(search.trim()); setPage(1) }, 300)
+    return () => clearTimeout(id)
+  }, [search])
+
+  // Server-driven list: search, status filter and pagination all run on the
+  // backend, so we only ever hold one page in memory.
+  const loadList = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      const { data } = await billingApi.getAll()
+      const { data } = await billingApi.getAll(listParams({ page, pageSize: PAGE_SIZE }))
       setInvoices((data.invoices || []).map(normalizeInvoice))
+      setTotal(data.total ?? 0)
     } catch {
       setError('Could not load invoices. Make sure the backend is running.')
     } finally {
       setLoading(false)
     }
+  }, [listParams, page])
+
+  const loadStats = useCallback(async () => {
+    try {
+      const { data } = await billingApi.getStats()
+      setStats({
+        collected: data.collected || 0,
+        gstCollected: data.gstCollected || 0,
+        paidCount: data.paidCount || 0,
+        pendingTotal: data.pendingTotal || 0,
+        pendingCount: data.pendingCount || 0,
+        overdueTotal: data.overdueTotal || 0,
+        overdueCount: data.overdueCount || 0,
+      })
+    } catch { /* non-critical; the list error banner covers outages */ }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { loadList() }, [loadList])
+  useEffect(() => { loadStats() }, [loadStats])
 
-  // ── Stats ──────────────────────────────────────────────────────────────────
-  const stats = useMemo(() => {
-    const paid    = invoices.filter(i => i.status === 'Paid')
-    const pending = invoices.filter(i => i.status === 'Pending')
-    const overdue = invoices.filter(i => i.status === 'Overdue')
-    return {
-      collected:    paid.reduce((s, i) => s + i.total, 0),
-      pendingTotal: pending.reduce((s, i) => s + i.total, 0),
-      pendingCount: pending.length,
-      overdueTotal: overdue.reduce((s, i) => s + i.total, 0),
-      overdueCount: overdue.length,
-      gstCollected: paid.reduce((s, i) => s + i.gstAmount, 0),
-    }
-  }, [invoices])
+  // Collecting a payment / generating an invoice shifts both the page and the
+  // aggregates — reload both rather than patching a single row in place.
+  const reload = useCallback(() => { loadList(); loadStats() }, [loadList, loadStats])
 
-  // ── Filtered invoices ──────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim()
-    return invoices.filter(inv => {
-      const matchStatus = statusFilter === 'All' || inv.status === statusFilter
-      const matchSearch = !q ||
-        inv.guest.toLowerCase().includes(q) ||
-        inv.invoiceNo.toLowerCase().includes(q) ||
-        inv.room.toLowerCase().includes(q)
-      return matchStatus && matchSearch
-    })
-  }, [invoices, search, statusFilter])
+  const handleStatusFilter = (s) => { setStatusFilter(s); setPage(1) }
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleCollect = async (method) => {
@@ -838,7 +855,7 @@ export default function Billing() {
       await billingApi.collect(target.id)
       addToast(`${formatCurrency(target.total)} collected via ${method || 'Cash'} for ${target.guest}`, 'success')
       setCollectModal(null)
-      load()
+      reload()
     } catch (err) {
       addToast(err.response?.data?.message || 'Could not record payment', 'error')
     }
@@ -862,15 +879,24 @@ export default function Billing() {
       const { data } = await billingApi.generate(payload)
       addToast(`Invoice ${data.invoice?.invoiceNo || ''} generated`, 'success')
       setShowGenerate(false)
-      load()
+      reload()
     } catch (err) {
       addToast(err.response?.data?.message || 'Could not generate invoice', 'error')
     }
   }
 
-  const handleExportCSV = () => {
+  // Export every invoice matching the current filters (not just the visible page).
+  const handleExportCSV = async () => {
+    let list = []
+    try {
+      const { data } = await billingApi.getAll(listParams())
+      list = (data.invoices || []).map(normalizeInvoice)
+    } catch {
+      addToast('Could not export invoices', 'error')
+      return
+    }
     const headers = ['Invoice No', 'Guest', 'Room', 'Period', 'Rent', 'Food', 'Amenities', 'GST', 'Total', 'Status', 'Created', 'Paid On']
-    const rows = filtered.map(inv => [
+    const rows = list.map(inv => [
       inv.invoiceNo, inv.guest, inv.room, inv.period,
       inv.rent, inv.food, inv.amenities, inv.gstAmount, inv.total,
       inv.status, inv.createdAt, inv.paidAt || '',
@@ -899,7 +925,7 @@ export default function Billing() {
         </div>
         {activeTab === 'invoices' && (
           <div className="flex gap-2">
-            <button className="btn btn-outline btn-sm" onClick={load} disabled={loading}>↻ Refresh</button>
+            <button className="btn btn-outline btn-sm" onClick={reload} disabled={loading}>↻ Refresh</button>
             <button className="btn btn-outline btn-sm" onClick={handleExportCSV}>↓ Export CSV</button>
             <button className="btn btn-primary" onClick={() => setShowGenerate(true)}>+ Generate Invoice</button>
           </div>
@@ -923,7 +949,7 @@ export default function Billing() {
             {formatCurrency(stats.collected)}
           </p>
           <p className="mt-[3px] mb-0 text-[11px] text-ink3">
-            {invoices.filter(i => i.status === 'Paid').length} invoices paid
+            {stats.paidCount} invoices paid
           </p>
         </div>
 
@@ -1008,7 +1034,7 @@ export default function Billing() {
                 return (
                   <button
                     key={s}
-                    onClick={() => setStatusFilter(s)}
+                    onClick={() => handleStatusFilter(s)}
                     className={`t-xs px-[13px] py-[5px] rounded-[20px] cursor-pointer transition-all duration-[130ms] ${active ? 'bg-[var(--gold-bg)] border border-gold text-gold' : 'bg-surface border border-line text-ink2'}`}
                   >
                     {s}
@@ -1019,13 +1045,13 @@ export default function Billing() {
 
             <div className="flex-1" />
             <p className="t-xs m-0 text-ink3 shrink-0">
-              {filtered.length} of {invoices.length} records
+              {total} record{total !== 1 ? 's' : ''}
             </p>
           </div>
 
           {/* Payment Records Table */}
           <div className="card overflow-x-auto">
-            {filtered.length === 0 ? (
+            {invoices.length === 0 ? (
               <div className="empty-state">
                 <p className="m-0 font-semibold text-ink2">{loading ? 'Loading invoices…' : 'No invoices found'}</p>
                 {!loading && <p className="t-xs mt-1 mx-0 mb-0">Generate an invoice or adjust your filters</p>}
@@ -1042,7 +1068,7 @@ export default function Billing() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map(inv => (
+                  {invoices.map(inv => (
                     <tr key={inv.id} className="transition-[background] duration-100">
                       {/* Invoice # */}
                       <td className="px-3 py-[11px]">
@@ -1148,6 +1174,17 @@ export default function Billing() {
               </table>
             )}
           </div>
+
+          {total > PAGE_SIZE && (
+            <div className="flex items-center justify-between mt-3 t-xs text-ink3">
+              <span>Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}</span>
+              <div className="flex items-center gap-2">
+                <button className="btn btn-outline btn-xs" disabled={page <= 1 || loading} onClick={() => setPage(p => Math.max(1, p - 1))}>← Prev</button>
+                <span>Page {page} of {totalPages}</span>
+                <button className="btn btn-outline btn-xs" disabled={page >= totalPages || loading} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next →</button>
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -1170,6 +1207,7 @@ export default function Billing() {
       />
 
       <RemindModal
+        key={remindModal?.id}
         invoice={remindModal}
         onClose={() => setRemindModal(null)}
         onSend={handleRemind}

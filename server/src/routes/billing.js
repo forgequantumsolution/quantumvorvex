@@ -1,6 +1,7 @@
 import express from 'express'
 import {
   getInvoices,
+  getInvoiceStats,
   generateInvoice,
   collectPayment,
   getInvoicePdf,
@@ -15,6 +16,7 @@ router.use(verifyToken, requirePermission('billing'))
 
 router.get('/', getInvoices)
 // Static paths before parameterized ones.
+router.get('/stats', getInvoiceStats)
 router.get('/ledger', getLedger)
 router.get('/cash-register', getCashRegister)
 router.post('/generate', generateInvoice)

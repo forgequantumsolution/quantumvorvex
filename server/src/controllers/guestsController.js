@@ -7,7 +7,10 @@ const generateDocId = async () => {
   return `DOC-${padded}`
 }
 
-// GET /guests?status=&stayType=&search=
+// GET /guests?status=&stayType=&search=&page=&pageSize=
+// Pagination is opt-in: pass page/pageSize for a single page, otherwise all
+// matching rows are returned (kept for callers that need the full set, e.g.
+// the Today panel and the billing guest pickers).
 export const getGuests = async (req, res) => {
   try {
     const { status, stayType, search } = req.query
@@ -25,18 +28,51 @@ export const getGuests = async (req, res) => {
       ]
     }
 
-    const guests = await prisma.guest.findMany({
+    const hasPaging = req.query.page !== undefined || req.query.pageSize !== undefined
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20))
+
+    const findArgs = {
       where,
       include: {
         room: { include: { type: true } },
         _count: { select: { documents: true, invoices: true } },
       },
       orderBy: { createdAt: 'desc' },
-    })
+    }
+    if (hasPaging) {
+      findArgs.skip = (page - 1) * pageSize
+      findArgs.take = pageSize
+    }
 
-    return res.status(200).json({ guests })
+    const [guests, total] = await Promise.all([
+      prisma.guest.findMany(findArgs),
+      prisma.guest.count({ where }),
+    ])
+
+    return res.status(200).json({ guests, total, ...(hasPaging ? { page, pageSize } : {}) })
   } catch (err) {
     console.error('getGuests error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /guests/stats — full-dataset counts for the summary cards, independent of
+// the current search/filter/page so the totals always reflect every guest.
+export const getGuestStats = async (req, res) => {
+  try {
+    const grouped = await prisma.guest.groupBy({ by: ['status'], _count: { _all: true } })
+    const byStatus = Object.fromEntries(grouped.map((g) => [g.status, g._count._all]))
+    const total = grouped.reduce((s, g) => s + g._count._all, 0)
+
+    return res.status(200).json({
+      total,
+      active: byStatus.Active || 0,
+      due: byStatus.Due || 0,
+      checkedOut: byStatus['Checked Out'] || 0,
+    })
+  } catch (err) {
+    console.error('getGuestStats error:', err)
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }
