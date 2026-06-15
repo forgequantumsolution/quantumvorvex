@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { LuMenu, LuSearch, LuBell, LuPlus, LuChevronRight } from 'react-icons/lu'
+import { LuMenu, LuSearch, LuBell, LuPlus } from 'react-icons/lu'
 import { useAppSelector, useUiActions } from '../../store/hooks'
-import { PANEL_META } from '../../utils/navigation'
 
 const MOCK_NOTIFS = [
   { id: 1, type: 'danger',  icon: '!', title: 'Overdue Invoice',    msg: 'INV-005 — Kavya Reddy (₹12,096)',      time: '2h ago',    read: false },
@@ -54,11 +53,6 @@ export default function Topbar() {
   const markAllRead  = () => setNotifs(ns => ns.map(n => ({ ...n, read: true })))
   const dismissNotif = (id) => setNotifs(ns => ns.filter(n => n.id !== id))
 
-  const panelMeta = PANEL_META[activePanel]
-  // Fallback for panels outside the nav structure: capitalize the raw id.
-  const pageLabel = panelMeta?.label
-    || activePanel.charAt(0).toUpperCase() + activePanel.slice(1)
-
   const iconBtnClass = 'bg-transparent border border-line2 rounded-lg w-9 h-9 flex items-center justify-center cursor-pointer text-ink2 shrink-0 transition-all duration-[140ms]'
   const hoverGold = {
     onMouseEnter: e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold)' },
@@ -73,19 +67,10 @@ export default function Topbar() {
         <LuMenu size={18} />
       </button>
 
-      {/* Breadcrumb (section › page) + today's date — the page renders its own
-          full heading, so the topbar only provides lightweight orientation */}
+      {/* Today's date — the page renders its own full heading, so the topbar
+          only provides lightweight orientation */}
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1 whitespace-nowrap overflow-hidden">
-          {panelMeta?.section && (
-            <>
-              <span className="text-[12px] text-ink3 font-medium">{panelMeta.section}</span>
-              <LuChevronRight size={12} className="text-ink3 shrink-0" />
-            </>
-          )}
-          <span className="text-[13px] text-ink font-semibold overflow-hidden text-ellipsis">{pageLabel}</span>
-        </div>
-        <div className="text-[11.5px] text-ink3 font-medium mt-px">
+        <div className="text-[11.5px] text-ink3 font-medium">
           {todayLabel()}
         </div>
       </div>
