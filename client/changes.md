@@ -6,6 +6,56 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-16 · Download button for room maintenance QR
+
+## Summary
+Added a "Download QR" button next to "Print sticker" in the room's Maintenance QR modal, so
+the user can save the QR as an image (with the room number) instead of only printing it.
+
+## File changes
+
+### `src/components/modules/rooms/Rooms.jsx`
+- **`RoomQrCode`**: added a `handleDownload` that serializes the room QR `<svg>`, draws it onto
+  a canvas with a `Room {number}` caption above it, and triggers a PNG download named
+  `room-{number}-qr.png`. The image includes both the QR code and the room number.
+- Rendered a `⬇ Download QR` (outline) button alongside the existing `🖨 Print sticker` button,
+  wrapping the pair in a `flex items-center justify-center gap-2` row.
+
+---
+
+# Session — 2026-06-16 · Mobile polish for the QR maintenance report page
+
+## Summary
+The public "Report an Issue" page (`/report?t=<qrToken>`, reached by scanning a room's
+maintenance QR) looked cramped on mobile. Reworked its styling to be mobile-first. Logic
+unchanged — markup/CSS only.
+
+## File changes
+
+### `src/components/modules/maintenance/GuestMaintenanceForm.jsx`
+- **iOS zoom fix**: this page's inputs used the shared `.form-input/.form-select` classes at
+  13px; iOS Safari auto-zooms the page when focusing any sub-16px field. Replaced them with
+  page-local Tailwind controls at `text-base` (16px), `px-4 py-3`, `rounded-xl`, and a larger
+  focus ring. Left the global `.form-*` classes untouched (used across the authed app).
+- Bigger tap targets and spacing (`gap-5`), `min-h-[100dvh]` instead of `min-h-screen` (no
+  mobile URL-bar gap), and `env(safe-area-inset-bottom)` padding for notched phones.
+- The theme defines both `--main-bg` and `--surface` as pure white, so the card was
+  invisible against the page. Tinted the page with `bg-surface2` (faint cream) and kept the
+  card white so it lifts off the background; vertically centered the form (`justify-center`)
+  so it doesn't strand empty space on tall screens.
+- **Width/scroll fix (the page rendered as a narrow left column):** `#root` is a full-height
+  flex **row** with `overflow:hidden` (index.css). A single flex child shrinks to its content
+  width, so the page sat in a `max-w-md`-wide strip with empty space beside it, and a tall
+  form couldn't scroll. Wrapped the page in a `flex-1 min-w-0 overflow-y-auto` container (the
+  same pattern `LoginPage.css` uses) with an inner `min-h-full` centering layer — now it fills
+  the viewport width at every size and scrolls when the form exceeds the screen.
+- Polished header (gold icon badge + room shown as a pill), `shadow-soft` card, larger
+  success/error states, ticket number rendered as a mono chip.
+- Submit button: `text-black` on gold (better contrast than the old `text-white`), full-width
+  `py-3.5`, with an `active:scale` press cue.
+
+---
+
 # Session — 2026-06-16 · Payment-proof attachment on guest check-out
 
 ## Summary

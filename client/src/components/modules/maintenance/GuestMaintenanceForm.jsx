@@ -56,49 +56,67 @@ export default function GuestMaintenanceForm() {
     }
   }
 
+  // Mobile-first control styling. 16px font on inputs is deliberate: it stops
+  // iOS Safari from auto-zooming the page when a field gains focus.
+  const labelCls = 'block text-[13px] font-semibold text-ink2 mb-2'
+  const fieldCls =
+    'w-full text-base text-ink bg-surface2 border border-line rounded-xl px-4 py-3 ' +
+    'outline-none transition placeholder:text-ink3 ' +
+    'focus:border-gold focus:bg-surface focus:ring-4 focus:ring-gold-bg'
+
   return (
-    <div className="min-h-screen bg-surface2 flex flex-col items-center px-4 py-8">
-      <div className="w-full max-w-md">
+    // #root is a full-height flex ROW (see index.css), so this page must claim
+    // the full width (flex-1) and own its vertical scroll — #root/body are
+    // overflow:hidden, which would otherwise clip a tall form on small screens.
+    <div className="flex-1 min-w-0 overflow-y-auto bg-surface2">
+      <div className="min-h-full flex flex-col items-center justify-center px-4 pt-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <div className="w-full max-w-md">
         {/* Brand header */}
-        <div className="text-center mb-6">
-          <h1 className="text-[22px] font-extrabold text-ink tracking-[-0.02em] m-0">Report an Issue</h1>
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className="w-14 h-14 rounded-2xl bg-gold-bg border border-gold-border flex items-center justify-center text-[26px] mb-3">
+            🔧
+          </div>
+          <h1 className="text-2xl font-extrabold text-ink tracking-[-0.02em] m-0">Report an Issue</h1>
           {room && (
-            <p className="t-sm text-ink3 mt-1">
+            <span className="inline-flex items-center gap-1.5 mt-2.5 rounded-full bg-surface2 border border-line px-3 py-1 text-sm font-medium text-ink2">
               Room {room.number}{room.floor ? ` · Floor ${room.floor}` : ''}
-            </p>
+            </span>
           )}
         </div>
 
-        <div className="bg-surface border border-line rounded-[var(--radius)] p-5">
+        <div className="bg-surface border border-line rounded-2xl shadow-soft p-5 sm:p-6">
           {loading && (
-            <p className="t-sm text-ink3 text-center py-8 m-0">Loading…</p>
+            <p className="text-base text-ink3 text-center py-10 m-0">Loading…</p>
           )}
 
           {!loading && loadError && (
-            <div className="text-center py-6">
-              <p className="t-display mb-2">⚠️</p>
-              <p className="font-semibold text-ink2 m-0">{loadError}</p>
-              <p className="t-xs text-ink3 mt-2">Please ask the front desk for help.</p>
+            <div className="text-center py-8">
+              <p className="text-4xl mb-3 m-0">⚠️</p>
+              <p className="text-base font-semibold text-ink2 m-0">{loadError}</p>
+              <p className="text-sm text-ink3 mt-2">Please ask the front desk for help.</p>
             </div>
           )}
 
           {!loading && !loadError && done && (
-            <div className="text-center py-6">
-              <p className="t-display mb-2">✅</p>
-              <p className="font-semibold text-ink m-0">Thank you!</p>
-              <p className="t-sm text-ink3 mt-2">
-                Your request has been sent to our team. Reference <strong>{done.ticketNo}</strong>.
+            <div className="text-center py-8">
+              <p className="text-5xl mb-3 m-0">✅</p>
+              <p className="text-lg font-bold text-ink m-0">Thank you!</p>
+              <p className="text-sm text-ink3 mt-2 leading-relaxed">
+                Your request has been sent to our team.
               </p>
+              <span className="inline-block mt-3 rounded-lg bg-surface2 border border-line px-3 py-1.5 font-mono text-sm text-ink2">
+                {done.ticketNo}
+              </span>
             </div>
           )}
 
           {!loading && !loadError && !done && (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
               {/* Category */}
               <div>
-                <label className="form-label block mb-[5px]">What needs attention?</label>
+                <label className={labelCls}>What needs attention?</label>
                 <select
-                  className="form-select"
+                  className={fieldCls}
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                 >
@@ -108,9 +126,9 @@ export default function GuestMaintenanceForm() {
 
               {/* Title */}
               <div>
-                <label className="form-label block mb-[5px]">Issue</label>
+                <label className={labelCls}>Issue</label>
                 <input
-                  className="form-input"
+                  className={fieldCls}
                   type="text"
                   maxLength={120}
                   placeholder="e.g. AC not cooling"
@@ -121,9 +139,9 @@ export default function GuestMaintenanceForm() {
 
               {/* Description */}
               <div>
-                <label className="form-label block mb-[5px]">Details <span className="text-ink3 font-normal">(optional)</span></label>
+                <label className={labelCls}>Details <span className="text-ink3 font-normal normal-case">(optional)</span></label>
                 <textarea
-                  className="form-input min-h-[90px] resize-y"
+                  className={`${fieldCls} min-h-[110px] resize-y`}
                   maxLength={1000}
                   placeholder="Anything that helps us fix it faster"
                   value={description}
@@ -132,13 +150,13 @@ export default function GuestMaintenanceForm() {
               </div>
 
               {submitError && (
-                <p className="t-sm text-danger-text bg-danger-bg rounded-lg px-3 py-2 m-0">{submitError}</p>
+                <p className="text-sm text-danger-text bg-danger-bg rounded-lg px-3 py-2.5 m-0">{submitError}</p>
               )}
 
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 rounded-lg bg-gold text-white font-semibold text-[15px] disabled:opacity-60 transition-opacity"
+                className="w-full py-3.5 rounded-xl bg-gold text-black font-bold text-base shadow-soft active:scale-[0.99] disabled:opacity-60 transition"
               >
                 {submitting ? 'Sending…' : 'Submit Request'}
               </button>
@@ -146,7 +164,8 @@ export default function GuestMaintenanceForm() {
           )}
         </div>
 
-        <p className="t-xs text-ink3 text-center mt-4">No login needed · Your room staff will be notified</p>
+          <p className="text-xs text-ink3 text-center mt-5">No login needed · Your room staff will be notified</p>
+        </div>
       </div>
     </div>
   )

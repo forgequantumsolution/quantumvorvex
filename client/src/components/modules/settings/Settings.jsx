@@ -2087,7 +2087,7 @@ export default function Settings({ onRunSetup }) {
             Configure hotel profile, room types, pricing, and system preferences
           </p>
         </div>
-        {onRunSetup && isOwner && (
+        {/* {onRunSetup && isOwner && (
           <button
             className="btn btn-outline btn-sm shrink-0"
             onClick={onRunSetup}
@@ -2095,7 +2095,7 @@ export default function Settings({ onRunSetup }) {
           >
             ⚙ Re-run Setup
           </button>
-        )}
+        )} */}
       </div>
 
       <Tabs tabs={tabs} active={validActiveTab} onChange={setActiveTab}>
