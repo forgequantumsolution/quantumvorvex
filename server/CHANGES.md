@@ -5,6 +5,26 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-16 · Guest documents upload endpoint (for check-out payment proofs)
+
+## Summary
+The guest check-out flow needed to attach a payment screenshot/receipt, but guests had no
+documents-upload endpoint (bookings did). Added one mirroring `uploadBookingDocuments`.
+
+## File changes
+
+### `src/controllers/guestsController.js`
+- New `uploadGuestDocuments` controller: validates files + guest, normalises `docTypes`, and
+  creates `Document` rows (the guest-linked model) with `url: /uploads/documents/<file>`. Mirrors
+  `uploadBookingDocuments` but targets `prisma.document` instead of `bookingDocument`.
+- Added `import path from 'path'` for the filename fallback.
+
+### `src/routes/guests.js`
+- Registered `POST /:id/documents` using the shared `uploadDocs` multer config imported from
+  `bookingsController.js` (same 10MB / image+PDF limits as booking uploads).
+
+---
+
 # Session — 2026-06-16 · Booking-time documents now surface in the Documents tab
 
 ## Summary

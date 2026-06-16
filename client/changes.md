@@ -6,6 +6,50 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-16 · Payment-proof attachment on guest check-out
+
+## Summary
+The guest check-out modal collected payment method + remarks but had no way to attach a
+payment screenshot/receipt, unlike the bookings check-out. Added the attachment field and
+wired the upload, mirroring the bookings flow. (Server side: see `../server/CHANGES.md`.)
+
+## File changes
+
+### `src/components/modules/guests/Guests.jsx`
+- Added a "Payment screenshot / proof (optional)" file field to step 2 of the inline
+  `CheckoutModal` — same image/PDF picker, 10MB cap, and remove button as the bookings
+  `CheckOutModal`. New `proof`/`proofError` state + `pickProof` validator; the file is passed
+  through `onConfirm`.
+- `handleCheckoutConfirm` now uploads the proof (multipart, `docType: payment_proof`) **before**
+  calling `guestsApi.checkout`, so a failed upload aborts the check-out — same ordering as
+  bookings. Also forwards `notes`/`paymentMethod` in the checkout body.
+- Added `key={checkoutGuest?.id}` on `<CheckoutModal>` so each guest gets a fresh form; prevents
+  a prior guest's step/receipt from leaking into the next check-out (the modal component stays
+  mounted otherwise).
+
+### `src/api/client.js`
+- Added `guestsApi.uploadDocuments(id, form)` → `POST /guests/:id/documents` (multipart).
+
+---
+
+# Session — 2026-06-16 · New-booking check-in date defaults to today
+
+## Summary
+The new-booking form defaulted the check-in date to 2026-06-02 (a hardcoded demo "today")
+instead of the actual current date.
+
+## File changes
+
+### `src/utils/booking.js`
+- Replaced the hardcoded `TODAY = '2026-06-02'` constant with a computed local current date
+  in `YYYY-MM-DD` format (using `getMonth`/`getDate` rather than `toISOString()` to avoid a
+  UTC/IST off-by-one).
+- This flows into the new-booking form's default `fromDate` (`EMPTY.fromDate = TODAY` in
+  `BookingForm.jsx`) and the `isUpcoming` date comparison, which both keep working since the
+  string format is unchanged.
+
+---
+
 # Session — 2026-06-16 · E2E test for booking-time documents in the Documents tab
 
 ## Summary

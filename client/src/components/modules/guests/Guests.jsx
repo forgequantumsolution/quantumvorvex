@@ -412,20 +412,35 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
 
 // ─── Checkout Modal ────────────────────────────────────────────────────────────
 
+const MAX_PROOF_BYTES = 10 * 1024 * 1024 // matches the server's 10MB limit
+
 function CheckoutModal({ guest, onClose, onConfirm }) {
   const [step, setStep] = useState(1)
   const [payMethod, setPayMethod] = useState('Cash')
   const [notes, setNotes] = useState('')
   const [settled, setSettled] = useState(false)
+  const [proof, setProof] = useState(null)
+  const [proofError, setProofError] = useState('')
 
   if (!guest) return null
   const { rent, food, amenities, gst, total } = calcCheckout(guest)
   const dueDate = getDueDate(guest)
   const balance = total - guest.advance
 
+  const pickProof = (e) => {
+    const file = e.target.files?.[0] || null
+    setProofError('')
+    if (file && file.size > MAX_PROOF_BYTES) {
+      setProof(null); setProofError('File is too large (max 10MB).')
+      e.target.value = ''
+      return
+    }
+    setProof(file)
+  }
+
   const handleConfirm = () => {
     if (step === 1) { setStep(2); return }
-    onConfirm(guest, notes, payMethod)
+    onConfirm(guest, notes, payMethod, proof)
   }
 
   return (
@@ -517,6 +532,29 @@ function CheckoutModal({ guest, onClose, onConfirm }) {
           <div className="mb-3.5">
             <label className="form-label block mb-[5px]">Remarks (optional)</label>
             <textarea className="form-textarea" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Key return confirmation, damages, etc." />
+          </div>
+
+          <div className="mb-3.5">
+            <label className="form-label block mb-[5px]">Payment screenshot / proof (optional)</label>
+            {proof ? (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-line2 bg-surface px-3 py-2">
+                <span className="t-sm text-ink truncate">📎 {proof.name}</span>
+                <button
+                  type="button"
+                  className="t-xs text-ink3 hover:text-danger-text shrink-0"
+                  onClick={() => { setProof(null); setProofError('') }}
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center gap-2 cursor-pointer rounded-lg border border-dashed border-line2 bg-surface px-3 py-2.5 t-sm text-ink3 hover:border-gold hover:text-ink2">
+                <span className="text-base">⬆</span>
+                <span>Attach an image or PDF (e.g. UPI / card receipt)</span>
+                <input type="file" accept="image/*,.pdf" className="hidden" onChange={pickProof} />
+              </label>
+            )}
+            {proofError && <span className="block text-[11.5px] text-danger mt-1">{proofError}</span>}
           </div>
 
           <label className="t-sm flex items-center gap-[9px] cursor-pointer">
@@ -689,9 +727,16 @@ export default function Guests() {
     }
   }
 
-  const handleCheckoutConfirm = async (guest) => {
+  const handleCheckoutConfirm = async (guest, notes, payMethod, proofFile) => {
     try {
-      await guestsApi.checkout(guest.id)
+      // Attach the payment screenshot first so a failed upload aborts the check-out.
+      if (proofFile) {
+        const form = new FormData()
+        form.append('documents', proofFile)
+        form.append('docTypes', JSON.stringify(['payment_proof']))
+        await guestsApi.uploadDocuments(guest.id, form)
+      }
+      await guestsApi.checkout(guest.id, { notes, paymentMethod: payMethod })
       setCheckoutGuest(null)
       addToast(`${guest.name} checked out. Room marked for housekeeping.`, 'success')
       reload()
@@ -854,7 +899,7 @@ export default function Guests() {
 
       {/* Modals */}
       <GuestProfileModal guest={profileGuest} onClose={() => setProfileGuest(null)} onCheckout={openCheckout} onEdit={openEdit} />
-      <CheckoutModal guest={checkoutGuest} onClose={() => setCheckoutGuest(null)} onConfirm={handleCheckoutConfirm} />
+      <CheckoutModal key={checkoutGuest?.id} guest={checkoutGuest} onClose={() => setCheckoutGuest(null)} onConfirm={handleCheckoutConfirm} />
       <EditGuestModal guest={editGuest} onClose={() => setEditGuest(null)} onSave={handleEditSave} />
     </div>
   )

@@ -79,6 +79,7 @@ export const guestsApi = {
   update: (id, data) => api.put(`/guests/${id}`, data),
   checkout: (id, data) => api.post(`/guests/${id}/checkout`, data),
   renew:    (id, data) => api.post(`/guests/${id}/renew`, data),       // { months } | { checkOutDate }
+  uploadDocuments: (id, form) => api.post(`/guests/${id}/documents`, form, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getCommunications: (id)       => api.get(`/guests/${id}/communications`),
   addCommunication:  (id, data) => api.post(`/guests/${id}/communications`, data), // { channel, direction, subject, content }
 }

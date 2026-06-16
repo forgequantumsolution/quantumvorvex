@@ -1,3 +1,4 @@
+import path from 'path'
 import prisma from '../utils/prisma.js'
 
 // Generate a unique document ID: DOC-XXXX
@@ -300,6 +301,43 @@ export const createGuestCommunication = async (req, res) => {
     return res.status(201).json({ communication })
   } catch (err) {
     console.error('createGuestCommunication error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// POST /guests/:id/documents — attach files to a guest (ID proofs, payment
+// receipts, etc.). Multipart; reuses the same multer config as bookings.
+export const uploadGuestDocuments = async (req, res) => {
+  try {
+    const { id } = req.params
+    const files = req.files || []
+    if (!files.length) return res.status(400).json({ message: 'No files uploaded.' })
+
+    const guest = await prisma.guest.findUnique({ where: { id }, select: { id: true } })
+    if (!guest) return res.status(404).json({ message: 'Guest not found.' })
+
+    // Normalise docTypes into an array aligned with files
+    let labels = req.body.docTypes
+    if (typeof labels === 'string') {
+      try { labels = JSON.parse(labels) } catch { labels = [labels] }
+    }
+    if (!Array.isArray(labels)) labels = labels ? [labels] : []
+
+    const created = await prisma.$transaction(
+      files.map((file, i) =>
+        prisma.document.create({
+          data: {
+            guestId: id,
+            docType: (labels[i] || path.basename(file.originalname)).toString().slice(0, 80),
+            url: `/uploads/documents/${file.filename}`,
+          },
+        })
+      )
+    )
+
+    return res.status(201).json({ documents: created })
+  } catch (err) {
+    console.error('uploadGuestDocuments error:', err)
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }
