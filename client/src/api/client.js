@@ -73,17 +73,20 @@ export const roomsApi = {
 
 export const guestsApi = {
   getAll: (params) => api.get('/guests', { params }),
+  getStats: (params) => api.get('/guests/stats', { params }),
   create: (data)   => api.post('/guests', data),
   getOne: (id)     => api.get(`/guests/${id}`),
   update: (id, data) => api.put(`/guests/${id}`, data),
   checkout: (id, data) => api.post(`/guests/${id}/checkout`, data),
   renew:    (id, data) => api.post(`/guests/${id}/renew`, data),       // { months } | { checkOutDate }
+  uploadDocuments: (id, form) => api.post(`/guests/${id}/documents`, form, { headers: { 'Content-Type': 'multipart/form-data' } }),
   getCommunications: (id)       => api.get(`/guests/${id}/communications`),
   addCommunication:  (id, data) => api.post(`/guests/${id}/communications`, data), // { channel, direction, subject, content }
 }
 
 export const billingApi = {
   getAll: (params) => api.get('/billing', { params }),
+  getStats: (params) => api.get('/billing/stats', { params }),
   generate: (data) => api.post('/billing/generate', data),
   collect: (id)    => api.put(`/billing/${id}/collect`),
   getPdf: (id)     => api.get(`/billing/${id}/pdf`, { responseType: 'blob' }),
@@ -93,6 +96,7 @@ export const billingApi = {
 
 export const bookingsApi = {
   getAll:   (params)   => api.get('/bookings', { params }),
+  getStats: (params)   => api.get('/bookings/stats', { params }),
   getOne:   (id)       => api.get(`/bookings/${id}`),
   create:   (data)     => api.post('/bookings', data),
   update:   (id, data) => api.put(`/bookings/${id}`, data),

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { PageWrapper, StatCard, Card, FilterTabs, SearchInput, Button } from '../../ui-tw'
 import BookingsTable from './BookingsTable'
 import BookingForm from './BookingForm'
@@ -9,7 +9,6 @@ import { useToast } from '../../../hooks/useToast'
 import { useAppSelector, usePrimaryAction } from '../../../store/hooks'
 import { bookingsApi } from '../../../api/client'
 import { formatCurrency } from '../../../utils/format'
-import { isUpcoming } from '../../../utils/booking'
 import { normalizeBooking as normalize } from '../../../utils/normalizeBooking'
 
 const TABS = [
@@ -21,6 +20,8 @@ const TABS = [
   { id: 'Cancelled', label: 'Cancelled' },
 ]
 const TAB_IDS = TABS.map((t) => t.id)
+const PAGE_SIZE = 20
+const EMPTY_COUNTS = { all: 0, Upcoming: 0, Confirmed: 0, CheckedIn: 0, CheckedOut: 0, Cancelled: 0 }
 
 export default function Bookings() {
   const toast = useToast()
@@ -33,84 +34,94 @@ export default function Bookings() {
   const [error, setError] = useState('')
   const [tab, setTab] = useState(() => (TAB_IDS.includes(navTab) ? navTab : 'all'))
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  // Full-dataset aggregates served by /bookings/stats — independent of the
+  // current search/tab/page so the stat cards and tab counts always show totals.
+  const [stats, setStats] = useState({ total: 0, confirmed: 0, checkedIn: 0, revenue: 0, dues: 0 })
+  const [counts, setCounts] = useState(EMPTY_COUNTS)
   const [showNew, setShowNew] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
   const [checkOutTarget, setCheckOutTarget] = useState(null)
   const [invoiceTarget, setInvoiceTarget] = useState(null)
   const [busyId, setBusyId] = useState(null)
 
-  const load = useCallback(async () => {
+  // Debounce the search box so we hit the API at most once per pause in typing.
+  // A new query always resets back to the first page.
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setDebouncedQuery(query.trim())
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(id)
+  }, [query])
+
+  // The list is now server-driven: search (q), tab (status) and pagination all
+  // run on the backend, so we only ever hold one page in memory.
+  const loadList = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      const { data } = await bookingsApi.getAll()
+      const { data } = await bookingsApi.getAll({
+        q: debouncedQuery || undefined,
+        status: tab,
+        page,
+        pageSize: PAGE_SIZE,
+      })
       setBookings((data.bookings || []).map(normalize))
+      setTotal(data.total ?? 0)
     } catch {
       setError('Could not load bookings. Make sure the backend is running.')
     } finally {
       setLoading(false)
     }
+  }, [debouncedQuery, tab, page])
+
+  const loadStats = useCallback(async () => {
+    try {
+      const { data } = await bookingsApi.getStats()
+      if (data.stats) setStats(data.stats)
+      setCounts({ ...EMPTY_COUNTS, ...(data.counts || {}) })
+    } catch {
+      /* stats are non-critical; the list error banner already covers outages */
+    }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  // Re-fetch the visible page whenever search / tab / page changes.
+  useEffect(() => { loadList() }, [loadList])
+  // Aggregates only need refreshing on mount and after mutations.
+  useEffect(() => { loadStats() }, [loadStats])
+
+  // After any action that can change a booking's status/amounts, both the list
+  // and the aggregates may shift — reload both rather than patching in place.
+  const reload = useCallback(() => { loadList(); loadStats() }, [loadList, loadStats])
 
   // Follow a deep-link tab if the panel was opened with one (e.g. from Today).
   useEffect(() => {
-    if (TAB_IDS.includes(navTab)) setTab(navTab)
+    if (TAB_IDS.includes(navTab)) { setTab(navTab); setPage(1) }
   }, [navTab])
 
   // Open the New Booking form when the header's contextual button fires
   usePrimaryAction('bookings', () => setShowNew(true))
 
-  // Stats
-  const stats = useMemo(() => {
-    const active = bookings.filter((b) => !['Cancelled', 'CheckedOut', 'NoShow'].includes(b.status))
-    return {
-      total: bookings.length,
-      confirmed: bookings.filter((b) => b.status === 'Confirmed').length,
-      checkedIn: bookings.filter((b) => b.status === 'CheckedIn').length,
-      revenue: active.reduce((s, b) => s + (Number(b.amount) || 0), 0),
-      dues: active.reduce((s, b) => s + (Number(b.balanceDue) || 0), 0),
-    }
-  }, [bookings])
+  const handleTabChange = (next) => { setTab(next); setPage(1) }
 
-  const counts = useMemo(() => ({
-    all: bookings.length,
-    Upcoming: bookings.filter(isUpcoming).length,
-    Confirmed: bookings.filter((b) => b.status === 'Confirmed').length,
-    CheckedIn: bookings.filter((b) => b.status === 'CheckedIn').length,
-    CheckedOut: bookings.filter((b) => b.status === 'CheckedOut').length,
-    Cancelled: bookings.filter((b) => b.status === 'Cancelled').length,
-  }), [bookings])
-
-  const filtered = useMemo(() => {
-    let list = bookings
-    if (tab === 'Upcoming') list = list.filter(isUpcoming)
-    else if (tab !== 'all') list = list.filter((b) => b.status === tab)
-
-    const q = query.trim().toLowerCase()
-    if (q) {
-      list = list.filter((b) =>
-        b.guestName?.toLowerCase().includes(q) ||
-        b.bookingNo?.toLowerCase().includes(q) ||
-        String(b.roomNumber || '').includes(q))
-    }
-    return list
-  }, [bookings, tab, query])
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   // ── Actions ──
   const handleCreated = (booking) => {
-    setBookings((prev) => [normalize(booking), ...prev])
     toast(`Booking ${booking.bookingNo} created for ${booking.guestName}`)
     setShowNew(false)
+    reload()
   }
 
   const runAction = async (id, fn, successMsg, tone) => {
     setBusyId(id)
     try {
-      const { data } = await fn()
-      setBookings((prev) => prev.map((b) => (b.id === id ? normalize(data.booking) : b)))
+      await fn()
       toast(successMsg, tone)
+      reload()
     } catch (err) {
       toast(err.response?.data?.message || 'Action failed', 'error')
     } finally {
@@ -133,10 +144,10 @@ export default function Bookings() {
         form.append('docTypes', JSON.stringify(['payment_proof']))
         await bookingsApi.uploadDocuments(id, form)
       }
-      const { data } = await bookingsApi.checkOut(id, { finalPayment, extraCharges, paymentMethod, paymentReference })
-      setBookings((prev) => prev.map((x) => (x.id === id ? normalize(data.booking) : x)))
+      await bookingsApi.checkOut(id, { finalPayment, extraCharges, paymentMethod, paymentReference })
       toast(`${b?.guestName || 'Guest'} checked out`)
       setCheckOutTarget(null)
+      reload()
     } catch (err) {
       toast(err.response?.data?.message || 'Check-out failed', 'error')
     } finally {
@@ -177,12 +188,12 @@ export default function Bookings() {
           actions={
             <div className="flex items-center gap-2">
               <SearchInput value={query} onChange={setQuery} placeholder="Search name, no. or room" className="w-56" />
-              <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
+              <Button variant="ghost" onClick={reload} disabled={loading}>↻ Refresh</Button>
             </div>
           }
         >
           <div className="px-5 py-3 border-b border-line">
-            <FilterTabs tabs={TABS.map((t) => ({ ...t, count: counts[t.id] }))} active={tab} onChange={setTab} />
+            <FilterTabs tabs={TABS.map((t) => ({ ...t, count: counts[t.id] }))} active={tab} onChange={handleTabChange} />
           </div>
 
           {error && (
@@ -190,7 +201,7 @@ export default function Bookings() {
           )}
 
           <BookingsTable
-            bookings={filtered}
+            bookings={bookings}
             loading={loading}
             busyId={busyId}
             onCheckIn={handleCheckIn}
@@ -198,8 +209,25 @@ export default function Bookings() {
             onConfirm={handleConfirm}
             onCancel={setCancelTarget}
             onInvoice={setInvoiceTarget}
-            emptyMessage={query ? 'No bookings match your search.' : 'Create a booking to get started.'}
+            emptyMessage={debouncedQuery ? 'No bookings match your search.' : 'Create a booking to get started.'}
           />
+
+          {total > PAGE_SIZE && (
+            <div className="flex items-center justify-between px-5 py-3 border-t border-line text-sm text-muted">
+              <span>
+                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                  ← Prev
+                </Button>
+                <span>Page {page} of {totalPages}</span>
+                <Button variant="ghost" disabled={page >= totalPages || loading} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                  Next →
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
       )}
       <CancelModal

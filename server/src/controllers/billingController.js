@@ -1,6 +1,7 @@
 import prisma from '../utils/prisma.js'
 
-// GET /billing?status=&search=
+// GET /billing?status=&search=&page=&pageSize=
+// Pagination is opt-in: with no page/pageSize the full matching set is returned.
 export const getInvoices = async (req, res) => {
   try {
     const { status, search } = req.query
@@ -15,7 +16,11 @@ export const getInvoices = async (req, res) => {
       ]
     }
 
-    const invoices = await prisma.invoice.findMany({
+    const hasPaging = req.query.page !== undefined || req.query.pageSize !== undefined
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20))
+
+    const findArgs = {
       where,
       include: {
         guest: {
@@ -23,11 +28,48 @@ export const getInvoices = async (req, res) => {
         },
       },
       orderBy: { createdAt: 'desc' },
-    })
+    }
+    if (hasPaging) {
+      findArgs.skip = (page - 1) * pageSize
+      findArgs.take = pageSize
+    }
 
-    return res.status(200).json({ invoices })
+    const [invoices, total] = await Promise.all([
+      prisma.invoice.findMany(findArgs),
+      prisma.invoice.count({ where }),
+    ])
+
+    return res.status(200).json({ invoices, total, ...(hasPaging ? { page, pageSize } : {}) })
   } catch (err) {
     console.error('getInvoices error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /billing/stats — full-dataset aggregates for the stat cards (collected /
+// pending / overdue totals + GST), independent of the current search/filter/page.
+export const getInvoiceStats = async (req, res) => {
+  try {
+    const [grouped, paid, pending, overdue] = await Promise.all([
+      prisma.invoice.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.invoice.aggregate({ where: { status: 'Paid' }, _sum: { total: true, gstAmount: true } }),
+      prisma.invoice.aggregate({ where: { status: 'Pending' }, _sum: { total: true } }),
+      prisma.invoice.aggregate({ where: { status: 'Overdue' }, _sum: { total: true } }),
+    ])
+
+    const byStatus = Object.fromEntries(grouped.map((g) => [g.status, g._count._all]))
+
+    return res.status(200).json({
+      collected: paid._sum.total || 0,
+      gstCollected: paid._sum.gstAmount || 0,
+      paidCount: byStatus.Paid || 0,
+      pendingTotal: pending._sum.total || 0,
+      pendingCount: byStatus.Pending || 0,
+      overdueTotal: overdue._sum.total || 0,
+      overdueCount: byStatus.Overdue || 0,
+    })
+  } catch (err) {
+    console.error('getInvoiceStats error:', err)
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }
