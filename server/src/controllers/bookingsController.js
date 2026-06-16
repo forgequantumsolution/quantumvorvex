@@ -8,6 +8,20 @@ import { htmlToPdf } from '../utils/pdf.js'
 
 const DAY_MS = 86400000
 
+// Demo "today" — mirrors client/src/utils/booking.js TODAY so the server-side
+// "Upcoming" filter and count match the UI exactly.
+const DEMO_TODAY = new Date('2026-06-02')
+
+// Statuses that count as a live/active stay (not cancelled, checked out or no-show).
+// Used for the "Active value" / "Outstanding dues" stat aggregates.
+const ACTIVE_STATUSES = ['Pending', 'Confirmed', 'CheckedIn']
+
+// WHERE clause for the "Upcoming" tab: a future-or-today arrival still pending/confirmed.
+const upcomingWhere = {
+  fromDate: { gte: DEMO_TODAY },
+  status: { in: ['Confirmed', 'Pending'] },
+}
+
 // ── ID-document uploads (Aadhaar front/back, PAN, etc.) ──────────────────────────
 const docsDir = path.resolve('uploads/documents')
 if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true })
@@ -131,12 +145,19 @@ const bookingInclude = {
 
 // ── Handlers ───────────────────────────────────────────────────────────────────
 
-// GET /bookings?status=&source=&q=&roomId=
+// GET /bookings?status=&source=&q=&roomId=&page=&pageSize=
+// `status=Upcoming` is a derived filter (future arrival, still confirmed/pending).
+// Pagination is opt-in: pass page/pageSize to get a single page, otherwise all
+// matching rows are returned (kept for callers that need the full set).
 export const getBookings = async (req, res) => {
   try {
     const { status, source, q, roomId } = req.query
     const where = {}
-    if (status && status !== 'all') where.status = status
+    if (status === 'Upcoming') {
+      Object.assign(where, upcomingWhere)
+    } else if (status && status !== 'all') {
+      where.status = status
+    }
     if (source) where.source = source
     if (roomId) where.roomId = roomId
     if (q) {
@@ -148,14 +169,63 @@ export const getBookings = async (req, res) => {
       ]
     }
 
-    const bookings = await prisma.booking.findMany({
-      where,
-      include: bookingInclude,
-      orderBy: { createdAt: 'desc' },
-    })
-    return res.status(200).json({ bookings, total: bookings.length })
+    const hasPaging = req.query.page !== undefined || req.query.pageSize !== undefined
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20))
+
+    const findArgs = { where, include: bookingInclude, orderBy: { createdAt: 'desc' } }
+    if (hasPaging) {
+      findArgs.skip = (page - 1) * pageSize
+      findArgs.take = pageSize
+    }
+
+    const [bookings, total] = await Promise.all([
+      prisma.booking.findMany(findArgs),
+      prisma.booking.count({ where }),
+    ])
+    return res.status(200).json({ bookings, total, ...(hasPaging ? { page, pageSize } : {}) })
   } catch (err) {
     logger.error('getBookings error', { error: err.message })
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /bookings/stats — full-dataset aggregates for the page's stat cards and
+// per-tab counts. Kept separate from the (searchable, paginated) list so the UI
+// never has to load every row just to show totals.
+export const getBookingStats = async (req, res) => {
+  try {
+    const [grouped, active, upcoming] = await Promise.all([
+      prisma.booking.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.booking.aggregate({
+        where: { status: { in: ACTIVE_STATUSES } },
+        _sum: { amount: true, balance: true },
+      }),
+      prisma.booking.count({ where: upcomingWhere }),
+    ])
+
+    const byStatus = Object.fromEntries(grouped.map((g) => [g.status, g._count._all]))
+    const total = grouped.reduce((s, g) => s + g._count._all, 0)
+
+    return res.status(200).json({
+      stats: {
+        total,
+        confirmed: byStatus.Confirmed || 0,
+        checkedIn: byStatus.CheckedIn || 0,
+        revenue: active._sum.amount || 0,
+        dues: active._sum.balance || 0,
+      },
+      counts: {
+        all: total,
+        Upcoming: upcoming,
+        Confirmed: byStatus.Confirmed || 0,
+        CheckedIn: byStatus.CheckedIn || 0,
+        CheckedOut: byStatus.CheckedOut || 0,
+        Cancelled: byStatus.Cancelled || 0,
+      },
+    })
+  } catch (err) {
+    logger.error('getBookingStats error', { error: err.message })
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }

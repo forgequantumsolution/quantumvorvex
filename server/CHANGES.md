@@ -5,6 +5,107 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-16 · Guest documents upload endpoint (for check-out payment proofs)
+
+## Summary
+The guest check-out flow needed to attach a payment screenshot/receipt, but guests had no
+documents-upload endpoint (bookings did). Added one mirroring `uploadBookingDocuments`.
+
+## File changes
+
+### `src/controllers/guestsController.js`
+- New `uploadGuestDocuments` controller: validates files + guest, normalises `docTypes`, and
+  creates `Document` rows (the guest-linked model) with `url: /uploads/documents/<file>`. Mirrors
+  `uploadBookingDocuments` but targets `prisma.document` instead of `bookingDocument`.
+- Added `import path from 'path'` for the filename fallback.
+
+### `src/routes/guests.js`
+- Registered `POST /:id/documents` using the shared `uploadDocs` multer config imported from
+  `bookingsController.js` (same 10MB / image+PDF limits as booking uploads).
+
+---
+
+# Session — 2026-06-16 · Booking-time documents now surface in the Documents tab
+
+## Summary
+Documents uploaded at booking time live in `BookingDocument`, linked only by `bookingId`. A
+booking has no linked `Guest` until check-in, but `getDocuments` fetched everything through
+`Guest → bookings → documents` — so a Confirmed/Pending booking's ID docs were invisible in the
+Documents (KYC) tab until the guest checked in.
+
+## File changes
+
+### `src/controllers/documentsController.js`
+- `getDocuments`: after building the guest-keyed list, added a second pass that fetches **orphan
+  bookings** (`guestId: null` with at least one document) and maps each into a guest-like row the
+  client already renders:
+  - keyed `id: "booking:<bookingId>"` (prefixed so the client never treats it as a real `guestId`),
+    `docId: bookingNo`, `name: guestName`, plus `idType`/`idNumber`/`room`.
+  - each document carries `source: 'booking'` and `bookingId`.
+  - response is now `{ guests: [...guests, ...orphanGuests] }`.
+- The `guestId: null` filter prevents duplication — bookings already linked to a guest still surface
+  through the original guest path.
+
+## Notes / unchanged
+- No schema migration. `BookingDocument` stays booking-scoped (the contained fix).
+- Known limitation: the Documents tab "Upload" action POSTs to `/documents/:guestId`, which requires a
+  real `Guest`, so adding *new* docs to an orphan-booking row isn't possible until check-in (add them
+  from the booking screen instead). Listing and **Verify** both work — `verifyDocument` already falls
+  back to `bookingDocument`.
+
+---
+
+# Session — 2026-06-16 · Server-side search/pagination + aggregates for Guests & Billing
+
+## Summary
+Applied the Bookings pattern (previous entry) to the Guests and Billing list endpoints: opt-in
+pagination, server-side search/filtering already existed and is now actually used, plus dedicated
+full-dataset aggregate endpoints so the summary cards stay whole-dataset.
+
+## File changes
+
+### `src/controllers/guestsController.js`
+- `getGuests`: added opt-in pagination (`page`/`pageSize`, max 100); returns `total` (and
+  `page`/`pageSize` when paginated). No page params → full matching set as before, so existing callers
+  (Today panel, billing guest pickers) are unaffected.
+- New `getGuestStats` (`GET /guests/stats`): full-dataset counts by status (active / due / checkedOut)
+  + total via `groupBy`.
+
+### `src/controllers/billingController.js`
+- `getInvoices`: same opt-in pagination + `total`.
+- New `getInvoiceStats` (`GET /billing/stats`): full-dataset stat-card aggregates — collected total +
+  GST and paid count (status Paid), pending total/count, overdue total/count — via `groupBy` + `aggregate`.
+
+### `src/routes/guests.js`, `src/routes/billing.js`
+- Registered `GET /stats` before the `/:id` (guests) / parameterized (billing) routes.
+
+---
+
+# Session — 2026-06-16 · Server-side search/pagination + aggregates for Bookings
+
+## Summary
+Moved the Bookings page off "load every row and filter in the browser" onto real server-side search,
+status filtering and pagination, with a dedicated aggregate endpoint so the stat cards / tab counts stay
+whole-dataset. Intended as the template for migrating the other list pages (guests, billing, etc.).
+
+## File changes
+
+### `src/controllers/bookingsController.js`
+- `getBookings`: added opt-in pagination (`page`/`pageSize`, max 100) and server-side handling of the
+  derived `status=Upcoming` tab (future-or-today arrival, still Confirmed/Pending). Pagination is opt-in —
+  with no page/pageSize the full matching set is still returned, so existing callers (e.g. Cancellations)
+  are unaffected. Response now always includes `total` (and `page`/`pageSize` when paginated).
+- New `getBookingStats` handler (`GET /bookings/stats`): full-dataset stat-card aggregates
+  (total / confirmed / checkedIn / active value / dues) and per-tab counts, via `groupBy` + `aggregate`,
+  so the UI never loads all rows just to show totals.
+- Added `DEMO_TODAY` (mirrors client `utils/booking.js` TODAY), `ACTIVE_STATUSES`, and a shared
+  `upcomingWhere` clause reused by both the list filter and the count.
+
+### `src/routes/bookings.js`
+- Registered `GET /bookings/stats` before `/:id` so it isn't captured as an id param.
+
+---
+
 # Session — 2026-06-15 · Non-intrusive auth throttle + free-form admin password reset
 
 ## Summary

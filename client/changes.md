@@ -6,6 +6,215 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-16 · Download button for room maintenance QR
+
+## Summary
+Added a "Download QR" button next to "Print sticker" in the room's Maintenance QR modal, so
+the user can save the QR as an image (with the room number) instead of only printing it.
+
+## File changes
+
+### `src/components/modules/rooms/Rooms.jsx`
+- **`RoomQrCode`**: added a `handleDownload` that serializes the room QR `<svg>`, draws it onto
+  a canvas with a `Room {number}` caption above it, and triggers a PNG download named
+  `room-{number}-qr.png`. The image includes both the QR code and the room number.
+- Rendered a `⬇ Download QR` (outline) button alongside the existing `🖨 Print sticker` button,
+  wrapping the pair in a `flex items-center justify-center gap-2` row.
+
+---
+
+# Session — 2026-06-16 · QR report page: custom category dropdown (fixes overlapping options)
+
+## Summary
+The "What needs attention?" category picker on the public report page (`/report`) used a native
+`<select>`. Its dropdown popup is OS/browser-rendered and showed overlapping option text on the
+user's machine. Replaced it with a custom, fully-styled dropdown for consistent rendering.
+
+## File changes
+
+### `src/components/modules/maintenance/GuestMaintenanceForm.jsx`
+- First tried a CSS fix: the `@tailwindcss/forms` chevron sits at the right edge but the shared
+  `px-4` had overridden the plugin's `padding-right`, so the selected value overlapped the arrow.
+  That helped the closed state but the open native popup still rendered inconsistently.
+- Replaced the native `<select>` with a new `CategorySelect` component: a styled trigger button
+  (value + chevron) and a click-to-open `role="listbox"` panel rendered as real DOM — opaque
+  `bg-surface`, rounded, `shadow-lift`, `z-20`, each option its own padded row with hover +
+  gold-highlighted selection. Closes on outside-click / Escape; same `value`/`onChange` contract,
+  so submit logic is unchanged.
+- Verified the open state with a Playwright screenshot (possible now that options are DOM): all
+  six categories render on separate lines with no overlap.
+
+---
+
+# Session — 2026-06-16 · Mobile polish for the QR maintenance report page
+
+## Summary
+The public "Report an Issue" page (`/report?t=<qrToken>`, reached by scanning a room's
+maintenance QR) looked cramped on mobile. Reworked its styling to be mobile-first. Logic
+unchanged — markup/CSS only.
+
+## File changes
+
+### `src/components/modules/maintenance/GuestMaintenanceForm.jsx`
+- **iOS zoom fix**: this page's inputs used the shared `.form-input/.form-select` classes at
+  13px; iOS Safari auto-zooms the page when focusing any sub-16px field. Replaced them with
+  page-local Tailwind controls at `text-base` (16px), `px-4 py-3`, `rounded-xl`, and a larger
+  focus ring. Left the global `.form-*` classes untouched (used across the authed app).
+- Bigger tap targets and spacing (`gap-5`), `min-h-[100dvh]` instead of `min-h-screen` (no
+  mobile URL-bar gap), and `env(safe-area-inset-bottom)` padding for notched phones.
+- The theme defines both `--main-bg` and `--surface` as pure white, so the card was
+  invisible against the page. Tinted the page with `bg-surface2` (faint cream) and kept the
+  card white so it lifts off the background; vertically centered the form (`justify-center`)
+  so it doesn't strand empty space on tall screens.
+- **Width/scroll fix (the page rendered as a narrow left column):** `#root` is a full-height
+  flex **row** with `overflow:hidden` (index.css). A single flex child shrinks to its content
+  width, so the page sat in a `max-w-md`-wide strip with empty space beside it, and a tall
+  form couldn't scroll. Wrapped the page in a `flex-1 min-w-0 overflow-y-auto` container (the
+  same pattern `LoginPage.css` uses) with an inner `min-h-full` centering layer — now it fills
+  the viewport width at every size and scrolls when the form exceeds the screen.
+- Polished header (gold icon badge + room shown as a pill), `shadow-soft` card, larger
+  success/error states, ticket number rendered as a mono chip.
+- Submit button: `text-black` on gold (better contrast than the old `text-white`), full-width
+  `py-3.5`, with an `active:scale` press cue.
+
+---
+
+# Session — 2026-06-16 · Payment-proof attachment on guest check-out
+
+## Summary
+The guest check-out modal collected payment method + remarks but had no way to attach a
+payment screenshot/receipt, unlike the bookings check-out. Added the attachment field and
+wired the upload, mirroring the bookings flow. (Server side: see `../server/CHANGES.md`.)
+
+## File changes
+
+### `src/components/modules/guests/Guests.jsx`
+- Added a "Payment screenshot / proof (optional)" file field to step 2 of the inline
+  `CheckoutModal` — same image/PDF picker, 10MB cap, and remove button as the bookings
+  `CheckOutModal`. New `proof`/`proofError` state + `pickProof` validator; the file is passed
+  through `onConfirm`.
+- `handleCheckoutConfirm` now uploads the proof (multipart, `docType: payment_proof`) **before**
+  calling `guestsApi.checkout`, so a failed upload aborts the check-out — same ordering as
+  bookings. Also forwards `notes`/`paymentMethod` in the checkout body.
+- Added `key={checkoutGuest?.id}` on `<CheckoutModal>` so each guest gets a fresh form; prevents
+  a prior guest's step/receipt from leaking into the next check-out (the modal component stays
+  mounted otherwise).
+
+### `src/api/client.js`
+- Added `guestsApi.uploadDocuments(id, form)` → `POST /guests/:id/documents` (multipart).
+
+---
+
+# Session — 2026-06-16 · New-booking check-in date defaults to today
+
+## Summary
+The new-booking form defaulted the check-in date to 2026-06-02 (a hardcoded demo "today")
+instead of the actual current date.
+
+## File changes
+
+### `src/utils/booking.js`
+- Replaced the hardcoded `TODAY = '2026-06-02'` constant with a computed local current date
+  in `YYYY-MM-DD` format (using `getMonth`/`getDate` rather than `toISOString()` to avoid a
+  UTC/IST off-by-one).
+- This flows into the new-booking form's default `fromDate` (`EMPTY.fromDate = TODAY` in
+  `BookingForm.jsx`) and the `isUpcoming` date comparison, which both keep working since the
+  string format is unchanged.
+
+---
+
+# Session — 2026-06-16 · E2E test for booking-time documents in the Documents tab
+
+## Summary
+Added Playwright coverage for the server fix that surfaces booking-time ID documents in the Documents
+(KYC) tab before check-in (see `../server/CHANGES.md`).
+
+## File changes
+
+### `tests/documents-booking.spec.js` (new)
+- Helper creates a Confirmed booking (no check-in → no linked `Guest`) and uploads an ID doc to it,
+  trying rooms until one is free (some seed rooms have open-ended guests that conflict with any date).
+- **API test**: asserts `GET /documents` returns a guest-like row keyed `booking:<id>` with
+  `docId === bookingNo`, the booking's `name`, and a document carrying `source: 'booking'`.
+- **UI test**: logs in, opens Documents, filters by booking number, and asserts the row + guest name
+  render.
+- Uses `E2E_API_URL` (default `http://localhost:5001/api/v1`) for direct setup calls, since the dev
+  backend + Vite proxy run on **5001** here (the shared `tests/helpers.js` still hardcodes 5000).
+
+## Verification performed
+- Both tests pass against the fix.
+- False-positive guard: temporarily dropped `orphanGuests` from the server response — both tests
+  failed; restoring the fix made them pass again.
+
+---
+
+# Session — 2026-06-16 · Guests & Billing: server-side search, filter & pagination
+
+## Summary
+Rolled the Bookings pattern (previous entry) out to the Guests and Billing pages: debounced server-side
+search, server-side status/stay filtering, pagination, and full-dataset stat cards fed by new
+`/guests/stats` and `/billing/stats` endpoints (see `../server/CHANGES.md`).
+
+## File changes
+
+### `src/api/client.js`
+- Added `guestsApi.getStats(params)` and `billingApi.getStats(params)`.
+
+### `src/components/modules/guests/Guests.jsx`
+- Search debounced (300ms) → `search` param; stay/status selects → `stayType`/`status` params; results
+  paginated (`PAGE_SIZE = 20`). Removed the client-side `filtered` memo and the `activeCount`/`dueCount`/
+  `checkedOutCount` derivations — the page holds only one page of rows.
+- Summary cards now come from `getStats()` (whole-dataset), refreshed on mount and after
+  checkout/renew/edit. Changing search or a filter resets to page 1; added a Prev/Next pager.
+- "Export CSV" now fetches all rows matching the current filters (not just the visible page).
+- Removed the now-unused `useMemo` import.
+
+### `src/components/modules/billing/Billing.jsx`
+- Same treatment for the Invoices tab: debounced `search`, status-pill `status` filter, pagination, and
+  stat cards from `getStats()` (collected/pending/overdue/GST). Record count now shows the server total;
+  added a pager. Collect/Generate reload list + stats; "Export CSV" exports all matching rows.
+- Removed the unused `useMemo` import; converted `RemindModal`'s prefill (previously `setState` inside
+  `useMemo`) to a derived initial state with a per-invoice `key` on the modal — fixes the cascading-render
+  lint error and the original misuse of `useMemo`.
+
+---
+
+# Session — 2026-06-16 · Bookings: server-side search, filter & pagination
+
+## Summary
+Migrated the Bookings page from client-side in-memory filtering (load all rows, filter with useMemo) to
+server-driven search / status-filter / pagination, backed by a new `/bookings/stats` aggregate endpoint
+(see `../server/CHANGES.md`). This is the reference pattern for the other list pages.
+
+## File changes
+
+### `src/api/client.js`
+- Added `bookingsApi.getStats(params)` → `GET /bookings/stats`.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- Search box is now debounced (300ms) and sent to the API as `q`; the active tab is sent as `status`
+  (including the derived `Upcoming`), and results are paginated (`PAGE_SIZE = 20`). Removed the
+  client-side `filtered`/`stats`/`counts` useMemos — the page now holds only one page of rows.
+- Stat cards and tab counts are fed by `getStats()` (full-dataset), refreshed on mount and after any
+  mutation, so they stay whole-dataset rather than reflecting the current search/page.
+- Changing search or tab resets to page 1; added a Prev/Next pager with "showing X–Y of N".
+- Booking actions (check-in/out, confirm, cancel, create) now reload the list + stats instead of patching
+  a single row in place (a status change can move a row out of the current tab/page).
+- Removed now-unused `useMemo` and `isUpcoming` imports.
+
+---
+
+# Session — 2026-06-15 · Hide Remind button on paid invoices
+
+## File changes
+
+### `src/components/modules/billing/Billing.jsx`
+- The "Remind" button in the invoices table was rendered unconditionally, so it still showed for
+  fully-paid invoices (checkout complete). Gated it on `inv.status !== 'Paid'`, matching the existing
+  "Collect" button's status guard. Remind now only appears for Pending/Overdue invoices.
+
+---
+
 # Session — 2026-06-15 · Free-form password on edit-user
 
 ## File changes

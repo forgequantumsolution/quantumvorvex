@@ -1,3 +1,4 @@
+import path from 'path'
 import prisma from '../utils/prisma.js'
 
 // Generate a unique document ID: DOC-XXXX
@@ -7,7 +8,10 @@ const generateDocId = async () => {
   return `DOC-${padded}`
 }
 
-// GET /guests?status=&stayType=&search=
+// GET /guests?status=&stayType=&search=&page=&pageSize=
+// Pagination is opt-in: pass page/pageSize for a single page, otherwise all
+// matching rows are returned (kept for callers that need the full set, e.g.
+// the Today panel and the billing guest pickers).
 export const getGuests = async (req, res) => {
   try {
     const { status, stayType, search } = req.query
@@ -25,18 +29,51 @@ export const getGuests = async (req, res) => {
       ]
     }
 
-    const guests = await prisma.guest.findMany({
+    const hasPaging = req.query.page !== undefined || req.query.pageSize !== undefined
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 20))
+
+    const findArgs = {
       where,
       include: {
         room: { include: { type: true } },
         _count: { select: { documents: true, invoices: true } },
       },
       orderBy: { createdAt: 'desc' },
-    })
+    }
+    if (hasPaging) {
+      findArgs.skip = (page - 1) * pageSize
+      findArgs.take = pageSize
+    }
 
-    return res.status(200).json({ guests })
+    const [guests, total] = await Promise.all([
+      prisma.guest.findMany(findArgs),
+      prisma.guest.count({ where }),
+    ])
+
+    return res.status(200).json({ guests, total, ...(hasPaging ? { page, pageSize } : {}) })
   } catch (err) {
     console.error('getGuests error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /guests/stats — full-dataset counts for the summary cards, independent of
+// the current search/filter/page so the totals always reflect every guest.
+export const getGuestStats = async (req, res) => {
+  try {
+    const grouped = await prisma.guest.groupBy({ by: ['status'], _count: { _all: true } })
+    const byStatus = Object.fromEntries(grouped.map((g) => [g.status, g._count._all]))
+    const total = grouped.reduce((s, g) => s + g._count._all, 0)
+
+    return res.status(200).json({
+      total,
+      active: byStatus.Active || 0,
+      due: byStatus.Due || 0,
+      checkedOut: byStatus['Checked Out'] || 0,
+    })
+  } catch (err) {
+    console.error('getGuestStats error:', err)
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }
@@ -264,6 +301,43 @@ export const createGuestCommunication = async (req, res) => {
     return res.status(201).json({ communication })
   } catch (err) {
     console.error('createGuestCommunication error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// POST /guests/:id/documents — attach files to a guest (ID proofs, payment
+// receipts, etc.). Multipart; reuses the same multer config as bookings.
+export const uploadGuestDocuments = async (req, res) => {
+  try {
+    const { id } = req.params
+    const files = req.files || []
+    if (!files.length) return res.status(400).json({ message: 'No files uploaded.' })
+
+    const guest = await prisma.guest.findUnique({ where: { id }, select: { id: true } })
+    if (!guest) return res.status(404).json({ message: 'Guest not found.' })
+
+    // Normalise docTypes into an array aligned with files
+    let labels = req.body.docTypes
+    if (typeof labels === 'string') {
+      try { labels = JSON.parse(labels) } catch { labels = [labels] }
+    }
+    if (!Array.isArray(labels)) labels = labels ? [labels] : []
+
+    const created = await prisma.$transaction(
+      files.map((file, i) =>
+        prisma.document.create({
+          data: {
+            guestId: id,
+            docType: (labels[i] || path.basename(file.originalname)).toString().slice(0, 80),
+            url: `/uploads/documents/${file.filename}`,
+          },
+        })
+      )
+    )
+
+    return res.status(201).json({ documents: created })
+  } catch (err) {
+    console.error('uploadGuestDocuments error:', err)
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }

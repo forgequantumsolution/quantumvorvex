@@ -4,7 +4,13 @@
  */
 import { formatDate } from './format'
 
-export const TODAY = '2026-06-02' // demo "today"
+// Local "today" as a YYYY-MM-DD string (avoids the UTC off-by-one of toISOString).
+export const TODAY = (() => {
+  const d = new Date()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}-${m}-${day}`
+})()
 
 // Outstanding balance = total amount − advance paid.
 export function balance(b) {

@@ -196,6 +196,46 @@ function RoomQrCode({ room }) {
     win.print()
   }
 
+  // Download the QR (with room number caption) as a PNG image.
+  const handleDownload = () => {
+    const svg = document.getElementById('room-qr-svg')
+    if (!svg) return
+
+    const PAD = 24
+    const QR = 200
+    const TITLE_H = 40
+    const W = QR + PAD * 2
+    const H = QR + PAD * 2 + TITLE_H
+
+    const svgData = new XMLSerializer().serializeToString(svg)
+    const svgUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData)
+
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = W
+      canvas.height = H
+      const ctx = canvas.getContext('2d')
+
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, W, H)
+
+      ctx.fillStyle = '#111111'
+      ctx.font = 'bold 22px system-ui, sans-serif'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(`Room ${room.number}`, W / 2, PAD + TITLE_H / 2)
+
+      ctx.drawImage(img, PAD, PAD + TITLE_H, QR, QR)
+
+      const link = document.createElement('a')
+      link.download = `room-${room.number}-qr.png`
+      link.href = canvas.toDataURL('image/png')
+      link.click()
+    }
+    img.src = svgUrl
+  }
+
   return (
     <div className="text-center">
       <p className="t-sm text-ink3 mb-4">
@@ -205,8 +245,9 @@ function RoomQrCode({ room }) {
         <QRCodeSVG id="room-qr-svg" value={url} size={200} level="M" includeMargin />
       </div>
       <p className="t-xs text-ink3 break-all mt-3">{url}</p>
-      <div className="mt-4">
+      <div className="mt-4 flex items-center justify-center gap-2">
         <Button variant="primary" onClick={handlePrint}>🖨 Print sticker</Button>
+        <Button variant="outline" onClick={handleDownload}>⬇ Download QR</Button>
       </div>
     </div>
   )

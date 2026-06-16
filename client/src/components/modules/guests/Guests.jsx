@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Formik, Form } from 'formik'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
@@ -412,20 +412,35 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
 
 // ─── Checkout Modal ────────────────────────────────────────────────────────────
 
+const MAX_PROOF_BYTES = 10 * 1024 * 1024 // matches the server's 10MB limit
+
 function CheckoutModal({ guest, onClose, onConfirm }) {
   const [step, setStep] = useState(1)
   const [payMethod, setPayMethod] = useState('Cash')
   const [notes, setNotes] = useState('')
   const [settled, setSettled] = useState(false)
+  const [proof, setProof] = useState(null)
+  const [proofError, setProofError] = useState('')
 
   if (!guest) return null
   const { rent, food, amenities, gst, total } = calcCheckout(guest)
   const dueDate = getDueDate(guest)
   const balance = total - guest.advance
 
+  const pickProof = (e) => {
+    const file = e.target.files?.[0] || null
+    setProofError('')
+    if (file && file.size > MAX_PROOF_BYTES) {
+      setProof(null); setProofError('File is too large (max 10MB).')
+      e.target.value = ''
+      return
+    }
+    setProof(file)
+  }
+
   const handleConfirm = () => {
     if (step === 1) { setStep(2); return }
-    onConfirm(guest, notes, payMethod)
+    onConfirm(guest, notes, payMethod, proof)
   }
 
   return (
@@ -519,6 +534,29 @@ function CheckoutModal({ guest, onClose, onConfirm }) {
             <textarea className="form-textarea" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Key return confirmation, damages, etc." />
           </div>
 
+          <div className="mb-3.5">
+            <label className="form-label block mb-[5px]">Payment screenshot / proof (optional)</label>
+            {proof ? (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-line2 bg-surface px-3 py-2">
+                <span className="t-sm text-ink truncate">📎 {proof.name}</span>
+                <button
+                  type="button"
+                  className="t-xs text-ink3 hover:text-danger-text shrink-0"
+                  onClick={() => { setProof(null); setProofError('') }}
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center gap-2 cursor-pointer rounded-lg border border-dashed border-line2 bg-surface px-3 py-2.5 t-sm text-ink3 hover:border-gold hover:text-ink2">
+                <span className="text-base">⬆</span>
+                <span>Attach an image or PDF (e.g. UPI / card receipt)</span>
+                <input type="file" accept="image/*,.pdf" className="hidden" onChange={pickProof} />
+              </label>
+            )}
+            {proofError && <span className="block text-[11.5px] text-danger mt-1">{proofError}</span>}
+          </div>
+
           <label className="t-sm flex items-center gap-[9px] cursor-pointer">
             <input type="checkbox" checked={settled} onChange={e => setSettled(e.target.checked)} />
             Payment received & key returned — confirm checkout
@@ -610,6 +648,8 @@ function EditGuestModal({ guest, onClose, onSave }) {
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
+const PAGE_SIZE = 20
+
 export default function Guests() {
   const addToast = useToast()
   const { navigateTo } = useUiActions()
@@ -618,45 +658,88 @@ export default function Guests() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [stayFilter, setStayFilter] = useState('All')
   const [statusFilter, setStatusFilter] = useState('All')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  // Full-dataset counts for the summary cards (independent of search/filter/page).
+  const [stats, setStats] = useState({ total: 0, active: 0, due: 0, checkedOut: 0 })
 
   const [profileGuest,  setProfileGuest]  = useState(null)
   const [checkoutGuest, setCheckoutGuest] = useState(null)
   const [editGuest,     setEditGuest]     = useState(null)
 
-  const load = useCallback(async () => {
+  // Query params shared by the list fetch and the "export all" action.
+  const listParams = useCallback((extra = {}) => ({
+    search: debouncedSearch || undefined,
+    status: statusFilter !== 'All' ? statusFilter : undefined,
+    stayType: stayFilter !== 'All' ? stayFilter.toLowerCase() : undefined,
+    ...extra,
+  }), [debouncedSearch, statusFilter, stayFilter])
+
+  // Debounce the search box; a new query resets to the first page.
+  useEffect(() => {
+    const id = setTimeout(() => { setDebouncedSearch(search.trim()); setPage(1) }, 300)
+    return () => clearTimeout(id)
+  }, [search])
+
+  // Server-driven list: search, status/stay filters and pagination all run on
+  // the backend, so we only ever hold one page in memory.
+  const loadList = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      const { data } = await guestsApi.getAll()
+      const { data } = await guestsApi.getAll(listParams({ page, pageSize: PAGE_SIZE }))
       setGuests((data.guests || []).map(normalizeGuest))
+      setTotal(data.total ?? 0)
     } catch {
       setError('Could not load guests. Make sure the backend is running.')
     } finally {
       setLoading(false)
     }
+  }, [listParams, page])
+
+  const loadStats = useCallback(async () => {
+    try {
+      const { data } = await guestsApi.getStats()
+      setStats({ total: data.total || 0, active: data.active || 0, due: data.due || 0, checkedOut: data.checkedOut || 0 })
+    } catch { /* non-critical; the list error banner covers outages */ }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { loadList() }, [loadList])
+  useEffect(() => { loadStats() }, [loadStats])
 
-  const filtered = useMemo(() => guests.filter(g => {
-    const q = search.toLowerCase()
-    const matchSearch = !q || g.name.toLowerCase().includes(q) || g.room.includes(q) || g.docId.toLowerCase().includes(q) || g.phone.includes(q)
-    const matchStay   = stayFilter   === 'All' || g.stayType === stayFilter.toLowerCase()
-    const matchStatus = statusFilter  === 'All' || g.status   === statusFilter
-    return matchSearch && matchStay && matchStatus
-  }), [guests, search, stayFilter, statusFilter])
+  // A mutation can change a guest's status (and which filter/page it lands in),
+  // so reload the page and the counts rather than patching in place.
+  const reload = useCallback(() => { loadList(); loadStats() }, [loadList, loadStats])
 
-  const activeCount      = guests.filter(g => g.status === 'Active').length
-  const dueCount         = guests.filter(g => g.status === 'Due').length
-  const checkedOutCount  = guests.filter(g => g.status === 'Checked Out').length
+  const handleStayChange   = (v) => { setStayFilter(v); setPage(1) }
+  const handleStatusChange = (v) => { setStatusFilter(v); setPage(1) }
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
-  const handleCheckoutConfirm = async (guest) => {
+  // Export every guest matching the current filters (not just the visible page).
+  const handleExportCSV = async () => {
     try {
-      await guestsApi.checkout(guest.id)
+      const { data } = await guestsApi.getAll(listParams())
+      exportGuestCSV((data.guests || []).map(normalizeGuest))
+    } catch {
+      addToast('Could not export guests', 'error')
+    }
+  }
+
+  const handleCheckoutConfirm = async (guest, notes, payMethod, proofFile) => {
+    try {
+      // Attach the payment screenshot first so a failed upload aborts the check-out.
+      if (proofFile) {
+        const form = new FormData()
+        form.append('documents', proofFile)
+        form.append('docTypes', JSON.stringify(['payment_proof']))
+        await guestsApi.uploadDocuments(guest.id, form)
+      }
+      await guestsApi.checkout(guest.id, { notes, paymentMethod: payMethod })
       setCheckoutGuest(null)
       addToast(`${guest.name} checked out. Room marked for housekeeping.`, 'success')
-      load()
+      reload()
     } catch (err) {
       addToast(err.response?.data?.message || 'Checkout failed', 'error')
     }
@@ -670,7 +753,7 @@ export default function Guests() {
         : { checkOutDate: new Date(Date.now() + 86400000).toISOString() }
       await guestsApi.renew(guest.id, payload)
       addToast(`Stay renewed for ${guest.name}.`, 'success')
-      load()
+      reload()
     } catch (err) {
       addToast(err.response?.data?.message || 'Could not renew stay.', 'error')
     }
@@ -681,7 +764,7 @@ export default function Guests() {
       await guestsApi.update(updated.id, editPayload(updated))
       setEditGuest(null)
       addToast('Guest details updated', 'success')
-      load()
+      reload()
     } catch (err) {
       addToast(err.response?.data?.message || 'Could not update guest', 'error')
     }
@@ -709,8 +792,8 @@ export default function Guests() {
           <p className="t-sm mt-1 mb-0 text-ink3">Guest registry, stay history & billing</p>
         </div>
         <div className="flex gap-2">
-          <button className="btn btn-outline btn-sm" onClick={load} disabled={loading}>↻ Refresh</button>
-          <button className="btn btn-outline btn-sm" onClick={() => exportGuestCSV(filtered)}>↓ Export CSV</button>
+          <button className="btn btn-outline btn-sm" onClick={reload} disabled={loading}>↻ Refresh</button>
+          <button className="btn btn-outline btn-sm" onClick={handleExportCSV}>↓ Export CSV</button>
           <button className="btn btn-primary" onClick={() => navigateTo({ panel: 'bookings', params: { tab: 'Upcoming' } })}>+ Check-In</button>
         </div>
       </div>
@@ -724,11 +807,11 @@ export default function Guests() {
       {/* Summary Stats */}
       <div className="grid grid-cols-4 gap-3 mb-[18px]">
         {[
-          { label: 'Active', count: activeCount, type: 'green', bar: 'stat-bar-green' },
-          { label: 'Due / Overdue', count: dueCount, type: 'amber', bar: 'stat-bar-amber' },
-          { label: 'Checked Out', count: checkedOutCount, type: 'grey', bar: '' },
-          { label: 'Total Guests', count: guests.length, type: 'blue', bar: 'stat-bar-blue' },
-        ].map(({ label, count, type, bar }) => (
+          { label: 'Active', count: stats.active, bar: 'stat-bar-green' },
+          { label: 'Due / Overdue', count: stats.due, bar: 'stat-bar-amber' },
+          { label: 'Checked Out', count: stats.checkedOut, bar: '' },
+          { label: 'Total Guests', count: stats.total, bar: 'stat-bar-blue' },
+        ].map(({ label, count, bar }) => (
           <div key={label} className={`stat-card ${bar}`}>
             <div className="t-label mb-1.5">{label}</div>
             <div className="text-[26px] font-bold text-ink" style={{ fontFamily: 'var(--font-mono)' }}>{count}</div>
@@ -743,10 +826,10 @@ export default function Guests() {
             <span className="t-h3 absolute left-2.5 top-1/2 -translate-y-1/2 text-ink3">⌕</span>
             <input className="form-input pl-[30px]" placeholder="Search name, room, DOC ID, phone..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
-          <select className="form-select w-[140px]" value={stayFilter} onChange={e => setStayFilter(e.target.value)}>
+          <select className="form-select w-[140px]" value={stayFilter} onChange={e => handleStayChange(e.target.value)}>
             <option>All</option><option>Daily</option><option>Monthly</option>
           </select>
-          <select className="form-select w-[150px]" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+          <select className="form-select w-[150px]" value={statusFilter} onChange={e => handleStatusChange(e.target.value)}>
             <option>All</option><option>Active</option><option>Due</option><option>Checked Out</option>
           </select>
         </div>
@@ -764,10 +847,10 @@ export default function Guests() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
+              {guests.length === 0 && (
                 <tr><td colSpan={11}><div className="empty-state">{loading ? 'Loading guests…' : 'No guests found'}</div></td></tr>
               )}
-              {filtered.map(guest => {
+              {guests.map(guest => {
                 const dueDate = getDueDate(guest)
                 return (
                   <tr key={guest.id} className="cursor-pointer" onClick={() => openProfile(guest)}>
@@ -802,11 +885,21 @@ export default function Guests() {
             </tbody>
           </table>
         </div>
+        {total > PAGE_SIZE && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-line t-xs text-ink3">
+            <span>Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}</span>
+            <div className="flex items-center gap-2">
+              <button className="btn btn-outline btn-xs" disabled={page <= 1 || loading} onClick={() => setPage(p => Math.max(1, p - 1))}>← Prev</button>
+              <span>Page {page} of {totalPages}</span>
+              <button className="btn btn-outline btn-xs" disabled={page >= totalPages || loading} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next →</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Modals */}
       <GuestProfileModal guest={profileGuest} onClose={() => setProfileGuest(null)} onCheckout={openCheckout} onEdit={openEdit} />
-      <CheckoutModal guest={checkoutGuest} onClose={() => setCheckoutGuest(null)} onConfirm={handleCheckoutConfirm} />
+      <CheckoutModal key={checkoutGuest?.id} guest={checkoutGuest} onClose={() => setCheckoutGuest(null)} onConfirm={handleCheckoutConfirm} />
       <EditGuestModal guest={editGuest} onClose={() => setEditGuest(null)} onSave={handleEditSave} />
     </div>
   )
