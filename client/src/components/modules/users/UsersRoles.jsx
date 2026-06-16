@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Formik, Form } from 'formik'
+import * as Yup from 'yup'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import FormikField from '../../ui/FormikField'
 import { useToast } from '../../../hooks/useToast'
-import { useAppSelector } from '../../../store/hooks'
+import { useAppSelector, useAppDispatch } from '../../../store/hooks'
+import { setCredentials } from '../../../store/slices/authSlice'
 import { useCan } from '../../../hooks/useCan'
-import { usersApi, rolesApi } from '../../../api/client'
+import { usersApi, rolesApi, authApi } from '../../../api/client'
 import { userSchema } from '../../../validation/userSchema'
 import { timeAgo } from '../../../utils/format'
 
@@ -327,6 +329,66 @@ function RolesTab({ roles, modules, canManage, onAdd, onEdit, onDelete }) {
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Security tab: self-service password change ───────────────────────────────
+const passwordSchema = Yup.object({
+  currentPassword: Yup.string().required('Enter your current password'),
+  newPassword: Yup.string().max(128).required('Enter a new password'),
+  confirmPassword: Yup.string()
+    .oneOf([Yup.ref('newPassword')], 'Passwords do not match')
+    .required('Confirm your new password'),
+})
+
+function SecurityTab() {
+  const addToast = useToast()
+  const dispatch = useAppDispatch()
+  const currentUser = useAppSelector((s) => s.auth.currentUser)
+
+  return (
+    <div className="card max-w-[460px]">
+      <div className="card-header"><span className="card-title">Change Password</span></div>
+      <div className="card-body">
+        <Formik
+          initialValues={{ currentPassword: '', newPassword: '', confirmPassword: '' }}
+          validationSchema={passwordSchema}
+          onSubmit={async (values, { setSubmitting, resetForm }) => {
+            try {
+              const { data } = await authApi.changePassword({
+                currentPassword: values.currentPassword,
+                newPassword: values.newPassword,
+              })
+              // The server reissues a token (other sessions are revoked). Keep this
+              // session signed in by swapping the stored token.
+              if (data?.token) {
+                localStorage.setItem('qv_token', data.token)
+                dispatch(setCredentials({ token: data.token, user: currentUser }))
+              }
+              addToast('Password updated.', 'success')
+              resetForm()
+            } catch (err) {
+              addToast(err.response?.data?.error || 'Could not change password.', 'error')
+            } finally {
+              setSubmitting(false)
+            }
+          }}
+        >
+          {({ isSubmitting }) => (
+            <Form className="flex flex-col gap-3.5">
+              <FormikField name="currentPassword" label="Current Password" type="password" required placeholder="Current password" />
+              <FormikField name="newPassword" label="New Password" type="password" required placeholder="Enter a new password" />
+              <FormikField name="confirmPassword" label="Confirm New Password" type="password" required placeholder="Re-enter new password" />
+              <div className="pt-2">
+                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+                  {isSubmitting ? 'Updating…' : 'Update Password'}
+                </button>
+              </div>
+            </Form>
+          )}
+        </Formik>
+      </div>
+    </div>
+  )
+}
+
 export default function UsersRoles() {
   const currentUser = useAppSelector((s) => s.auth.currentUser)
   const canManageUsers = useCan('users', 'MANAGE')                 // user CRUD needs users:manage
@@ -433,6 +495,7 @@ export default function UsersRoles() {
   const tabs = [
     { id: 'users', label: 'Users' },
     { id: 'roles', label: 'Roles' },
+    { id: 'security', label: 'Security' },
   ]
 
   return (
@@ -472,6 +535,9 @@ export default function UsersRoles() {
             onEdit={(r) => setRoleModal({ role: r })}
             onDelete={(r) => setConfirm({ kind: 'role', item: r })}
           />
+        </div>
+        <div data-tab-id="security">
+          <SecurityTab />
         </div>
       </Tabs>
 
