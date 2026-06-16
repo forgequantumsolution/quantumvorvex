@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { maintenanceApi } from '../../../api/client'
 
 // Standalone, no-login page reached by scanning a room's maintenance QR code:
@@ -112,16 +112,11 @@ export default function GuestMaintenanceForm() {
 
           {!loading && !loadError && !done && (
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-              {/* Category */}
+              {/* Category — custom dropdown (native <select> popups render inconsistently
+                  across OS/browsers; this gives a styled, predictable list). */}
               <div>
                 <label className={labelCls}>What needs attention?</label>
-                <select
-                  className={fieldCls}
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                >
-                  {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <CategorySelect value={category} onChange={setCategory} options={CATEGORIES} />
               </div>
 
               {/* Title */}
@@ -167,6 +162,67 @@ export default function GuestMaintenanceForm() {
           <p className="text-xs text-ink3 text-center mt-5">No login needed · Your room staff will be notified</p>
         </div>
       </div>
+    </div>
+  )
+}
+
+// A small custom dropdown used in place of a native <select>. Renders the option
+// list as real DOM so it's styled consistently (and verifiable) on every device.
+function CategorySelect({ value, onChange, options }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  // Close on outside click or Escape.
+  useEffect(() => {
+    if (!open) return
+    const onDocClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', onDocClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDocClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-2 text-base text-ink bg-surface2 border border-line rounded-xl px-4 py-3 outline-none transition focus:border-gold focus:ring-4 focus:ring-gold-bg"
+      >
+        <span>{value}</span>
+        <span className={`text-ink3 text-sm transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
+      </button>
+
+      {open && (
+        <ul
+          role="listbox"
+          className="absolute z-20 mt-2 w-full max-h-64 overflow-auto rounded-xl border border-line bg-surface shadow-lift p-1"
+        >
+          {options.map((opt) => {
+            const selected = opt === value
+            return (
+              <li key={opt}>
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => { onChange(opt); setOpen(false) }}
+                  className={`w-full text-left text-base rounded-lg px-3 py-2.5 transition ${
+                    selected ? 'bg-gold-bg text-ink font-semibold' : 'text-ink2 hover:bg-surface2'
+                  }`}
+                >
+                  {opt}
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }

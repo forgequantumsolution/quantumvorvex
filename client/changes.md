@@ -23,6 +23,29 @@ the user can save the QR as an image (with the room number) instead of only prin
 
 ---
 
+# Session — 2026-06-16 · QR report page: custom category dropdown (fixes overlapping options)
+
+## Summary
+The "What needs attention?" category picker on the public report page (`/report`) used a native
+`<select>`. Its dropdown popup is OS/browser-rendered and showed overlapping option text on the
+user's machine. Replaced it with a custom, fully-styled dropdown for consistent rendering.
+
+## File changes
+
+### `src/components/modules/maintenance/GuestMaintenanceForm.jsx`
+- First tried a CSS fix: the `@tailwindcss/forms` chevron sits at the right edge but the shared
+  `px-4` had overridden the plugin's `padding-right`, so the selected value overlapped the arrow.
+  That helped the closed state but the open native popup still rendered inconsistently.
+- Replaced the native `<select>` with a new `CategorySelect` component: a styled trigger button
+  (value + chevron) and a click-to-open `role="listbox"` panel rendered as real DOM — opaque
+  `bg-surface`, rounded, `shadow-lift`, `z-20`, each option its own padded row with hover +
+  gold-highlighted selection. Closes on outside-click / Escape; same `value`/`onChange` contract,
+  so submit logic is unchanged.
+- Verified the open state with a Playwright screenshot (possible now that options are DOM): all
+  six categories render on separate lines with no overlap.
+
+---
+
 # Session — 2026-06-16 · Mobile polish for the QR maintenance report page
 
 ## Summary
