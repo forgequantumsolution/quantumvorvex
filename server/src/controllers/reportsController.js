@@ -253,6 +253,7 @@ export const getOccupancy = async (req, res) => {
         where: {
           status: { in: ['Confirmed', 'CheckedIn', 'CheckedOut'] },
           fromDate: { lte: end },
+          deletedAt: null,
         },
         select: { fromDate: true, toDate: true, checkedOutAt: true },
       }),

@@ -5,6 +5,7 @@ import BookingForm from './BookingForm'
 import CancelModal from '../cancellations/CancelModal'
 import CheckOutModal from '../checkout/CheckOutModal'
 import InvoiceModal from './InvoiceModal'
+import ConfirmModal from '../../ui/ConfirmModal'
 import { useToast } from '../../../hooks/useToast'
 import { useAppSelector, usePrimaryAction } from '../../../store/hooks'
 import { bookingsApi } from '../../../api/client'
@@ -45,6 +46,7 @@ export default function Bookings() {
   const [cancelTarget, setCancelTarget] = useState(null)
   const [checkOutTarget, setCheckOutTarget] = useState(null)
   const [invoiceTarget, setInvoiceTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [busyId, setBusyId] = useState(null)
 
   // Debounce the search box so we hit the API at most once per pause in typing.
@@ -161,6 +163,12 @@ export default function Bookings() {
     setCancelTarget(null)
   }
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    await runAction(deleteTarget.id, () => bookingsApi.remove(deleteTarget.id), `Booking ${deleteTarget.bookingNo} deleted`, 'error')
+    setDeleteTarget(null)
+  }
+
   return (
     <PageWrapper
       stats={
@@ -209,6 +217,7 @@ export default function Bookings() {
             onConfirm={handleConfirm}
             onCancel={setCancelTarget}
             onInvoice={setInvoiceTarget}
+            onDelete={setDeleteTarget}
             emptyMessage={debouncedQuery ? 'No bookings match your search.' : 'Create a booking to get started.'}
           />
 
@@ -247,6 +256,16 @@ export default function Bookings() {
         isOpen={!!invoiceTarget}
         booking={invoiceTarget}
         onClose={() => setInvoiceTarget(null)}
+      />
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Booking"
+        message={deleteTarget ? <>Permanently delete booking <b>{deleteTarget.bookingNo}</b> for <b>{deleteTarget.guestName}</b>? This cannot be undone.</> : null}
+        confirmLabel="Delete"
+        danger
+        busy={busyId === deleteTarget?.id}
       />
     </PageWrapper>
   )

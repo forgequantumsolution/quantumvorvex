@@ -223,6 +223,13 @@ model Booking {
   documents           BookingDocument[]
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+
+  // Soft delete: when set, the booking is hidden from all lists/stats and no
+  // longer blocks its room, but the record (and its payment/invoice history)
+  // is preserved. NULL = live.
+  deletedAt           DateTime?
+
+  @@index([deletedAt])
 }
 
 // ID / KYC documents captured at booking time (Aadhaar front/back, PAN, etc.)

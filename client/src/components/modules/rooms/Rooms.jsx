@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import Modal from '../../ui/Modal'
+import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
 import Button from '../../ui/Button'
 import { roomsApi } from '../../../api/client'
@@ -79,7 +80,7 @@ function KanbanColumn({ title, rooms, badgeType, onSelect }) {
 }
 
 // ─── Room Detail Modal Content ────────────────────────────────────────────────
-function RoomDetail({ room, onClose, onStatusChange, onShowQr }) {
+function RoomDetail({ room, onClose, onStatusChange, onShowQr, onDelete }) {
   if (!room) return null
 
   const badgeType = STATUS_BADGE[room.status] || 'grey'
@@ -155,6 +156,9 @@ function RoomDetail({ room, onClose, onStatusChange, onShowQr }) {
           )}
           <Button variant="outline" size="sm" onClick={() => onShowQr(room)}>
             ▦ Maintenance QR
+          </Button>
+          <Button variant="danger" size="sm" onClick={() => onDelete(room)}>
+            🗑 Delete Room
           </Button>
         </div>
       </div>
@@ -305,6 +309,8 @@ export default function Rooms() {
   const [view, setView]               = useState('grid')   // 'grid' | 'kanban'
   const [selectedRoom, setSelectedRoom] = useState(null)
   const [qrRoom, setQrRoom]           = useState(null)
+  const [deleteRoom, setDeleteRoom]   = useState(null)
+  const [deleting, setDeleting]       = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [addForm, setAddForm]         = useState(EMPTY_FORM)
 
@@ -358,6 +364,21 @@ export default function Rooms() {
       load()
     } catch (err) {
       addToast(err.response?.data?.message || 'Could not add room', 'error')
+    }
+  }
+
+  const handleDeleteRoom = async () => {
+    if (!deleteRoom) return
+    setDeleting(true)
+    try {
+      await roomsApi.delete(deleteRoom.id)
+      addToast(`Room ${deleteRoom.number} deleted`, 'success')
+      setDeleteRoom(null)
+      load()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not delete room', 'error')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -538,8 +559,21 @@ export default function Rooms() {
           onClose={() => setSelectedRoom(null)}
           onStatusChange={handleStatusChange}
           onShowQr={(room) => { setSelectedRoom(null); setQrRoom(room) }}
+          onDelete={(room) => { setSelectedRoom(null); setDeleteRoom(room) }}
         />
       </Modal>
+
+      {/* ── Delete Room Confirm ─────────────────────────────────────────────── */}
+      <ConfirmModal
+        isOpen={!!deleteRoom}
+        onClose={() => setDeleteRoom(null)}
+        onConfirm={handleDeleteRoom}
+        title="Delete Room"
+        message={deleteRoom ? <>Delete <b>Room {deleteRoom.number}</b>? This cannot be undone.</> : null}
+        confirmLabel="Delete"
+        danger
+        busy={deleting}
+      />
 
       {/* ── Maintenance QR Modal ────────────────────────────────────────────── */}
       <Modal

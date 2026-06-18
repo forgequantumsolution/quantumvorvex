@@ -5,6 +5,37 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-18 · Bookings: soft delete instead of hard delete
+
+## Summary
+`DELETE /bookings/:id` previously did a raw `prisma.booking.delete`, which destroys the row and
+its payment/invoice history and can fail on related records. Since the UI only needs the booking
+to disappear, switched to a **soft delete**: a nullable `deletedAt` column is stamped, and every
+list/stat/conflict query now excludes `deletedAt != null` rows. The record is preserved and the
+room is freed.
+
+## File changes
+
+### `prisma/schema.prisma`
+- `Booking`: added `deletedAt DateTime?` (NULL = live) and `@@index([deletedAt])`.
+
+### `prisma/migrations/20260618000000_booking_soft_delete/migration.sql` (new)
+- Additive, nullable column + index. Safe for existing rows (all stay live).
+
+### `src/controllers/bookingsController.js`
+- `deleteBooking`: now `update`s `deletedAt: new Date()` instead of deleting the row.
+- `getBookings`: list/count `where` seeded with `deletedAt: null`.
+- `getBookingStats`: `deletedAt: null` added to the groupBy, active aggregate, and upcoming count.
+- `findConflict`: `deletedAt: null` added so a deleted booking no longer blocks its room.
+
+### `src/controllers/reportsController.js`
+- Occupancy report's booking query excludes soft-deleted rows.
+
+### `src/controllers/documentsController.js`
+- Orphan-booking (pre-check-in KYC) query excludes soft-deleted rows.
+
+---
+
 # Session — 2026-06-16 · Guest documents upload endpoint (for check-out payment proofs)
 
 ## Summary

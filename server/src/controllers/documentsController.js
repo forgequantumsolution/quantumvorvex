@@ -83,7 +83,7 @@ export const getDocuments = async (req, res) => {
     // to the guest-keyed query above. Surface those orphan bookings (no linked
     // guest) as guest-like rows so their KYC files show up before check-in.
     const orphanBookings = await prisma.booking.findMany({
-      where: { guestId: null, documents: { some: {} } },
+      where: { guestId: null, documents: { some: {} }, deletedAt: null },
       select: {
         id: true,
         bookingNo: true,

@@ -108,6 +108,7 @@ const findConflict = async (roomId, from, end, ignoreBookingId = null) => {
     where: {
       roomId,
       status: { in: LIVE },
+      deletedAt: null,
       ...(ignoreBookingId ? { id: { not: ignoreBookingId } } : {}),
       // overlap: existing.from < newEnd  AND  existing.end > newFrom
       fromDate: { lt: end },
@@ -152,7 +153,7 @@ const bookingInclude = {
 export const getBookings = async (req, res) => {
   try {
     const { status, source, q, roomId } = req.query
-    const where = {}
+    const where = { deletedAt: null }
     if (status === 'Upcoming') {
       Object.assign(where, upcomingWhere)
     } else if (status && status !== 'all') {
@@ -196,12 +197,12 @@ export const getBookings = async (req, res) => {
 export const getBookingStats = async (req, res) => {
   try {
     const [grouped, active, upcoming] = await Promise.all([
-      prisma.booking.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.booking.groupBy({ by: ['status'], where: { deletedAt: null }, _count: { _all: true } }),
       prisma.booking.aggregate({
-        where: { status: { in: ACTIVE_STATUSES } },
+        where: { status: { in: ACTIVE_STATUSES }, deletedAt: null },
         _sum: { amount: true, balance: true },
       }),
-      prisma.booking.count({ where: upcomingWhere }),
+      prisma.booking.count({ where: { ...upcomingWhere, deletedAt: null } }),
     ])
 
     const byStatus = Object.fromEntries(grouped.map((g) => [g.status, g._count._all]))
@@ -694,9 +695,14 @@ export const noShowBooking = async (req, res) => {
 }
 
 // DELETE /bookings/:id
+// Soft delete: stamp deletedAt so the booking disappears from every list/stat
+// and stops blocking its room, while its payment/invoice history is preserved.
 export const deleteBooking = async (req, res) => {
   try {
-    await prisma.booking.delete({ where: { id: req.params.id } })
+    await prisma.booking.update({
+      where: { id: req.params.id },
+      data: { deletedAt: new Date() },
+    })
     return res.status(200).json({ message: 'Booking deleted.' })
   } catch (err) {
     if (err.code === 'P2025') return res.status(404).json({ message: 'Booking not found.' })

@@ -6,6 +6,51 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-18 · Delete option for bookings
+
+## Summary
+Bookings could be cancelled but never removed from the list. Added a delete action to each
+booking row, guarded by a confirmation dialog. Server-side this is a **soft delete** (the row is
+stamped `deletedAt` and hidden everywhere, but its payment/invoice history is preserved) — see
+`server/CHANGES.md`. The `bookingsApi.remove` helper and `DELETE /bookings/:id` route already
+existed; the UI and the soft-delete behaviour were added.
+
+## File changes
+
+### `src/components/modules/bookings/BookingsTable.jsx`
+- Added an `onDelete` prop and a red `🗑` (danger) button to the actions column, shown for every
+  row regardless of status. Disabled while the row is busy.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- Added `deleteTarget` state and a `handleDelete` handler that calls `bookingsApi.remove(id)` via
+  the shared `runAction` helper (toast + reload of list and stats).
+- Passed `onDelete={setDeleteTarget}` to `BookingsTable`.
+- Rendered a `<ConfirmModal>` ("Permanently delete booking X for <guest>? …")
+  with a busy state, reusing the same confirm pattern as the rooms delete.
+- Imported `ConfirmModal` from `../../ui/ConfirmModal`.
+
+---
+
+# Session — 2026-06-18 · Delete option for rooms
+
+## Summary
+There was no way to delete a room from the UI. Added a delete action to the room detail modal,
+guarded by a confirmation dialog. The backend route (`DELETE /rooms/:id`) and `roomsApi.delete`
+helper already existed — only the UI was missing.
+
+## File changes
+
+### `src/components/modules/rooms/Rooms.jsx`
+- **`RoomDetail`**: added a red `🗑 Delete Room` button to the Quick Actions row, wired to a new
+  `onDelete` prop.
+- Added `deleteRoom` / `deleting` state and a `handleDeleteRoom` handler that calls
+  `roomsApi.delete(id)`, shows a success/error toast, and reloads the room list.
+- Rendered a `<ConfirmModal>` ("Delete Room X? This cannot be undone.") with a busy state,
+  matching the confirm pattern used in `UsersRoles` instead of native `window.confirm`.
+- Imported `ConfirmModal` from `../../ui/ConfirmModal`.
+
+---
+
 # Session — 2026-06-16 · Download button for room maintenance QR
 
 ## Summary
