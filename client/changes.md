@@ -6,6 +6,46 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-19 · Sidebar shows saved hotel name after fresh login
+
+## Summary
+On a fresh login in a new browser the sidebar showed the hardcoded default name ("Quantum Vorvex")
+instead of the name saved in Settings, only correcting itself once the Settings page was opened.
+The sidebar reads `s.hotel.hotelName` from Redux, whose initial state is the hardcoded default; it
+was only updated via `setHotelName` on Settings save / SetupWizard / Settings page mount. Nothing
+hydrated it at app boot. Added a boot-time fetch of `GET /settings` that pushes the saved
+`name`/`ownerName` into the store as soon as a token is present, so the correct name shows
+immediately on any fresh login. No backend change.
+
+## File changes
+
+### `src/App.jsx`
+- Imported `useHotelActions` and `settingsApi`; destructured `setHotelName`/`setOwnerName`.
+- Added a `useEffect` keyed on `token` that calls `settingsApi.get()` and dispatches
+  `setHotelName`/`setOwnerName` from `data.hotel` (cancel-guarded, falls back to defaults on error).
+
+---
+
+# Session — 2026-06-19 · Delete option for cancellations
+
+## Summary
+Added a delete action to the Cancellations page. A cancellation is just a booking with status
+`Cancelled`, so this reuses the existing booking soft-delete (`bookingsApi.remove` →
+`DELETE /bookings/:id`); a deleted booking already drops out of this list. No backend change.
+
+## File changes
+
+### `src/components/modules/cancellations/Cancellations.jsx`
+- Added a trailing actions column with a red `LuTrash2` button (title "Delete cancellation"),
+  `deleteTarget`/`deleting` state, a `handleDelete` calling `bookingsApi.remove` (removes the row +
+  toast), and a `<ConfirmModal>`.
+- Imported `ConfirmModal` and `LuTrash2`.
+
+### `tests/soft-delete.spec.js`
+- Added a cancellations E2E delete test (creates → cancels → deletes a booking). Suite now 9/9 green.
+
+---
+
 # Session — 2026-06-19 · Replace 🗑 emoji with a clean Lucide trash icon
 
 ## Summary

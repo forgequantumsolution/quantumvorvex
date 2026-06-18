@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, lazy, Suspense } from 'react'
-import { useAppSelector, useAuthActions, useUiActions } from './store/hooks'
+import { useAppSelector, useAuthActions, useUiActions, useHotelActions } from './store/hooks'
 import { panelFromUrl } from './store/slices/uiSlice'
 import Layout from './components/layout/Layout'
 import Toast from './components/ui/Toast'
@@ -15,7 +15,7 @@ import LoginPage from './components/auth/LoginPage'
 import ResetPasswordPage from './components/auth/ResetPasswordPage'
 // import LandingPage from './components/auth/LandingPage'
 import { canAccess } from './utils/permissions'
-import { authApi } from './api/client'
+import { authApi, settingsApi } from './api/client'
 import { MOCK_USER, MOCK_TOKEN } from './api/mockData.js'
 
 const IS_MOCK = import.meta.env.VITE_MOCK === 'true'
@@ -103,6 +103,7 @@ export default function App() {
   const token       = useAppSelector((s) => s.auth.token)
   const { login, setCurrentUser } = useAuthActions()
   const { setActivePanel } = useUiActions()
+  const { setHotelName, setOwnerName } = useHotelActions()
   const [showSetup, setShowSetup] = useState(false)
   // True when the user arrived via a password-reset email link (/reset-password?token=…)
   const [resetRoute, setResetRoute] = useState(
@@ -152,6 +153,22 @@ export default function App() {
     window.addEventListener('auth:forbidden', resync)
     return () => window.removeEventListener('auth:forbidden', resync)
   }, [token, setCurrentUser])
+
+  // Hydrate the hotel name/owner into the store on boot so the sidebar shows the
+  // saved name after a fresh login — otherwise it stays on the hardcoded default
+  // until the user opens the Settings page.
+  useEffect(() => {
+    if (!token) return
+    let cancelled = false
+    settingsApi.get()
+      .then(({ data }) => {
+        if (cancelled || !data?.hotel) return
+        if (data.hotel.name)      setHotelName(data.hotel.name)
+        if (data.hotel.ownerName) setOwnerName(data.hotel.ownerName)
+      })
+      .catch(() => { /* keep defaults */ })
+    return () => { cancelled = true }
+  }, [token, setHotelName, setOwnerName])
 
   // Keyboard shortcuts
   useKeyboardShortcuts({})

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { LuTrash2 } from 'react-icons/lu'
 import { PageWrapper, StatCard, Card, DataTable, SearchInput, Button, EmptyState } from '../../ui-tw'
+import ConfirmModal from '../../ui/ConfirmModal'
 import CancelModal from './CancelModal'
 import { useToast } from '../../../hooks/useToast'
 import { usePrimaryAction } from '../../../store/hooks'
@@ -15,6 +17,8 @@ export default function Cancellations() {
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [showCancel, setShowCancel] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true); setError('')
@@ -69,6 +73,21 @@ export default function Cancellations() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await bookingsApi.remove(deleteTarget.id)
+      setBookings((prev) => prev.filter((b) => b.id !== deleteTarget.id))
+      toast(`Booking ${deleteTarget.bookingNo} deleted`)
+      setDeleteTarget(null)
+    } catch (err) {
+      toast(err.response?.data?.message || 'Could not delete booking', 'error')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   const columns = [
     {
       key: 'booking', header: 'Booking',
@@ -89,6 +108,14 @@ export default function Cancellations() {
           <div className="text-ink">{formatDate(b.cancelledAt)}</div>
           <div className="text-xs text-ink3 mt-0.5">{formatCurrency(b.amount)} value</div>
         </div>
+      ),
+    },
+    {
+      key: 'actions', header: '', align: 'right',
+      render: (b) => (
+        <Button variant="danger" size="sm" title="Delete cancellation" onClick={() => setDeleteTarget(b)}>
+          <LuTrash2 size={14} />
+        </Button>
       ),
     },
   ]
@@ -135,6 +162,17 @@ export default function Cancellations() {
         bookings={cancellable}
         onClose={() => setShowCancel(false)}
         onConfirm={handleCancel}
+      />
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Cancellation"
+        message={deleteTarget ? <>Permanently delete the cancelled booking <b>{deleteTarget.bookingNo}</b> for <b>{deleteTarget.guestName}</b>? It will be removed from this list. This cannot be undone.</> : null}
+        confirmLabel="Delete"
+        danger
+        busy={deleting}
       />
     </PageWrapper>
   )
