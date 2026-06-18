@@ -5,7 +5,7 @@ import prisma from '../utils/prisma.js'
 export const getInvoices = async (req, res) => {
   try {
     const { status, search } = req.query
-    const where = {}
+    const where = { deletedAt: null }
 
     if (status) where.status = status
     if (search) {
@@ -51,10 +51,10 @@ export const getInvoices = async (req, res) => {
 export const getInvoiceStats = async (req, res) => {
   try {
     const [grouped, paid, pending, overdue] = await Promise.all([
-      prisma.invoice.groupBy({ by: ['status'], _count: { _all: true } }),
-      prisma.invoice.aggregate({ where: { status: 'Paid' }, _sum: { total: true, gstAmount: true } }),
-      prisma.invoice.aggregate({ where: { status: 'Pending' }, _sum: { total: true } }),
-      prisma.invoice.aggregate({ where: { status: 'Overdue' }, _sum: { total: true } }),
+      prisma.invoice.groupBy({ by: ['status'], where: { deletedAt: null }, _count: { _all: true } }),
+      prisma.invoice.aggregate({ where: { status: 'Paid', deletedAt: null }, _sum: { total: true, gstAmount: true } }),
+      prisma.invoice.aggregate({ where: { status: 'Pending', deletedAt: null }, _sum: { total: true } }),
+      prisma.invoice.aggregate({ where: { status: 'Overdue', deletedAt: null }, _sum: { total: true } }),
     ])
 
     const byStatus = Object.fromEntries(grouped.map((g) => [g.status, g._count._all]))
@@ -160,8 +160,12 @@ export const getLedger = async (req, res) => {
     if (!guest) return res.status(404).json({ message: 'Guest not found.' })
 
     const [invoices, payments] = await Promise.all([
-      prisma.invoice.findMany({ where: { guestId }, orderBy: { createdAt: 'asc' } }),
-      prisma.payment.findMany({ where: { guestId }, orderBy: { createdAt: 'asc' } }),
+      prisma.invoice.findMany({ where: { guestId, deletedAt: null }, orderBy: { createdAt: 'asc' } }),
+      // Exclude payments belonging to a soft-deleted invoice (advances have no invoiceId).
+      prisma.payment.findMany({
+        where: { guestId, OR: [{ invoiceId: null }, { invoice: { deletedAt: null } }] },
+        orderBy: { createdAt: 'asc' },
+      }),
     ])
 
     // Build raw entries: invoice charges are debits, payments are credits.
@@ -221,7 +225,8 @@ export const getCashRegister = async (req, res) => {
     const end = new Date(day); end.setHours(23, 59, 59, 999)
 
     const payments = await prisma.payment.findMany({
-      where: { createdAt: { gte: start, lte: end } },
+      // Skip payments tied to a soft-deleted invoice (advances have no invoiceId).
+      where: { createdAt: { gte: start, lte: end }, OR: [{ invoiceId: null }, { invoice: { deletedAt: null } }] },
       include: { guest: { select: { name: true, docId: true } }, invoice: { select: { invoiceNo: true } } },
       orderBy: { createdAt: 'asc' },
     })
@@ -283,6 +288,23 @@ export const getInvoicePdf = async (req, res) => {
     return res.status(200).json({ invoice, hotel })
   } catch (err) {
     console.error('getInvoicePdf error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// DELETE /billing/:id — soft delete. Stamps deletedAt so the invoice (and its
+// collected payments) disappears from billing, the ledger, the cash register and
+// revenue/GST reports, while the row is preserved for audit.
+export const deleteInvoice = async (req, res) => {
+  try {
+    const { id } = req.params
+    const invoice = await prisma.invoice.findUnique({ where: { id }, select: { id: true, deletedAt: true } })
+    if (!invoice || invoice.deletedAt) return res.status(404).json({ message: 'Invoice not found.' })
+
+    await prisma.invoice.update({ where: { id }, data: { deletedAt: new Date() } })
+    return res.status(200).json({ message: 'Invoice deleted.' })
+  } catch (err) {
+    console.error('deleteInvoice error:', err)
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }

@@ -1,3 +1,4 @@
+import { LuTrash2 } from 'react-icons/lu'
 import { StatusBadge } from '../../ui-tw'
 import { TICKET_STATUSES } from '../../../data/opsSeed'
 import { formatDate } from '../../../utils/format'
@@ -10,7 +11,7 @@ const PRIORITY_BAR = {
 }
 
 /** A single maintenance ticket with an inline status switcher. */
-export default function TicketCard({ ticket, busy, onStatusChange }) {
+export default function TicketCard({ ticket, busy, onStatusChange, onDelete }) {
   return (
     <div className="relative bg-surface border border-line rounded-xl shadow-soft overflow-hidden flex flex-col">
       <span className={`absolute left-0 top-0 h-full w-1 ${PRIORITY_BAR[ticket.priority] || 'bg-line2'}`} />
@@ -56,6 +57,16 @@ export default function TicketCard({ ticket, busy, onStatusChange }) {
             {s}
           </button>
         ))}
+        {onDelete && (
+          <button
+            disabled={busy}
+            onClick={() => onDelete(ticket)}
+            title="Delete ticket"
+            className="ml-auto inline-flex items-center justify-center text-xs px-2.5 py-1 rounded-md font-medium transition-colors disabled:opacity-50 bg-danger-bg text-danger-text hover:bg-danger hover:text-white"
+          >
+            <LuTrash2 size={15} />
+          </button>
+        )}
       </div>
     </div>
   )

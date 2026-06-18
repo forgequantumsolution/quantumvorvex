@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
+import { LuTrash2 } from 'react-icons/lu'
 import Modal from '../../ui/Modal'
+import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
 import { useToast } from '../../../hooks/useToast'
 import { documentsApi } from '../../../api/client'
@@ -154,7 +156,7 @@ function UploadModal({ doc, onClose, onSave }) {
 
 // ─── View Docs Modal ──────────────────────────────────────────────────────────
 
-function ViewDocsModal({ doc, onClose, onVerify }) {
+function ViewDocsModal({ doc, onClose, onVerify, onDelete }) {
   if (!doc) return null
 
   const docList = (doc.documents || []).map((d) => ({
@@ -215,9 +217,18 @@ function ViewDocsModal({ doc, onClose, onVerify }) {
                 <div className="text-[11.5px] text-ink3">Uploaded {d.uploadDate}</div>
               </div>
             </div>
-            <Badge type={d.verified ? 'green' : 'amber'}>
-              {d.verified ? '✓ Verified' : 'Pending'}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge type={d.verified ? 'green' : 'amber'}>
+                {d.verified ? '✓ Verified' : 'Pending'}
+              </Badge>
+              <button
+                className="btn btn-danger btn-xs inline-flex items-center"
+                title="Delete document"
+                onClick={() => onDelete({ id: d.key, label: d.label, guestName: doc.guestName })}
+              >
+                <LuTrash2 size={14} />
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -235,6 +246,10 @@ export default function Documents() {
   const [search, setSearch] = useState('')
   const [uploadDoc, setUploadDoc] = useState(null)
   const [viewDoc, setViewDoc] = useState(null)
+  const [deleteDocTarget, setDeleteDocTarget] = useState(null)   // single document { id, label, guestName }
+  const [deletingDoc, setDeletingDoc] = useState(false)
+  const [deleteRowTarget, setDeleteRowTarget] = useState(null)   // guest row (delete all its documents)
+  const [deletingRow, setDeletingRow] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true); setError('')
@@ -297,6 +312,38 @@ export default function Documents() {
   const handleQuickVerify = async (doc) => {
     try { await verifyAll(doc) }
     catch { addToast('Could not verify documents', 'error') }
+  }
+
+  const handleDeleteDoc = async () => {
+    if (!deleteDocTarget) return
+    setDeletingDoc(true)
+    try {
+      await documentsApi.delete(deleteDocTarget.id)
+      addToast('Document deleted', 'success')
+      // Drop it from the open View modal immediately, then refresh the table.
+      setViewDoc((v) => v ? { ...v, documents: (v.documents || []).filter((d) => d.id !== deleteDocTarget.id) } : v)
+      setDeleteDocTarget(null)
+      load()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not delete document', 'error')
+    } finally {
+      setDeletingDoc(false)
+    }
+  }
+
+  const handleDeleteRow = async () => {
+    if (!deleteRowTarget) return
+    setDeletingRow(true)
+    try {
+      await Promise.all((deleteRowTarget.documents || []).map((d) => documentsApi.delete(d.id)))
+      addToast(`Documents deleted for ${deleteRowTarget.guestName}`, 'success')
+      setDeleteRowTarget(null)
+      load()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not delete documents', 'error')
+    } finally {
+      setDeletingRow(false)
+    }
   }
 
   return (
@@ -418,6 +465,15 @@ export default function Documents() {
                             Verify
                           </button>
                         )}
+                        {doc.documents.length > 0 && (
+                          <button
+                            className="btn btn-danger btn-xs inline-flex items-center"
+                            title="Delete all documents for this guest"
+                            onClick={() => setDeleteRowTarget(doc)}
+                          >
+                            <LuTrash2 size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -438,6 +494,27 @@ export default function Documents() {
         doc={viewDoc}
         onClose={() => setViewDoc(null)}
         onVerify={handleVerify}
+        onDelete={setDeleteDocTarget}
+      />
+      <ConfirmModal
+        isOpen={!!deleteDocTarget}
+        onClose={() => setDeleteDocTarget(null)}
+        onConfirm={handleDeleteDoc}
+        title="Delete Document"
+        message={deleteDocTarget ? <>Delete <b>{deleteDocTarget.label}</b> for <b>{deleteDocTarget.guestName}</b>? The file is permanently removed.</> : null}
+        confirmLabel="Delete"
+        danger
+        busy={deletingDoc}
+      />
+      <ConfirmModal
+        isOpen={!!deleteRowTarget}
+        onClose={() => setDeleteRowTarget(null)}
+        onConfirm={handleDeleteRow}
+        title="Delete Documents"
+        message={deleteRowTarget ? <>Delete all <b>{deleteRowTarget.documents.length}</b> document{deleteRowTarget.documents.length !== 1 ? 's' : ''} for <b>{deleteRowTarget.guestName}</b>? The files are permanently removed.</> : null}
+        confirmLabel="Delete"
+        danger
+        busy={deletingRow}
       />
     </div>
   )

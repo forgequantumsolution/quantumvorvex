@@ -60,7 +60,11 @@ model RoomType {
 
 model Room {
   id                 String              @id @default(cuid())
-  number             String              @unique
+  // Uniqueness is enforced by a PARTIAL unique index (number WHERE deletedAt IS NULL)
+  // so a soft-deleted room frees its number for reuse. Prisma can't express partial
+  // indexes, so the index is managed in raw SQL — see the room_number_partial_unique
+  // migration. Do not re-add @unique here or it will recreate the full index.
+  number             String
   qrToken            String?             @unique
   typeId             String
   type               RoomType            @relation(fields: [typeId], references: [id])
@@ -76,6 +80,12 @@ model Room {
   bookings           Booking[]
   maintenanceRequests MaintenanceRequest[]
   housekeepingStatus HousekeepingStatus?
+
+  // Soft delete: when set, the room is hidden from inventory/board/reports.
+  // The record (and its bookings/QR token) is preserved. NULL = live.
+  deletedAt          DateTime?
+
+  @@index([deletedAt])
 }
 
 model Guest {
@@ -122,6 +132,13 @@ model Guest {
   communications  GuestCommunication[]
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
+
+  // Soft delete: when set, the guest is hidden from lists/stats/reports and no
+  // longer blocks their room, but the record (and its invoices/payments/docs)
+  // is preserved. NULL = live.
+  deletedAt       DateTime?
+
+  @@index([deletedAt])
 }
 
 model Document {
@@ -153,6 +170,13 @@ model Invoice {
   createdAt   DateTime  @default(now())
   paidAt      DateTime?
   payments    Payment[]
+
+  // Soft delete: when set, the invoice is hidden from billing lists/stats, the
+  // guest ledger, the cash register and revenue/GST reports, but the row (and
+  // its payments) is preserved. NULL = live.
+  deletedAt   DateTime?
+
+  @@index([deletedAt])
 }
 
 model Payment {
@@ -223,6 +247,13 @@ model Booking {
   documents           BookingDocument[]
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
+
+  // Soft delete: when set, the booking is hidden from all lists/stats and no
+  // longer blocks its room, but the record (and its payment/invoice history)
+  // is preserved. NULL = live.
+  deletedAt           DateTime?
+
+  @@index([deletedAt])
 }
 
 // ID / KYC documents captured at booking time (Aadhaar front/back, PAN, etc.)

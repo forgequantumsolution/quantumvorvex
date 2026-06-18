@@ -5,6 +5,179 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-19 · Billing (invoice soft delete) + Documents (hard delete)
+
+## Summary
+Added delete to the last two list pages. Invoices are financial, so they **soft delete** and
+disappear from every money total (billing list/stats, guest ledger, cash register, revenue/GST
+reports). Documents are just uploaded files, so they **hard delete** (row + file on disk).
+
+## Billing — invoice soft delete
+
+### `prisma/schema.prisma`
+- `Invoice`: added `deletedAt DateTime?` (NULL = live) and `@@index([deletedAt])`.
+
+### `prisma/migrations/20260619000000_invoice_soft_delete/migration.sql` (new)
+- Additive nullable column + index.
+
+### `src/controllers/billingController.js`
+- New `deleteInvoice`: stamps `deletedAt`.
+- `getInvoices` list/count, `getInvoiceStats` (groupBy + 3 aggregates) filtered to `deletedAt: null`.
+- `getLedger`: invoices filtered; payments exclude those tied to a deleted invoice
+  (`OR: [{ invoiceId: null }, { invoice: { deletedAt: null } }]`).
+- `getCashRegister`: same payment filter so a deleted invoice's cash drops out of the day's totals.
+
+### `src/routes/billing.js`
+- Added `DELETE /billing/:id`.
+
+### `src/controllers/reportsController.js`
+- All six invoice queries (dashboard paid, revenue, GST, CSV billing/gst, PDF billing/gst) now
+  exclude `deletedAt != null`.
+
+### `src/utils/cron.js`
+- Overdue-invoice reminder sweep excludes soft-deleted invoices.
+
+## Documents — hard delete
+
+### `src/controllers/documentsController.js`
+- New `deleteDocument`: handles both `Document` and `BookingDocument`; deletes the row and unlinks
+  the backing file from `uploads/` (path-guarded, best-effort).
+
+### `src/routes/documents.js`
+- Added `DELETE /documents/:id`.
+
+---
+
+# Session — 2026-06-18 · Guests: soft delete (deletedAt) + delete endpoint
+
+## Summary
+Guests had no delete at all. Added a soft delete (matching Room/Booking): a `deletedAt` timestamp
+hides the guest from every list/stat/report and stops them blocking their room, while their
+invoices/payments/documents are preserved. Deleting an Active/Due guest also frees their room.
+
+## File changes
+
+### `prisma/schema.prisma`
+- `Guest`: added `deletedAt DateTime?` (NULL = live) and `@@index([deletedAt])`.
+
+### `prisma/migrations/20260618030000_guest_soft_delete/migration.sql` (new)
+- Additive nullable column + index. Safe for existing rows.
+
+### `src/controllers/guestsController.js`
+- New `deleteGuest`: soft-deletes in a transaction; if the guest was Active/Due, sets their room
+  back to `available`.
+- `getGuests` list/count `where` seeded with `deletedAt: null`; `getGuestStats` groupBy filtered.
+
+### `src/routes/guests.js`
+- Added `DELETE /guests/:id → deleteGuest`.
+
+### Filtered out soft-deleted guests in every other list/aggregate that surfaces them:
+- `src/controllers/bookingsController.js` — `findConflict` guest-overlap check (a deleted guest no
+  longer blocks their room).
+- `src/controllers/foodController.js` — food orders list.
+- `src/controllers/documentsController.js` — guest documents list.
+- `src/controllers/reportsController.js` — dashboard recent-guests + both CSV/PDF guest exports.
+- `src/utils/cron.js` — overdue-guest reminder sweep.
+
+### Maintenance
+- No server change: `DELETE /maintenance/:id` already existed (hard delete; removes the ticket and
+  its notes). Only the UI was missing.
+
+---
+
+# Session — 2026-06-18 · Rooms: free the room number on soft delete (partial unique index)
+
+## Summary
+`Room.number` was globally unique, so a soft-deleted room kept reserving its number and you
+couldn't create a new room with the same number. Replaced the full unique index with a **partial
+unique index** that only applies to live rooms (`WHERE deletedAt IS NULL`). A number used only by
+soft-deleted rooms is now reusable; duplicates among live rooms still raise P2002 (→ 409).
+
+Verified: create → soft-delete → re-create same number succeeds; a second *live* duplicate is
+still blocked.
+
+## File changes
+
+### `prisma/schema.prisma`
+- `Room.number`: removed `@unique` (Prisma can't express partial indexes; the constraint is now
+  managed in raw SQL). Added a comment warning not to re-add `@unique`.
+
+### `prisma/migrations/20260618020000_room_number_partial_unique/migration.sql` (new)
+- `DROP INDEX "Room_number_key"` then recreate it as
+  `CREATE UNIQUE INDEX "Room_number_key" ON "Room"("number") WHERE "deletedAt" IS NULL`.
+
+### `src/utils/seed.js`
+- Room seeding can no longer `upsert` on `number` (not a unique field anymore). Switched to
+  `findFirst({ where: { number, deletedAt: null } })` + update/create.
+
+### `src/controllers/roomsController.js`
+- No change needed: `createRoom` already maps the P2002 unique violation to a 409, which the
+  partial index still raises for live duplicates.
+
+---
+
+# Session — 2026-06-18 · Rooms: soft delete via deletedAt (aligns with bookings)
+
+## Summary
+Rooms were already soft-deleted, but via a `status = 'deleted'` sentinel that overloaded the
+operational status column and recorded no deletion time. Switched them to a dedicated
+`deletedAt` timestamp, matching `Booking`. Behaviour is unchanged (deleted rooms stay hidden);
+we now also know *when* a room was deleted, and `status` keeps a single clear meaning.
+
+## File changes
+
+### `prisma/schema.prisma`
+- `Room`: added `deletedAt DateTime?` (NULL = live) and `@@index([deletedAt])`.
+
+### `prisma/migrations/20260618010000_room_soft_delete/migration.sql` (new)
+- Additive nullable column + index. Backfills existing `status='deleted'` rooms: stamps
+  `deletedAt = now()` and resets their `status` to `'available'` so they stay hidden under the
+  new filter and carry a valid status if ever restored.
+
+### `src/controllers/roomsController.js`
+- `deleteRoom` (soft branch): now sets `deletedAt: new Date()` instead of `status: 'deleted'`.
+  The `?hard=true` branch (real delete) is unchanged.
+- `getRooms`: list filter switched to `deletedAt: null`.
+
+### `src/controllers/housekeepingController.js`
+- Board (`getBoard`) and daily list (`getDailyList`) room queries now exclude `deletedAt != null`.
+
+### `src/controllers/reportsController.js`
+- Both room queries (dashboard summary + occupancy report) switched to `deletedAt: null`.
+
+---
+
+# Session — 2026-06-18 · Bookings: soft delete instead of hard delete
+
+## Summary
+`DELETE /bookings/:id` previously did a raw `prisma.booking.delete`, which destroys the row and
+its payment/invoice history and can fail on related records. Since the UI only needs the booking
+to disappear, switched to a **soft delete**: a nullable `deletedAt` column is stamped, and every
+list/stat/conflict query now excludes `deletedAt != null` rows. The record is preserved and the
+room is freed.
+
+## File changes
+
+### `prisma/schema.prisma`
+- `Booking`: added `deletedAt DateTime?` (NULL = live) and `@@index([deletedAt])`.
+
+### `prisma/migrations/20260618000000_booking_soft_delete/migration.sql` (new)
+- Additive, nullable column + index. Safe for existing rows (all stay live).
+
+### `src/controllers/bookingsController.js`
+- `deleteBooking`: now `update`s `deletedAt: new Date()` instead of deleting the row.
+- `getBookings`: list/count `where` seeded with `deletedAt: null`.
+- `getBookingStats`: `deletedAt: null` added to the groupBy, active aggregate, and upcoming count.
+- `findConflict`: `deletedAt: null` added so a deleted booking no longer blocks its room.
+
+### `src/controllers/reportsController.js`
+- Occupancy report's booking query excludes soft-deleted rows.
+
+### `src/controllers/documentsController.js`
+- Orphan-booking (pre-check-in KYC) query excludes soft-deleted rows.
+
+---
+
 # Session — 2026-06-16 · Guest documents upload endpoint (for check-out payment proofs)
 
 ## Summary

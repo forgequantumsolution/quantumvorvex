@@ -7,6 +7,7 @@ import {
   getInvoicePdf,
   getLedger,
   getCashRegister,
+  deleteInvoice,
 } from '../controllers/billingController.js'
 import { verifyToken, requirePermission } from '../middleware/auth.js'
 
@@ -22,5 +23,6 @@ router.get('/cash-register', getCashRegister)
 router.post('/generate', generateInvoice)
 router.put('/:id/collect', collectPayment)
 router.get('/:id/pdf', getInvoicePdf)
+router.delete('/:id', deleteInvoice)
 
 export default router

@@ -1391,6 +1391,7 @@ function NotificationsTab({ addToast }) {
       {/* Edit Template Modal */}
       {editingId && editingTpl && (
         <Modal
+          isOpen
           title={`Edit Template — ${editingTpl.label}`}
           onClose={closeEdit}
         >

@@ -5,14 +5,14 @@ import htmlToPdf from '../utils/pdf.js'
 export const getDashboard = async (req, res) => {
   try {
     const [rooms, guests, invoices, notifications] = await Promise.all([
-      prisma.room.findMany({ where: { status: { not: 'deleted' } } }),
+      prisma.room.findMany({ where: { deletedAt: null } }),
       prisma.guest.findMany({
-        where: { status: 'Active' },
+        where: { status: 'Active', deletedAt: null },
         include: { room: { select: { number: true } } },
         orderBy: { createdAt: 'desc' },
         take: 10,
       }),
-      prisma.invoice.findMany({ where: { status: 'Paid' } }),
+      prisma.invoice.findMany({ where: { status: 'Paid', deletedAt: null } }),
       prisma.notification.findMany({ where: { dismissed: false }, orderBy: { createdAt: 'desc' } }),
     ])
 
@@ -44,7 +44,7 @@ export const getRevenue = async (req, res) => {
   try {
     const { from, to } = req.query
 
-    const where = { status: 'Paid' }
+    const where = { status: 'Paid', deletedAt: null }
     if (from || to) {
       where.paidAt = {}
       if (from) where.paidAt.gte = new Date(from)
@@ -88,7 +88,7 @@ export const getGst = async (req, res) => {
   try {
     const { from, to } = req.query
 
-    const where = {}
+    const where = { deletedAt: null }
     if (from || to) {
       where.createdAt = {}
       if (from) where.createdAt.gte = new Date(from)
@@ -144,6 +144,7 @@ export const exportCsv = async (req, res) => {
     if (type === 'guests') {
       filename = 'guests-report.csv'
       const guests = await prisma.guest.findMany({
+        where: { deletedAt: null },
         include: { room: { select: { number: true } } },
         orderBy: { createdAt: 'desc' },
       })
@@ -164,7 +165,7 @@ export const exportCsv = async (req, res) => {
       csvContent = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(',')).join('\n')
     } else if (type === 'billing') {
       filename = 'billing-report.csv'
-      const where = {}
+      const where = { deletedAt: null }
       if (from || to) {
         where.createdAt = {}
         if (from) where.createdAt.gte = new Date(from)
@@ -195,7 +196,7 @@ export const exportCsv = async (req, res) => {
       csvContent = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(',')).join('\n')
     } else if (type === 'gst') {
       filename = 'gst-report.csv'
-      const where = {}
+      const where = { deletedAt: null }
       if (from || to) {
         where.createdAt = {}
         if (from) where.createdAt.gte = new Date(from)
@@ -248,11 +249,12 @@ export const getOccupancy = async (req, res) => {
     end.setHours(23, 59, 59, 999)
 
     const [rooms, bookings] = await Promise.all([
-      prisma.room.findMany({ where: { status: { not: 'deleted' } }, include: { type: true } }),
+      prisma.room.findMany({ where: { deletedAt: null }, include: { type: true } }),
       prisma.booking.findMany({
         where: {
           status: { in: ['Confirmed', 'CheckedIn', 'CheckedOut'] },
           fromDate: { lte: end },
+          deletedAt: null,
         },
         select: { fromDate: true, toDate: true, checkedOutAt: true },
       }),
@@ -326,6 +328,7 @@ export const exportPdf = async (req, res) => {
       title = 'Guests Report'
       filename = 'guests-report.pdf'
       const guests = await prisma.guest.findMany({
+        where: { deletedAt: null },
         include: { room: { select: { number: true } } },
         orderBy: { createdAt: 'desc' },
       })
@@ -335,7 +338,7 @@ export const exportPdf = async (req, res) => {
         g.checkInDate?.toISOString().split('T')[0] || '—', g.status, fmt(g.roomRate),
       ])
     } else if (type === 'billing' || type === 'gst') {
-      const where = {}
+      const where = { deletedAt: null }
       if (from || to) {
         where.createdAt = {}
         if (from) where.createdAt.gte = new Date(from)

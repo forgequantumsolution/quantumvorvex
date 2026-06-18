@@ -4,7 +4,7 @@ export const getBoard = async (req, res) => {
   try {
     const rooms = await prisma.room.findMany({
       include: { type: true, housekeepingStatus: true },
-      where: { status: { not: 'deleted' } },
+      where: { deletedAt: null },
       orderBy: [{ floor: 'asc' }, { number: 'asc' }]
     })
     res.json(rooms)
@@ -27,7 +27,7 @@ export const getDailyList = async (req, res) => {
   try {
     const rooms = await prisma.room.findMany({
       include: { housekeepingStatus: true, type: true },
-      where: { housekeepingStatus: { status: { in: ['dirty_available', 'cleaning_in_progress', 'checkout_pending'] } } }
+      where: { deletedAt: null, housekeepingStatus: { status: { in: ['dirty_available', 'cleaning_in_progress', 'checkout_pending'] } } }
     })
     res.json(rooms)
   } catch (e) { res.status(500).json({ error: e.message }) }
