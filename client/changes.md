@@ -6,6 +6,23 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-19 · Fix Edit Template modal in Settings → Notifications
+
+## Summary
+The "Edit Template" button in Notification Management (Settings page) did nothing when clicked.
+The button set `editingId`, but the editor `Modal` was rendered without an `isOpen` prop. Since
+`Modal` returns `null` when `isOpen` is falsy, the modal silently rendered nothing. Added the
+`isOpen` prop. It's safe to hardcode because the block is already guarded by
+`{editingId && editingTpl && (...)}`, so the Modal only mounts when there's a template to edit.
+No backend change.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- Added `isOpen` to the `<Modal>` in `NotificationsTab`'s Edit Template block.
+
+---
+
 # Session — 2026-06-19 · Sidebar shows saved hotel name after fresh login
 
 ## Summary
