@@ -77,18 +77,23 @@ async function seed() {
   for (const r of roomData) {
     const typeId = createdTypes[r.type]
     const rates = roomTypes.find(rt => rt.name === r.type)
-    await prisma.room.upsert({
-      where: { number: r.number },
-      update: { status: r.status },
-      create: {
-        number: r.number,
-        typeId,
-        floor: r.floor,
-        status: r.status,
-        dailyRate: rates.dailyRate,
-        monthlyRate: rates.monthlyRate,
-      },
-    })
+    // `number` is no longer globally unique (partial unique index on live rooms),
+    // so we can't upsert on it — match the live room by number instead.
+    const existing = await prisma.room.findFirst({ where: { number: r.number, deletedAt: null } })
+    if (existing) {
+      await prisma.room.update({ where: { id: existing.id }, data: { status: r.status } })
+    } else {
+      await prisma.room.create({
+        data: {
+          number: r.number,
+          typeId,
+          floor: r.floor,
+          status: r.status,
+          dailyRate: rates.dailyRate,
+          monthlyRate: rates.monthlyRate,
+        },
+      })
+    }
   }
   console.log('✓ Sample rooms (24)')
 

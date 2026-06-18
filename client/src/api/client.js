@@ -77,6 +77,7 @@ export const guestsApi = {
   create: (data)   => api.post('/guests', data),
   getOne: (id)     => api.get(`/guests/${id}`),
   update: (id, data) => api.put(`/guests/${id}`, data),
+  delete: (id)     => api.delete(`/guests/${id}`),
   checkout: (id, data) => api.post(`/guests/${id}/checkout`, data),
   renew:    (id, data) => api.post(`/guests/${id}/renew`, data),       // { months } | { checkOutDate }
   uploadDocuments: (id, form) => api.post(`/guests/${id}/documents`, form, { headers: { 'Content-Type': 'multipart/form-data' } }),
@@ -89,6 +90,7 @@ export const billingApi = {
   getStats: (params) => api.get('/billing/stats', { params }),
   generate: (data) => api.post('/billing/generate', data),
   collect: (id)    => api.put(`/billing/${id}/collect`),
+  delete: (id)     => api.delete(`/billing/${id}`),
   getPdf: (id)     => api.get(`/billing/${id}/pdf`, { responseType: 'blob' }),
   getLedger:       (guestId) => api.get('/billing/ledger', { params: { guestId } }),
   getCashRegister: (date)    => api.get('/billing/cash-register', { params: { date } }),
@@ -118,6 +120,7 @@ export const documentsApi = {
   getAll: ()               => api.get('/documents'),
   upload: (guestId, form)  => api.post(`/documents/${guestId}`, form, { headers: { 'Content-Type': 'multipart/form-data' } }),
   verify: (id)             => api.put(`/documents/${id}/verify`),
+  delete: (id)             => api.delete(`/documents/${id}`),
 }
 
 export const foodApi = {

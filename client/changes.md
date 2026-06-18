@@ -6,6 +6,191 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-19 · Fix Edit Template modal in Settings → Notifications
+
+## Summary
+The "Edit Template" button in Notification Management (Settings page) did nothing when clicked.
+The button set `editingId`, but the editor `Modal` was rendered without an `isOpen` prop. Since
+`Modal` returns `null` when `isOpen` is falsy, the modal silently rendered nothing. Added the
+`isOpen` prop. It's safe to hardcode because the block is already guarded by
+`{editingId && editingTpl && (...)}`, so the Modal only mounts when there's a template to edit.
+No backend change.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- Added `isOpen` to the `<Modal>` in `NotificationsTab`'s Edit Template block.
+
+---
+
+# Session — 2026-06-19 · Sidebar shows saved hotel name after fresh login
+
+## Summary
+On a fresh login in a new browser the sidebar showed the hardcoded default name ("Quantum Vorvex")
+instead of the name saved in Settings, only correcting itself once the Settings page was opened.
+The sidebar reads `s.hotel.hotelName` from Redux, whose initial state is the hardcoded default; it
+was only updated via `setHotelName` on Settings save / SetupWizard / Settings page mount. Nothing
+hydrated it at app boot. Added a boot-time fetch of `GET /settings` that pushes the saved
+`name`/`ownerName` into the store as soon as a token is present, so the correct name shows
+immediately on any fresh login. No backend change.
+
+## File changes
+
+### `src/App.jsx`
+- Imported `useHotelActions` and `settingsApi`; destructured `setHotelName`/`setOwnerName`.
+- Added a `useEffect` keyed on `token` that calls `settingsApi.get()` and dispatches
+  `setHotelName`/`setOwnerName` from `data.hotel` (cancel-guarded, falls back to defaults on error).
+
+---
+
+# Session — 2026-06-19 · Delete option for cancellations
+
+## Summary
+Added a delete action to the Cancellations page. A cancellation is just a booking with status
+`Cancelled`, so this reuses the existing booking soft-delete (`bookingsApi.remove` →
+`DELETE /bookings/:id`); a deleted booking already drops out of this list. No backend change.
+
+## File changes
+
+### `src/components/modules/cancellations/Cancellations.jsx`
+- Added a trailing actions column with a red `LuTrash2` button (title "Delete cancellation"),
+  `deleteTarget`/`deleting` state, a `handleDelete` calling `bookingsApi.remove` (removes the row +
+  toast), and a `<ConfirmModal>`.
+- Imported `ConfirmModal` and `LuTrash2`.
+
+### `tests/soft-delete.spec.js`
+- Added a cancellations E2E delete test (creates → cancels → deletes a booking). Suite now 9/9 green.
+
+---
+
+# Session — 2026-06-19 · Replace 🗑 emoji with a clean Lucide trash icon
+
+## Summary
+The delete buttons used the 🗑 emoji, which rendered inconsistently/ugly across platforms. Swapped
+every one for the `LuTrash2` icon from `react-icons/lu` (the icon set already used in the sidebar/
+topbar), sized 14–15px and vertically centred.
+
+## File changes
+- `src/components/modules/rooms/Rooms.jsx` — "Delete Room" button icon.
+- `src/components/modules/bookings/BookingsTable.jsx` — row delete.
+- `src/components/modules/guests/Guests.jsx` — row delete.
+- `src/components/modules/maintenance/TicketCard.jsx` — card delete.
+- `src/components/modules/billing/Billing.jsx` — invoice row delete.
+- `src/components/modules/documents/Documents.jsx` — row delete + per-document delete (modal).
+- Each imports `{ LuTrash2 } from 'react-icons/lu'`.
+
+### `tests/soft-delete.spec.js`
+- Updated the room-delete locator from the emoji name to `{ name: 'Delete Room' }` (other tests
+  locate by `title`, unaffected). Suite still 8/8 green.
+
+---
+
+# Session — 2026-06-19 · Delete option for invoices (Billing) & documents
+
+## Summary
+Added delete to the Billing and Documents pages — the last two list pages without it. Both use the
+shared `ConfirmModal`. Invoice delete is a server-side soft delete that also removes the invoice
+from all money totals; document delete is a permanent hard delete of the file (see `server/CHANGES.md`).
+
+## File changes
+
+### `src/api/client.js`
+- Added `billingApi.delete(id) → DELETE /billing/:id` and `documentsApi.delete(id) → DELETE /documents/:id`.
+
+### `src/components/modules/billing/Billing.jsx`
+- Added a red `🗑` (title "Delete invoice") to each invoice row's Actions, `deleteModal`/`deleting`
+  state, a `handleDelete` calling `billingApi.delete` (toast + reload list & stats), and a
+  `<ConfirmModal>` warning it's removed from billing/ledger/cash register/revenue reports.
+
+### `src/components/modules/documents/Documents.jsx`
+- Added a **row-level** `🗑` (title "Delete all documents for this guest") in the Documents table
+  Actions, shown when the guest has ≥1 file — deletes them all via `Promise.all(documentsApi.delete)`.
+  This is the visible delete users expect on the page (matches every other module's row delete).
+- Also added a **per-document** `🗑` (title "Delete document") inside the **View Docs** modal for
+  granular single-file deletion (new `onDelete` prop on `ViewDocsModal`).
+- Both confirmed via `<ConfirmModal>`; both reload the list.
+
+### `tests/soft-delete.spec.js`
+- Added billing-invoice + two document E2E delete tests (modal per-doc and row-level). Suite now
+  8 tests, all green.
+
+---
+
+# Session — 2026-06-18 · Delete option for guests & maintenance tickets
+
+## Summary
+Extended the delete action to the two remaining list pages that lacked it: Guests and Maintenance.
+Both use the shared `ConfirmModal`. Guest delete is a server-side soft delete (see
+`server/CHANGES.md`); maintenance ticket delete is a hard delete (the endpoint already existed).
+
+## File changes
+
+### `src/api/client.js`
+- Added `guestsApi.delete(id) → DELETE /guests/:id`.
+
+### `src/components/modules/guests/Guests.jsx`
+- Added a red `🗑` action (title "Delete guest") to each guest row, `deleteGuest`/`deleting` state,
+  a `handleDeleteConfirm` calling `guestsApi.delete` (toast + reload), and a `<ConfirmModal>`
+  noting billing history is kept and the room is freed.
+
+### `src/components/modules/maintenance/TicketCard.jsx`
+- Added an optional `onDelete` prop and a red `🗑` button (right-aligned in the status footer).
+
+### `src/components/modules/maintenance/Maintenance.jsx`
+- Added `deleteTarget`/`deleting` state, a `handleDelete` calling the existing `maintenanceApi.remove`
+  (removes the card on success), passed `onDelete` to `TicketCard`, and rendered a `<ConfirmModal>`.
+
+### `tests/soft-delete.spec.js`
+- Extended the Playwright suite with guest-delete and ticket-delete E2E tests (now 5 tests, all
+  green). Guest test also asserts the freed room and that the API no longer lists the guest.
+
+---
+
+# Session — 2026-06-18 · Delete option for bookings
+
+## Summary
+Bookings could be cancelled but never removed from the list. Added a delete action to each
+booking row, guarded by a confirmation dialog. Server-side this is a **soft delete** (the row is
+stamped `deletedAt` and hidden everywhere, but its payment/invoice history is preserved) — see
+`server/CHANGES.md`. The `bookingsApi.remove` helper and `DELETE /bookings/:id` route already
+existed; the UI and the soft-delete behaviour were added.
+
+## File changes
+
+### `src/components/modules/bookings/BookingsTable.jsx`
+- Added an `onDelete` prop and a red `🗑` (danger) button to the actions column, shown for every
+  row regardless of status. Disabled while the row is busy.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- Added `deleteTarget` state and a `handleDelete` handler that calls `bookingsApi.remove(id)` via
+  the shared `runAction` helper (toast + reload of list and stats).
+- Passed `onDelete={setDeleteTarget}` to `BookingsTable`.
+- Rendered a `<ConfirmModal>` ("Permanently delete booking X for <guest>? …")
+  with a busy state, reusing the same confirm pattern as the rooms delete.
+- Imported `ConfirmModal` from `../../ui/ConfirmModal`.
+
+---
+
+# Session — 2026-06-18 · Delete option for rooms
+
+## Summary
+There was no way to delete a room from the UI. Added a delete action to the room detail modal,
+guarded by a confirmation dialog. The backend route (`DELETE /rooms/:id`) and `roomsApi.delete`
+helper already existed — only the UI was missing.
+
+## File changes
+
+### `src/components/modules/rooms/Rooms.jsx`
+- **`RoomDetail`**: added a red `🗑 Delete Room` button to the Quick Actions row, wired to a new
+  `onDelete` prop.
+- Added `deleteRoom` / `deleting` state and a `handleDeleteRoom` handler that calls
+  `roomsApi.delete(id)`, shows a success/error toast, and reloads the room list.
+- Rendered a `<ConfirmModal>` ("Delete Room X? This cannot be undone.") with a busy state,
+  matching the confirm pattern used in `UsersRoles` instead of native `window.confirm`.
+- Imported `ConfirmModal` from `../../ui/ConfirmModal`.
+
+---
+
 # Session — 2026-06-16 · Download button for room maintenance QR
 
 ## Summary

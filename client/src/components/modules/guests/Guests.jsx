@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Formik, Form } from 'formik'
+import { LuTrash2 } from 'react-icons/lu'
 import Modal from '../../ui/Modal'
+import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import FormikField from '../../ui/FormikField'
@@ -669,6 +671,8 @@ export default function Guests() {
   const [profileGuest,  setProfileGuest]  = useState(null)
   const [checkoutGuest, setCheckoutGuest] = useState(null)
   const [editGuest,     setEditGuest]     = useState(null)
+  const [deleteGuest,   setDeleteGuest]   = useState(null)
+  const [deleting,      setDeleting]      = useState(false)
 
   // Query params shared by the list fetch and the "export all" action.
   const listParams = useCallback((extra = {}) => ({
@@ -756,6 +760,21 @@ export default function Guests() {
       reload()
     } catch (err) {
       addToast(err.response?.data?.message || 'Could not renew stay.', 'error')
+    }
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteGuest) return
+    setDeleting(true)
+    try {
+      await guestsApi.delete(deleteGuest.id)
+      addToast(`${deleteGuest.name} deleted`, 'success')
+      setDeleteGuest(null)
+      reload()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not delete guest', 'error')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -877,6 +896,8 @@ export default function Guests() {
                           <button className="btn btn-xs bg-success-bg text-success-text"
                             onClick={() => handleRenew(guest)}>Renew</button>
                         )}
+                        <button className="btn btn-danger btn-xs" title="Delete guest"
+                          onClick={() => setDeleteGuest(guest)}><LuTrash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>
@@ -901,6 +922,16 @@ export default function Guests() {
       <GuestProfileModal guest={profileGuest} onClose={() => setProfileGuest(null)} onCheckout={openCheckout} onEdit={openEdit} />
       <CheckoutModal key={checkoutGuest?.id} guest={checkoutGuest} onClose={() => setCheckoutGuest(null)} onConfirm={handleCheckoutConfirm} />
       <EditGuestModal guest={editGuest} onClose={() => setEditGuest(null)} onSave={handleEditSave} />
+      <ConfirmModal
+        isOpen={!!deleteGuest}
+        onClose={() => setDeleteGuest(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Guest"
+        message={deleteGuest ? <>Delete <b>{deleteGuest.name}</b> ({deleteGuest.docId})? Their billing history is kept, but they'll be removed from the registry. This frees their room.</> : null}
+        confirmLabel="Delete"
+        danger
+        busy={deleting}
+      />
     </div>
   )
 }

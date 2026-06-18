@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
+import { LuTrash2 } from 'react-icons/lu'
 import Modal from '../../ui/Modal'
+import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
 import { useToast } from '../../../hooks/useToast'
 import { billingApi, guestsApi, remindersApi } from '../../../api/client'
@@ -792,6 +794,8 @@ export default function Billing() {
   const [invoiceModal, setInvoiceModal]     = useState(null)   // invoice obj
   const [collectModal, setCollectModal]     = useState(null)   // invoice obj
   const [remindModal, setRemindModal]       = useState(null)   // invoice obj
+  const [deleteModal, setDeleteModal]       = useState(null)   // invoice obj
+  const [deleting, setDeleting]             = useState(false)
   const [showGenerate, setShowGenerate]     = useState(false)
 
   // Query params shared by the list fetch and the "export all" action.
@@ -871,6 +875,21 @@ export default function Billing() {
       setRemindModal(null)
     } catch (err) {
       addToast(err.response?.data?.error || 'Could not send reminder', 'error')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteModal) return
+    setDeleting(true)
+    try {
+      await billingApi.delete(deleteModal.id)
+      addToast(`Invoice ${deleteModal.invoiceNo} deleted`, 'success')
+      setDeleteModal(null)
+      reload()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not delete invoice', 'error')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -1166,6 +1185,15 @@ export default function Billing() {
                           >
                             Invoice
                           </button>
+
+                          {/* Delete */}
+                          <button
+                            className="btn btn-danger btn-xs inline-flex items-center"
+                            title="Delete invoice"
+                            onClick={() => setDeleteModal(inv)}
+                          >
+                            <LuTrash2 size={14} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1217,6 +1245,17 @@ export default function Billing() {
         isOpen={showGenerate}
         onClose={() => setShowGenerate(false)}
         onGenerate={handleGenerate}
+      />
+
+      <ConfirmModal
+        isOpen={!!deleteModal}
+        onClose={() => setDeleteModal(null)}
+        onConfirm={handleDelete}
+        title="Delete Invoice"
+        message={deleteModal ? <>Delete invoice <b>{deleteModal.invoiceNo}</b> for <b>{deleteModal.guest}</b> ({formatCurrency(deleteModal.total)})? It will be removed from billing, the ledger, the cash register and revenue reports. This cannot be undone.</> : null}
+        confirmLabel="Delete"
+        danger
+        busy={deleting}
       />
     </div>
   )

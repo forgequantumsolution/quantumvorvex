@@ -1,3 +1,4 @@
+import { LuTrash2 } from 'react-icons/lu'
 import { DataTable, StatusBadge, Button, EmptyState } from '../../ui-tw'
 import { formatCurrency, formatDate } from '../../../utils/format'
 import { dateRangeLabel, stayLabel } from '../../../utils/booking'
@@ -8,7 +9,7 @@ import { dateRangeLabel, stayLabel } from '../../../utils/booking'
  */
 export default function BookingsTable({
   bookings, loading, busyId,
-  onConfirm, onCheckIn, onCheckOut, onCancel, onInvoice, emptyMessage,
+  onConfirm, onCheckIn, onCheckOut, onCancel, onInvoice, onDelete, emptyMessage,
 }) {
   const columns = [
     {
@@ -104,6 +105,17 @@ export default function BookingsTable({
                 title="Download tax invoice"
               >
                 ⤓ Invoice
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                variant="danger"
+                size="sm"
+                disabled={busy}
+                onClick={() => onDelete(b)}
+                title="Delete booking permanently"
+              >
+                <LuTrash2 size={14} />
               </Button>
             )}
           </div>

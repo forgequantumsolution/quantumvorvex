@@ -93,6 +93,7 @@ export const getFoodOrders = async (req, res) => {
       where: {
         status: 'Active',
         foodPlan: { not: null },
+        deletedAt: null,
       },
       include: {
         room: { select: { number: true } },

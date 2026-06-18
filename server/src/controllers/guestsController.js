@@ -16,7 +16,7 @@ export const getGuests = async (req, res) => {
   try {
     const { status, stayType, search } = req.query
 
-    const where = {}
+    const where = { deletedAt: null }
 
     if (status) where.status = status
     if (stayType) where.stayType = stayType
@@ -62,7 +62,7 @@ export const getGuests = async (req, res) => {
 // the current search/filter/page so the totals always reflect every guest.
 export const getGuestStats = async (req, res) => {
   try {
-    const grouped = await prisma.guest.groupBy({ by: ['status'], _count: { _all: true } })
+    const grouped = await prisma.guest.groupBy({ by: ['status'], where: { deletedAt: null }, _count: { _all: true } })
     const byStatus = Object.fromEntries(grouped.map((g) => [g.status, g._count._all]))
     const total = grouped.reduce((s, g) => s + g._count._all, 0)
 
@@ -420,6 +420,35 @@ export const checkoutGuest = async (req, res) => {
     })
   } catch (err) {
     console.error('checkoutGuest error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// DELETE /guests/:id — soft delete. Stamps deletedAt so the guest disappears from
+// every list/stat/report while their invoices/payments/documents are preserved.
+// If the guest was still occupying a room, the room is freed.
+export const deleteGuest = async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const guest = await prisma.guest.findUnique({
+      where: { id },
+      select: { id: true, roomId: true, status: true, deletedAt: true },
+    })
+    if (!guest || guest.deletedAt) return res.status(404).json({ message: 'Guest not found.' })
+
+    const wasOccupying = guest.status === 'Active' || guest.status === 'Due'
+
+    await prisma.$transaction(async (tx) => {
+      await tx.guest.update({ where: { id }, data: { deletedAt: new Date() } })
+      if (wasOccupying && guest.roomId) {
+        await tx.room.update({ where: { id: guest.roomId }, data: { status: 'available' } })
+      }
+    })
+
+    return res.status(200).json({ message: 'Guest deleted.' })
+  } catch (err) {
+    console.error('deleteGuest error:', err)
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }
