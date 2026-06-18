@@ -37,6 +37,7 @@ const checkOverdueGuests = async () => {
       where: {
         status: 'Pending',
         createdAt: { lte: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000) }, // 7 days old
+        deletedAt: null,
       },
       include: { guest: { select: { name: true, docId: true } } },
     })

@@ -12,7 +12,7 @@ export const getDashboard = async (req, res) => {
         orderBy: { createdAt: 'desc' },
         take: 10,
       }),
-      prisma.invoice.findMany({ where: { status: 'Paid' } }),
+      prisma.invoice.findMany({ where: { status: 'Paid', deletedAt: null } }),
       prisma.notification.findMany({ where: { dismissed: false }, orderBy: { createdAt: 'desc' } }),
     ])
 
@@ -44,7 +44,7 @@ export const getRevenue = async (req, res) => {
   try {
     const { from, to } = req.query
 
-    const where = { status: 'Paid' }
+    const where = { status: 'Paid', deletedAt: null }
     if (from || to) {
       where.paidAt = {}
       if (from) where.paidAt.gte = new Date(from)
@@ -88,7 +88,7 @@ export const getGst = async (req, res) => {
   try {
     const { from, to } = req.query
 
-    const where = {}
+    const where = { deletedAt: null }
     if (from || to) {
       where.createdAt = {}
       if (from) where.createdAt.gte = new Date(from)
@@ -165,7 +165,7 @@ export const exportCsv = async (req, res) => {
       csvContent = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(',')).join('\n')
     } else if (type === 'billing') {
       filename = 'billing-report.csv'
-      const where = {}
+      const where = { deletedAt: null }
       if (from || to) {
         where.createdAt = {}
         if (from) where.createdAt.gte = new Date(from)
@@ -196,7 +196,7 @@ export const exportCsv = async (req, res) => {
       csvContent = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(',')).join('\n')
     } else if (type === 'gst') {
       filename = 'gst-report.csv'
-      const where = {}
+      const where = { deletedAt: null }
       if (from || to) {
         where.createdAt = {}
         if (from) where.createdAt.gte = new Date(from)
@@ -338,7 +338,7 @@ export const exportPdf = async (req, res) => {
         g.checkInDate?.toISOString().split('T')[0] || '—', g.status, fmt(g.roomRate),
       ])
     } else if (type === 'billing' || type === 'gst') {
-      const where = {}
+      const where = { deletedAt: null }
       if (from || to) {
         where.createdAt = {}
         if (from) where.createdAt.gte = new Date(from)

@@ -1,3 +1,4 @@
+import { LuTrash2 } from 'react-icons/lu'
 import { StatusBadge } from '../../ui-tw'
 import { TICKET_STATUSES } from '../../../data/opsSeed'
 import { formatDate } from '../../../utils/format'
@@ -61,9 +62,9 @@ export default function TicketCard({ ticket, busy, onStatusChange, onDelete }) {
             disabled={busy}
             onClick={() => onDelete(ticket)}
             title="Delete ticket"
-            className="ml-auto text-xs px-2.5 py-1 rounded-md font-medium transition-colors disabled:opacity-50 bg-danger-bg text-danger-text hover:bg-danger hover:text-white"
+            className="ml-auto inline-flex items-center justify-center text-xs px-2.5 py-1 rounded-md font-medium transition-colors disabled:opacity-50 bg-danger-bg text-danger-text hover:bg-danger hover:text-white"
           >
-            🗑
+            <LuTrash2 size={15} />
           </button>
         )}
       </div>

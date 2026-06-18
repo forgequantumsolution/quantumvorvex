@@ -1,3 +1,4 @@
+import { LuTrash2 } from 'react-icons/lu'
 import { DataTable, StatusBadge, Button, EmptyState } from '../../ui-tw'
 import { formatCurrency, formatDate } from '../../../utils/format'
 import { dateRangeLabel, stayLabel } from '../../../utils/booking'
@@ -114,7 +115,7 @@ export default function BookingsTable({
                 onClick={() => onDelete(b)}
                 title="Delete booking permanently"
               >
-                🗑
+                <LuTrash2 size={14} />
               </Button>
             )}
           </div>

@@ -170,6 +170,13 @@ model Invoice {
   createdAt   DateTime  @default(now())
   paidAt      DateTime?
   payments    Payment[]
+
+  // Soft delete: when set, the invoice is hidden from billing lists/stats, the
+  // guest ledger, the cash register and revenue/GST reports, but the row (and
+  // its payments) is preserved. NULL = live.
+  deletedAt   DateTime?
+
+  @@index([deletedAt])
 }
 
 model Payment {

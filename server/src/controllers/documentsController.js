@@ -197,3 +197,44 @@ export const verifyDocument = async (req, res) => {
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }
+
+// Best-effort removal of the file backing a document URL (/uploads/documents/x).
+const unlinkDocFile = (url) => {
+  if (!url) return
+  try {
+    const filePath = path.resolve(url.replace(/^[/\\]+/, ''))
+    // Only delete inside the uploads dir — never follow a URL outside it.
+    if (filePath.startsWith(path.resolve('uploads')) && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath)
+    }
+  } catch (e) {
+    console.warn('unlinkDocFile failed:', e.message)
+  }
+}
+
+// DELETE /documents/:id — hard delete a guest or booking document (and its file).
+// Documents are just uploaded files, not financial records, so removal is permanent.
+export const deleteDocument = async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const doc = await prisma.document.findUnique({ where: { id }, select: { id: true, url: true } })
+    if (doc) {
+      await prisma.document.delete({ where: { id } })
+      unlinkDocFile(doc.url)
+      return res.status(200).json({ message: 'Document deleted.' })
+    }
+
+    const bookingDoc = await prisma.bookingDocument.findUnique({ where: { id }, select: { id: true, url: true } })
+    if (bookingDoc) {
+      await prisma.bookingDocument.delete({ where: { id } })
+      unlinkDocFile(bookingDoc.url)
+      return res.status(200).json({ message: 'Document deleted.' })
+    }
+
+    return res.status(404).json({ message: 'Document not found.' })
+  } catch (err) {
+    console.error('deleteDocument error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}

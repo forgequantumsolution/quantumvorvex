@@ -5,6 +5,49 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-19 · Billing (invoice soft delete) + Documents (hard delete)
+
+## Summary
+Added delete to the last two list pages. Invoices are financial, so they **soft delete** and
+disappear from every money total (billing list/stats, guest ledger, cash register, revenue/GST
+reports). Documents are just uploaded files, so they **hard delete** (row + file on disk).
+
+## Billing — invoice soft delete
+
+### `prisma/schema.prisma`
+- `Invoice`: added `deletedAt DateTime?` (NULL = live) and `@@index([deletedAt])`.
+
+### `prisma/migrations/20260619000000_invoice_soft_delete/migration.sql` (new)
+- Additive nullable column + index.
+
+### `src/controllers/billingController.js`
+- New `deleteInvoice`: stamps `deletedAt`.
+- `getInvoices` list/count, `getInvoiceStats` (groupBy + 3 aggregates) filtered to `deletedAt: null`.
+- `getLedger`: invoices filtered; payments exclude those tied to a deleted invoice
+  (`OR: [{ invoiceId: null }, { invoice: { deletedAt: null } }]`).
+- `getCashRegister`: same payment filter so a deleted invoice's cash drops out of the day's totals.
+
+### `src/routes/billing.js`
+- Added `DELETE /billing/:id`.
+
+### `src/controllers/reportsController.js`
+- All six invoice queries (dashboard paid, revenue, GST, CSV billing/gst, PDF billing/gst) now
+  exclude `deletedAt != null`.
+
+### `src/utils/cron.js`
+- Overdue-invoice reminder sweep excludes soft-deleted invoices.
+
+## Documents — hard delete
+
+### `src/controllers/documentsController.js`
+- New `deleteDocument`: handles both `Document` and `BookingDocument`; deletes the row and unlinks
+  the backing file from `uploads/` (path-guarded, best-effort).
+
+### `src/routes/documents.js`
+- Added `DELETE /documents/:id`.
+
+---
+
 # Session — 2026-06-18 · Guests: soft delete (deletedAt) + delete endpoint
 
 ## Summary

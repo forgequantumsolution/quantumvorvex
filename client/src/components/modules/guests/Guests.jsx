@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Formik, Form } from 'formik'
+import { LuTrash2 } from 'react-icons/lu'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
@@ -896,7 +897,7 @@ export default function Guests() {
                             onClick={() => handleRenew(guest)}>Renew</button>
                         )}
                         <button className="btn btn-danger btn-xs" title="Delete guest"
-                          onClick={() => setDeleteGuest(guest)}>🗑</button>
+                          onClick={() => setDeleteGuest(guest)}><LuTrash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>

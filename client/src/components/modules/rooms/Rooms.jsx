@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
+import { LuTrash2 } from 'react-icons/lu'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
@@ -158,7 +159,7 @@ function RoomDetail({ room, onClose, onStatusChange, onShowQr, onDelete }) {
             ▦ Maintenance QR
           </Button>
           <Button variant="danger" size="sm" onClick={() => onDelete(room)}>
-            🗑 Delete Room
+            <span className="inline-flex items-center gap-1.5"><LuTrash2 size={15} /> Delete Room</span>
           </Button>
         </div>
       </div>

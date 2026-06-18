@@ -6,6 +6,59 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-19 · Replace 🗑 emoji with a clean Lucide trash icon
+
+## Summary
+The delete buttons used the 🗑 emoji, which rendered inconsistently/ugly across platforms. Swapped
+every one for the `LuTrash2` icon from `react-icons/lu` (the icon set already used in the sidebar/
+topbar), sized 14–15px and vertically centred.
+
+## File changes
+- `src/components/modules/rooms/Rooms.jsx` — "Delete Room" button icon.
+- `src/components/modules/bookings/BookingsTable.jsx` — row delete.
+- `src/components/modules/guests/Guests.jsx` — row delete.
+- `src/components/modules/maintenance/TicketCard.jsx` — card delete.
+- `src/components/modules/billing/Billing.jsx` — invoice row delete.
+- `src/components/modules/documents/Documents.jsx` — row delete + per-document delete (modal).
+- Each imports `{ LuTrash2 } from 'react-icons/lu'`.
+
+### `tests/soft-delete.spec.js`
+- Updated the room-delete locator from the emoji name to `{ name: 'Delete Room' }` (other tests
+  locate by `title`, unaffected). Suite still 8/8 green.
+
+---
+
+# Session — 2026-06-19 · Delete option for invoices (Billing) & documents
+
+## Summary
+Added delete to the Billing and Documents pages — the last two list pages without it. Both use the
+shared `ConfirmModal`. Invoice delete is a server-side soft delete that also removes the invoice
+from all money totals; document delete is a permanent hard delete of the file (see `server/CHANGES.md`).
+
+## File changes
+
+### `src/api/client.js`
+- Added `billingApi.delete(id) → DELETE /billing/:id` and `documentsApi.delete(id) → DELETE /documents/:id`.
+
+### `src/components/modules/billing/Billing.jsx`
+- Added a red `🗑` (title "Delete invoice") to each invoice row's Actions, `deleteModal`/`deleting`
+  state, a `handleDelete` calling `billingApi.delete` (toast + reload list & stats), and a
+  `<ConfirmModal>` warning it's removed from billing/ledger/cash register/revenue reports.
+
+### `src/components/modules/documents/Documents.jsx`
+- Added a **row-level** `🗑` (title "Delete all documents for this guest") in the Documents table
+  Actions, shown when the guest has ≥1 file — deletes them all via `Promise.all(documentsApi.delete)`.
+  This is the visible delete users expect on the page (matches every other module's row delete).
+- Also added a **per-document** `🗑` (title "Delete document") inside the **View Docs** modal for
+  granular single-file deletion (new `onDelete` prop on `ViewDocsModal`).
+- Both confirmed via `<ConfirmModal>`; both reload the list.
+
+### `tests/soft-delete.spec.js`
+- Added billing-invoice + two document E2E delete tests (modal per-doc and row-level). Suite now
+  8 tests, all green.
+
+---
+
 # Session — 2026-06-18 · Delete option for guests & maintenance tickets
 
 ## Summary
