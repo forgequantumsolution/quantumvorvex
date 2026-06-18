@@ -8,7 +8,7 @@ export const generateQrToken = () => crypto.randomBytes(16).toString('hex')
 export const getRooms = async (req, res) => {
   try {
     const rooms = await prisma.room.findMany({
-      where: { status: { not: 'deleted' } },
+      where: { deletedAt: null },
       include: { type: true },
       orderBy: { number: 'asc' },
     })
@@ -125,9 +125,11 @@ export const deleteRoom = async (req, res) => {
     if (hard === 'true') {
       await prisma.room.delete({ where: { id } })
     } else {
+      // Soft delete: stamp deletedAt so the room drops out of every list/board/
+      // report while its record (bookings, QR token) is preserved.
       await prisma.room.update({
         where: { id },
-        data: { status: 'deleted' },
+        data: { deletedAt: new Date() },
       })
     }
 

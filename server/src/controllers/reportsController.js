@@ -5,7 +5,7 @@ import htmlToPdf from '../utils/pdf.js'
 export const getDashboard = async (req, res) => {
   try {
     const [rooms, guests, invoices, notifications] = await Promise.all([
-      prisma.room.findMany({ where: { status: { not: 'deleted' } } }),
+      prisma.room.findMany({ where: { deletedAt: null } }),
       prisma.guest.findMany({
         where: { status: 'Active' },
         include: { room: { select: { number: true } } },
@@ -248,7 +248,7 @@ export const getOccupancy = async (req, res) => {
     end.setHours(23, 59, 59, 999)
 
     const [rooms, bookings] = await Promise.all([
-      prisma.room.findMany({ where: { status: { not: 'deleted' } }, include: { type: true } }),
+      prisma.room.findMany({ where: { deletedAt: null }, include: { type: true } }),
       prisma.booking.findMany({
         where: {
           status: { in: ['Confirmed', 'CheckedIn', 'CheckedOut'] },

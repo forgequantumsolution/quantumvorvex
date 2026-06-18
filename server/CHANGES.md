@@ -5,6 +5,68 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-18 · Rooms: free the room number on soft delete (partial unique index)
+
+## Summary
+`Room.number` was globally unique, so a soft-deleted room kept reserving its number and you
+couldn't create a new room with the same number. Replaced the full unique index with a **partial
+unique index** that only applies to live rooms (`WHERE deletedAt IS NULL`). A number used only by
+soft-deleted rooms is now reusable; duplicates among live rooms still raise P2002 (→ 409).
+
+Verified: create → soft-delete → re-create same number succeeds; a second *live* duplicate is
+still blocked.
+
+## File changes
+
+### `prisma/schema.prisma`
+- `Room.number`: removed `@unique` (Prisma can't express partial indexes; the constraint is now
+  managed in raw SQL). Added a comment warning not to re-add `@unique`.
+
+### `prisma/migrations/20260618020000_room_number_partial_unique/migration.sql` (new)
+- `DROP INDEX "Room_number_key"` then recreate it as
+  `CREATE UNIQUE INDEX "Room_number_key" ON "Room"("number") WHERE "deletedAt" IS NULL`.
+
+### `src/utils/seed.js`
+- Room seeding can no longer `upsert` on `number` (not a unique field anymore). Switched to
+  `findFirst({ where: { number, deletedAt: null } })` + update/create.
+
+### `src/controllers/roomsController.js`
+- No change needed: `createRoom` already maps the P2002 unique violation to a 409, which the
+  partial index still raises for live duplicates.
+
+---
+
+# Session — 2026-06-18 · Rooms: soft delete via deletedAt (aligns with bookings)
+
+## Summary
+Rooms were already soft-deleted, but via a `status = 'deleted'` sentinel that overloaded the
+operational status column and recorded no deletion time. Switched them to a dedicated
+`deletedAt` timestamp, matching `Booking`. Behaviour is unchanged (deleted rooms stay hidden);
+we now also know *when* a room was deleted, and `status` keeps a single clear meaning.
+
+## File changes
+
+### `prisma/schema.prisma`
+- `Room`: added `deletedAt DateTime?` (NULL = live) and `@@index([deletedAt])`.
+
+### `prisma/migrations/20260618010000_room_soft_delete/migration.sql` (new)
+- Additive nullable column + index. Backfills existing `status='deleted'` rooms: stamps
+  `deletedAt = now()` and resets their `status` to `'available'` so they stay hidden under the
+  new filter and carry a valid status if ever restored.
+
+### `src/controllers/roomsController.js`
+- `deleteRoom` (soft branch): now sets `deletedAt: new Date()` instead of `status: 'deleted'`.
+  The `?hard=true` branch (real delete) is unchanged.
+- `getRooms`: list filter switched to `deletedAt: null`.
+
+### `src/controllers/housekeepingController.js`
+- Board (`getBoard`) and daily list (`getDailyList`) room queries now exclude `deletedAt != null`.
+
+### `src/controllers/reportsController.js`
+- Both room queries (dashboard summary + occupancy report) switched to `deletedAt: null`.
+
+---
+
 # Session — 2026-06-18 · Bookings: soft delete instead of hard delete
 
 ## Summary
