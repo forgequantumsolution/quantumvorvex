@@ -132,6 +132,13 @@ model Guest {
   communications  GuestCommunication[]
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
+
+  // Soft delete: when set, the guest is hidden from lists/stats/reports and no
+  // longer blocks their room, but the record (and its invoices/payments/docs)
+  // is preserved. NULL = live.
+  deletedAt       DateTime?
+
+  @@index([deletedAt])
 }
 
 model Document {

@@ -125,6 +125,7 @@ const findConflict = async (roomId, from, end, ignoreBookingId = null) => {
     where: {
       roomId,
       status: 'Active',
+      deletedAt: null,
       checkInDate: { lt: end },
       OR: [
         { checkOutDate: null },

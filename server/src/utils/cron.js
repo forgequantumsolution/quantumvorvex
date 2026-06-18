@@ -11,6 +11,7 @@ const checkOverdueGuests = async () => {
       where: {
         status: 'Active',
         checkOutDate: { lte: today },
+        deletedAt: null,
       },
       include: { room: { select: { number: true } } },
     })

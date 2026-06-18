@@ -6,6 +6,36 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-18 · Delete option for guests & maintenance tickets
+
+## Summary
+Extended the delete action to the two remaining list pages that lacked it: Guests and Maintenance.
+Both use the shared `ConfirmModal`. Guest delete is a server-side soft delete (see
+`server/CHANGES.md`); maintenance ticket delete is a hard delete (the endpoint already existed).
+
+## File changes
+
+### `src/api/client.js`
+- Added `guestsApi.delete(id) → DELETE /guests/:id`.
+
+### `src/components/modules/guests/Guests.jsx`
+- Added a red `🗑` action (title "Delete guest") to each guest row, `deleteGuest`/`deleting` state,
+  a `handleDeleteConfirm` calling `guestsApi.delete` (toast + reload), and a `<ConfirmModal>`
+  noting billing history is kept and the room is freed.
+
+### `src/components/modules/maintenance/TicketCard.jsx`
+- Added an optional `onDelete` prop and a red `🗑` button (right-aligned in the status footer).
+
+### `src/components/modules/maintenance/Maintenance.jsx`
+- Added `deleteTarget`/`deleting` state, a `handleDelete` calling the existing `maintenanceApi.remove`
+  (removes the card on success), passed `onDelete` to `TicketCard`, and rendered a `<ConfirmModal>`.
+
+### `tests/soft-delete.spec.js`
+- Extended the Playwright suite with guest-delete and ticket-delete E2E tests (now 5 tests, all
+  green). Guest test also asserts the freed room and that the API no longer lists the guest.
+
+---
+
 # Session — 2026-06-18 · Delete option for bookings
 
 ## Summary

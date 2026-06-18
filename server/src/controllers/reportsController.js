@@ -7,7 +7,7 @@ export const getDashboard = async (req, res) => {
     const [rooms, guests, invoices, notifications] = await Promise.all([
       prisma.room.findMany({ where: { deletedAt: null } }),
       prisma.guest.findMany({
-        where: { status: 'Active' },
+        where: { status: 'Active', deletedAt: null },
         include: { room: { select: { number: true } } },
         orderBy: { createdAt: 'desc' },
         take: 10,
@@ -144,6 +144,7 @@ export const exportCsv = async (req, res) => {
     if (type === 'guests') {
       filename = 'guests-report.csv'
       const guests = await prisma.guest.findMany({
+        where: { deletedAt: null },
         include: { room: { select: { number: true } } },
         orderBy: { createdAt: 'desc' },
       })
@@ -327,6 +328,7 @@ export const exportPdf = async (req, res) => {
       title = 'Guests Report'
       filename = 'guests-report.pdf'
       const guests = await prisma.guest.findMany({
+        where: { deletedAt: null },
         include: { room: { select: { number: true } } },
         orderBy: { createdAt: 'desc' },
       })

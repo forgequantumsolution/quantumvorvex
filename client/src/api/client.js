@@ -77,6 +77,7 @@ export const guestsApi = {
   create: (data)   => api.post('/guests', data),
   getOne: (id)     => api.get(`/guests/${id}`),
   update: (id, data) => api.put(`/guests/${id}`, data),
+  delete: (id)     => api.delete(`/guests/${id}`),
   checkout: (id, data) => api.post(`/guests/${id}/checkout`, data),
   renew:    (id, data) => api.post(`/guests/${id}/renew`, data),       // { months } | { checkOutDate }
   uploadDocuments: (id, form) => api.post(`/guests/${id}/documents`, form, { headers: { 'Content-Type': 'multipart/form-data' } }),

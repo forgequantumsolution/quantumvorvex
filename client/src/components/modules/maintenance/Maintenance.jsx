@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { PageWrapper, StatCard, Card, FilterTabs, SearchInput, Button, EmptyState } from '../../ui-tw'
 import TicketCard from './TicketCard'
 import NewTicketModal from './NewTicketModal'
+import ConfirmModal from '../../ui/ConfirmModal'
 import { useToast } from '../../../hooks/useToast'
 import { usePrimaryAction } from '../../../store/hooks'
 import { maintenanceApi } from '../../../api/client'
@@ -24,6 +25,8 @@ export default function Maintenance() {
   const [query, setQuery] = useState('')
   const [showNew, setShowNew] = useState(false)
   const [busyId, setBusyId] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true); setError('')
@@ -92,6 +95,21 @@ export default function Maintenance() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await maintenanceApi.remove(deleteTarget.id)
+      setTickets((prev) => prev.filter((t) => t.id !== deleteTarget.id))
+      toast(`Ticket ${deleteTarget.ticketNo} deleted`)
+      setDeleteTarget(null)
+    } catch (err) {
+      toast(err.response?.data?.message || 'Could not delete ticket', 'error')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <PageWrapper
       actions={
@@ -128,7 +146,7 @@ export default function Maintenance() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filtered.map((t) => (
-                <TicketCard key={t.id} ticket={t} busy={busyId === t.id} onStatusChange={handleStatus} />
+                <TicketCard key={t.id} ticket={t} busy={busyId === t.id} onStatusChange={handleStatus} onDelete={setDeleteTarget} />
               ))}
             </div>
           )}
@@ -136,6 +154,16 @@ export default function Maintenance() {
       </Card>
 
       <NewTicketModal isOpen={showNew} onClose={() => setShowNew(false)} onSave={handleCreate} />
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Ticket"
+        message={deleteTarget ? <>Permanently delete ticket <b>{deleteTarget.ticketNo}</b> ({deleteTarget.title})? This cannot be undone.</> : null}
+        confirmLabel="Delete"
+        danger
+        busy={deleting}
+      />
     </PageWrapper>
   )
 }

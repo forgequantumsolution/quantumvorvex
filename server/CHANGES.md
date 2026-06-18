@@ -5,6 +5,43 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-18 · Guests: soft delete (deletedAt) + delete endpoint
+
+## Summary
+Guests had no delete at all. Added a soft delete (matching Room/Booking): a `deletedAt` timestamp
+hides the guest from every list/stat/report and stops them blocking their room, while their
+invoices/payments/documents are preserved. Deleting an Active/Due guest also frees their room.
+
+## File changes
+
+### `prisma/schema.prisma`
+- `Guest`: added `deletedAt DateTime?` (NULL = live) and `@@index([deletedAt])`.
+
+### `prisma/migrations/20260618030000_guest_soft_delete/migration.sql` (new)
+- Additive nullable column + index. Safe for existing rows.
+
+### `src/controllers/guestsController.js`
+- New `deleteGuest`: soft-deletes in a transaction; if the guest was Active/Due, sets their room
+  back to `available`.
+- `getGuests` list/count `where` seeded with `deletedAt: null`; `getGuestStats` groupBy filtered.
+
+### `src/routes/guests.js`
+- Added `DELETE /guests/:id → deleteGuest`.
+
+### Filtered out soft-deleted guests in every other list/aggregate that surfaces them:
+- `src/controllers/bookingsController.js` — `findConflict` guest-overlap check (a deleted guest no
+  longer blocks their room).
+- `src/controllers/foodController.js` — food orders list.
+- `src/controllers/documentsController.js` — guest documents list.
+- `src/controllers/reportsController.js` — dashboard recent-guests + both CSV/PDF guest exports.
+- `src/utils/cron.js` — overdue-guest reminder sweep.
+
+### Maintenance
+- No server change: `DELETE /maintenance/:id` already existed (hard delete; removes the ticket and
+  its notes). Only the UI was missing.
+
+---
+
 # Session — 2026-06-18 · Rooms: free the room number on soft delete (partial unique index)
 
 ## Summary

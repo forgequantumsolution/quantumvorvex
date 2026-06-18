@@ -33,6 +33,7 @@ export const upload = multer({
 export const getDocuments = async (req, res) => {
   try {
     const rows = await prisma.guest.findMany({
+      where: { deletedAt: null },
       select: {
         id: true,
         docId: true,
