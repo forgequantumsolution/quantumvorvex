@@ -1,5 +1,6 @@
 import crypto from 'crypto'
 import prisma from '../utils/prisma.js'
+import { generateTicketNo } from './maintenanceController.js'
 
 // Unguessable per-room token embedded in the room's maintenance QR code.
 export const generateQrToken = () => crypto.randomBytes(16).toString('hex')
@@ -105,6 +106,30 @@ export const updateRoom = async (req, res) => {
       data: updateData,
       include: { type: true },
     })
+
+    // When a room is moved into maintenance from the Rooms tab, open a matching
+    // ticket so it surfaces in the Maintenance tab. Skip if the room already has
+    // an unresolved ticket so we don't stack duplicates on repeated saves.
+    if (status === 'maintenance') {
+      const openTicket = await prisma.maintenanceRequest.findFirst({
+        where: { roomId: id, status: { not: 'Resolved' } },
+      })
+      if (!openTicket) {
+        const ticketNo = await generateTicketNo()
+        await prisma.maintenanceRequest.create({
+          data: {
+            ticketNo,
+            roomId: id,
+            category: 'Other',
+            issueType: 'Other',
+            title: `Room ${room.number} marked for maintenance`,
+            priority: 'Medium',
+            reportedBy: 'Front Desk',
+            status: 'Open',
+          },
+        })
+      }
+    }
 
     return res.status(200).json({ room })
   } catch (err) {

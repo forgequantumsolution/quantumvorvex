@@ -342,6 +342,55 @@ export const uploadGuestDocuments = async (req, res) => {
   }
 }
 
+// Base check-out bill for a guest, shared by the preview and the check-out so the
+// figures shown in the modal match what is actually charged. Uses the open pending
+// invoice when one exists, otherwise a fresh room-only invoice from the room rate.
+// The security deposit is treated as advance already paid toward the stay.
+function computeGuestBill(guest, gstRate) {
+  const pending = guest.invoices?.find((inv) => inv.status === 'Pending')
+
+  let rent, food, amenities, gst, total, amountPaid
+  if (pending) {
+    rent = pending.rent
+    food = pending.food
+    amenities = pending.amenities
+    gst = pending.gstAmount
+    total = pending.total
+    amountPaid = pending.amountPaid
+  } else {
+    rent = guest.roomRate
+    food = 0
+    amenities = 0
+    gst = parseFloat(((rent * gstRate) / 100).toFixed(2))
+    total = parseFloat((rent + gst).toFixed(2))
+    amountPaid = 0
+  }
+
+  const advance = guest.deposit || 0
+  const balanceDue = parseFloat((total - amountPaid - advance).toFixed(2))
+  return { rent, food, amenities, gst, gstRate, total, amountPaid, advance, balanceDue }
+}
+
+// GET /guests/:id/checkout-preview — the bill the check-out modal renders.
+export const getCheckoutPreview = async (req, res) => {
+  try {
+    const { id } = req.params
+    const guest = await prisma.guest.findUnique({
+      where: { id },
+      include: { invoices: true },
+    })
+    if (!guest) return res.status(404).json({ message: 'Guest not found.' })
+
+    const hotel = await prisma.hotel.findFirst()
+    const gstRate = hotel?.gstRate || 12
+
+    return res.status(200).json({ bill: computeGuestBill(guest, gstRate) })
+  } catch (err) {
+    console.error('getCheckoutPreview error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
 // POST /guests/:id/checkout
 export const checkoutGuest = async (req, res) => {
   try {
@@ -364,6 +413,12 @@ export const checkoutGuest = async (req, res) => {
     const hotel = await prisma.hotel.findFirst()
     const gstRate = hotel?.gstRate || 12
 
+    // Settlement inputs from the check-out modal (same shape the bookings flow uses).
+    const extraCharges     = Number(req.body.extraCharges) || 0
+    const finalPayment     = Number(req.body.finalPayment) || 0
+    const paymentMethod    = req.body.paymentMethod || 'cash'
+    const paymentReference = req.body.paymentReference || null
+
     const result = await prisma.$transaction(async (tx) => {
       // Check if a pending invoice exists; if not, create final invoice
       const pendingInvoice = guest.invoices.find((inv) => inv.status === 'Pending')
@@ -374,10 +429,12 @@ export const checkoutGuest = async (req, res) => {
         const invoiceNo = `INV-${String(invoiceCount + 1).padStart(4, '0')}`
         const rent = guest.roomRate
         const food = 0
-        const amenitiesCharge = 0
-        const subtotal = rent + food + amenitiesCharge
+        // Extra charges sit on the amenities line and are added after tax —
+        // GST is only charged on the room (matches the bookings checkout).
+        const amenitiesCharge = extraCharges
+        const subtotal = rent + food
         const gstAmount = parseFloat(((subtotal * gstRate) / 100).toFixed(2))
-        const total = parseFloat((subtotal + gstAmount).toFixed(2))
+        const total = parseFloat((subtotal + gstAmount + extraCharges).toFixed(2))
 
         finalInvoice = await tx.invoice.create({
           data: {
@@ -391,6 +448,41 @@ export const checkoutGuest = async (req, res) => {
             gstAmount,
             total,
             status: 'Pending',
+          },
+        })
+      } else if (extraCharges > 0) {
+        // Append extra charges (untaxed) to the existing pending invoice.
+        finalInvoice = await tx.invoice.update({
+          where: { id: pendingInvoice.id },
+          data: {
+            amenities: pendingInvoice.amenities + extraCharges,
+            total: parseFloat((pendingInvoice.total + extraCharges).toFixed(2)),
+          },
+        })
+      }
+
+      // Record the amount collected at check-out and settle the invoice. The
+      // Payment row feeds the same payments ledger the bookings flow writes to.
+      if (finalPayment > 0 && finalInvoice) {
+        const amountPaid = parseFloat((finalInvoice.amountPaid + finalPayment).toFixed(2))
+        // The deposit counts toward the bill (same as the preview's balance).
+        const fullySettled = amountPaid + (guest.deposit || 0) >= finalInvoice.total
+        finalInvoice = await tx.invoice.update({
+          where: { id: finalInvoice.id },
+          data: {
+            amountPaid,
+            status: fullySettled ? 'Paid' : finalInvoice.status,
+            paidAt: fullySettled ? new Date() : finalInvoice.paidAt,
+          },
+        })
+        await tx.payment.create({
+          data: {
+            guestId: id,
+            invoiceId: finalInvoice.id,
+            amount: finalPayment,
+            method: paymentMethod,
+            reference: paymentReference,
+            type: 'collection',
           },
         })
       }

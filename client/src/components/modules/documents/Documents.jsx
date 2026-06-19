@@ -30,6 +30,13 @@ const DOC_SLOTS = [
   { key: 'additional', label: 'Additional Doc', icon: '📄' },
 ]
 
+const MAX_DOCUMENTS = 4
+
+// docTypes are inconsistent across sources (slot keys like `idFront`, booking
+// labels like `ID Front`, seed values like `Photo`). Normalise to alphanumerics
+// so an existing doc can be matched back to the slot it fills.
+const normDocType = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getVerificationStatus(doc) {
@@ -50,8 +57,20 @@ function UploadModal({ doc, onClose, onSave }) {
   const [files, setFiles] = useState({ idFront: null, idBack: null, guestPhoto: null, additional: null })
   if (!doc) return null
 
-  const handleDrop = (key, e) => {
+  // Which slots are already filled by an existing document (matched by docType),
+  // and how many more uploads are allowed before hitting the cap.
+  const existingTypes = new Set((doc.documents || []).map((d) => normDocType(d.docType)))
+  const isSlotFilled = (slot) =>
+    existingTypes.has(normDocType(slot.key)) || existingTypes.has(normDocType(slot.label))
+  const remaining = Math.max(0, MAX_DOCUMENTS - doc.uploaded)
+  const newUploadCount = Object.values(files).filter(Boolean).length
+  // An empty slot is locked once we've already queued as many files as remain.
+  const slotLocked = (slot) =>
+    isSlotFilled(slot) || (!files[slot.key] && newUploadCount >= remaining)
+
+  const handleDrop = (key, slot, e) => {
     e.preventDefault()
+    if (slotLocked(slot)) return
     const file = e.dataTransfer.files[0]
     if (file) setFiles(f => ({ ...f, [key]: file }))
   }
@@ -62,8 +81,6 @@ function UploadModal({ doc, onClose, onSave }) {
   }
 
   const handleDragOver = (e) => e.preventDefault()
-
-  const newUploadCount = Object.values(files).filter(Boolean).length
 
   return (
     <Modal
@@ -109,45 +126,61 @@ function UploadModal({ doc, onClose, onSave }) {
 
       {/* Upload zones */}
       <div className="grid grid-cols-2 gap-3">
-        {DOC_SLOTS.map(slot => (
-          <div key={slot.key}>
-            <label className="form-label block mb-1.5">
-              {slot.icon} {slot.label}
-            </label>
-            <div
-              className={`upload-zone${files[slot.key] ? ' dragover' : ''} min-h-[80px] flex flex-col items-center justify-center gap-1.5`}
-              onDrop={e => handleDrop(slot.key, e)}
-              onDragOver={handleDragOver}
-              onClick={() => document.getElementById(`file-${slot.key}`).click()}
-            >
-              {files[slot.key] ? (
-                <>
-                  <div className="text-[20px]">✓</div>
-                  <div className="text-[11.5px] text-success-text font-semibold break-all text-center">
-                    {files[slot.key].name}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="text-[22px] text-ink3">+</div>
-                  <div className="text-[11.5px] text-ink3">Click or drop file</div>
-                </>
-              )}
-              <input
-                id={`file-${slot.key}`}
-                type="file"
-                accept="image/*,.pdf"
-                className="hidden"
-                onChange={e => handleFileInput(slot.key, e)}
-              />
+        {DOC_SLOTS.map(slot => {
+          const filled = isSlotFilled(slot)
+          const locked = slotLocked(slot)
+          return (
+            <div key={slot.key}>
+              <label className="form-label block mb-1.5">
+                {slot.icon} {slot.label}
+              </label>
+              <div
+                className={`upload-zone${files[slot.key] ? ' dragover' : ''} min-h-[80px] flex flex-col items-center justify-center gap-1.5${locked ? ' opacity-50 cursor-not-allowed' : ''}`}
+                onDrop={e => handleDrop(slot.key, slot, e)}
+                onDragOver={handleDragOver}
+                onClick={() => { if (!locked) document.getElementById(`file-${slot.key}`).click() }}
+              >
+                {filled ? (
+                  <>
+                    <div className="text-[20px]">✓</div>
+                    <div className="text-[11.5px] text-ink3 font-semibold text-center">
+                      Already uploaded
+                    </div>
+                  </>
+                ) : files[slot.key] ? (
+                  <>
+                    <div className="text-[20px]">✓</div>
+                    <div className="text-[11.5px] text-success-text font-semibold break-all text-center">
+                      {files[slot.key].name}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-[22px] text-ink3">+</div>
+                    <div className="text-[11.5px] text-ink3">{locked ? 'Limit reached' : 'Click or drop file'}</div>
+                  </>
+                )}
+                <input
+                  id={`file-${slot.key}`}
+                  type="file"
+                  accept="image/*,.pdf"
+                  className="hidden"
+                  disabled={locked}
+                  onChange={e => handleFileInput(slot.key, e)}
+                />
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
-      {newUploadCount > 0 && (
+      {remaining === 0 ? (
+        <div className="notif mt-[14px] bg-surface2 text-ink3 text-[12.5px]">
+          All {MAX_DOCUMENTS} document slots are filled for this guest.
+        </div>
+      ) : newUploadCount > 0 && (
         <div className="notif notif-success mt-[14px] bg-success-bg text-[12.5px]">
-          {newUploadCount} new file{newUploadCount > 1 ? 's' : ''} ready to upload
+          {newUploadCount} new file{newUploadCount > 1 ? 's' : ''} ready to upload · {remaining - newUploadCount} slot{remaining - newUploadCount !== 1 ? 's' : ''} left
         </div>
       )}
     </Modal>
