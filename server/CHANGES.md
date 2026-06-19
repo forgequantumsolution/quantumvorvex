@@ -5,6 +5,99 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-19 · Guest check-out: apply extra charges, record payment, serve the bill
+
+## Summary
+The guest check-out endpoint previously ignored the request body — it only created/found a pending
+invoice and marked the guest checked out. Now it applies the settlement entered in the check-out
+modal (matching how the bookings flow already works) and exposes the bill so the frontend stops
+using a hardcoded mock.
+
+## `src/controllers/guestsController.js`
+- Added `computeGuestBill(guest, gstRate)` — the base check-out bill, shared by the preview and the
+  check-out so the figures shown match what's charged. Uses the open pending invoice if present,
+  else a room-only invoice from `guest.roomRate` + GST. The security deposit is treated as advance
+  already paid: `balanceDue = total − amountPaid − advance`.
+- Added `getCheckoutPreview` (`GET /guests/:id/checkout-preview`) returning `{ bill }`.
+- `checkoutGuest`: now reads `extraCharges` / `finalPayment` / `paymentMethod` / `paymentReference`.
+  Extra charges go on the `amenities` line, added **after** tax (GST on the room only, matching the
+  bookings checkout). Collected amount bumps `invoice.amountPaid` and marks the invoice `Paid` +
+  stamps `paidAt` when settled (deposit counts toward the total). Writes a `Payment` row
+  (`type: 'collection'`, with method + reference) into the same ledger the bookings flow uses.
+
+## `src/routes/guests.js`
+- Registered `GET /:id/checkout-preview` → `getCheckoutPreview` (before the existing `/checkout` POST).
+
+## Notes
+- No DB migration: extra charges ride on the `amenities` line since `Invoice` has no dedicated
+  `extraCharges` column.
+- Deposit modeling: a settled guest invoice can end up `status: 'Paid'` with `amountPaid < total`
+  (the deposit covers the gap rather than being written into `amountPaid`). Consistent end-to-end,
+  but revisit if billing reports expect `amountPaid == total` on paid invoices.
+
+## Testing
+Not run — verified `node --check` on the changed files only.
+
+---
+
+# Session — 2026-06-19 · Cap guest documents at 4
+
+## Summary
+Fixed: the Documents tab let you keep uploading past the limit (e.g. "6 / 4"). Nothing actually
+enforced a cap — `uploadDocument` always `create`d a new `Document`, with no limit and no
+duplicate check. Added a hard server-side cap so the "x / 4" the UI shows is real.
+
+## `src/controllers/documentsController.js`
+- Added `MAX_DOCUMENTS = 4`.
+- `uploadDocument`: before creating, counts the guest's `Document` rows **plus** their bookings'
+  `BookingDocument` rows (the same total the client merges into "x / 4") and rejects with `409`
+  once at the cap.
+- `uploadDocument`: rejects a duplicate `docType` (re-filling an already-used slot) with `409`.
+- Cleans up the multer-saved temp file on every rejection path (cap, duplicate, and the existing
+  "guest not found" case) so blocked uploads don't leave orphan files on disk.
+
+Note: only prevents *new* over-limit uploads — guests already over 4 (from earlier) are not
+retroactively trimmed.
+
+---
+
+# Session — 2026-06-19 · Rooms ⇄ Maintenance sync
+
+## Summary
+Fixed: rooms marked for maintenance in the **Rooms** tab never appeared in the **Maintenance** tab.
+The two were disconnected — Rooms wrote `Room.status = 'maintenance'`, Maintenance only reads
+`MaintenanceRequest` rows. Now the room board and the ticket list stay in sync both directions.
+
+## Sync rules
+| Action | Effect |
+|---|---|
+| Rooms tab → Mark Maintenance | Opens a ticket (skipped if room already has an unresolved one) |
+| Maintenance tab → New Ticket (`createRequest`) | Sets room → `maintenance` |
+| Guest QR report (`createGuestRequest`) | Sets room → `maintenance` |
+| Resolve a ticket (`updateRequest`) | Releases room → `available`, only if it's in maintenance **and** no other ticket is still open |
+
+Moving a room **out** of maintenance manually in the Rooms tab is left untouched (does not
+auto-resolve tickets — closing work items silently would be wrong).
+
+## `src/controllers/maintenanceController.js`
+- Exported `generateTicketNo` so the rooms controller can mint consistent `MT-2026-00X` numbers.
+- `createRequest` / `createGuestRequest`: set the room's `status='maintenance'` (only when not already).
+- `updateRequest`: on `status='Resolved'`, release the room to `available` if it's in maintenance
+  and has no other unresolved tickets (guards against releasing a room with open work).
+
+## `src/controllers/roomsController.js`
+- `updateRoom`: when `status` transitions to `'maintenance'`, auto-create a `MaintenanceRequest`
+  (`Room N marked for maintenance`, Medium/Open/Front Desk) unless an unresolved ticket already
+  exists for that room — so repeated saves don't stack duplicates.
+
+## Testing
+Drove the real controller functions against the dev DB with a throwaway room (mock req/res): all
+10 checks passed — ticket creation, no-duplicate on re-save, feed visibility, room release on
+resolve, room marked on ticket create, and room held in maintenance until the **last** of multiple
+tickets is resolved.
+
+---
+
 # Session — 2026-06-19 · Billing (invoice soft delete) + Documents (hard delete)
 
 ## Summary

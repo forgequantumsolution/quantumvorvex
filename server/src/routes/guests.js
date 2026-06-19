@@ -6,6 +6,7 @@ import {
   createGuest,
   updateGuest,
   deleteGuest,
+  getCheckoutPreview,
   checkoutGuest,
   renewGuestStay,
   getGuestCommunications,
@@ -26,6 +27,7 @@ router.get('/:id', getGuest)
 router.put('/:id', updateGuest)
 router.delete('/:id', deleteGuest)
 router.post('/:id/documents', uploadDocs.array('documents', 12), uploadGuestDocuments)
+router.get('/:id/checkout-preview', getCheckoutPreview)
 router.post('/:id/checkout', checkoutGuest)
 router.post('/:id/renew', renewGuestStay)
 router.get('/:id/communications', getGuestCommunications)

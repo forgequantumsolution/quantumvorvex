@@ -4,7 +4,7 @@ import logger from '../utils/logger.js'
 const YEAR = 2026
 
 // Ticket number: MT-2026-001 (derived from the highest existing number).
-const generateTicketNo = async () => {
+export const generateTicketNo = async () => {
   const last = await prisma.maintenanceRequest.findFirst({
     orderBy: { createdAt: 'desc' },
     select: { ticketNo: true },
@@ -68,6 +68,11 @@ export const createRequest = async (req, res) => {
       include,
     })
 
+    // Keep the room board in sync: a new ticket puts the room into maintenance.
+    if (room.status !== 'maintenance') {
+      await prisma.room.update({ where: { id: roomId }, data: { status: 'maintenance' } })
+    }
+
     // Alert the team on high-severity issues
     if (priority === 'High' || priority === 'Urgent') {
       await prisma.notification.create({
@@ -126,6 +131,11 @@ export const createGuestRequest = async (req, res) => {
       include,
     })
 
+    // A guest-reported issue also moves the room into maintenance.
+    if (room.status !== 'maintenance') {
+      await prisma.room.update({ where: { id: room.id }, data: { status: 'maintenance' } })
+    }
+
     // Surface guest-reported issues to the team.
     await prisma.notification.create({
       data: { type: 'info', message: `Guest reported: ${title} in Room ${room.number} (${ticketNo})` },
@@ -149,6 +159,18 @@ export const updateRequest = async (req, res) => {
     if (data.status && data.status !== 'Resolved') data.resolvedAt = null
 
     const request = await prisma.maintenanceRequest.update({ where: { id }, data, include })
+
+    // When a ticket is resolved, release the room back to available — but only
+    // if it's currently in maintenance and has no other unresolved tickets.
+    if (data.status === 'Resolved' && request.room?.status === 'maintenance') {
+      const stillOpen = await prisma.maintenanceRequest.findFirst({
+        where: { roomId: request.roomId, status: { not: 'Resolved' } },
+      })
+      if (!stillOpen) {
+        await prisma.room.update({ where: { id: request.roomId }, data: { status: 'available' } })
+      }
+    }
+
     res.json({ request })
   } catch (e) {
     if (e.code === 'P2025') return res.status(404).json({ message: 'Ticket not found.' })

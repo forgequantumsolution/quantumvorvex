@@ -6,6 +6,69 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-19 · Documents upload respects the 4-doc limit
+
+## Summary
+The Documents tab's Upload modal always showed 4 *empty* slots regardless of what was already
+uploaded, so you could keep adding files and push the count past the limit (e.g. "6 / 4"). The
+modal is now aware of existing documents: filled slots are locked, and you can't queue more files
+than remain before the cap. Pairs with the new server-side cap (see server CHANGES.md).
+
+## File changes
+
+### `src/components/modules/documents/Documents.jsx`
+- Added `MAX_DOCUMENTS = 4` and a `normDocType` helper (normalises to alphanumerics) so existing
+  docs match back to their slot despite inconsistent `docType` naming across sources (`idFront`
+  vs booking labels like `ID Front` vs seed values like `Photo`).
+- `UploadModal`: slots whose `docType` already exists render as "✓ Already uploaded", disabled and
+  non-clickable.
+- `UploadModal`: empty slots lock with "Limit reached" once queued files reach the remaining count
+  (`4 − uploaded`); the input is `disabled` and click/drop are guarded.
+- `UploadModal`: footer notice shows slots left, or "All 4 document slots are filled" when none
+  remain.
+
+---
+
+# Session — 2026-06-19 · Unify the check-out modal across Bookings & Guests
+
+## Summary
+The Bookings and Guests tabs used two different check-out modals. Unified them onto one shared
+component (the Guests two-step "Bill Summary → Confirm & Pay" design), built as a superset so the
+booking-only billing controls (extra charges, partial "collect now", payment reference) are opt-in
+via flags and nothing is lost. Both tabs now show identical fields. Also made the payment-method
+list uniform (single lowercase list) and switched the Guests bill from a hardcoded frontend mock to
+the real bill fetched from the backend.
+
+## File changes
+
+### `src/components/modules/checkout/CheckOutModal.jsx`
+- Rewrote as the shared, entity-agnostic modal. Callers pass a normalised bill
+  (`guestName`, `folio`, `room`, `stayPeriod`, `lineItems`, `advance`, `balanceDue`) and get raw
+  inputs back via `onConfirm({ extra, finalPayment, paymentMethod, paymentReference, notes, proofFile })`.
+- Booking extras gated behind `allowExtraCharges` / `allowPartialPayment` (extra-charges field,
+  editable "collect now", reference field, running "balance after check-out"). Guests render the
+  fixed full-balance box when flags are off.
+- `DEFAULT_METHODS` is now the lowercase list (`cash`/`card`/`upi`/`bank_transfer`/`cheque`/`other`)
+  shared by both flows. Reference field shows for non-cash when collecting.
+- No reset effect: both call sites render the modal conditionally (unmounts on close), so lazy
+  state initialisers default "collect now" to the full balance on every open.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- Uses the shared modal with normalised props + both flags on; dropped the local `PAYMENT_METHODS`
+  (uses shared default). `handleCheckOut` reads the new result shape and folds `extra` onto the
+  booking's existing charges.
+
+### `src/components/modules/guests/Guests.jsx`
+- Deleted the inline `CheckoutModal` (~155 lines) and the hardcoded `calcCheckout` mock.
+- `openCheckout` now fetches the real bill via `guestsApi.checkoutPreview(id)` and renders the modal
+  only once the bill loads; both flags enabled. `handleCheckoutConfirm` sends `extraCharges`,
+  `finalPayment`, `paymentMethod`, `paymentReference`.
+
+### `src/api/client.js`
+- Added `guestsApi.checkoutPreview(id)` → `GET /guests/:id/checkout-preview`.
+
+---
+
 # Session — 2026-06-19 · Housekeeping staff list fetched dynamically from users
 
 ## Summary

@@ -132,6 +132,10 @@ export const getDocuments = async (req, res) => {
   }
 }
 
+// Max KYC documents a guest may hold (ID front/back, photo, additional).
+// Mirrors the 4 upload slots the client shows.
+const MAX_DOCUMENTS = 4
+
 // POST /documents/:guestId
 export const uploadDocument = async (req, res) => {
   try {
@@ -148,7 +152,32 @@ export const uploadDocument = async (req, res) => {
 
     const guest = await prisma.guest.findUnique({ where: { id: guestId } })
     if (!guest) {
+      // Reject before persisting; the multer-saved temp file is cleaned up below.
+      unlinkDocFile(`/uploads/documents/${req.file.filename}`)
       return res.status(404).json({ message: 'Guest not found.' })
+    }
+
+    // Cap the total at MAX_DOCUMENTS. The client merges a guest's own Document
+    // rows with the ID docs captured on their bookings, so count both here to
+    // keep the server's limit consistent with the "x / 4" the user sees.
+    const [docCount, bookingDocCount] = await Promise.all([
+      prisma.document.count({ where: { guestId } }),
+      prisma.bookingDocument.count({ where: { booking: { guestId } } }),
+    ])
+    if (docCount + bookingDocCount >= MAX_DOCUMENTS) {
+      unlinkDocFile(`/uploads/documents/${req.file.filename}`)
+      return res
+        .status(409)
+        .json({ message: `Document limit reached (${MAX_DOCUMENTS} per guest).` })
+    }
+
+    // Block re-uploading a slot that's already filled (same docType).
+    const duplicate = await prisma.document.findFirst({ where: { guestId, docType } })
+    if (duplicate) {
+      unlinkDocFile(`/uploads/documents/${req.file.filename}`)
+      return res
+        .status(409)
+        .json({ message: `A "${docType}" document already exists for this guest.` })
     }
 
     const url = `/uploads/documents/${req.file.filename}`

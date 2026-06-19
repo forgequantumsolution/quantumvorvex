@@ -3,6 +3,7 @@ import { Formik, Form } from 'formik'
 import { LuTrash2 } from 'react-icons/lu'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
+import CheckOutModal from '../checkout/CheckOutModal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import FormikField from '../../ui/FormikField'
@@ -101,15 +102,6 @@ function getTagClass(tag) {
   if (tag === 'Corporate') return 'gtag gtag-corp'
   if (tag === 'Long-term') return 'gtag gtag-long'
   return 'gtag gtag-long'
-}
-
-function calcCheckout(guest) {
-  const rent = guest.stayType === 'monthly' ? 14000 : 800
-  const food = guest.foodPlan === 'All Meals' ? 8000 : guest.foodPlan === 'No Meals' ? 0 : 2500
-  const amenities = guest.amenities.length * 800
-  const subtotal = rent + food + amenities
-  const gst = Math.round(subtotal * 0.12)
-  return { rent, food, amenities, gst, total: subtotal + gst }
 }
 
 function exportGuestCSV(guests) {
@@ -412,163 +404,6 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
   )
 }
 
-// ─── Checkout Modal ────────────────────────────────────────────────────────────
-
-const MAX_PROOF_BYTES = 10 * 1024 * 1024 // matches the server's 10MB limit
-
-function CheckoutModal({ guest, onClose, onConfirm }) {
-  const [step, setStep] = useState(1)
-  const [payMethod, setPayMethod] = useState('Cash')
-  const [notes, setNotes] = useState('')
-  const [settled, setSettled] = useState(false)
-  const [proof, setProof] = useState(null)
-  const [proofError, setProofError] = useState('')
-
-  if (!guest) return null
-  const { rent, food, amenities, gst, total } = calcCheckout(guest)
-  const dueDate = getDueDate(guest)
-  const balance = total - guest.advance
-
-  const pickProof = (e) => {
-    const file = e.target.files?.[0] || null
-    setProofError('')
-    if (file && file.size > MAX_PROOF_BYTES) {
-      setProof(null); setProofError('File is too large (max 10MB).')
-      e.target.value = ''
-      return
-    }
-    setProof(file)
-  }
-
-  const handleConfirm = () => {
-    if (step === 1) { setStep(2); return }
-    onConfirm(guest, notes, payMethod, proof)
-  }
-
-  return (
-    <Modal
-      isOpen={!!guest}
-      onClose={onClose}
-      title={`Check-Out — ${guest.name}`}
-      maxWidth="520px"
-      footer={
-        <>
-          <button className="btn btn-outline btn-sm" onClick={step === 2 ? () => setStep(1) : onClose}>
-            {step === 2 ? 'Back' : 'Cancel'}
-          </button>
-          <button
-            className="btn btn-danger btn-sm"
-            disabled={step === 2 && !settled}
-            onClick={handleConfirm}
-          >
-            {step === 1 ? 'Review & Confirm →' : 'Complete Check-Out'}
-          </button>
-        </>
-      }
-    >
-      {/* Step indicator */}
-      <div className="flex gap-1.5 mb-5">
-        {['Bill Summary', 'Confirm & Pay'].map((s, i) => (
-          <div key={s} className="flex-1 text-center">
-            <div className={`h-[3px] rounded-sm mb-[5px] ${step > i ? 'bg-gold' : 'bg-line'}`} />
-            <span className={`text-[10.5px] font-semibold ${step > i ? 'text-gold' : 'text-ink3'}`}>{s}</span>
-          </div>
-        ))}
-      </div>
-
-      {step === 1 && (
-        <>
-          {/* Room + period */}
-          <div className="bg-surface2 rounded-lg px-3.5 py-3 mb-3.5 border border-line">
-            <div className="flex justify-between mb-1.5">
-              <span className="t-xs text-ink3">Room</span>
-              <span className="t-title" style={{ fontFamily: 'var(--font-mono)' }}>{guest.room}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="t-xs text-ink3">Stay Period</span>
-              <span className="text-[12.5px] font-medium">{formatDate(guest.checkInDate)} → {formatDate(dueDate)}</span>
-            </div>
-          </div>
-
-          {/* Bill breakdown */}
-          <div className="mb-3.5">
-            {[['Room Rent', rent], ['Food Plan', food], ['Amenities', amenities], ['GST (12%)', gst]].map(([k, v]) => v > 0 && (
-              <div key={k} className="flex justify-between py-[7px] border-b border-line">
-                <span className="t-sm text-ink2">{k}</span>
-                <span className="t-sm" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(v)}</span>
-              </div>
-            ))}
-            <div className="flex justify-between py-[9px] border-b border-line">
-              <span className="t-sm text-ink2">Advance Paid</span>
-              <span className="t-sm text-success-text" style={{ fontFamily: 'var(--font-mono)' }}>−{formatCurrency(guest.advance)}</span>
-            </div>
-            <div className="t-h3 flex justify-between py-[11px]">
-              <span>Balance Due</span>
-              <span style={{ fontFamily: 'var(--font-mono)', color: balance > 0 ? 'var(--red-text)' : 'var(--green-text)' }}>
-                {formatCurrency(Math.abs(balance))} {balance <= 0 ? '(refund)' : ''}
-              </span>
-            </div>
-          </div>
-
-          {/* Checklist */}
-          <div className="t-xs text-ink3 mt-2.5">
-            Room will be marked as <strong>Dirty</strong> and queued for housekeeping automatically.
-          </div>
-        </>
-      )}
-
-      {step === 2 && (
-        <>
-          <div className="bg-[var(--gold-bg)] rounded-lg px-3.5 py-3 mb-4 flex justify-between items-center">
-            <span className="font-semibold text-gold">Amount to Collect</span>
-            <span className="t-h3 text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(Math.max(balance, 0))}</span>
-          </div>
-
-          <div className="mb-3">
-            <label className="form-label block mb-[5px]">Payment Method</label>
-            <select className="form-select" value={payMethod} onChange={e => setPayMethod(e.target.value)}>
-              {['Cash', 'UPI', 'Card', 'Bank Transfer', 'Cheque'].map(m => <option key={m}>{m}</option>)}
-            </select>
-          </div>
-
-          <div className="mb-3.5">
-            <label className="form-label block mb-[5px]">Remarks (optional)</label>
-            <textarea className="form-textarea" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Key return confirmation, damages, etc." />
-          </div>
-
-          <div className="mb-3.5">
-            <label className="form-label block mb-[5px]">Payment screenshot / proof (optional)</label>
-            {proof ? (
-              <div className="flex items-center justify-between gap-3 rounded-lg border border-line2 bg-surface px-3 py-2">
-                <span className="t-sm text-ink truncate">📎 {proof.name}</span>
-                <button
-                  type="button"
-                  className="t-xs text-ink3 hover:text-danger-text shrink-0"
-                  onClick={() => { setProof(null); setProofError('') }}
-                >
-                  Remove
-                </button>
-              </div>
-            ) : (
-              <label className="flex items-center gap-2 cursor-pointer rounded-lg border border-dashed border-line2 bg-surface px-3 py-2.5 t-sm text-ink3 hover:border-gold hover:text-ink2">
-                <span className="text-base">⬆</span>
-                <span>Attach an image or PDF (e.g. UPI / card receipt)</span>
-                <input type="file" accept="image/*,.pdf" className="hidden" onChange={pickProof} />
-              </label>
-            )}
-            {proofError && <span className="block text-[11.5px] text-danger mt-1">{proofError}</span>}
-          </div>
-
-          <label className="t-sm flex items-center gap-[9px] cursor-pointer">
-            <input type="checkbox" checked={settled} onChange={e => setSettled(e.target.checked)} />
-            Payment received & key returned — confirm checkout
-          </label>
-        </>
-      )}
-    </Modal>
-  )
-}
-
 // ─── Edit Guest Modal ──────────────────────────────────────────────────────────
 
 function EditGuestModal({ guest, onClose, onSave }) {
@@ -670,6 +505,7 @@ export default function Guests() {
 
   const [profileGuest,  setProfileGuest]  = useState(null)
   const [checkoutGuest, setCheckoutGuest] = useState(null)
+  const [checkoutBill,  setCheckoutBill]  = useState(null)
   const [editGuest,     setEditGuest]     = useState(null)
   const [deleteGuest,   setDeleteGuest]   = useState(null)
   const [deleting,      setDeleting]      = useState(false)
@@ -731,7 +567,9 @@ export default function Guests() {
     }
   }
 
-  const handleCheckoutConfirm = async (guest, notes, payMethod, proofFile) => {
+  const handleCheckoutConfirm = async ({ notes, paymentMethod, paymentReference, finalPayment, extra, proofFile }) => {
+    const guest = checkoutGuest
+    if (!guest) return
     try {
       // Attach the payment screenshot first so a failed upload aborts the check-out.
       if (proofFile) {
@@ -740,8 +578,15 @@ export default function Guests() {
         form.append('docTypes', JSON.stringify(['payment_proof']))
         await guestsApi.uploadDocuments(guest.id, form)
       }
-      await guestsApi.checkout(guest.id, { notes, paymentMethod: payMethod })
+      await guestsApi.checkout(guest.id, {
+        notes,
+        paymentMethod,
+        paymentReference,
+        finalPayment,
+        extraCharges: Number(extra) || 0,
+      })
       setCheckoutGuest(null)
+      setCheckoutBill(null)
       addToast(`${guest.name} checked out. Room marked for housekeeping.`, 'success')
       reload()
     } catch (err) {
@@ -799,7 +644,21 @@ export default function Guests() {
     } catch { /* keep list-level data */ }
   }
 
-  const openCheckout = (guest) => { setProfileGuest(null); setCheckoutGuest(guest) }
+  // Open the check-out modal and load the real bill from the backend so the
+  // figures shown match what the server will actually charge.
+  const openCheckout = async (guest) => {
+    setProfileGuest(null)
+    setCheckoutBill(null)
+    setCheckoutGuest(guest)
+    try {
+      const { data } = await guestsApi.checkoutPreview(guest.id)
+      setCheckoutBill(data.bill)
+    } catch (err) {
+      setCheckoutGuest(null)
+      addToast(err.response?.data?.message || 'Could not load checkout bill', 'error')
+    }
+  }
+  const closeCheckout = () => { setCheckoutGuest(null); setCheckoutBill(null) }
   const openEdit     = (guest) => { setProfileGuest(null); setEditGuest(guest) }
 
   return (
@@ -890,7 +749,7 @@ export default function Guests() {
                       <div className="flex gap-[5px]">
                         <button className="btn btn-outline btn-xs" onClick={() => openProfile(guest)}>View</button>
                         {(guest.status === 'Active' || guest.status === 'Due') && (
-                          <button className="btn btn-danger btn-xs" onClick={() => setCheckoutGuest(guest)}>Checkout</button>
+                          <button className="btn btn-danger btn-xs" onClick={() => openCheckout(guest)}>Checkout</button>
                         )}
                         {guest.status === 'Due' && (
                           <button className="btn btn-xs bg-success-bg text-success-text"
@@ -920,7 +779,23 @@ export default function Guests() {
 
       {/* Modals */}
       <GuestProfileModal guest={profileGuest} onClose={() => setProfileGuest(null)} onCheckout={openCheckout} onEdit={openEdit} />
-      <CheckoutModal key={checkoutGuest?.id} guest={checkoutGuest} onClose={() => setCheckoutGuest(null)} onConfirm={handleCheckoutConfirm} />
+      {checkoutGuest && checkoutBill && (
+        <CheckOutModal
+          key={checkoutGuest.id}
+          isOpen
+          guestName={checkoutGuest.name}
+          folio={checkoutGuest.docId}
+          room={checkoutGuest.room}
+          stayPeriod={`${formatDate(checkoutGuest.checkInDate)} → ${formatDate(getDueDate(checkoutGuest))}`}
+          lineItems={[['Room Rent', checkoutBill.rent], ['Food Plan', checkoutBill.food], ['Amenities', checkoutBill.amenities], [`GST (${checkoutBill.gstRate}%)`, checkoutBill.gst]]}
+          advance={checkoutBill.advance}
+          balanceDue={checkoutBill.balanceDue}
+          allowExtraCharges
+          allowPartialPayment
+          onClose={closeCheckout}
+          onConfirm={handleCheckoutConfirm}
+        />
+      )}
       <EditGuestModal guest={editGuest} onClose={() => setEditGuest(null)} onSave={handleEditSave} />
       <ConfirmModal
         isOpen={!!deleteGuest}
