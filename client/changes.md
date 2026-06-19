@@ -6,6 +6,28 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-19 · Housekeeping staff list fetched dynamically from users
+
+## Summary
+The Housekeeping module's staff dropdowns (Daily List filter, per-room "Assigned To" select, and
+the room Assignment modal) were populated from a hardcoded `HK_STAFF` array of placeholder names.
+Replaced it with a dynamic list fetched from the users API. On mount, the module now calls
+`usersApi.getAll()`, keeps only **active** users, maps to their names, sorts alphabetically, and
+threads the result down as a `staff` prop. The loader fails soft (leaves the list empty on error),
+matching the existing `loadLinen` behavior. No backend change.
+
+Note: this lists all active users, since the user model has no dedicated "housekeeping staff" flag.
+
+## File changes
+
+### `src/components/modules/housekeeping/Housekeeping.jsx`
+- Removed the hardcoded `HK_STAFF` constant.
+- Imported `usersApi`; added `staff` state and a `loadStaff()` loader (active users only, sorted),
+  called from the boot `useEffect` alongside `loadBoard`/`loadLinen`.
+- Threaded `staff` into `DailyListTab` (Staff filter + Assigned To select) and `AssignRoomModal`.
+
+---
+
 # Session — 2026-06-19 · Fix Edit Template modal in Settings → Notifications
 
 ## Summary
