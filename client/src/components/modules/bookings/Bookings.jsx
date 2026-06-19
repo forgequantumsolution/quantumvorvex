@@ -9,7 +9,8 @@ import ConfirmModal from '../../ui/ConfirmModal'
 import { useToast } from '../../../hooks/useToast'
 import { useAppSelector, usePrimaryAction } from '../../../store/hooks'
 import { bookingsApi } from '../../../api/client'
-import { formatCurrency } from '../../../utils/format'
+import { formatCurrency, formatDate } from '../../../utils/format'
+import { stayLabel } from '../../../utils/booking'
 import { normalizeBooking as normalize } from '../../../utils/normalizeBooking'
 
 const TABS = [
@@ -135,8 +136,11 @@ export default function Bookings() {
   const handleConfirm  = (b) => runAction(b.id, () => bookingsApi.confirm(b.id), `Booking ${b.bookingNo} confirmed`)
 
   // Settle the bill + (optional) payment proof, then check out — via the modal.
-  const handleCheckOut = async ({ id, finalPayment, extraCharges, paymentMethod, paymentReference, proofFile }) => {
-    const b = bookings.find((x) => x.id === id)
+  // The modal returns raw inputs; map `extra` onto the booking's existing charges.
+  const handleCheckOut = async ({ extra, finalPayment, paymentMethod, paymentReference, proofFile }) => {
+    const b = checkOutTarget
+    if (!b) return
+    const id = b.id
     setBusyId(id)
     try {
       // Attach the payment screenshot first so a failed upload aborts the check-out.
@@ -146,8 +150,9 @@ export default function Bookings() {
         form.append('docTypes', JSON.stringify(['payment_proof']))
         await bookingsApi.uploadDocuments(id, form)
       }
+      const extraCharges = (Number(b.extraCharges) || 0) + (Number(extra) || 0)
       await bookingsApi.checkOut(id, { finalPayment, extraCharges, paymentMethod, paymentReference })
-      toast(`${b?.guestName || 'Guest'} checked out`)
+      toast(`${b.guestName || 'Guest'} checked out`)
       setCheckOutTarget(null)
       reload()
     } catch (err) {
@@ -245,13 +250,24 @@ export default function Bookings() {
         onClose={() => setCancelTarget(null)}
         onConfirm={handleCancel}
       />
-      <CheckOutModal
-        isOpen={!!checkOutTarget}
-        booking={checkOutTarget}
-        submitting={busyId === checkOutTarget?.id}
-        onClose={() => setCheckOutTarget(null)}
-        onConfirm={handleCheckOut}
-      />
+      {checkOutTarget && (
+        <CheckOutModal
+          isOpen
+          guestName={checkOutTarget.guestName}
+          folio={checkOutTarget.bookingNo}
+          room={`${checkOutTarget.roomNumber} · ${checkOutTarget.roomType}`}
+          stayPeriod={`${formatDate(checkOutTarget.checkedInAt || checkOutTarget.fromDate)} · ${stayLabel(checkOutTarget)}`}
+          lineItems={[['Total amount', checkOutTarget.amount]]}
+          advance={checkOutTarget.advance}
+          balanceDue={checkOutTarget.balanceDue}
+          allowExtraCharges
+          allowPartialPayment
+          footnote={`Confirming releases Room ${checkOutTarget.roomNumber} and moves the guest to checked-out history.`}
+          submitting={busyId === checkOutTarget.id}
+          onClose={() => setCheckOutTarget(null)}
+          onConfirm={handleCheckOut}
+        />
+      )}
       <InvoiceModal
         isOpen={!!invoiceTarget}
         booking={invoiceTarget}

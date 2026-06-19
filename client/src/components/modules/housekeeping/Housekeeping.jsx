@@ -4,7 +4,7 @@ import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import { useToast } from '../../../hooks/useToast'
 import { useAppSelector } from '../../../store/hooks'
-import { housekeepingApi } from '../../../api/client'
+import { housekeepingApi, usersApi } from '../../../api/client'
 import { formatDate, timeAgo } from '../../../utils/format'
 
 // ─── Status config ──────────────────────────────────────────────────────────
@@ -16,8 +16,6 @@ const HK_STATUSES = {
   cleaning_in_progress:{ label: 'Cleaning',   color: 'var(--blue)',      bg: 'var(--blue-bg)',   text: 'var(--blue-text)' },
   maintenance:         { label: 'Maintenance', color: 'var(--grey-text)', bg: 'var(--grey-bg)',   text: 'var(--grey-text)' },
 }
-
-const HK_STAFF = ['Priya Desai', 'Meena Kumari', 'Sunita Rao', 'Rekha Singh', 'Anita Joshi']
 
 const CHECKLIST_ITEMS = [
   'Minibar stocked', 'Toiletries refilled', 'AC functional', 'TV functional',
@@ -86,7 +84,7 @@ function linenDueLabel(nextDue) {
 }
 
 // ─── Room Assignment Modal ────────────────────────────────────────────────────
-function AssignRoomModal({ room, onClose, onSave }) {
+function AssignRoomModal({ room, onClose, onSave, staff }) {
   const [status, setStatus] = useState(room?.status || 'clean_available')
   const [assignedTo, setAssignedTo] = useState(room?.assignedTo || '')
 
@@ -121,7 +119,7 @@ function AssignRoomModal({ room, onClose, onSave }) {
           <label className="form-label block mb-[5px]">Assign Staff</label>
           <select className="form-select" value={assignedTo} onChange={e => setAssignedTo(e.target.value)}>
             <option value="">— Unassigned —</option>
-            {HK_STAFF.map(s => <option key={s} value={s}>{s}</option>)}
+            {staff.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
       </div>
@@ -198,7 +196,7 @@ function BoardTab({ rooms, onRoomClick }) {
 }
 
 // ─── Daily List Tab ───────────────────────────────────────────────────────────
-function DailyListTab({ rooms, onUpdateRoom }) {
+function DailyListTab({ rooms, onUpdateRoom, staff }) {
   const addToast = useToast()
   const [staffFilter, setStaffFilter] = useState('All')
   const [floorFilter, setFloorFilter] = useState('All')
@@ -240,7 +238,7 @@ function DailyListTab({ rooms, onUpdateRoom }) {
           <label className="form-label whitespace-nowrap">Staff</label>
           <select className="form-select w-40" value={staffFilter} onChange={e => setStaffFilter(e.target.value)}>
             <option value="All">All Staff</option>
-            {HK_STAFF.map(s => <option key={s} value={s}>{s}</option>)}
+            {staff.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-1.5">
@@ -292,7 +290,7 @@ function DailyListTab({ rooms, onUpdateRoom }) {
                         onChange={e => handleAssign(room.id, e.target.value)}
                       >
                         <option value="">— Unassigned —</option>
-                        {HK_STAFF.map(s => <option key={s} value={s}>{s}</option>)}
+                        {staff.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
                     <td className="t-xs text-ink3">
@@ -565,6 +563,7 @@ export default function Housekeeping() {
   const addToast = useToast()
   const currentUser = useAppSelector(s => s.auth.currentUser)
   const [rooms, setRooms] = useState([])
+  const [staff, setStaff] = useState([])
   const [linenByRoom, setLinenByRoom] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -584,6 +583,21 @@ export default function Housekeeping() {
     }
   }, [])
 
+  const loadStaff = useCallback(async () => {
+    try {
+      const { data } = await usersApi.getAll()
+      const list = Array.isArray(data) ? data : (data.users || [])
+      const names = list
+        .filter(u => u.status === 'active')
+        .map(u => u.name)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b))
+      setStaff(names)
+    } catch {
+      /* staff list is non-critical; leave empty on failure */
+    }
+  }, [])
+
   const loadLinen = useCallback(async () => {
     try {
       const { data } = await housekeepingApi.getLinen()
@@ -600,7 +614,7 @@ export default function Housekeeping() {
     }
   }, [])
 
-  useEffect(() => { loadBoard(); loadLinen() }, [loadBoard, loadLinen])
+  useEffect(() => { loadBoard(); loadLinen(); loadStaff() }, [loadBoard, loadLinen, loadStaff])
 
   // Stat counts
   const cleanCount    = rooms.filter(r => r.status === 'clean_available').length
@@ -725,7 +739,7 @@ export default function Housekeeping() {
             </div>
 
             <div data-tab-id="daily">
-              <DailyListTab rooms={rooms} onUpdateRoom={handleUpdateRoom} />
+              <DailyListTab rooms={rooms} onUpdateRoom={handleUpdateRoom} staff={staff} />
             </div>
 
             <div data-tab-id="linen">
@@ -745,6 +759,7 @@ export default function Housekeeping() {
           room={assignRoomTarget}
           onClose={() => setAssignRoomTarget(null)}
           onSave={handleAssignSave}
+          staff={staff}
         />
       )}
     </div>
