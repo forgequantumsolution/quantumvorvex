@@ -6,6 +6,90 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-21 · Invoice config tab + editable invoice serial
+
+## Summary
+Added a new **Invoice** tab in Settings to configure the invoice serial (prefix / next number /
+padding), place of supply, bank details, and terms. The invoice preview now shows the serial in an
+editable field so it can be overridden per invoice.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- New `InvoiceConfigTab` — serial numbering (with a live "next will be …" preview), place of supply,
+  bank details, and terms & conditions; saves via `settingsApi.update({ hotel })`. Numeric fields are
+  coerced before sending. Added `invoice` to `ALL_TABS` (after Tax & Pricing) and wired its panel.
+- Seeded invoice defaults into `initSettings` so inputs are controlled before `GET /settings` loads.
+
+### `src/components/modules/bookings/InvoiceModal.jsx`
+- Fetches invoice JSON first (assigns + returns the serial), then the HTML preview, so both share one
+  number. Added an editable "Invoice No." field with an Update action → `bookingsApi.updateInvoiceNo`,
+  which reloads the preview. Object-URL lifecycle moved to a ref so the refreshed preview doesn't leak.
+
+### `src/api/client.js`
+- `bookingsApi.updateInvoiceNo(id, invoiceNo)` → `PATCH /bookings/:id/invoice-no`.
+
+### `src/utils/permissions.js`
+- Added `invoice` to the owner and manager settings-tab allow-lists.
+
+---
+
+# Session — 2026-06-20 · Settings: upload stamp & signature for invoices
+
+## Summary
+The tax invoice's signature box was just a label ("Signature" + hotel name). Added a way to upload a
+combined stamp + authorised-signature image in Settings → Hotel Profile, which then prints in the
+invoice signature area. Mirrors the existing logo-upload flow but uploads the image as-is (no crop),
+since the stamp is rectangular.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- `HotelProfileTab`: added a "Stamp & Signature" uploader below the logo — rectangular preview tile,
+  direct upload on file select (no crop modal), stored via `settingsApi.uploadStamp`. Local preview
+  falls back to `settings.stampUrl` from `GET /settings` after reload.
+
+### `src/api/client.js`
+- `settingsApi.uploadStamp(form)` → `POST /settings/stamp` (multipart).
+
+---
+
+# Session — 2026-06-20 · Booking form: phone & email validation + error feedback
+
+## Summary
+The new-booking form had no validation for the guest phone or email, and validation errors only
+appeared inline — easy to miss since the "Create Booking" button sits at the bottom of a long form.
+Added input restriction + validation for phone and email, and on a failed submit the form now toasts
+the first error and scrolls/focuses the offending field. Booking submit failures now surface as a
+toast too (previously an inline text banner), and the global toast styling/position was corrected.
+
+## File changes
+
+### `src/components/modules/bookings/BookingForm.jsx`
+- Phone: new `setPhone` handler strips non-digits and caps at 10 characters; field is now `type="tel"`
+  with `inputMode="numeric"` and `maxLength={10}`. Validates to exactly 10 digits when provided
+  (stays optional).
+- Email: `validate()` now rejects malformed addresses (`/^[^\s@]+@[^\s@]+\.[^\s@]+$/`) when provided
+  (stays optional); wired `error={errors.guestEmail}` onto the field.
+- `validate()` now returns the error object instead of a boolean.
+- `handleSubmit`: on validation failure, toasts the first error (in field order
+  `guestName → guestPhone → guestEmail → roomId → toDate/months`) and scrolls + focuses that field.
+- Added `name` attributes to the validated fields so the scroll/focus lookup resolves them.
+- Booking-submit failures now `toast(...)` instead of `setApiError(...)` (no more inline text banner
+  for submit errors; the rooms-load banner on mount is unchanged).
+- Fixed toast type: all booking toasts use `'danger'` (the supported type) instead of `'error'`,
+  which had no icon and fell back to the default gold border.
+
+### `src/components/ui/Toast.jsx`
+- Moved the toast container from bottom-right (`bottom-5`) to top-right (`top-5`). Global change —
+  affects all toasts app-wide.
+
+### `src/index.css`
+- Renamed the `slideUp` toast keyframe to `slideDown` (enters from `-8px`) so toasts animate in from
+  above, matching the new top position.
+
+---
+
 # Session — 2026-06-19 · Documents upload respects the 4-doc limit
 
 ## Summary

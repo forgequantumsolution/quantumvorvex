@@ -19,6 +19,7 @@ model Hotel {
   licenseNo          String?
   address            String?
   logoUrl            String?
+  stampUrl           String?   // stamp + authorised-signatory image shown on invoices
   gstRate            Float    @default(12)
   gstType            String   @default("CGST+SGST")
   gstApplyOn         String   @default("All")
@@ -27,6 +28,15 @@ model Hotel {
   setupComplete      Boolean  @default(false)
   termsAndConditions String?
   wifiPassword       String?
+  // ── Invoice config (serial numbering + details printed on the tax invoice) ──
+  invoicePrefix      String?  @default("INV-")
+  invoiceNextNumber  Int      @default(1)
+  invoicePadding     Int      @default(4)
+  placeOfSupply      String?
+  bankAccountName    String?
+  bankName           String?
+  bankAccountNo      String?
+  bankIfsc           String?
   // JSON-encoded config blobs for Settings tabs that have no dedicated table.
   documentsConfig    String?   // { kycDocs:[{id,label,required,maxMB,enabled}], expiryReminderDays }
   branding           String?   // { tagline, loginTitle, footerNote, logoUrl }
@@ -195,6 +205,10 @@ model Payment {
 model Booking {
   id                  String    @id @default(cuid())
   bookingNo           String    @unique
+  // Tax-invoice serial, assigned on first invoice generation from the hotel's
+  // invoice config (prefix + running counter). Editable per invoice. NULL until
+  // an invoice has been generated. Unique across bookings (NULLs are distinct).
+  invoiceNo           String?   @unique
 
   // ── Guest details (inline) + optional link to a Guest record ──
   guestName           String

@@ -117,6 +117,7 @@ export const buildInvoiceData = (booking, hotel = {}) => {
       email: hotel.email || null,
       address: hotel.address || null,
       logoUrl: hotel.logoUrl || null,
+      stampUrl: hotel.stampUrl || null,
       placeOfSupply: hotel.placeOfSupply || hotel.state || null,
       bank: hotel.bankName
         ? {
@@ -160,6 +161,8 @@ export const buildInvoiceData = (booking, hotel = {}) => {
 /**
  * Render the full HTML invoice document. `opts.autoPrint` injects a print
  * trigger (caller must relax CSP for inline script on that response).
+ * Logo/stamp images are expected to be inlined as data URIs by the caller, so
+ * they render regardless of how the document is loaded (blob: preview, PDF).
  */
 export const renderInvoiceHtml = (booking, hotel = {}, opts = {}) => {
   const d = buildInvoiceData(booking, hotel)
@@ -218,7 +221,8 @@ export const renderInvoiceHtml = (booking, hotel = {}, opts = {}) => {
   .totals .bal td { font-weight: 700; }
   .words { font-size: 13px; margin-top: 18px; }
   .words .label { font-size: 11px; font-weight: 700; color: #1e3a5f; }
-  .sign { margin-top: 28px; border: 1px solid #d1d5db; border-radius: 6px; height: 110px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 12px; }
+  .sign { margin-top: 28px; border: 1px solid #d1d5db; border-radius: 6px; min-height: 110px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 10px 12px 12px; }
+  .sign img { max-height: 96px; max-width: 240px; object-fit: contain; margin-bottom: 6px; }
   .sign .s { font-size: 12px; font-weight: 700; }
   .sign .h { font-size: 11px; color: #6b7280; }
   .terms { margin-top: 16px; font-size: 10px; color: #9ca3af; line-height: 1.5; }
@@ -357,7 +361,8 @@ export const renderInvoiceHtml = (booking, hotel = {}, opts = {}) => {
       ${esc(d.amountInWords)}
     </div>
     <div class="sign">
-      <div class="s">Signature</div>
+      ${h.stampUrl ? `<img src="${esc(h.stampUrl)}" alt="Stamp and authorised signature" />` : ''}
+      <div class="s">${h.stampUrl ? 'Authorised Signatory' : 'Signature'}</div>
       <div class="h">${esc(h.name)}</div>
     </div>
     ${h.terms ? `<div class="terms"><b>Terms &amp; Conditions:</b> ${esc(h.terms)}</div>` : ''}

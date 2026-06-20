@@ -113,6 +113,8 @@ export const bookingsApi = {
   // Tax invoice for a completed booking. Returns invoice HTML (responseType blob);
   // pass { format: 'json' } for the structured data instead.
   getInvoice: (id, params) => api.get(`/bookings/${id}/invoice`, { params, responseType: 'blob' }),
+  // Override the tax-invoice serial number for a booking.
+  updateInvoiceNo: (id, invoiceNo) => api.patch(`/bookings/${id}/invoice-no`, { invoiceNo }),
   // Direct URL to open/print the invoice in a new tab.
   invoiceUrl: (id) => `${api.defaults.baseURL}/bookings/${id}/invoice?print=1`,
 }
@@ -145,6 +147,7 @@ export const settingsApi = {
   get:        ()     => api.get('/settings'),
   update:     (data) => api.put('/settings', data),
   uploadLogo: (form) => api.post('/settings/logo', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  uploadStamp: (form) => api.post('/settings/stamp', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
 }
 
 export const notificationsApi = {

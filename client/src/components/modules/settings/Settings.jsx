@@ -30,6 +30,16 @@ const initSettings = {
   floors:      4,
   seasonalPricing: false,
   expiryReminderDays: 30,
+  // Invoice config
+  invoicePrefix:     'INV-',
+  invoiceNextNumber: 1,
+  invoicePadding:    4,
+  placeOfSupply:     '',
+  bankAccountName:   '',
+  bankName:          '',
+  bankAccountNo:     '',
+  bankIfsc:          '',
+  termsAndConditions:'',
 }
 
 const initFacilities = ['AC', 'WiFi', 'TV', 'Geyser', 'Hot Water', 'Parking', 'Balcony', 'CCTV']
@@ -191,6 +201,34 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
   // which arrives asynchronously from GET /settings — so it shows after reload.
   const logoSrc = logoPreview || settings.logoUrl || null
 
+  // Stamp + authorised-signature image printed on tax invoices. Uploaded as-is
+  // (rectangular, no crop) since it combines a round stamp with a signature.
+  const [stampPreview, setStampPreview] = useState(null)
+  const [stampUploading, setStampUploading] = useState(false)
+  const stampFileRef = useRef(null)
+  const stampSrc = stampPreview || settings.stampUrl || null
+
+  async function handleStampSelect(e) {
+    const file = e.target.files[0]
+    e.target.value = '' // allow re-selecting the same file
+    if (!file) return
+    setStampUploading(true)
+    try {
+      const form = new FormData()
+      form.append('stamp', file, file.name)
+      const { data } = await settingsApi.uploadStamp(form)
+      if (data.stampUrl) {
+        setStampPreview(data.stampUrl)
+        setSettings(s => ({ ...s, stampUrl: data.stampUrl }))
+      }
+      addToast('Stamp & signature uploaded', 'success')
+    } catch {
+      addToast('Stamp upload failed', 'error')
+    } finally {
+      setStampUploading(false)
+    }
+  }
+
   function handleFileSelect(e) {
     const file = e.target.files[0]
     if (!file) return
@@ -285,6 +323,28 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
         onCancel={() => setCropSrc(null)}
         onComplete={uploadCropped}
       />
+
+      {/* Stamp & signature (printed on tax invoices) */}
+      <div className="flex items-center gap-4">
+        <div
+          onClick={() => stampFileRef.current?.click()}
+          className="w-32 h-20 rounded-lg border-2 border-dashed border-line flex items-center justify-center cursor-pointer overflow-hidden shrink-0 bg-surface2"
+          title="Click to upload stamp & signature"
+        >
+          {stampSrc ? (
+            <img src={stampSrc} alt="Stamp & signature" className="w-full h-full object-contain" />
+          ) : (
+            <span className="t-xs text-ink3 text-center px-1.5 leading-tight">Stamp &amp; Signature</span>
+          )}
+        </div>
+        <div>
+          <button className="btn btn-outline text-[12px]" onClick={() => stampFileRef.current?.click()} disabled={stampUploading}>
+            {stampUploading ? 'Uploading…' : 'Upload Stamp & Signature'}
+          </button>
+          <p className="mt-1 mb-0 text-[11px] text-ink3">Printed in the signature area of tax invoices · PNG, JPG up to 5MB</p>
+          <input ref={stampFileRef} type="file" accept="image/*" className="hidden" onChange={handleStampSelect} />
+        </div>
+      </div>
 
       {/* Form grid */}
       <div className="grid grid-cols-2 gap-4">
@@ -1999,6 +2059,131 @@ function PreferencesTab({ settings, addToast }) {
   )
 }
 
+// ─── Tab: Invoice config ──────────────────────────────────────────────────────
+// Serial numbering + the details printed on the tax invoice (place of supply,
+// bank details, terms). The serial is assigned to a booking on first invoice
+// generation as `${prefix}${nextNumber padded}`; it can be overridden per
+// invoice from the invoice preview.
+function InvoiceConfigTab({ settings, setSettings, addToast }) {
+  const [saving, setSaving] = useState(false)
+
+  const nextNumber = Number(settings.invoiceNextNumber) || 1
+  const padding    = Number(settings.invoicePadding) || 0
+  const nextSerial = `${settings.invoicePrefix || ''}${String(nextNumber).padStart(padding, '0')}`
+
+  async function handleSave() {
+    setSaving(true)
+    try {
+      await settingsApi.update({
+        hotel: {
+          invoicePrefix:      settings.invoicePrefix ?? '',
+          invoiceNextNumber:  Number(settings.invoiceNextNumber) || 1,
+          invoicePadding:     Number(settings.invoicePadding) || 0,
+          placeOfSupply:      settings.placeOfSupply ?? '',
+          bankAccountName:    settings.bankAccountName ?? '',
+          bankName:           settings.bankName ?? '',
+          bankAccountNo:      settings.bankAccountNo ?? '',
+          bankIfsc:           settings.bankIfsc ?? '',
+          termsAndConditions: settings.termsAndConditions ?? '',
+        },
+      })
+      addToast('Invoice settings saved', 'success')
+    } catch (e) {
+      addToast(e.response?.data?.message || 'Failed to save invoice settings', 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const set = (field) => (e) => {
+    const v = field === 'invoiceNextNumber' || field === 'invoicePadding'
+      ? Number(e.target.value)
+      : e.target.value
+    setSettings(s => ({ ...s, [field]: v }))
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      {/* Serial numbering */}
+      <div className="card">
+        <div className="card-header"><span className="card-title">Invoice Numbering</span></div>
+        <div className="card-body">
+          <div className="grid grid-cols-3 gap-4">
+            <Field label="Prefix">
+              <input className="form-input" value={settings.invoicePrefix ?? ''}
+                onChange={set('invoicePrefix')} placeholder="INV-" />
+            </Field>
+            <Field label="Next Number">
+              <input className="form-input" type="number" min={1}
+                value={settings.invoiceNextNumber ?? 1} onChange={set('invoiceNextNumber')} />
+            </Field>
+            <Field label="Digits (padding)">
+              <input className="form-input" type="number" min={0} max={12}
+                value={settings.invoicePadding ?? 0} onChange={set('invoicePadding')} />
+            </Field>
+          </div>
+          <p className="t-xs mt-3 mb-0 text-ink3">
+            Next invoice will be numbered <span className="font-bold text-ink">{nextSerial}</span>.
+            The number is assigned when an invoice is first generated and can be edited per invoice.
+          </p>
+        </div>
+      </div>
+
+      {/* GST place of supply */}
+      <div className="card">
+        <div className="card-header"><span className="card-title">Place of Supply</span></div>
+        <div className="card-body">
+          <Field label="State / Place of Supply">
+            <input className="form-input max-w-[320px]" value={settings.placeOfSupply ?? ''}
+              onChange={set('placeOfSupply')} placeholder="e.g. Maharashtra" />
+          </Field>
+        </div>
+      </div>
+
+      {/* Bank details */}
+      <div className="card">
+        <div className="card-header"><span className="card-title">Bank Details</span></div>
+        <div className="card-body">
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Account Holder Name">
+              <input className="form-input" value={settings.bankAccountName ?? ''}
+                onChange={set('bankAccountName')} placeholder="Defaults to hotel name if blank" />
+            </Field>
+            <Field label="Bank Name">
+              <input className="form-input" value={settings.bankName ?? ''}
+                onChange={set('bankName')} />
+            </Field>
+            <Field label="Account Number">
+              <input className="form-input" value={settings.bankAccountNo ?? ''}
+                onChange={set('bankAccountNo')} />
+            </Field>
+            <Field label="IFSC">
+              <input className="form-input" value={settings.bankIfsc ?? ''}
+                onChange={set('bankIfsc')} />
+            </Field>
+          </div>
+          <p className="t-xs mt-3 mb-0 text-ink3">
+            The Bank Details block only appears on the invoice when a bank name is set.
+          </p>
+        </div>
+      </div>
+
+      {/* Terms */}
+      <div className="card">
+        <div className="card-header"><span className="card-title">Terms &amp; Conditions</span></div>
+        <div className="card-body">
+          <Field label="Printed in the invoice footer">
+            <textarea className="form-textarea resize-y" rows={3} value={settings.termsAndConditions ?? ''}
+              onChange={set('termsAndConditions')} placeholder="e.g. Check-out by 11 AM. Taxes as applicable." />
+          </Field>
+        </div>
+      </div>
+
+      <SaveButton onClick={handleSave} saving={saving} />
+    </div>
+  )
+}
+
 // ─── Settings (Root) ──────────────────────────────────────────────────────────
 const ALL_TABS = [
   { id: 'profile',       label: 'Hotel Profile'  },
@@ -2006,6 +2191,7 @@ const ALL_TABS = [
   { id: 'facilities',    label: 'Facilities'     },
   { id: 'food',          label: 'Food Plans'     },
   { id: 'tax',           label: 'Tax & Pricing'  },
+  { id: 'invoice',       label: 'Invoice'        },
   { id: 'documents',     label: 'Documents'      },
   { id: 'pricing',       label: 'Pricing Rules'  },
   { id: 'notifications', label: 'Notifications'  },
@@ -2121,6 +2307,9 @@ export default function Settings({ onRunSetup }) {
         </div>
         <div data-tab-id="tax">
           <TaxPricingTab settings={settings} setSettings={setSettings} addToast={addToast} />
+        </div>
+        <div data-tab-id="invoice">
+          <InvoiceConfigTab settings={settings} setSettings={setSettings} addToast={addToast} />
         </div>
         <div data-tab-id="documents">
           <DocumentsTab settings={settings} setSettings={setSettings} addToast={addToast} />

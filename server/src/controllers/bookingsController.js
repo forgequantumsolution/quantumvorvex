@@ -580,6 +580,55 @@ export const checkOutBooking = async (req, res) => {
 // GET /bookings/:id/invoice?format=html|json&print=1
 // Generates a GST tax invoice from a completed (checked-out) booking, pulling
 // guest/room/hotel data from the tables and rendering the standard template.
+// Inline a locally-served `/uploads/<file>` asset as a base64 data URI so the
+// invoice's logo/stamp render with no dependency on URL resolution — relative
+// paths don't resolve inside the blob: preview, and a remote host may be
+// unreachable from the PDF renderer. Returns the original value untouched if
+// it isn't a local upload or can't be read.
+const MIME_BY_EXT = {
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+}
+const inlineUploadAsset = (url) => {
+  if (typeof url !== 'string' || !url.startsWith('/uploads/')) return url
+  try {
+    const file = path.basename(url) // guard against path traversal
+    const abs = path.join(path.resolve('uploads'), file)
+    if (!fs.existsSync(abs)) return url
+    const mime = MIME_BY_EXT[path.extname(file).toLowerCase()] || 'application/octet-stream'
+    return `data:${mime};base64,${fs.readFileSync(abs).toString('base64')}`
+  } catch {
+    return url
+  }
+}
+
+// Build a serial from the hotel's invoice config: prefix + zero-padded number.
+const buildSerial = (hotel, n) =>
+  `${hotel.invoicePrefix ?? 'INV-'}${String(n).padStart(hotel.invoicePadding ?? 4, '0')}`
+
+// Assign the next tax-invoice serial to a booking and durably advance the
+// hotel's counter. The counter is incremented atomically per attempt, so a rare
+// collision (e.g. a number already reserved by a manual edit) just moves to the
+// next one instead of looping forever.
+const assignInvoiceNo = async (bookingId, hotelId) => {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const hotel = await prisma.hotel.update({
+      where: { id: hotelId },
+      data: { invoiceNextNumber: { increment: 1 } },
+    })
+    const reserved = (hotel.invoiceNextNumber ?? 1) - 1 // value before this increment
+    const serial = buildSerial(hotel, reserved)
+    try {
+      await prisma.booking.update({ where: { id: bookingId }, data: { invoiceNo: serial } })
+      return serial
+    } catch (e) {
+      if (e.code === 'P2002') continue // serial already taken — reserve the next
+      throw e
+    }
+  }
+  throw new Error('Could not assign a unique invoice number')
+}
+
 export const getBookingInvoice = async (req, res) => {
   try {
     const { id } = req.params
@@ -606,17 +655,34 @@ export const getBookingInvoice = async (req, res) => {
 
     const hotel = (await prisma.hotel.findFirst()) || {}
 
+    // Assign a stable serial on first generation (prefix + running counter from
+    // the hotel's invoice config). Once set it stays put; it can be overridden
+    // via PATCH /bookings/:id/invoice-no. Falls back to bookingNo if assignment
+    // fails or there's no hotel record to read the config from.
+    if (!booking.invoiceNo && hotel.id) {
+      try {
+        booking.invoiceNo = await assignInvoiceNo(booking.id, hotel.id)
+      } catch (err) {
+        logger.warn('Invoice serial assignment failed', { error: err.message, bookingId: booking.id })
+      }
+    }
+
     if (format === 'json') {
       return res.status(200).json({ invoice: buildInvoiceData(booking, hotel) })
     }
 
+    // Inline the logo/stamp as data URIs so they render regardless of how the
+    // document is loaded (blob: preview, PDF renderer, direct tab).
+    const renderHotel = {
+      ...hotel,
+      logoUrl: inlineUploadAsset(hotel.logoUrl),
+      stampUrl: inlineUploadAsset(hotel.stampUrl),
+    }
+
     if (format === 'pdf') {
-      // Reuse the exact HTML template, then render it to PDF. A <base> href lets
-      // the template's relative /uploads/logo.png resolve against this server.
-      const baseUrl = `${req.protocol}://${req.get('host')}`
-      const html = renderInvoiceHtml(booking, hotel)
+      const html = renderInvoiceHtml(booking, renderHotel)
       try {
-        const pdf = await htmlToPdf(html, { baseUrl })
+        const pdf = await htmlToPdf(html)
         res.setHeader('Content-Type', 'application/pdf')
         res.setHeader('Content-Disposition', `inline; filename="invoice-${booking.bookingNo}.pdf"`)
         return res.status(200).send(pdf)
@@ -629,7 +695,7 @@ export const getBookingInvoice = async (req, res) => {
       }
     }
 
-    const html = renderInvoiceHtml(booking, hotel, { autoPrint })
+    const html = renderInvoiceHtml(booking, renderHotel, { autoPrint })
 
     // This response is a standalone HTML document, not part of the SPA — relax
     // the strict API CSP so its inline <style> (and optional auto-print script)
@@ -643,6 +709,33 @@ export const getBookingInvoice = async (req, res) => {
     return res.status(200).send(html)
   } catch (err) {
     logger.error('getBookingInvoice error', { error: err.message })
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// PATCH /bookings/:id/invoice-no — set/override the tax-invoice serial for a
+// booking (the editable serial in the invoice preview).
+export const updateInvoiceNo = async (req, res) => {
+  try {
+    const { id } = req.params
+    const invoiceNo = typeof req.body?.invoiceNo === 'string' ? req.body.invoiceNo.trim() : ''
+    if (!invoiceNo) return res.status(400).json({ message: 'Invoice number is required.' })
+    if (invoiceNo.length > 60) return res.status(400).json({ message: 'Invoice number is too long (max 60 characters).' })
+
+    const booking = await prisma.booking.findUnique({ where: { id }, select: { id: true } })
+    if (!booking) return res.status(404).json({ message: 'Booking not found.' })
+
+    try {
+      const updated = await prisma.booking.update({ where: { id }, data: { invoiceNo } })
+      return res.status(200).json({ invoiceNo: updated.invoiceNo })
+    } catch (e) {
+      if (e.code === 'P2002') {
+        return res.status(409).json({ message: 'That invoice number is already used by another booking.' })
+      }
+      throw e
+    }
+  } catch (err) {
+    logger.error('updateInvoiceNo error', { error: err.message })
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }
