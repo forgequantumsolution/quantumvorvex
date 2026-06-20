@@ -13,6 +13,7 @@ import {
   deleteBooking,
   uploadBookingDocuments,
   getBookingInvoice,
+  updateInvoiceNo,
   uploadDocs,
 } from '../controllers/bookingsController.js'
 import { verifyToken, requirePermission } from '../middleware/auth.js'
@@ -28,6 +29,8 @@ router.get('/:id',   getBooking)
 
 // Tax invoice (HTML, print-ready) generated from a completed booking
 router.get('/:id/invoice', getBookingInvoice)
+// Override the tax-invoice serial number for a booking
+router.patch('/:id/invoice-no', updateInvoiceNo)
 router.post('/',   validate(schemas.createBooking), createBooking)
 router.put('/:id', validate(schemas.updateBooking), updateBooking)
 

@@ -6,6 +6,54 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-21 · Invoice config tab + editable invoice serial
+
+## Summary
+Added a new **Invoice** tab in Settings to configure the invoice serial (prefix / next number /
+padding), place of supply, bank details, and terms. The invoice preview now shows the serial in an
+editable field so it can be overridden per invoice.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- New `InvoiceConfigTab` — serial numbering (with a live "next will be …" preview), place of supply,
+  bank details, and terms & conditions; saves via `settingsApi.update({ hotel })`. Numeric fields are
+  coerced before sending. Added `invoice` to `ALL_TABS` (after Tax & Pricing) and wired its panel.
+- Seeded invoice defaults into `initSettings` so inputs are controlled before `GET /settings` loads.
+
+### `src/components/modules/bookings/InvoiceModal.jsx`
+- Fetches invoice JSON first (assigns + returns the serial), then the HTML preview, so both share one
+  number. Added an editable "Invoice No." field with an Update action → `bookingsApi.updateInvoiceNo`,
+  which reloads the preview. Object-URL lifecycle moved to a ref so the refreshed preview doesn't leak.
+
+### `src/api/client.js`
+- `bookingsApi.updateInvoiceNo(id, invoiceNo)` → `PATCH /bookings/:id/invoice-no`.
+
+### `src/utils/permissions.js`
+- Added `invoice` to the owner and manager settings-tab allow-lists.
+
+---
+
+# Session — 2026-06-20 · Settings: upload stamp & signature for invoices
+
+## Summary
+The tax invoice's signature box was just a label ("Signature" + hotel name). Added a way to upload a
+combined stamp + authorised-signature image in Settings → Hotel Profile, which then prints in the
+invoice signature area. Mirrors the existing logo-upload flow but uploads the image as-is (no crop),
+since the stamp is rectangular.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- `HotelProfileTab`: added a "Stamp & Signature" uploader below the logo — rectangular preview tile,
+  direct upload on file select (no crop modal), stored via `settingsApi.uploadStamp`. Local preview
+  falls back to `settings.stampUrl` from `GET /settings` after reload.
+
+### `src/api/client.js`
+- `settingsApi.uploadStamp(form)` → `POST /settings/stamp` (multipart).
+
+---
+
 # Session — 2026-06-20 · Booking form: phone & email validation + error feedback
 
 ## Summary

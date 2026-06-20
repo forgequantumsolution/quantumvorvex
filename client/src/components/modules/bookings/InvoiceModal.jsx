@@ -13,8 +13,9 @@ async function errorMessage(err, fallback) {
 
 /**
  * Previews a booking's GST tax invoice in-app (iframe) and lets the user
- * download or print it. The HTML is fetched from the backend through the
- * authenticated API client (not a raw URL), then shown via a blob object URL.
+ * download, print, or change its serial number. The HTML is fetched from the
+ * backend through the authenticated API client (not a raw URL), then shown via
+ * a blob object URL.
  */
 export default function InvoiceModal({ isOpen, booking, onClose }) {
   const toast = useToast()
@@ -22,28 +23,69 @@ export default function InvoiceModal({ isOpen, booking, onClose }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [downloading, setDownloading] = useState(false)
+  const [serial, setSerial] = useState('')        // editable invoice number
+  const [savedSerial, setSavedSerial] = useState('') // last persisted value
+  const [savingSerial, setSavingSerial] = useState(false)
   const frameRef = useRef(null)
+  const objectUrlRef = useRef('')
+
+  // Swap the preview to a new HTML blob, revoking the previous object URL.
+  const showPreview = (blob) => {
+    if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
+    const next = URL.createObjectURL(blob)
+    objectUrlRef.current = next
+    setUrl(next)
+  }
 
   useEffect(() => {
     if (!isOpen || !booking) return
-    let objectUrl
     let active = true
-    setLoading(true); setError(''); setUrl('')
+    setLoading(true); setError(''); setUrl(''); setSerial(''); setSavedSerial('')
 
-    bookingsApi.getInvoice(booking.id)   // HTML blob, with auth
-      .then(({ data }) => {
+    ;(async () => {
+      try {
+        // Fetch metadata first: this assigns the serial (if unset) and returns
+        // it, so the preview that follows reuses the same number.
+        const { data: metaBlob } = await bookingsApi.getInvoice(booking.id, { format: 'json' })
+        const meta = JSON.parse(await metaBlob.text())
         if (!active) return
-        objectUrl = URL.createObjectURL(data)
-        setUrl(objectUrl)
-      })
-      .catch(async (err) => {
+        const no = meta?.invoice?.invoiceNo || ''
+        setSerial(no); setSavedSerial(no)
+
+        const { data: htmlBlob } = await bookingsApi.getInvoice(booking.id)
+        if (!active) return
+        showPreview(htmlBlob)
+      } catch (err) {
         const msg = await errorMessage(err, 'Could not generate invoice')
         if (active) setError(msg)
-      })
-      .finally(() => { if (active) setLoading(false) })
+      } finally {
+        if (active) setLoading(false)
+      }
+    })()
 
-    return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl) }
+    return () => { active = false }
   }, [isOpen, booking])
+
+  // Revoke the live object URL when the modal unmounts.
+  useEffect(() => () => { if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current) }, [])
+
+  // Persist a changed serial, then reload the preview so the new number shows.
+  const saveSerial = async () => {
+    const next = serial.trim()
+    if (!next || next === savedSerial) return
+    setSavingSerial(true)
+    try {
+      const { data } = await bookingsApi.updateInvoiceNo(booking.id, next)
+      setSavedSerial(data.invoiceNo); setSerial(data.invoiceNo)
+      const { data: htmlBlob } = await bookingsApi.getInvoice(booking.id)
+      showPreview(htmlBlob)
+      toast('Invoice number updated', 'success')
+    } catch (err) {
+      toast(await errorMessage(err, 'Could not update invoice number'), 'error')
+    } finally {
+      setSavingSerial(false)
+    }
+  }
 
   // Download the server-rendered PDF (not the preview HTML).
   const download = async () => {
@@ -68,6 +110,8 @@ export default function InvoiceModal({ isOpen, booking, onClose }) {
 
   if (!booking) return null
 
+  const serialDirty = serial.trim() !== '' && serial.trim() !== savedSerial
+
   return (
     <Modal
       isOpen={isOpen}
@@ -85,6 +129,21 @@ export default function InvoiceModal({ isOpen, booking, onClose }) {
         </>
       }
     >
+      {url && !error && (
+        <div className="mb-3 flex items-center gap-2">
+          <label className="text-[12px] font-semibold text-ink2 shrink-0">Invoice No.</label>
+          <input
+            value={serial}
+            onChange={(e) => setSerial(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && saveSerial()}
+            placeholder="e.g. INV-0001"
+            className="w-[220px] px-2.5 py-1.5 text-[13px] bg-surface2 border border-line rounded-md text-ink"
+          />
+          <Button variant="ghost" onClick={saveSerial} disabled={savingSerial || !serialDirty}>
+            {savingSerial ? 'Saving…' : 'Update'}
+          </Button>
+        </div>
+      )}
       {loading && <div className="py-20 text-center text-ink3 text-sm">Generating invoice…</div>}
       {error && <div className="py-20 text-center text-danger-text text-sm">{error}</div>}
       {url && !error && (

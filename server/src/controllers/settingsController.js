@@ -13,7 +13,9 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname)
-    cb(null, `logo-${Date.now()}${ext}`)
+    // Prefix by field name ('logo' / 'stamp') so uploads are self-describing.
+    const prefix = /^[a-z]+$/i.test(file.fieldname) ? file.fieldname : 'file'
+    cb(null, `${prefix}-${Date.now()}${ext}`)
   },
 })
 
@@ -150,6 +152,30 @@ export const uploadLogo = async (req, res) => {
     return res.status(200).json({ logoUrl, hotel })
   } catch (err) {
     console.error('uploadLogo error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// POST /settings/stamp — stamp + authorised-signatory image printed on invoices.
+export const uploadStamp = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded.' })
+    }
+
+    const stampUrl = `/uploads/${req.file.filename}`
+
+    const existing = await prisma.hotel.findFirst()
+    let hotel
+    if (existing) {
+      hotel = await prisma.hotel.update({ where: { id: existing.id }, data: { stampUrl } })
+    } else {
+      hotel = await prisma.hotel.create({ data: { stampUrl } })
+    }
+
+    return res.status(200).json({ stampUrl, hotel })
+  } catch (err) {
+    console.error('uploadStamp error:', err)
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }
