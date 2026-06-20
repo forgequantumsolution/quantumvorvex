@@ -74,6 +74,10 @@ export default function BookingForm({ onSaved, onCancel }) {
 
   const set = (k) => (e) => setValues((v) => ({ ...v, [k]: e.target.value }))
 
+  // Phone: keep digits only, capped at 10.
+  const setPhone = (e) =>
+    setValues((v) => ({ ...v, guestPhone: e.target.value.replace(/\D/g, '').slice(0, 10) }))
+
   // Load rooms + hotel settings on mount
   useEffect(() => {
     setApiError('')
@@ -125,6 +129,9 @@ export default function BookingForm({ onSaved, onCancel }) {
   const validate = () => {
     const e = {}
     if (!values.guestName.trim()) e.guestName = 'Guest name is required'
+    if (values.guestPhone && values.guestPhone.length !== 10) e.guestPhone = 'Enter a valid 10-digit number'
+    if (values.guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.guestEmail.trim()))
+      e.guestEmail = 'Enter a valid email address'
     if (!values.roomId) e.roomId = 'Select a room'
     if (values.stayType === 'daily') {
       if (!values.toDate) e.toDate = 'Check-out date is required'
@@ -133,11 +140,23 @@ export default function BookingForm({ onSaved, onCancel }) {
       e.months = 'At least 1 month'
     }
     setErrors(e)
-    return Object.keys(e).length === 0
+    return e
   }
 
+  // Field order for "jump to first error" on a failed submit.
+  const FIELD_ORDER = ['guestName', 'guestPhone', 'guestEmail', 'roomId', 'toDate', 'months']
+
   const handleSubmit = async () => {
-    if (!validate()) return
+    const e = validate()
+    const errorKeys = Object.keys(e)
+    if (errorKeys.length) {
+      const first = FIELD_ORDER.find((k) => e[k]) || errorKeys[0]
+      toast(e[first] || 'Please fix the highlighted fields', 'danger')
+      const el = document.querySelector(`[name="${first}"]`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el?.focus?.({ preventScroll: true })
+      return
+    }
     setSubmitting(true)
     setApiError('')
     try {
@@ -185,14 +204,14 @@ export default function BookingForm({ onSaved, onCancel }) {
         try {
           await bookingsApi.uploadDocuments(booking.id, form)
         } catch {
-          toast('Booking created, but some documents failed to upload.', 'error')
+          toast('Booking created, but some documents failed to upload.', 'danger')
         }
       }
 
       onSaved(booking)
     } catch (err) {
       const d = err.response?.data
-      setApiError(d?.message || d?.error || 'Could not create the booking. Please try again.')
+      toast(d?.message || d?.error || 'Could not create the booking. Please try again.', 'danger')
     } finally {
       setSubmitting(false)
     }
@@ -212,11 +231,13 @@ export default function BookingForm({ onSaved, onCancel }) {
         {/* ── Guest ── */}
         <h4 className="text-xs font-semibold uppercase tracking-wide text-ink3 mb-2">Guest details</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Field label="Guest name" value={values.guestName} onChange={set('guestName')}
+          <Field label="Guest name" name="guestName" value={values.guestName} onChange={set('guestName')}
                  placeholder="Full name" error={errors.guestName} required />
-          <Field label="Phone" value={values.guestPhone} onChange={set('guestPhone')} placeholder="+91 …" />
-          <Field label="Email" type="email" value={values.guestEmail} onChange={set('guestEmail')}
-                 placeholder="guest@example.com" />
+          <Field label="Phone" name="guestPhone" type="tel" inputMode="numeric" maxLength={10}
+                 value={values.guestPhone} onChange={setPhone} placeholder="10-digit number"
+                 error={errors.guestPhone} />
+          <Field label="Email" name="guestEmail" type="email" value={values.guestEmail} onChange={set('guestEmail')}
+                 placeholder="guest@example.com" error={errors.guestEmail} />
           <Field label="Nationality" value={values.nationality} onChange={set('nationality')} placeholder="Indian" />
           <Field label="Adults" type="number" min="1" value={values.adults} onChange={set('adults')} />
           <Field label="Children" type="number" min="0" value={values.children} onChange={set('children')} />
@@ -254,7 +275,7 @@ export default function BookingForm({ onSaved, onCancel }) {
         {/* ── Stay ── */}
         <h4 className="text-xs font-semibold uppercase tracking-wide text-ink3 mb-2 mt-5">Stay</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Field label="Room" value={values.roomId} onChange={set('roomId')} error={errors.roomId}
+          <Field label="Room" name="roomId" value={values.roomId} onChange={set('roomId')} error={errors.roomId}
                  options={
                    loadingRooms
                      ? [{ value: '', label: 'Loading rooms…' }]
@@ -267,10 +288,10 @@ export default function BookingForm({ onSaved, onCancel }) {
                  options={[{ value: 'daily', label: 'Daily' }, { value: 'monthly', label: 'Monthly' }]} />
           <Field label="Check-in" type="date" value={values.fromDate} onChange={set('fromDate')} />
           {values.stayType === 'daily' ? (
-            <Field label="Check-out" type="date" value={values.toDate} onChange={set('toDate')}
+            <Field label="Check-out" name="toDate" type="date" value={values.toDate} onChange={set('toDate')}
                    error={errors.toDate} required />
           ) : (
-            <Field label="Months" type="number" min="1" value={values.months} onChange={set('months')}
+            <Field label="Months" name="months" type="number" min="1" value={values.months} onChange={set('months')}
                    error={errors.months} required />
           )}
         </div>

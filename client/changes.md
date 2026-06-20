@@ -6,6 +6,42 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-20 · Booking form: phone & email validation + error feedback
+
+## Summary
+The new-booking form had no validation for the guest phone or email, and validation errors only
+appeared inline — easy to miss since the "Create Booking" button sits at the bottom of a long form.
+Added input restriction + validation for phone and email, and on a failed submit the form now toasts
+the first error and scrolls/focuses the offending field. Booking submit failures now surface as a
+toast too (previously an inline text banner), and the global toast styling/position was corrected.
+
+## File changes
+
+### `src/components/modules/bookings/BookingForm.jsx`
+- Phone: new `setPhone` handler strips non-digits and caps at 10 characters; field is now `type="tel"`
+  with `inputMode="numeric"` and `maxLength={10}`. Validates to exactly 10 digits when provided
+  (stays optional).
+- Email: `validate()` now rejects malformed addresses (`/^[^\s@]+@[^\s@]+\.[^\s@]+$/`) when provided
+  (stays optional); wired `error={errors.guestEmail}` onto the field.
+- `validate()` now returns the error object instead of a boolean.
+- `handleSubmit`: on validation failure, toasts the first error (in field order
+  `guestName → guestPhone → guestEmail → roomId → toDate/months`) and scrolls + focuses that field.
+- Added `name` attributes to the validated fields so the scroll/focus lookup resolves them.
+- Booking-submit failures now `toast(...)` instead of `setApiError(...)` (no more inline text banner
+  for submit errors; the rooms-load banner on mount is unchanged).
+- Fixed toast type: all booking toasts use `'danger'` (the supported type) instead of `'error'`,
+  which had no icon and fell back to the default gold border.
+
+### `src/components/ui/Toast.jsx`
+- Moved the toast container from bottom-right (`bottom-5`) to top-right (`top-5`). Global change —
+  affects all toasts app-wide.
+
+### `src/index.css`
+- Renamed the `slideUp` toast keyframe to `slideDown` (enters from `-8px`) so toasts animate in from
+  above, matching the new top position.
+
+---
+
 # Session — 2026-06-19 · Documents upload respects the 4-doc limit
 
 ## Summary
