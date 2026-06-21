@@ -6,6 +6,45 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-21 · Extend stay on a booking
+
+## Summary
+Added an **Extend** action to active bookings so front-desk staff can push back the check-out date
+(daily) or add months (monthly). The new dialog previews the recomputed total and additional amount
+due. No backend work — it reuses `PUT /bookings/:id` (`bookingsApi.update`), which already re-checks
+room availability and recomputes the stay total + balance.
+
+## File changes
+
+### `src/components/modules/bookings/ExtendStayModal.jsx` (new)
+- Focused modal on the shared `Modal` component. Daily stays pick a later check-out date (`min` = day
+  after current checkout, enforcing extend-not-shorten); monthly stays add whole months. Live price
+  preview mirrors the server's `computePricing` (new length, new total, additional due). Confirm sends
+  `{ toDate: <ISO> }` (daily) or `{ months: <new total> }` (monthly).
+- **Availability cap (A):** on open (daily), looks up the next live booking on the same room via
+  `bookingsApi.getAll({ roomId })` and caps the date picker's `max` to it, with a hint naming the next
+  booking ("Room is booked again from … — extend up to then"). Same-day turnover is allowed (new
+  checkout may equal the next check-in). Confirm is disabled past the cap, so a clash can't be submitted.
+
+### `src/components/modules/bookings/BookingsTable.jsx`
+- Added an `onExtend` prop and a ghost **Extend** button, shown only on `Confirmed`/`CheckedIn` rows.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- Added `extendTarget` state, a `handleExtend` that calls `bookingsApi.update(...)` then toasts +
+  reloads, wired `onExtend={setExtendTarget}`, and rendered `<ExtendStayModal>` (conditionally, so the
+  modal's state re-initialises each open).
+- **Named conflict (B):** if the server still rejects with `ERR_ROOM_UNAVAILABLE` (e.g. an active guest
+  or a race), the error toast now names the blocker from the response's `conflict` object — booking no.
+  + date, or guest name — instead of a generic "unavailable" message.
+
+## Tests
+- `tests/extend-stay.spec.js` (new, Playwright): daily extension recomputes via `PUT` (200, nights +
+  amount up); the date picker caps to the next booking on the room (A); and the server returns the
+  blocking record on a clash for the named-conflict toast (B). Uses a clear-room finder (excludes rooms
+  with overlapping bookings or active guests) so runs are deterministic.
+
+---
+
 # Session — 2026-06-21 · Invoice config tab + editable invoice serial
 
 ## Summary

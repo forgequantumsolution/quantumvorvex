@@ -4,6 +4,7 @@ import BookingsTable from './BookingsTable'
 import BookingForm from './BookingForm'
 import CancelModal from '../cancellations/CancelModal'
 import CheckOutModal from '../checkout/CheckOutModal'
+import ExtendStayModal from './ExtendStayModal'
 import InvoiceModal from './InvoiceModal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import { useToast } from '../../../hooks/useToast'
@@ -46,6 +47,7 @@ export default function Bookings() {
   const [showNew, setShowNew] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
   const [checkOutTarget, setCheckOutTarget] = useState(null)
+  const [extendTarget, setExtendTarget] = useState(null)
   const [invoiceTarget, setInvoiceTarget] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [busyId, setBusyId] = useState(null)
@@ -162,6 +164,34 @@ export default function Bookings() {
     }
   }
 
+  // Extend an active stay: PUT the new toDate/months — the server re-checks room
+  // availability and recomputes the total + balance.
+  const handleExtend = async (payload) => {
+    const b = extendTarget
+    if (!b) return
+    setBusyId(b.id)
+    try {
+      await bookingsApi.update(b.id, payload)
+      toast(`Stay extended for ${b.guestName}`)
+      setExtendTarget(null)
+      reload()
+    } catch (err) {
+      // On a room clash the API returns the blocking record — name it so staff know
+      // who/what is in the way instead of a generic "unavailable".
+      const data = err.response?.data
+      const c = data?.conflict
+      const msg =
+        c?.type === 'booking'
+          ? `Room already booked (${c.bookingNo}) from ${formatDate(c.fromDate)}. Pick an earlier date.`
+          : c?.type === 'guest'
+            ? `Room is occupied by ${c.name}. Pick an earlier date.`
+            : data?.message || 'Could not extend the stay'
+      toast(msg, 'error')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   const handleCancel = async ({ id, reason }) => {
     const b = bookings.find((x) => x.id === id)
     await runAction(id, () => bookingsApi.cancel(id, { reason }), `Booking ${b?.bookingNo || ''} cancelled`, 'error')
@@ -221,6 +251,7 @@ export default function Bookings() {
             onCheckOut={setCheckOutTarget}
             onConfirm={handleConfirm}
             onCancel={setCancelTarget}
+            onExtend={setExtendTarget}
             onInvoice={setInvoiceTarget}
             onDelete={setDeleteTarget}
             emptyMessage={debouncedQuery ? 'No bookings match your search.' : 'Create a booking to get started.'}
@@ -266,6 +297,15 @@ export default function Bookings() {
           submitting={busyId === checkOutTarget.id}
           onClose={() => setCheckOutTarget(null)}
           onConfirm={handleCheckOut}
+        />
+      )}
+      {extendTarget && (
+        <ExtendStayModal
+          isOpen
+          booking={extendTarget}
+          submitting={busyId === extendTarget.id}
+          onClose={() => setExtendTarget(null)}
+          onConfirm={handleExtend}
         />
       )}
       <InvoiceModal
