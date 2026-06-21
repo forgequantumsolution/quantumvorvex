@@ -6,6 +6,33 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-21 · Booking room rate is GST-inclusive
+
+## Summary
+The room rate in the booking form is now **GST-inclusive** — the total stays equal to what's entered,
+and GST is shown extracted from it instead of added on top. Mirrors the server's `computePricing`.
+
+## File changes
+
+### `src/components/modules/bookings/BookingForm.jsx`
+- `pricing` preview: `gross = subtotal − discount`, `taxable = gross / (1 + GST%)`,
+  `taxAmount = gross − taxable` (rounded to 2dp), `total = gross + extraCharges`.
+- Pricing summary now reads **Room charge (incl. GST) → Taxable value → GST (X%) incl. → Total**.
+
+### `src/components/modules/bookings/ExtendStayModal.jsx`
+- Extension price preview uses the inclusive total (`gross + extraCharges`) so it matches the server.
+
+### `src/components/modules/billing/Billing.jsx`
+- Extended the model to monthly/guest invoices with **only rent GST-inclusive** (food & amenities stay
+  GST-on-top). Generate-invoice preview now extracts rent's GST and adds food/amenities' GST, showing
+  **Taxable value / GST / Total**. The printed invoice's "Subtotal" row became **Taxable Value** =
+  `rent/(1+GST%) + food + amenities`, so Taxable + CGST + SGST = Total reconciles.
+
+### Not changed
+- The booking **invoice** (`InvoiceModal`) is a viewer only — all math is server-side.
+
+---
+
 # Session — 2026-06-21 · Extend stay on a booking
 
 ## Summary

@@ -76,15 +76,18 @@ const nightsBetween = (from, to) => {
 
 /**
  * Compute the full pricing breakdown from raw inputs.
- * Tax is applied on (subtotal − discount); extra charges are added after tax.
+ * The room rate is GST-INCLUSIVE: (subtotal − discount) already contains the tax,
+ * so GST is *extracted* from it rather than added on top. Extra charges are added
+ * after (outside the GST breakdown).
  */
 const computePricing = ({ stayType, fromDate, toDate, months, roomRate, discount = 0, taxRate = 0, extraCharges = 0, advance = 0 }) => {
   const nights    = stayType === 'daily' ? nightsBetween(fromDate, toDate) : null
   const units     = stayType === 'daily' ? nights : (months || 1)
-  const subtotal  = +(roomRate * units).toFixed(2)
-  const taxable   = Math.max(0, subtotal - discount)
-  const taxAmount = +((taxable * taxRate) / 100).toFixed(2)
-  const amount    = +(taxable + taxAmount + extraCharges).toFixed(2)
+  const subtotal  = +(roomRate * units).toFixed(2)             // GST-inclusive gross
+  const gross     = Math.max(0, subtotal - discount)           // tax sits inside this
+  const taxable   = +(gross / (1 + taxRate / 100)).toFixed(2)  // base value (ex-GST)
+  const taxAmount = +(gross - taxable).toFixed(2)              // GST extracted from gross
+  const amount    = +(gross + extraCharges).toFixed(2)         // total = entered (+ extras)
   const balance   = +(amount - advance).toFixed(2)
   const paymentStatus = advance <= 0 ? 'unpaid' : advance >= amount ? 'paid' : 'partial'
   return { nights, subtotal, taxAmount, amount, balance, paymentStatus }

@@ -92,9 +92,13 @@ export const generateInvoice = async (req, res) => {
     const hotel = await prisma.hotel.findFirst()
     const gstRate = hotel?.gstRate || 12
 
-    const subtotal = (rent || 0) + (food || 0) + (amenitiesCharge || 0)
-    const gstAmount = parseFloat(((subtotal * gstRate) / 100).toFixed(2))
-    const total = parseFloat((subtotal + gstAmount).toFixed(2))
+    // Rent is GST-inclusive (tax extracted); food & amenities are GST-exclusive (added on top).
+    const r = rent || 0, f = food || 0, a = amenitiesCharge || 0
+    const rentBase  = parseFloat((r / (1 + gstRate / 100)).toFixed(2))
+    const rentGst   = parseFloat((r - rentBase).toFixed(2))
+    const faGst     = parseFloat((((f + a) * gstRate) / 100).toFixed(2))
+    const gstAmount = parseFloat((rentGst + faGst).toFixed(2))
+    const total     = parseFloat((r + f + a + faGst).toFixed(2))
 
     const invoiceCount = await prisma.invoice.count()
     const invoiceNo = `INV-${String(invoiceCount + 1).padStart(4, '0')}`

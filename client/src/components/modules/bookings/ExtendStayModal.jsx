@@ -75,10 +75,10 @@ export default function ExtendStayModal({ isOpen, onClose, onConfirm, submitting
     const units = isMonthly
       ? (Number(booking.months) || 1) + (Number(addMonths) || 0)
       : nights(booking.fromDate, newToDate)
+    // Room rate is GST-inclusive: the total is the gross (+ extras), GST sits inside it.
     const subtotal = rate * units
-    const taxable = Math.max(0, subtotal - (Number(booking.discount) || 0))
-    const taxAmount = (taxable * (Number(booking.taxRate) || 0)) / 100
-    const total = taxable + taxAmount + (Number(booking.extraCharges) || 0)
+    const gross = Math.max(0, subtotal - (Number(booking.discount) || 0))
+    const total = gross + (Number(booking.extraCharges) || 0)
     const additional = total - (Number(booking.amount) || 0)
     return { units, total, additional }
   }, [booking, isMonthly, newToDate, addMonths])

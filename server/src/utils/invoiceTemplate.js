@@ -88,8 +88,10 @@ const panFromGstin = (gstin) =>
  * Splits the booking's tax into CGST + SGST (intra-state default).
  */
 export const buildInvoiceData = (booking, hotel = {}) => {
-  const taxable = +Math.max(0, (booking.subtotal || 0) - (booking.discount || 0)).toFixed(2)
   const taxAmount = +(booking.taxAmount || 0).toFixed(2)
+  // Room rate is GST-inclusive: (subtotal − discount) already contains the tax, so
+  // the taxable (base) value is what remains once the extracted GST is removed.
+  const taxable = +(Math.max(0, (booking.subtotal || 0) - (booking.discount || 0)) - taxAmount).toFixed(2)
   const halfTax = +(taxAmount / 2).toFixed(2)
   const total = +(booking.amount || 0).toFixed(2)
   const received = +(booking.advance || 0).toFixed(2)

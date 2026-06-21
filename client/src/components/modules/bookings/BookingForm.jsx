@@ -115,15 +115,18 @@ export default function BookingForm({ onSaved, onCancel }) {
   }, [values.roomId, values.stayType]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Live pricing preview (mirrors the server formula) ──
+  // The room rate is GST-inclusive, so GST is extracted from (subtotal − discount)
+  // rather than added on top; the total stays equal to what's entered (+ extras).
   const pricing = useMemo(() => {
     const rate = Number(values.roomRate) || 0
     const units = values.stayType === 'daily' ? nights(values.fromDate, values.toDate) : Number(values.months) || 0
     const subtotal = rate * units
-    const taxable = Math.max(0, subtotal - (Number(values.discount) || 0))
-    const taxAmount = (taxable * (Number(values.taxRate) || 0)) / 100
-    const total = taxable + taxAmount + (Number(values.extraCharges) || 0)
+    const gross = Math.max(0, subtotal - (Number(values.discount) || 0))
+    const taxable = +(gross / (1 + (Number(values.taxRate) || 0) / 100)).toFixed(2)
+    const taxAmount = +(gross - taxable).toFixed(2)
+    const total = gross + (Number(values.extraCharges) || 0)
     const balance = total - (Number(values.advance) || 0)
-    return { units, subtotal, taxAmount, total, balance }
+    return { units, subtotal, taxable, taxAmount, total, balance }
   }, [values])
 
   const validate = () => {
@@ -357,13 +360,15 @@ export default function BookingForm({ onSaved, onCancel }) {
         {/* ── Pricing summary ── */}
         <div className="mt-5 rounded-lg bg-gold-bg border border-gold-border px-4 py-3 text-sm">
           <div className="flex justify-between text-ink2">
-            <span>Subtotal{pricing.units ? ` · ${pricing.units} ${values.stayType === 'daily' ? 'night(s)' : 'month(s)'} × ${inr(values.roomRate)}` : ''}</span>
+            <span>Room charge (incl. GST){pricing.units ? ` · ${pricing.units} ${values.stayType === 'daily' ? 'night(s)' : 'month(s)'} × ${inr(values.roomRate)}` : ''}</span>
             <span>{inr(pricing.subtotal)}</span>
           </div>
           {Number(values.discount) > 0 && (
             <div className="flex justify-between text-ink2 mt-1"><span>Discount</span><span>− {inr(values.discount)}</span></div>
           )}
-          <div className="flex justify-between text-ink2 mt-1"><span>GST ({values.taxRate || 0}%)</span><span>{inr(pricing.taxAmount)}</span></div>
+          {/* GST is included in the room charge — shown extracted, not added on top. */}
+          <div className="flex justify-between text-ink2 mt-1"><span>Taxable value</span><span>{inr(pricing.taxable)}</span></div>
+          <div className="flex justify-between text-ink2 mt-1"><span>GST ({values.taxRate || 0}%) <span className="text-ink3">incl.</span></span><span>{inr(pricing.taxAmount)}</span></div>
           {Number(values.extraCharges) > 0 && (
             <div className="flex justify-between text-ink2 mt-1"><span>Extra charges</span><span>{inr(values.extraCharges)}</span></div>
           )}
