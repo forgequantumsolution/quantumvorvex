@@ -5,6 +5,41 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-21 · Booking room rate is GST-inclusive
+
+## Summary
+The room rate entered for a booking is now treated as **GST-inclusive**: the booking total equals the
+entered amount, and GST is *extracted* from it for the breakdown rather than added on top. (Previously
+`amount = (subtotal − discount) + tax`; now `amount = (subtotal − discount) + extraCharges`, with the
+tax sitting inside.)
+
+## `src/controllers/bookingsController.js`
+- `computePricing`: `taxable = gross / (1 + taxRate/100)`, `taxAmount = gross − taxable`, where
+  `gross = subtotal − discount`. `amount = gross + extraCharges`. Extra charges stay outside the GST
+  breakdown; `checkOutBooking` (adds extra charges on top) is unchanged.
+
+## `src/utils/invoiceTemplate.js`
+- `buildInvoiceData`: the taxable (base) value is now `(subtotal − discount) − taxAmount` so the
+  CGST + SGST + taxable reconcile to the inclusive total. HTML/JSON/PDF invoices all flow from here.
+
+## Billing & guest invoices — rent inclusive, food/amenities on top
+Extended the same idea to monthly/guest invoices, but **only the rent is GST-inclusive**; food and
+amenities stay GST-exclusive (added on top). GST per invoice = `rentGst + faGst` where
+`rentGst = rent − rent/(1+rate)` and `faGst = (food+amenities)·rate/100`; `total = rent + food +
+amenities + faGst`. Taxable (base) value = `rent/(1+rate) + food + amenities`, so taxable + GST = total.
+- `src/controllers/billingController.js` — `generateInvoice`: per-component GST as above.
+- `src/controllers/guestsController.js` — `computeGuestBill` (room-only branch) and `checkoutGuest`
+  invoice generation: GST extracted from the room rate (`total = rent`, or `rent + untaxed extras`).
+  Guest invoices already taxed the room only, so this just flips rent to inclusive.
+
+## Note
+- Bookings/invoices created before this change were stored under the old "GST on top" model, so they
+  re-render with a different breakdown. No data migration was done (existing rows treated as test data).
+- Seed/demo invoice generators (`seed.js`, `seedDemo.js`) still use the old on-top math — sample data
+  only, left as-is.
+
+---
+
 # Session — 2026-06-21 · Revert Prisma CLI to 5.22 (undo half-finished v7 upgrade)
 
 ## Summary

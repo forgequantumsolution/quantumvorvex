@@ -361,8 +361,9 @@ function computeGuestBill(guest, gstRate) {
     rent = guest.roomRate
     food = 0
     amenities = 0
-    gst = parseFloat(((rent * gstRate) / 100).toFixed(2))
-    total = parseFloat((rent + gst).toFixed(2))
+    // Room rate is GST-inclusive: extract the tax rather than add it on top.
+    gst = parseFloat((rent - rent / (1 + gstRate / 100)).toFixed(2))
+    total = parseFloat(rent.toFixed(2))
     amountPaid = 0
   }
 
@@ -431,10 +432,10 @@ export const checkoutGuest = async (req, res) => {
         const food = 0
         // Extra charges sit on the amenities line and are added after tax —
         // GST is only charged on the room (matches the bookings checkout).
+        // The room rate is GST-inclusive, so the tax is extracted from it.
         const amenitiesCharge = extraCharges
-        const subtotal = rent + food
-        const gstAmount = parseFloat(((subtotal * gstRate) / 100).toFixed(2))
-        const total = parseFloat((subtotal + gstAmount + extraCharges).toFixed(2))
+        const gstAmount = parseFloat((rent - rent / (1 + gstRate / 100)).toFixed(2))
+        const total = parseFloat((rent + extraCharges).toFixed(2))
 
         finalInvoice = await tx.invoice.create({
           data: {
