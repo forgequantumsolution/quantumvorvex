@@ -31,9 +31,8 @@ const initSettings = {
   seasonalPricing: false,
   expiryReminderDays: 30,
   // Invoice config
-  invoicePrefix:     'INV-',
-  invoiceNextNumber: 1,
-  invoicePadding:    4,
+  invoicePrefix:     'RA/',
+  invoiceYear:       '2026',
   placeOfSupply:     '',
   bankAccountName:   '',
   bankName:          '',
@@ -2061,53 +2060,32 @@ function PreferencesTab({ settings, addToast }) {
 
 // ─── Tab: Invoice config ──────────────────────────────────────────────────────
 // Serial numbering + the details printed on the tax invoice (place of supply,
-// bank details, terms). The serial is built from a token template (see
-// FORMAT_TOKENS) on first invoice generation; the {SEQ} running number restarts
-// whenever the date part changes. It can be overridden per invoice from the
-// invoice preview.
+// bank details, terms). The serial is "<prefix><year>-<DD>/<MM>/<NN>" where
+// prefix + year are set here, DD/MM come from the booking date, and NN is the
+// per-day count. It can be overridden per invoice from the invoice preview.
 
-// Resolve a serial-format template the same way the server does, for live preview.
-// Mirrors fillSerial() in the server's bookingsController.
-function previewSerial(format, prefix, padding, seq, d) {
-  const tokens = {
-    PREFIX: prefix ?? '',
-    YYYY:   String(d.getFullYear()),
-    YY:     String(d.getFullYear()).slice(-2),
-    MM:     String(d.getMonth() + 1).padStart(2, '0'),
-    DD:     String(d.getDate()).padStart(2, '0'),
-    SEQ:    String(seq).padStart(padding, '0'),
-  }
-  return (format || '{PREFIX}{SEQ}').replace(/{(PREFIX|YYYY|YY|MM|DD|SEQ)}/g, (_, k) => tokens[k])
+// Build the serial preview the same way the server does (see buildSerial in
+// bookingsController). `seq` is the per-day count; `d` is the booking date.
+function previewSerial(prefix, year, seq, d) {
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const yr = year || String(d.getFullYear())
+  return `${prefix ?? ''}${yr}-${dd}/${mm}/${String(seq).padStart(2, '0')}`
 }
-
-// The format that reproduces the sample invoice: RA/2026-27/06/01
-const SAMPLE_FORMAT = '{PREFIX}/{YYYY}-{DD}/{MM}/{SEQ}'
-
-const FORMAT_TOKENS = [
-  ['{PREFIX}', 'Prefix below'],
-  ['{YYYY}',   'Year, e.g. 2026'],
-  ['{YY}',     '2-digit year, e.g. 26'],
-  ['{DD}',     'Day of month, e.g. 27'],
-  ['{MM}',     'Month, e.g. 06'],
-  ['{SEQ}',    "Booking number that day (resets daily)"],
-]
 
 function InvoiceConfigTab({ settings, setSettings, addToast }) {
   const [saving, setSaving] = useState(false)
 
-  const padding    = Number(settings.invoicePadding) || 0
-  const nextSerial = previewSerial(
-    settings.invoiceFormat, settings.invoicePrefix, padding, 1, new Date(),
-  )
+  // Preview for a booking made today, first invoice of the day.
+  const nextSerial = previewSerial(settings.invoicePrefix, settings.invoiceYear, 1, new Date())
 
   async function handleSave() {
     setSaving(true)
     try {
       await settingsApi.update({
         hotel: {
-          invoiceFormat:      settings.invoiceFormat ?? '{PREFIX}{SEQ}',
           invoicePrefix:      settings.invoicePrefix ?? '',
-          invoicePadding:     Number(settings.invoicePadding) || 0,
+          invoiceYear:        settings.invoiceYear ?? '',
           placeOfSupply:      settings.placeOfSupply ?? '',
           bankAccountName:    settings.bankAccountName ?? '',
           bankName:           settings.bankName ?? '',
@@ -2124,10 +2102,7 @@ function InvoiceConfigTab({ settings, setSettings, addToast }) {
     }
   }
 
-  const set = (field) => (e) => {
-    const v = field === 'invoicePadding' ? Number(e.target.value) : e.target.value
-    setSettings(s => ({ ...s, [field]: v }))
-  }
+  const set = (field) => (e) => setSettings(s => ({ ...s, [field]: e.target.value }))
 
   return (
     <div className="flex flex-col gap-5">
@@ -2135,40 +2110,28 @@ function InvoiceConfigTab({ settings, setSettings, addToast }) {
       <div className="card">
         <div className="card-header"><span className="card-title">Invoice Numbering</span></div>
         <div className="card-body">
-          <Field label="Format">
-            <input className="form-input font-mono" value={settings.invoiceFormat ?? ''}
-              onChange={set('invoiceFormat')} placeholder={SAMPLE_FORMAT} />
-          </Field>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-            {FORMAT_TOKENS.map(([token, hint]) => (
-              <span key={token} className="t-xs text-ink3">
-                <button type="button"
-                  onClick={() => setSettings(s => ({ ...s, invoiceFormat: (s.invoiceFormat ?? '') + token }))}
-                  className="font-mono text-accent hover:underline">{token}</button>
-                {' '}{hint}
-              </span>
-            ))}
-          </div>
-          <button type="button"
-            onClick={() => setSettings(s => ({ ...s, invoiceFormat: SAMPLE_FORMAT, invoicePrefix: s.invoicePrefix || 'RA', invoicePadding: 2 }))}
-            className="btn btn-ghost btn-sm mt-3">
-            Use RA/2026-27/06/01 style
-          </button>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Prefix">
               <input className="form-input" value={settings.invoicePrefix ?? ''}
-                onChange={set('invoicePrefix')} placeholder="RA" />
+                onChange={set('invoicePrefix')} placeholder="RA/" />
             </Field>
-            <Field label="Sequence digits (padding)">
-              <input className="form-input" type="number" min={0} max={12}
-                value={settings.invoicePadding ?? 0} onChange={set('invoicePadding')} />
+            <Field label="Year">
+              <input className="form-input" value={settings.invoiceYear ?? ''}
+                onChange={set('invoiceYear')} placeholder="2026" />
             </Field>
           </div>
+
+          {/* Live preview */}
+          <div className="mt-4 rounded-md bg-surface2 px-4 py-3">
+            <span className="t-xs text-ink3">Invoice number will look like</span>
+            <div className="font-mono text-lg font-bold text-ink mt-1">{nextSerial}</div>
+          </div>
+
           <p className="t-xs mt-3 mb-0 text-ink3">
-            Today's first invoice will be numbered <span className="font-bold text-ink">{nextSerial}</span>.
-            The number is assigned when an invoice is first generated and can be edited per invoice.
-            The <span className="font-mono">{'{SEQ}'}</span> counter restarts at 1 each day (whenever the date part of the format changes).
+            <span className="font-mono">{settings.invoicePrefix || 'RA/'}{settings.invoiceYear || '2026'}</span> is fixed;
+            the <span className="font-mono">-DD/MM</span> is taken automatically from the booking's date, and the
+            last <span className="font-mono">NN</span> counts bookings for that day (restarts at 01 daily).
+            The number is assigned when an invoice is first generated and can still be edited per invoice.
           </p>
         </div>
       </div>

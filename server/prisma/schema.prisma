@@ -29,15 +29,14 @@ model Hotel {
   termsAndConditions String?
   wifiPassword       String?
   // ── Invoice config (serial numbering + details printed on the tax invoice) ──
-  // invoiceFormat is a token template, built per booking in bookingsController:
-  //   {PREFIX} {YYYY} {YY} {MM} {DD} {SEQ}
-  //   e.g. "{PREFIX}/{YYYY}-{DD}/{MM}/{SEQ}" + prefix "RA" → RA/2026-27/06/01
-  // The running sequence ({SEQ}) restarts whenever the non-{SEQ} part of the
-  // serial changes — so a format with {DD} resets daily (per-bucket counters live
-  // in InvoiceCounter). invoiceNextNumber is retained for legacy installs but is
-  // no longer used for assignment.
-  invoiceFormat      String?  @default("{PREFIX}{SEQ}")
+  // Serial = "<invoicePrefix><invoiceYear>-<DD>/<MM>/<NN>", built per booking in
+  // bookingsController. prefix + year are configured here (e.g. "RA/" + "2026");
+  // DD/MM come from the booking date; NN is the per-day running count (2 digits)
+  // and lives in InvoiceCounter. e.g. "RA/2026-27/06/01".
+  // invoiceNextNumber / invoicePadding are retained for legacy installs but are no
+  // longer used for assignment.
   invoicePrefix      String?  @default("INV-")
+  invoiceYear        String?
   invoiceNextNumber  Int      @default(1)
   invoicePadding     Int      @default(4)
   placeOfSupply      String?
@@ -54,11 +53,10 @@ model Hotel {
   updatedAt          DateTime @updatedAt
 }
 
-// Per-bucket running counter for tax-invoice serials. `period` is the reset
-// bucket — the serial with {SEQ} stripped (e.g. "RA/2026-27/06/") — so {SEQ}
-// restarts at 1 each time the date part changes (daily for a format with {DD}).
-// `next` is the value to assign on the next invoice in that bucket. Incremented
-// atomically; (hotelId, period) is unique.
+// Per-day running counter for tax-invoice serials. `period` is the reset bucket —
+// the serial with the running number stripped (e.g. "RA/2026-27/06/") — so NN
+// restarts at 1 each booking day. `next` is the value to assign on the next
+// invoice in that bucket. Incremented atomically; (hotelId, period) is unique.
 model InvoiceCounter {
   id      String @id @default(cuid())
   hotelId String

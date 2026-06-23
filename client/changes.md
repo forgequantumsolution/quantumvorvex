@@ -6,25 +6,36 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
-# Session — 2026-06-23 · Configurable invoice serial format
+# Session — 2026-06-23 · Editable invoice number on the booking form
 
 ## Summary
-Reworked the **Settings → Invoice → Invoice Numbering** card so the serial can be configured to match
-a layout like `RA/2026-27/06/01`. Replaced the old Prefix / Next Number / Digits inputs with a token
-**Format** field plus clickable token chips, a one-click preset, and a live preview that resolves the
-template against today's date. The running sequence resets daily (see server changelog).
+The create-booking form now shows the auto-generated tax-invoice number (pre-filled from the server)
+and lets the user override it. Left unchanged, the server reserves the next number atomically so two
+same-day bookings can't collide.
+
+## `src/components/modules/bookings/BookingForm.jsx`
+- Added an **"Invoice no."** field in the Stay section, hint "Auto-generated — edit to override".
+- On mount, fetches `bookingsApi.nextInvoiceNo()` and pre-fills it (remembered as `autoInvoiceNo`).
+- On submit, sends `invoiceNo` **only if** the user edited it away from the suggestion; otherwise omits
+  it so the server auto-assigns.
+
+## `src/api/client.js`
+- `bookingsApi.nextInvoiceNo()` → `GET /bookings/next-invoice-no`.
+
+## `src/components/ui-tw/Field.jsx`
+- Added a `hint` prop — renders a muted helper line below the control when there's no `error`.
+
+## Summary
+Simplified the **Settings → Invoice → Invoice Numbering** card to just two fields — **Prefix** (`RA/`)
+and **Year** (`2026`) — with a prominent live preview. Everything after (`-DD/MM/NN`) is automatic:
+day/month from the booking date, `NN` the per-day count. Produces serials like `RA/2026-27/06/01`.
 
 ## `src/components/modules/settings/Settings.jsx`
-- `InvoiceConfigTab`:
-  - New **Format** input (token template), with clickable chips that append tokens:
-    `{PREFIX} {YYYY} {YY} {MM} {DD} {SEQ}`.
-  - **"Use RA/2026-27/06/01 style"** button — sets format `{PREFIX}/{YYYY}-{DD}/{MM}/{SEQ}`, prefix
-    `RA`, padding `2` in one click.
-  - Removed the **Next Number** field (sequence now resets per date bucket, server-side); kept
-    **Prefix** and **Sequence digits (padding)**.
-  - Live preview via `previewSerial()` (mirrors the server's `fillSerial`); helper text explains the
-    daily reset.
-  - `handleSave` now sends `invoiceFormat`; no longer sends `invoiceNextNumber`.
+- `InvoiceConfigTab`: removed the token-format field, token chips, preset button, and padding input
+  (an interim design). Now just **Prefix** + **Year** inputs and a boxed live preview.
+- `previewSerial(prefix, year, seq, d)` mirrors the server's `buildSerial`.
+- `handleSave` sends `invoicePrefix` + `invoiceYear` (no longer `invoiceFormat` / `invoicePadding` /
+  `invoiceNextNumber`); default settings object updated to `invoicePrefix: 'RA/'`, `invoiceYear: '2026'`.
 
 ---
 
