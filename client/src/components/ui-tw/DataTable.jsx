@@ -20,7 +20,7 @@ export default function DataTable({ columns, rows, rowKey = (r) => r.id, empty, 
             {columns.map((col) => (
               <th
                 key={col.key}
-                className={`px-5 py-3 font-medium text-[11px] uppercase tracking-wider text-ink3 ${alignClass(col.align)} ${col.className || ''}`}
+                className={`px-5 py-3 font-medium text-[11px] uppercase tracking-wider text-ink3 whitespace-nowrap ${alignClass(col.align)} ${col.className || ''}`}
               >
                 {col.header}
               </th>
@@ -37,7 +37,7 @@ export default function DataTable({ columns, rows, rowKey = (r) => r.id, empty, 
               }`}
             >
               {columns.map((col) => (
-                <td key={col.key} className={`px-5 py-3.5 text-ink ${alignClass(col.align)} ${col.className || ''}`}>
+                <td key={col.key} className={`px-5 py-3.5 text-ink whitespace-nowrap ${alignClass(col.align)} ${col.className || ''}`}>
                   {col.render ? col.render(row) : row[col.key]}
                 </td>
               ))}

@@ -56,8 +56,16 @@ stat tiles 4-col→`grid-cols-2 lg:grid-cols-4`) across:
 - `guests/Guests.jsx`, `settings/Settings.jsx` — wrapped raw `<table>`s that lacked a scroll wrapper.
 - Calendar timeline and all `DataTable`-based tables already scroll (`overflow-x-auto`).
 
+### `src/components/ui-tw/DataTable.jsx`
+- Added `whitespace-nowrap` to all `<th>`/`<td>`. The table was `w-full`, so on a narrow
+  container (e.g. iPad Pro with the drawer layout) columns squeezed and cells wrapped ugly
+  (the Bookings "Stay" date column collapsed vertically) instead of scrolling. With nowrap the
+  table takes its natural width and the existing `overflow-x-auto` wrapper scrolls horizontally.
+  Affects every DataTable-based list (Bookings, Cancellations, Users, …). Columns can still opt
+  back into wrapping via their per-column `className`.
+
 ### Not changed
-- Shared modals (`ui-tw/Modal`, `ui/Modal`) and `ui-tw/DataTable` were already fluid / scroll-wrapped.
+- Shared modals (`ui-tw/Modal`, `ui/Modal`) were already fluid.
 - `App.css` (unused Vite boilerplate).
 
 ## Tests
