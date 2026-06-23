@@ -15,8 +15,6 @@ const normalizeRoom = (r) => ({
   floor: r.floor,
   status: r.status,
   type: r.type?.name || (typeof r.type === 'string' ? r.type : 'Standard'),
-  dailyRate: r.dailyRate,
-  monthlyRate: r.monthlyRate,
   qrToken: r.qrToken,
 })
 
@@ -42,7 +40,7 @@ const STATUS_LABEL = {
 const FILTERS = ['All', 'Available', 'Occupied', 'Maintenance', 'Reserved']
 
 const EMPTY_FORM = {
-  number: '', type: 'Single', floor: '', dailyRate: '', monthlyRate: '', maxOccupancy: '',
+  number: '', type: 'Single', floor: '', maxOccupancy: '',
 }
 
 // ─── Kanban Column ────────────────────────────────────────────────────────────
@@ -95,8 +93,6 @@ function RoomDetail({ room, onClose, onStatusChange, onShowQr, onDelete }) {
           ['Type',        room.type],
           ['Floor',       `Floor ${room.floor}`],
           ['Status',      null],
-          ['Daily Rate',  `₹${room.dailyRate?.toLocaleString()}`],
-          ['Monthly Rate',`₹${room.monthlyRate?.toLocaleString()}`],
         ].map(([label, value]) => (
           <div key={label} className="bg-surface2 border border-line rounded-lg px-[14px] py-2.5">
             <p className="t-label">{label}</p>
@@ -292,8 +288,6 @@ function AddRoomForm({ form, onChange }) {
       </div>
 
       {field('Floor', 'floor', 'number', { placeholder: '1', min: 1 })}
-      {field('Daily Rate ₹', 'dailyRate', 'number', { placeholder: '500', min: 0 })}
-      {field('Monthly Rate ₹', 'monthlyRate', 'number', { placeholder: '9000', min: 0 })}
       {field('Max Occupancy', 'maxOccupancy', 'number', { placeholder: '2', min: 1 })}
     </div>
   )
@@ -355,8 +349,6 @@ export default function Rooms() {
         number: addForm.number.trim(),
         typeName: addForm.type,
         floor: parseInt(addForm.floor, 10),
-        dailyRate: parseFloat(addForm.dailyRate) || undefined,
-        monthlyRate: parseFloat(addForm.monthlyRate) || undefined,
         status: 'available',
       })
       setAddForm(EMPTY_FORM)
@@ -636,11 +628,6 @@ function RoomCard({ room, onClick }) {
           {room.guest.name}
         </p>
       )}
-
-      {/* Rate */}
-      <p className="t-label mt-1">
-        ₹{room.dailyRate}/day
-      </p>
     </div>
   )
 }

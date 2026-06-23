@@ -6,6 +6,53 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-23 · Configurable invoice serial format
+
+## Summary
+Reworked the **Settings → Invoice → Invoice Numbering** card so the serial can be configured to match
+a layout like `RA/2026-27/06/01`. Replaced the old Prefix / Next Number / Digits inputs with a token
+**Format** field plus clickable token chips, a one-click preset, and a live preview that resolves the
+template against today's date. The running sequence resets daily (see server changelog).
+
+## `src/components/modules/settings/Settings.jsx`
+- `InvoiceConfigTab`:
+  - New **Format** input (token template), with clickable chips that append tokens:
+    `{PREFIX} {YYYY} {YY} {MM} {DD} {SEQ}`.
+  - **"Use RA/2026-27/06/01 style"** button — sets format `{PREFIX}/{YYYY}-{DD}/{MM}/{SEQ}`, prefix
+    `RA`, padding `2` in one click.
+  - Removed the **Next Number** field (sequence now resets per date bucket, server-side); kept
+    **Prefix** and **Sequence digits (padding)**.
+  - Live preview via `previewSerial()` (mirrors the server's `fillSerial`); helper text explains the
+    daily reset.
+  - `handleSave` now sends `invoiceFormat`; no longer sends `invoiceNextNumber`.
+
+---
+
+# Session — 2026-06-23 · Room price entered at booking, not configured per room
+
+## Summary
+Removed room price configuration from the Rooms module. Rooms no longer carry a
+daily/monthly rate in the UI — the rate is entered directly during booking. Backend
+schema is untouched (`Room.dailyRate`/`monthlyRate` columns still exist with defaults
+but are no longer set or read from the UI). Settings → Room Types rates left as-is.
+
+## File changes
+
+### `src/components/modules/rooms/Rooms.jsx`
+- Removed the **Daily Rate** / **Monthly Rate** inputs from the Add Room form and from
+  the create payload (`EMPTY_FORM` and `handleAddRoom`).
+- Removed the rate cells from the room detail modal and the `₹/day` line on the room card.
+- Stopped mapping `dailyRate`/`monthlyRate` in `normalizeRoom`.
+
+### `src/components/modules/bookings/BookingForm.jsx`
+- `roomRate` no longer pre-fills from the selected room — starts empty with an
+  "Enter rate" placeholder. Removed the effect that overwrote the rate on room/stay-type change.
+- Dropped the `· ₹X/night` suffix from the room dropdown labels.
+- Added validation requiring a rate > 0 on submit (added to `validate`, `FIELD_ORDER`,
+  and the Rate `Field`) so a booking can't be created at ₹0 by accident.
+
+---
+
 # Session — 2026-06-23 · Tablet responsiveness
 
 ## Summary
