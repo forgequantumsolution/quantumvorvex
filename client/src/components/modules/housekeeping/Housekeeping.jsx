@@ -150,7 +150,7 @@ function BoardTab({ rooms, onRoomClick }) {
             <p className="t-title m-0 mb-2.5 tracking-[-0.01em] uppercase">
               Floor {floor}
             </p>
-            <div className="grid grid-cols-8 gap-2">
+            <div className="grid grid-cols-4 lg:grid-cols-8 gap-2">
               {floorRooms.map(room => {
                 const st = HK_STATUSES[room.status] || HK_STATUSES.clean_available
                 return (
@@ -424,7 +424,7 @@ function InspectionTab({ rooms, onSubmit }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-5 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
       {/* Left: Checklist */}
       <div>
         <div className="mb-4">
@@ -710,7 +710,7 @@ export default function Housekeeping() {
       )}
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-3 gap-[14px] mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[14px] mb-6">
         <div className="stat-card stat-bar-green">
           <p className="t-label m-0">Clean Available</p>
           <p className="t-display mt-1.5 text-success-text tracking-[-0.03em]">{cleanCount}</p>

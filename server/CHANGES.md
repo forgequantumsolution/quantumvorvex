@@ -5,6 +5,37 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-23 · Token-based invoice serials with date-bucket reset
+
+## Summary
+Replaced the fixed `prefix + padded counter` invoice serial with a **token template** so the serial
+can match a layout like `RA/2026-27/06/01` (prefix / year - day / month / Nth invoice that day). The
+running sequence now restarts automatically whenever the date part of the serial changes — a format
+with `{DD}` resets **daily**, one with only `{MM}` monthly, one with no date token never resets. No
+separate "reset period" setting.
+
+## `prisma/schema.prisma` + migration `20260623000000_invoice_format_counters`
+- `Hotel`: added `invoiceFormat String? @default("{PREFIX}{SEQ}")` — token template. Tokens:
+  `{PREFIX} {YYYY} {YY} {MM} {DD} {SEQ}`. Default reproduces the old `INV-0001` behaviour.
+- New model `InvoiceCounter (id, hotelId, period, next)` with `@@unique([hotelId, period])` —
+  per-bucket running counter. `period` is the serial with `{SEQ}` stripped (e.g. `RA/2026-27/06/`).
+- `invoiceNextNumber` retained for legacy installs but no longer used for assignment.
+
+## `src/controllers/bookingsController.js`
+- `fillSerial(hotel, date, seq)` — resolves the template against the assignment date; `seq = null`
+  yields the serial without its sequence (used as the reset bucket).
+- `buildSerial` now delegates to `fillSerial`; `invoicePeriod(hotel, date)` returns the date bucket.
+- `assignInvoiceNo(bookingId, hotel)` (was `(bookingId, hotelId)`) — reserves the next number from
+  `InvoiceCounter` for the current bucket via an atomic `upsert` (create → seq 1; update → increment).
+  `reserved = counter.next - 1`; retries on `P2002` (counter create race **or** serial taken by a
+  manual edit). `getBookingInvoice` updated to pass the `hotel` object.
+
+## Note
+- Removed the financial-year (Apr–Mar) interpretation from an earlier draft of this change; the serial
+  uses plain calendar year/day/month per the requested sample format.
+
+---
+
 # Session — 2026-06-21 · Booking room rate is GST-inclusive
 
 ## Summary

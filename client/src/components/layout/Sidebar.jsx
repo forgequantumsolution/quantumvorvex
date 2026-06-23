@@ -32,13 +32,23 @@ export default function Sidebar() {
 
   // Collapse is a desktop-only affordance; the mobile drawer always shows full.
   const [isDesktop, setIsDesktop] = useState(
-    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true,
+    typeof window !== 'undefined' ? window.innerWidth >= 1200 : true,
   )
   useEffect(() => {
-    const onResize = () => setIsDesktop(window.innerWidth >= 1024)
+    const onResize = () => setIsDesktop(window.innerWidth >= 1200)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
+
+  // Lock body scroll while the drawer is open (mobile/tablet only — the drawer
+  // is off-canvas below 1024px). Prevents the page behind the overlay from
+  // scrolling on touch devices.
+  useEffect(() => {
+    if (sidebarOpen && !isDesktop) {
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = '' }
+    }
+  }, [sidebarOpen, isDesktop])
 
   const collapsed = sidebarCollapsed && isDesktop
 
@@ -52,7 +62,7 @@ export default function Sidebar() {
 
   const handleNavClick = (panelId) => {
     setActivePanel(panelId)
-    if (window.innerWidth < 1024) {
+    if (window.innerWidth < 1200) {
       closeSidebar()
     }
   }

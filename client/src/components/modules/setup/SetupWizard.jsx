@@ -157,7 +157,7 @@ function Step1Profile({ data, onChange }) {
       </div>
 
       {/* Fields */}
-      <div className="grid grid-cols-2 gap-x-[18px] gap-y-[14px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-[18px] gap-y-[14px]">
         <Field label="Hotel Name" required>
           <input className="form-input" value={data.hotelName} onChange={(e) => set('hotelName', e.target.value)} placeholder="e.g. Quantum Vorvex" />
         </Field>
@@ -223,7 +223,7 @@ function Step2Floors({ data, onChange }) {
 
   return (
     <div className="flex flex-col gap-[22px]">
-      <div className="grid grid-cols-2 gap-x-[18px] gap-y-[14px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-[18px] gap-y-[14px]">
         <Field label="Number of Floors" required>
           <input
             className="form-input" type="number" min={1} max={10}
@@ -240,7 +240,7 @@ function Step2Floors({ data, onChange }) {
 
       {/* Format selection */}
       <Field label="Room Number Format" required>
-        <div className="grid grid-cols-3 gap-2.5 mt-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 mt-1">
           {[
             { id: 'floor_seq', label: 'Floor + Sequential', example: '101, 102, 201...' },
             { id: 'seq_only',  label: 'Sequential Only',    example: '1, 2, 3...' },
@@ -334,7 +334,7 @@ function Step3RoomTypes({ data, onChange }) {
   return (
     <div className="flex flex-col gap-[18px]">
       {/* Rate reference cards */}
-      <div className="grid grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         {ROOM_TYPE_PRESETS.map((p) => (
           <div key={p.name} className="bg-surface2 border border-line rounded-lg px-3 py-2.5">
             <div className="t-xs text-ink mb-1">{p.name}</div>
@@ -465,7 +465,7 @@ function Step4Facilities({ data, onChange }) {
             ({facilities.length} selected)
           </span>
         </div>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {ALL_FACILITIES.map((f) => {
             const checked = facilities.includes(f)
             return (
@@ -751,7 +751,7 @@ function Step7Preview({ wizardData, onLaunch }) {
       )}
 
       {/* Summary grid */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {summaryCards.map((card) => (
           <div key={card.title} className="bg-surface2 border border-line rounded-[10px] px-4 py-3.5 border-l-[3px]" style={{ borderLeftColor: card.color }}>
             <div className="t-h1 mb-1.5">{card.icon}</div>

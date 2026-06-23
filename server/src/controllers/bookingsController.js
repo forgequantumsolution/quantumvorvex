@@ -605,27 +605,56 @@ const inlineUploadAsset = (url) => {
   }
 }
 
-// Build a serial from the hotel's invoice config: prefix + zero-padded number.
-const buildSerial = (hotel, n) =>
-  `${hotel.invoicePrefix ?? 'INV-'}${String(n).padStart(hotel.invoicePadding ?? 4, '0')}`
+// Fill the hotel's invoice format template against a date and running sequence.
+// Tokens: {PREFIX} {YYYY} {YY} {MM} {DD} {SEQ}. Pass seq = null to get the serial
+// WITHOUT its sequence (used as the reset bucket — see invoicePeriod).
+//   "{PREFIX}/{YYYY}-{DD}/{MM}/{SEQ}" + prefix "RA", padding 2 → "RA/2026-27/06/01".
+const fillSerial = (hotel, date, seq) => {
+  const tpl = hotel.invoiceFormat || '{PREFIX}{SEQ}'
+  const tokens = {
+    PREFIX: hotel.invoicePrefix ?? '',
+    YYYY:   String(date.getFullYear()),
+    YY:     String(date.getFullYear()).slice(-2),
+    MM:     String(date.getMonth() + 1).padStart(2, '0'),
+    DD:     String(date.getDate()).padStart(2, '0'),
+    SEQ:    seq == null ? '' : String(seq).padStart(hotel.invoicePadding ?? 0, '0'),
+  }
+  return tpl.replace(/{(PREFIX|YYYY|YY|MM|DD|SEQ)}/g, (_, k) => tokens[k])
+}
 
-// Assign the next tax-invoice serial to a booking and durably advance the
-// hotel's counter. The counter is incremented atomically per attempt, so a rare
-// collision (e.g. a number already reserved by a manual edit) just moves to the
-// next one instead of looping forever.
-const assignInvoiceNo = async (bookingId, hotelId) => {
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const hotel = await prisma.hotel.update({
-      where: { id: hotelId },
-      data: { invoiceNextNumber: { increment: 1 } },
-    })
-    const reserved = (hotel.invoiceNextNumber ?? 1) - 1 // value before this increment
-    const serial = buildSerial(hotel, reserved)
+const buildSerial = (hotel, seq, date) => fillSerial(hotel, date, seq)
+
+// The reset bucket for {SEQ}: the serial with the sequence stripped out. The
+// counter restarts whenever this changes — so a format with {DD} resets daily,
+// one with only {MM} resets monthly, and one with no date token never resets.
+const invoicePeriod = (hotel, date) => fillSerial(hotel, date, null)
+
+// Assign the next tax-invoice serial to a booking. The running counter lives
+// per-period in InvoiceCounter (keyed by hotel + the date-bucket above), so
+// {SEQ} restarts at 1 for each new bucket. The counter is incremented atomically
+// per attempt, so a rare collision (e.g. a number reserved by a manual edit)
+// just moves to the next one instead of looping forever.
+const assignInvoiceNo = async (bookingId, hotel) => {
+  const now = new Date()
+  const period = invoicePeriod(hotel, now)
+  for (let attempt = 0; attempt < 20; attempt++) {
     try {
+      // Get-or-create the period counter and reserve a number atomically. On
+      // create the first serial is 1 (next stored as 2); on update we take the
+      // pre-increment value. Either way: reserved = counter.next - 1.
+      const counter = await prisma.invoiceCounter.upsert({
+        where:  { hotelId_period: { hotelId: hotel.id, period } },
+        create: { hotelId: hotel.id, period, next: 2 },
+        update: { next: { increment: 1 } },
+      })
+      const reserved = counter.next - 1
+      const serial = buildSerial(hotel, reserved, now)
       await prisma.booking.update({ where: { id: bookingId }, data: { invoiceNo: serial } })
       return serial
     } catch (e) {
-      if (e.code === 'P2002') continue // serial already taken — reserve the next
+      // P2002 on the counter create => concurrent first-insert race; retry hits
+      // the update path. P2002 on the booking => serial taken; reserve the next.
+      if (e.code === 'P2002') continue
       throw e
     }
   }
@@ -664,7 +693,7 @@ export const getBookingInvoice = async (req, res) => {
     // fails or there's no hotel record to read the config from.
     if (!booking.invoiceNo && hotel.id) {
       try {
-        booking.invoiceNo = await assignInvoiceNo(booking.id, hotel.id)
+        booking.invoiceNo = await assignInvoiceNo(booking.id, hotel)
       } catch (err) {
         logger.warn('Invoice serial assignment failed', { error: err.message, bookingId: booking.id })
       }

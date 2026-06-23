@@ -190,7 +190,7 @@ export default function CheckOutModal({
 
           {/* Editable billing controls (booking flow) */}
           {(allowExtraCharges || allowPartialPayment) && (
-            <div className="grid grid-cols-2 gap-3 mb-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3.5">
               {allowExtraCharges && (
                 <div>
                   <label className="form-label block mb-[5px]">Extra charges (₹)</label>

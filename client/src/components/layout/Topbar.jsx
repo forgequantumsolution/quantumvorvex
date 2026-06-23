@@ -97,7 +97,7 @@ export default function Topbar() {
 
         {/* Notification dropdown */}
         {notifOpen && (
-          <div className="absolute top-[44px] right-0 w-[340px] bg-surface border border-line rounded-[10px] shadow-[var(--shadow-md)] z-[500] overflow-hidden">
+          <div className="absolute top-[44px] right-0 w-[340px] max-w-[calc(100vw-24px)] bg-surface border border-line rounded-[10px] shadow-[var(--shadow-md)] z-[500] overflow-hidden">
             <div className="px-4 py-3 flex justify-between items-center border-b border-line">
               <div>
                 <span className="t-title">Notifications</span>

@@ -57,7 +57,7 @@ function FloorPlanRoomDetail({ room, onClose }) {
   return (
     <>
       {/* Info grid */}
-      <div className="grid grid-cols-[1fr_1fr] gap-3 mb-[18px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-[18px]">
         {[
           ['Room Number', room.number],
           ['Floor',       `Floor ${room.floor}`],
@@ -124,10 +124,12 @@ function FloorSection({ floorNum, rooms, onRoomClick }) {
       </div>
 
       {/* Room grid */}
-      <div className="grid grid-cols-[repeat(8,1fr)] gap-2">
-        {rooms.map(room => (
-          <FloorRoomCell key={room.id} room={room} onClick={() => onRoomClick(room)} />
-        ))}
+      <div className="overflow-x-auto">
+        <div className="grid grid-cols-[repeat(8,minmax(70px,1fr))] gap-2">
+          {rooms.map(room => (
+            <FloorRoomCell key={room.id} room={room} onClick={() => onRoomClick(room)} />
+          ))}
+        </div>
       </div>
     </div>
   )

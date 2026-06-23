@@ -39,7 +39,7 @@ function OverviewTab({ dashboard, revenue }) {
   const byDay = (revenue?.byDay || []).map((d) => ({ date: d.date, revenue: d.revenue }))
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <MiniStat label="Revenue (paid invoices)" value={formatCurrencyCompact(dashboard?.revenue || 0)} accent="#c9a84c" />
         <MiniStat label="Occupancy Rate" value={`${dashboard?.occupancyRate ?? 0}%`} accent="#3b82f6" />
         <MiniStat label="Active Guests" value={(dashboard?.recentGuests?.length ?? 0)} accent="#22c55e" />
@@ -74,7 +74,7 @@ function RevenueTab({ revenue }) {
   const byDay = revenue?.byDay || []
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <MiniStat label="Total Revenue" value={formatCurrencyCompact(revenue?.totalRevenue || 0)} accent="#c9a84c" />
         <MiniStat label="Paid Invoices" value={(revenue?.invoices?.length ?? 0)} accent="#3b82f6" />
       </div>
@@ -126,7 +126,7 @@ function OccupancyTab({ rooms, occupancy }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <MiniStat label="Avg Occupancy (period)" value={`${occupancy?.avgRate ?? 0}%`} accent="#3b82f6" />
         <MiniStat label="Total Rooms" value={occupancy?.totalRooms ?? rooms.length} accent="#c9a84c" />
       </div>
@@ -200,7 +200,7 @@ function GSTTab({ gst }) {
   const invoices = gst?.invoices || []
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-3 gap-[14px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[14px]">
         <MiniStat label="Total Taxable" value={formatCurrencyCompact(gst?.totalTaxable || 0)} accent="#6366f1" />
         <MiniStat label="Total GST" value={formatCurrencyCompact(gst?.totalGst || 0)} accent="#c9a84c" />
         <MiniStat label="Total Amount" value={formatCurrencyCompact(gst?.totalAmount || 0)} accent="#22c55e" />
@@ -278,7 +278,7 @@ function ExportTab({ addToast }) {
   ]
 
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {exports.map(exp => (
         <div key={exp.type} className="card flex flex-col gap-[14px]">
           <div className="card-body flex flex-col gap-2.5">

@@ -94,7 +94,6 @@ export default function BookingForm({ onSaved, onCancel }) {
           ...EMPTY,
           ...v,
           roomId: pool[0]?.id || '',
-          roomRate: pool[0]?.dailyRate ?? '',
           taxRate: gst ?? v.taxRate,
         }))
       })
@@ -102,17 +101,7 @@ export default function BookingForm({ onSaved, onCancel }) {
       .finally(() => setLoadingRooms(false))
   }, [])
 
-  const room = useMemo(() => rooms.find((r) => r.id === values.roomId), [rooms, values.roomId])
   const typeName = (r) => roomTypes.find((t) => t.id === r?.typeId)?.name || ''
-
-  // When the selected room or stay type changes, refresh the rate default
-  useEffect(() => {
-    if (!room) return
-    setValues((v) => ({
-      ...v,
-      roomRate: v.stayType === 'daily' ? room.dailyRate : room.monthlyRate,
-    }))
-  }, [values.roomId, values.stayType]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Live pricing preview (mirrors the server formula) ──
   // The room rate is GST-inclusive, so GST is extracted from (subtotal − discount)
@@ -136,6 +125,7 @@ export default function BookingForm({ onSaved, onCancel }) {
     if (values.guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.guestEmail.trim()))
       e.guestEmail = 'Enter a valid email address'
     if (!values.roomId) e.roomId = 'Select a room'
+    if (!values.roomRate || Number(values.roomRate) <= 0) e.roomRate = 'Enter the room rate'
     if (values.stayType === 'daily') {
       if (!values.toDate) e.toDate = 'Check-out date is required'
       else if (nights(values.fromDate, values.toDate) < 1) e.toDate = 'Must be after check-in'
@@ -147,7 +137,7 @@ export default function BookingForm({ onSaved, onCancel }) {
   }
 
   // Field order for "jump to first error" on a failed submit.
-  const FIELD_ORDER = ['guestName', 'guestPhone', 'guestEmail', 'roomId', 'toDate', 'months']
+  const FIELD_ORDER = ['guestName', 'guestPhone', 'guestEmail', 'roomId', 'roomRate', 'toDate', 'months']
 
   const handleSubmit = async () => {
     const e = validate()
@@ -283,7 +273,7 @@ export default function BookingForm({ onSaved, onCancel }) {
                    loadingRooms
                      ? [{ value: '', label: 'Loading rooms…' }]
                      : rooms.length
-                       ? rooms.map((r) => ({ value: r.id, label: `Room ${r.number}${typeName(r) ? ` · ${typeName(r)}` : ''} · ₹${r.dailyRate}/night` }))
+                       ? rooms.map((r) => ({ value: r.id, label: `Room ${r.number}${typeName(r) ? ` · ${typeName(r)}` : ''}` }))
                        : [{ value: '', label: 'No rooms available' }]
                  } />
           <Field label="Booking source" value={values.source} onChange={set('source')} options={SOURCES} />
@@ -302,8 +292,8 @@ export default function BookingForm({ onSaved, onCancel }) {
         {/* ── Pricing ── */}
         <h4 className="text-xs font-semibold uppercase tracking-wide text-ink3 mb-2 mt-5">Pricing</h4>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Field label={`Rate (₹/${values.stayType === 'daily' ? 'night' : 'month'})`} type="number" min="0"
-                 value={values.roomRate} onChange={set('roomRate')} />
+          <Field label={`Rate (₹/${values.stayType === 'daily' ? 'night' : 'month'})`} name="roomRate" type="number" min="0"
+                 value={values.roomRate} onChange={set('roomRate')} placeholder="Enter rate" error={errors.roomRate} required />
           <Field label="Discount (₹)" type="number" min="0" value={values.discount} onChange={set('discount')} />
           <Field label="GST (%)" type="number" min="0" value={values.taxRate} onChange={set('taxRate')} />
           <Field label="Extra charges (₹)" type="number" min="0" value={values.extraCharges} onChange={set('extraCharges')} />
