@@ -14,6 +14,7 @@ const EMPTY = {
   fromDate: TODAY, toDate: '', months: 1,
   roomRate: '', discount: 0, taxRate: 12, extraCharges: 0, advance: 0,
   source: 'walk_in', specialRequests: '', notes: '',
+  invoiceNo: '',
 }
 
 const SOURCES = [
@@ -45,6 +46,10 @@ export default function BookingForm({ onSaved, onCancel }) {
   const [loadingRooms, setLoadingRooms] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [apiError, setApiError] = useState('')
+  // The auto-suggested invoice number; if the user leaves the field on this value
+  // we send nothing and let the server reserve the next one atomically (avoids
+  // two same-day bookings grabbing the same number).
+  const [autoInvoiceNo, setAutoInvoiceNo] = useState('')
 
   // ── ID documents ──
   // idDocs is keyed by ID type → { front, back } files
@@ -82,19 +87,26 @@ export default function BookingForm({ onSaved, onCancel }) {
   useEffect(() => {
     setApiError('')
     setLoadingRooms(true)
-    Promise.all([roomsApi.getAll(), settingsApi.get().catch(() => ({ data: {} }))])
-      .then(([roomsRes, settingsRes]) => {
+    Promise.all([
+      roomsApi.getAll(),
+      settingsApi.get().catch(() => ({ data: {} })),
+      bookingsApi.nextInvoiceNo().catch(() => ({ data: {} })),
+    ])
+      .then(([roomsRes, settingsRes, invoiceRes]) => {
         const list = roomsRes.data?.rooms || roomsRes.data || []
         const available = list.filter((r) => r.status === 'available')
         const pool = available.length ? available : list
         setRooms(pool)
         setRoomTypes(settingsRes.data?.roomTypes || [])
         const gst = settingsRes.data?.hotel?.gstRate
+        const nextInvoiceNo = invoiceRes.data?.invoiceNo || ''
+        setAutoInvoiceNo(nextInvoiceNo)
         setValues((v) => ({
           ...EMPTY,
           ...v,
           roomId: pool[0]?.id || '',
           taxRate: gst ?? v.taxRate,
+          invoiceNo: nextInvoiceNo,
         }))
       })
       .catch(() => setApiError('Could not load rooms. Is the backend running?'))
@@ -176,6 +188,11 @@ export default function BookingForm({ onSaved, onCancel }) {
         source: values.source,
         specialRequests: values.specialRequests.trim() || undefined,
         notes: values.notes.trim() || undefined,
+        // Only send an explicit number if the user edited it; otherwise let the
+        // server auto-assign so concurrent same-day bookings don't collide.
+        invoiceNo: values.invoiceNo.trim() && values.invoiceNo.trim() !== autoInvoiceNo
+          ? values.invoiceNo.trim()
+          : undefined,
       }
       const { data } = await bookingsApi.create(payload)
       const booking = data.booking
@@ -277,6 +294,8 @@ export default function BookingForm({ onSaved, onCancel }) {
                        : [{ value: '', label: 'No rooms available' }]
                  } />
           <Field label="Booking source" value={values.source} onChange={set('source')} options={SOURCES} />
+          <Field label="Invoice no." value={values.invoiceNo} onChange={set('invoiceNo')}
+                 placeholder="Auto" hint="Auto-generated — edit to override" />
           <Field label="Stay type" value={values.stayType} onChange={set('stayType')}
                  options={[{ value: 'daily', label: 'Daily' }, { value: 'monthly', label: 'Monthly' }]} />
           <Field label="Check-in" type="date" value={values.fromDate} onChange={set('fromDate')} />

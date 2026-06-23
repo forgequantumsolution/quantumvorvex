@@ -5,34 +5,58 @@ Paths below are relative to `server/`.
 
 ---
 
-# Session — 2026-06-23 · Token-based invoice serials with date-bucket reset
+# Session — 2026-06-23 · Assign invoice number at booking creation (auto + editable)
 
 ## Summary
-Replaced the fixed `prefix + padded counter` invoice serial with a **token template** so the serial
-can match a layout like `RA/2026-27/06/01` (prefix / year - day / month / Nth invoice that day). The
-running sequence now restarts automatically whenever the date part of the serial changes — a format
-with `{DD}` resets **daily**, one with only `{MM}` monthly, one with no date token never resets. No
-separate "reset period" setting.
-
-## `prisma/schema.prisma` + migration `20260623000000_invoice_format_counters`
-- `Hotel`: added `invoiceFormat String? @default("{PREFIX}{SEQ}")` — token template. Tokens:
-  `{PREFIX} {YYYY} {YY} {MM} {DD} {SEQ}`. Default reproduces the old `INV-0001` behaviour.
-- New model `InvoiceCounter (id, hotelId, period, next)` with `@@unique([hotelId, period])` —
-  per-bucket running counter. `period` is the serial with `{SEQ}` stripped (e.g. `RA/2026-27/06/`).
-- `invoiceNextNumber` retained for legacy installs but no longer used for assignment.
+The tax-invoice serial is now assigned **when a booking is created** (auto-incrementing the per-day
+counter), instead of only on first invoice generation. The number is editable in the create form; a
+blank/unchanged value is auto-assigned server-side, a user-supplied value is used as-is.
 
 ## `src/controllers/bookingsController.js`
-- `fillSerial(hotel, date, seq)` — resolves the template against the assignment date; `seq = null`
-  yields the serial without its sequence (used as the reset bucket).
-- `buildSerial` now delegates to `fillSerial`; `invoicePeriod(hotel, date)` returns the date bucket.
-- `assignInvoiceNo(bookingId, hotel)` (was `(bookingId, hotelId)`) — reserves the next number from
-  `InvoiceCounter` for the current bucket via an atomic `upsert` (create → seq 1; update → increment).
-  `reserved = counter.next - 1`; retries on `P2002` (counter create race **or** serial taken by a
-  manual edit). `getBookingInvoice` updated to pass the `hotel` object.
+- Factored the counter logic into `reserveSerial(hotel, date)` — atomically advances that day's
+  `InvoiceCounter` and returns the serial. `assignInvoiceNo` (legacy invoice-generation fallback) now
+  delegates to it.
+- `peekSerial(hotel, date)` — returns the next serial **without** reserving it.
+- `getNextInvoiceNo` (`GET /bookings/next-invoice-no`) — preview of today's next serial for the form.
+- `createBooking`: assigns `invoiceNo` in a retry loop — uses the user-supplied number when present
+  (returns **409 `ERR_DUP_INVOICE_NO`** on a duplicate), otherwise reserves the next auto number
+  (retries on collision). Logs the assigned `invoiceNo`.
+- `isInvoiceNoConflict(e)` helper — detects a `P2002` specifically on `Booking.invoiceNo`.
 
-## Note
-- Removed the financial-year (Apr–Mar) interpretation from an earlier draft of this change; the serial
-  uses plain calendar year/day/month per the requested sample format.
+## `src/middleware/validate.js`
+- `createBooking`: added optional `invoiceNo` (`string`, ≤60, trimmed).
+
+## `src/routes/bookings.js`
+- Registered `GET /next-invoice-no` **before** `/:id` so it isn't captured as an id param.
+
+---
+
+# Session — 2026-06-23 · Date-based invoice serials (RA/2026-27/06/01)
+
+## Summary
+Changed the tax-invoice serial to the fixed shape **`<prefix><year>-<DD>/<MM>/<NN>`**, e.g.
+`RA/2026-27/06/01`. The hotel configures only the **prefix** (`RA/`) and **year** (`2026`); the
+`-DD/MM` is taken automatically from the **booking date** and `NN` is the running count of invoices for
+that day (2 digits, restarts at 01 daily).
+
+(Built up over two migrations in one session — `..._invoice_format_counters` first added a token
+template + counter table, then `..._invoice_prefix_year` simplified it to the prefix+year shape below.)
+
+## `prisma/schema.prisma`
+- `Hotel`: added `invoiceYear String?` (migration `20260623010000_invoice_prefix_year`); dropped the
+  short-lived `invoiceFormat` token column. `invoiceNextNumber` / `invoicePadding` kept for legacy
+  installs but unused for assignment.
+- New model `InvoiceCounter (id, hotelId, period, next)` with `@@unique([hotelId, period])`
+  (migration `20260623000000_invoice_format_counters`) — per-day running counter. `period` is the
+  serial with `NN` stripped, e.g. `RA/2026-27/06/`.
+
+## `src/controllers/bookingsController.js`
+- `serialBucket(hotel, date)` → `<prefix><year>-<DD>/<MM>/` (year falls back to the date's year);
+  `buildSerial(hotel, seq, date)` appends the 2-digit count.
+- `assignInvoiceNo(booking, hotel)` (was `(bookingId, hotelId)`) — uses the **booking's `createdAt`**
+  for the date, reserves the next number from `InvoiceCounter` for that day's bucket via an atomic
+  `upsert` (create → 1; update → increment). `reserved = counter.next - 1`; retries on `P2002` (counter
+  create race **or** serial taken by a manual edit). `getBookingInvoice` passes the `booking` object.
 
 ---
 

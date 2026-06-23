@@ -200,6 +200,8 @@ export const schemas = {
     notes:           z.string().max(1000).optional().nullable(),
     specialRequests: z.string().max(1000).optional().nullable(),
     source:          z.enum(['walk_in', 'phone', 'website', 'ota', 'referral', 'corporate']).default('walk_in'),
+    // Tax-invoice serial — optional; auto-assigned when blank, editable here.
+    invoiceNo:       z.string().max(60).trim().optional().nullable(),
   }),
 
   // Booking — general edit (all optional)

@@ -285,44 +285,72 @@ export const createBooking = async (req, res) => {
     const priced   = computePricing({ ...b, roomRate, taxRate })
 
     const bookingNo = await generateBookingNo()
-    const booking = await prisma.booking.create({
-      data: {
-        bookingNo,
-        guestName:    b.guestName,
-        guestPhone:   b.guestPhone ?? null,
-        guestEmail:   b.guestEmail ?? null,
-        guestAddress: b.guestAddress ?? null,
-        nationality:  b.nationality ?? null,
-        idType:       b.idType ?? null,
-        idNumber:     b.idNumber ?? null,
-        adults:       b.adults,
-        children:     b.children,
-        roomId:       b.roomId,
-        stayType:     b.stayType,
-        fromDate:     from,
-        toDate:       b.toDate ? new Date(b.toDate) : null,
-        months:       b.stayType === 'monthly' ? b.months : null,
-        nights:       priced.nights,
-        roomRate,
-        subtotal:     priced.subtotal,
-        discount:     b.discount,
-        taxRate,
-        taxAmount:    priced.taxAmount,
-        extraCharges: b.extraCharges,
-        amount:       priced.amount,
-        advance:      b.advance,
-        balance:      priced.balance,
-        paymentStatus: priced.paymentStatus,
-        notes:           b.notes ?? null,
-        specialRequests: b.specialRequests ?? null,
-        source:       b.source,
-        status:       'Confirmed',
-        confirmedAt:  new Date(),
-      },
-      include: bookingInclude,
-    })
+    const hotel = await prisma.hotel.findFirst()
+    // The tax-invoice serial is assigned now, at booking creation: auto-numbered
+    // from the day counter unless the user supplied one (editable in the form).
+    const userInvoiceNo =
+      typeof b.invoiceNo === 'string' && b.invoiceNo.trim() ? b.invoiceNo.trim() : null
 
-    logger.info('Booking created', { event: 'BOOKING', bookingNo, roomId: b.roomId })
+    const data = {
+      bookingNo,
+      guestName:    b.guestName,
+      guestPhone:   b.guestPhone ?? null,
+      guestEmail:   b.guestEmail ?? null,
+      guestAddress: b.guestAddress ?? null,
+      nationality:  b.nationality ?? null,
+      idType:       b.idType ?? null,
+      idNumber:     b.idNumber ?? null,
+      adults:       b.adults,
+      children:     b.children,
+      roomId:       b.roomId,
+      stayType:     b.stayType,
+      fromDate:     from,
+      toDate:       b.toDate ? new Date(b.toDate) : null,
+      months:       b.stayType === 'monthly' ? b.months : null,
+      nights:       priced.nights,
+      roomRate,
+      subtotal:     priced.subtotal,
+      discount:     b.discount,
+      taxRate,
+      taxAmount:    priced.taxAmount,
+      extraCharges: b.extraCharges,
+      amount:       priced.amount,
+      advance:      b.advance,
+      balance:      priced.balance,
+      paymentStatus: priced.paymentStatus,
+      notes:           b.notes ?? null,
+      specialRequests: b.specialRequests ?? null,
+      source:       b.source,
+      status:       'Confirmed',
+      confirmedAt:  new Date(),
+    }
+
+    let booking
+    for (let attempt = 0; attempt < 20; attempt++) {
+      // A user-supplied number is used as-is; otherwise reserve the next auto one.
+      const invoiceNo = userInvoiceNo
+        ?? (hotel?.id ? await reserveSerial(hotel, new Date()) : null)
+      try {
+        booking = await prisma.booking.create({ data: { ...data, invoiceNo }, include: bookingInclude })
+        break
+      } catch (e) {
+        if (isInvoiceNoConflict(e)) {
+          // A manual number that's already taken is a user error; auto-numbers
+          // just retry with the next value.
+          if (userInvoiceNo) {
+            return res.status(409).json({
+              message: 'That invoice number is already used by another booking.',
+              code: 'ERR_DUP_INVOICE_NO',
+            })
+          }
+          continue
+        }
+        throw e
+      }
+    }
+    if (!booking) throw new Error('Could not assign a unique invoice number')
+
+    logger.info('Booking created', { event: 'BOOKING', bookingNo, invoiceNo: booking.invoiceNo, roomId: b.roomId })
     return res.status(201).json({ booking })
   } catch (err) {
     logger.error('createBooking error', { error: err.message })
@@ -605,60 +633,88 @@ const inlineUploadAsset = (url) => {
   }
 }
 
-// Fill the hotel's invoice format template against a date and running sequence.
-// Tokens: {PREFIX} {YYYY} {YY} {MM} {DD} {SEQ}. Pass seq = null to get the serial
-// WITHOUT its sequence (used as the reset bucket — see invoicePeriod).
-//   "{PREFIX}/{YYYY}-{DD}/{MM}/{SEQ}" + prefix "RA", padding 2 → "RA/2026-27/06/01".
-const fillSerial = (hotel, date, seq) => {
-  const tpl = hotel.invoiceFormat || '{PREFIX}{SEQ}'
-  const tokens = {
-    PREFIX: hotel.invoicePrefix ?? '',
-    YYYY:   String(date.getFullYear()),
-    YY:     String(date.getFullYear()).slice(-2),
-    MM:     String(date.getMonth() + 1).padStart(2, '0'),
-    DD:     String(date.getDate()).padStart(2, '0'),
-    SEQ:    seq == null ? '' : String(seq).padStart(hotel.invoicePadding ?? 0, '0'),
-  }
-  return tpl.replace(/{(PREFIX|YYYY|YY|MM|DD|SEQ)}/g, (_, k) => tokens[k])
+// The tax-invoice serial is "<prefix><year>-<DD>/<MM>/<NN>":
+//   prefix + year are configured by the hotel (e.g. "RA/" + "2026"); DD/MM come
+//   from the BOOKING DATE; NN is the running count for that day (2 digits).
+//   e.g. prefix "RA/", year "2026", booking 27 Jun → "RA/2026-27/06/01".
+const SEQ_PAD = 2
+
+// The fixed left part "<prefix><year>-<DD>/<MM>/" — also the per-day reset bucket
+// (everything except the running number), so NN restarts at 1 each booking day.
+const serialBucket = (hotel, date) => {
+  const dd = String(date.getDate()).padStart(2, '0')
+  const mm = String(date.getMonth() + 1).padStart(2, '0')
+  const year = hotel.invoiceYear || String(date.getFullYear())
+  return `${hotel.invoicePrefix ?? ''}${year}-${dd}/${mm}/`
 }
 
-const buildSerial = (hotel, seq, date) => fillSerial(hotel, date, seq)
+const buildSerial = (hotel, seq, date) =>
+  `${serialBucket(hotel, date)}${String(seq).padStart(SEQ_PAD, '0')}`
 
-// The reset bucket for {SEQ}: the serial with the sequence stripped out. The
-// counter restarts whenever this changes — so a format with {DD} resets daily,
-// one with only {MM} resets monthly, and one with no date token never resets.
-const invoicePeriod = (hotel, date) => fillSerial(hotel, date, null)
+// True when a P2002 (unique constraint) error is on Booking.invoiceNo.
+const isInvoiceNoConflict = (e) =>
+  e.code === 'P2002' && String(e.meta?.target ?? '').includes('invoiceNo')
 
-// Assign the next tax-invoice serial to a booking. The running counter lives
-// per-period in InvoiceCounter (keyed by hotel + the date-bucket above), so
-// {SEQ} restarts at 1 for each new bucket. The counter is incremented atomically
-// per attempt, so a rare collision (e.g. a number reserved by a manual edit)
-// just moves to the next one instead of looping forever.
-const assignInvoiceNo = async (bookingId, hotel) => {
-  const now = new Date()
-  const period = invoicePeriod(hotel, now)
-  for (let attempt = 0; attempt < 20; attempt++) {
+// Reserve the next serial for `date` by atomically advancing that day's counter,
+// and return the serial. On create the first serial is 1 (next stored as 2); on
+// update we take the pre-increment value (reserved = counter.next - 1). Retries
+// the counter create on a rare concurrent first-insert race.
+const reserveSerial = async (hotel, date) => {
+  const period = serialBucket(hotel, date)
+  for (let i = 0; i < 10; i++) {
     try {
-      // Get-or-create the period counter and reserve a number atomically. On
-      // create the first serial is 1 (next stored as 2); on update we take the
-      // pre-increment value. Either way: reserved = counter.next - 1.
       const counter = await prisma.invoiceCounter.upsert({
         where:  { hotelId_period: { hotelId: hotel.id, period } },
         create: { hotelId: hotel.id, period, next: 2 },
         update: { next: { increment: 1 } },
       })
-      const reserved = counter.next - 1
-      const serial = buildSerial(hotel, reserved, now)
-      await prisma.booking.update({ where: { id: bookingId }, data: { invoiceNo: serial } })
-      return serial
+      return buildSerial(hotel, counter.next - 1, date)
     } catch (e) {
-      // P2002 on the counter create => concurrent first-insert race; retry hits
-      // the update path. P2002 on the booking => serial taken; reserve the next.
       if (e.code === 'P2002') continue
       throw e
     }
   }
+  throw new Error('Could not reserve an invoice number')
+}
+
+// Peek the next auto serial for `date` WITHOUT reserving it (booking-form preview).
+const peekSerial = async (hotel, date) => {
+  const period = serialBucket(hotel, date)
+  const counter = await prisma.invoiceCounter.findUnique({
+    where: { hotelId_period: { hotelId: hotel.id, period } },
+  })
+  return buildSerial(hotel, counter?.next ?? 1, date)
+}
+
+// Assign the next tax-invoice serial to a booking that has none (fallback used by
+// invoice generation for legacy bookings). New bookings get their number at
+// creation; see createBooking.
+const assignInvoiceNo = async (booking, hotel) => {
+  const date = booking.createdAt ? new Date(booking.createdAt) : new Date()
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const serial = await reserveSerial(hotel, date)
+    try {
+      await prisma.booking.update({ where: { id: booking.id }, data: { invoiceNo: serial } })
+      return serial
+    } catch (e) {
+      if (isInvoiceNoConflict(e)) continue // serial taken by a manual edit — reserve the next
+      throw e
+    }
+  }
   throw new Error('Could not assign a unique invoice number')
+}
+
+// GET /bookings/next-invoice-no — the next auto invoice serial for today, for the
+// booking form preview. Does not reserve it (the real number is assigned on create).
+export const getNextInvoiceNo = async (req, res) => {
+  try {
+    const hotel = await prisma.hotel.findFirst()
+    const invoiceNo = hotel?.id ? await peekSerial(hotel, new Date()) : ''
+    return res.status(200).json({ invoiceNo })
+  } catch (err) {
+    logger.error('getNextInvoiceNo error', { error: err.message })
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
 }
 
 export const getBookingInvoice = async (req, res) => {
@@ -693,7 +749,7 @@ export const getBookingInvoice = async (req, res) => {
     // fails or there's no hotel record to read the config from.
     if (!booking.invoiceNo && hotel.id) {
       try {
-        booking.invoiceNo = await assignInvoiceNo(booking.id, hotel)
+        booking.invoiceNo = await assignInvoiceNo(booking, hotel)
       } catch (err) {
         logger.warn('Invoice serial assignment failed', { error: err.message, bookingId: booking.id })
       }

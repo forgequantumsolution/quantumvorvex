@@ -13,6 +13,7 @@ import {
   deleteBooking,
   uploadBookingDocuments,
   getBookingInvoice,
+  getNextInvoiceNo,
   updateInvoiceNo,
   uploadDocs,
 } from '../controllers/bookingsController.js'
@@ -25,6 +26,8 @@ router.use(verifyToken, requirePermission('bookings'))
 
 router.get('/',      getBookings)
 router.get('/stats', getBookingStats)
+// Next auto invoice serial (preview for the create-booking form). Must precede /:id.
+router.get('/next-invoice-no', getNextInvoiceNo)
 router.get('/:id',   getBooking)
 
 // Tax invoice (HTML, print-ready) generated from a completed booking
