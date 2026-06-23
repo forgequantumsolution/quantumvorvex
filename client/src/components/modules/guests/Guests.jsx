@@ -202,7 +202,7 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
       }
     >
       {/* Summary bar */}
-      <div className="grid grid-cols-4 gap-2.5 mb-[18px]">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-[18px]">
         {[
           { label: 'Room', value: guest.room, mono: true },
           { label: 'Stay Type', value: guest.stayType === 'monthly' ? 'Monthly' : 'Daily' },
@@ -230,7 +230,7 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
         {/* ── Profile Tab ── */}
         {tab === 'info' && (
           <div>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3.5 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3.5 mb-4">
               <InfoRow label="Phone" value={guest.phone} />
               <InfoRow label="Email" value={guest.email} />
               <InfoRow label="Nationality" value={guest.nationality} />
@@ -276,6 +276,7 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
             {guest.billingHistory.length === 0 ? (
               <div className="t-sm text-center py-8 text-ink3">No billing records</div>
             ) : (
+              <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-surface2">
@@ -299,6 +300,7 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
             <div className="mt-3.5 px-3.5 py-2.5 bg-[var(--gold-bg)] rounded-lg flex justify-between">
               <span className="t-title text-gold">Total Lifetime Spend</span>
@@ -444,7 +446,7 @@ function EditGuestModal({ guest, onClose, onSave }) {
               </>
             }
           >
-            <Form className="grid grid-cols-2 gap-3">
+            <Form className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <FormikField name="name" label="Name" required />
               <FormikField name="phone" label="Phone" required />
               <FormikField name="email" label="Email" type="email" />
@@ -683,7 +685,7 @@ export default function Guests() {
       )}
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-4 gap-3 mb-[18px]">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-[18px]">
         {[
           { label: 'Active', count: stats.active, bar: 'stat-bar-green' },
           { label: 'Due / Overdue', count: stats.due, bar: 'stat-bar-amber' },

@@ -82,7 +82,7 @@ function InvoiceModal({ invoice, onClose }) {
         </div>
 
         {/* Invoice meta */}
-        <div className="grid grid-cols-2 gap-2.5 mb-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-5">
           {[
             ['Invoice No',  invoice.invoiceNo],
             ['Date',        formatDate(invoice.createdAt)],
@@ -221,7 +221,7 @@ function CollectModal({ invoice, onClose, onConfirm }) {
       {/* Payment method */}
       <div className="mb-3">
         <label className="form-label block mb-[5px]">Payment Method</label>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           {['Cash', 'UPI', 'Card', 'Bank Transfer'].map(m => (
             <button key={m} onClick={() => setMethod(m)} className={`t-xs px-1.5 py-2 rounded-[7px] cursor-pointer text-center transition-all duration-150 ${method === m ? 'bg-[var(--gold-bg)] border-[1.5px] border-gold text-gold' : 'bg-surface2 border border-line text-ink2'}`}>{m}</button>
           ))}
@@ -384,7 +384,7 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
         </div>
 
         {/* Amount fields */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {[
             ['Rent ₹',       'rent'],
             ['Food ₹',       'food'],

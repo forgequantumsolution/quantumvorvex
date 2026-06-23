@@ -125,7 +125,7 @@ function UploadModal({ doc, onClose, onSave }) {
       </div>
 
       {/* Upload zones */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {DOC_SLOTS.map(slot => {
           const filled = isSlotFilled(slot)
           const locked = slotLocked(slot)
@@ -399,7 +399,7 @@ export default function Documents() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-[18px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-[18px]">
         {[
           { label: 'Total Guests', count: totalGuests, bar: 'stat-bar-blue' },
           { label: 'Verified', count: verifiedCount, bar: 'stat-bar-green' },

@@ -347,7 +347,7 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
       </div>
 
       {/* Form grid */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label="Hotel Name">
           <input className="form-input" value={settings.name}
             onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
@@ -763,7 +763,7 @@ function TaxPricingTab({ settings, setSettings, addToast }) {
       <div className="card">
         <div className="card-header"><span className="card-title">GST Settings</span></div>
         <div className="card-body">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="GST Rate %">
               <input className="form-input max-w-[120px]" type="number" min={0} max={28}
                 value={settings.gstRate}
@@ -795,7 +795,7 @@ function TaxPricingTab({ settings, setSettings, addToast }) {
       <div className="card">
         <div className="card-header"><span className="card-title">Late Fee & Grace Period</span></div>
         <div className="card-body">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Late Fee Rate %">
               <input className="form-input max-w-[120px]" type="number" min={0}
                 value={settings.lateFeeRate}
@@ -1559,7 +1559,7 @@ function PropertiesTab({ settings, setSettings, addToast }) {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Hotel Name">
                 <input className="form-input" value={settings.name}
                   onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
@@ -1619,7 +1619,7 @@ function PropertiesTab({ settings, setSettings, addToast }) {
           </div>
 
           {/* Demo table — greyed out */}
-          <div className="opacity-45 pointer-events-none">
+          <div className="opacity-45 pointer-events-none overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr>
@@ -1927,7 +1927,7 @@ function BrandingTab({ settings, setSettings, addToast }) {
 
       <div className="card">
         <div className="card-header"><span className="card-title">Brand Text</span></div>
-        <div className="card-body grid grid-cols-2 gap-4">
+        <div className="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Hotel / Brand Name">
             <input className="form-input" value={settings.name}
               onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
@@ -2000,7 +2000,7 @@ function PreferencesTab({ settings, addToast }) {
     <div className="flex flex-col gap-5">
       <div className="card">
         <div className="card-header"><span className="card-title">Regional</span></div>
-        <div className="card-body grid grid-cols-2 gap-4">
+        <div className="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Language">
             <select className="form-select" value={prefs.language} onChange={e => set({ language: e.target.value })}>
               <option value="en">English</option>
@@ -2108,7 +2108,7 @@ function InvoiceConfigTab({ settings, setSettings, addToast }) {
       <div className="card">
         <div className="card-header"><span className="card-title">Invoice Numbering</span></div>
         <div className="card-body">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Field label="Prefix">
               <input className="form-input" value={settings.invoicePrefix ?? ''}
                 onChange={set('invoicePrefix')} placeholder="INV-" />
@@ -2144,7 +2144,7 @@ function InvoiceConfigTab({ settings, setSettings, addToast }) {
       <div className="card">
         <div className="card-header"><span className="card-title">Bank Details</span></div>
         <div className="card-body">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Account Holder Name">
               <input className="form-input" value={settings.bankAccountName ?? ''}
                 onChange={set('bankAccountName')} placeholder="Defaults to hotel name if blank" />

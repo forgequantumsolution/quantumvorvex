@@ -89,7 +89,7 @@ function RoomDetail({ room, onClose, onStatusChange, onShowQr, onDelete }) {
   return (
     <>
       {/* Room header info */}
-      <div className="grid grid-cols-2 gap-3.5 mb-[18px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-[18px]">
         {[
           ['Room Number', room.number],
           ['Type',        room.type],
@@ -274,7 +274,7 @@ function AddRoomForm({ form, onChange }) {
   )
 
   return (
-    <div className="grid grid-cols-2 gap-3.5">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
       {field('Room Number', 'number', 'text', { placeholder: 'e.g. 105' })}
 
       {/* Room Type select */}

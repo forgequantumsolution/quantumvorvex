@@ -79,11 +79,11 @@ function UserModal({ isOpen, onClose, user, roles, onSave }) {
         >
           <Form className="flex flex-col gap-3.5" autoComplete="off">
             <FormikField name="name" label="Full Name" required placeholder="e.g. Ramesh Gupta" autoComplete="off" />
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <FormikField name="email" label="Email" type="email" required placeholder="user@hotel.com" autoComplete="off" />
               <FormikField name="phone" label="Phone" placeholder="10-digit mobile" autoComplete="off" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <FormikField name="roleId" label="Role" required as="select" disabled={isSuper}>
                 {roles.map((r) => (
                   <option key={r.id} value={r.id}>{r.name}</option>

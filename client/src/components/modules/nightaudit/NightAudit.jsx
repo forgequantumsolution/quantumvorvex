@@ -131,7 +131,7 @@ export default function NightAudit() {
       </div>
 
       {/* Summary stat cards */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         {[
           { label: 'Occupancy',       value: `${Math.round((AUDIT_SUMMARY.occupiedRooms / AUDIT_SUMMARY.totalRooms) * 100)}%`, color: 'var(--blue-text)', bar: 'stat-bar-blue' },
           { label: "Today's Revenue", value: formatCurrency(REVENUE_TODAY.total), color: 'var(--gold)', bar: 'stat-bar-amber' },
@@ -146,7 +146,7 @@ export default function NightAudit() {
       </div>
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-2 gap-5 mb-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
 
         {/* Revenue Breakdown */}
         <div className="card">
@@ -195,7 +195,7 @@ export default function NightAudit() {
       </div>
 
       {/* Three-column second row */}
-      <div className="grid grid-cols-3 gap-5 mb-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-5">
 
         {/* Pending Checkouts */}
         <div className="card">

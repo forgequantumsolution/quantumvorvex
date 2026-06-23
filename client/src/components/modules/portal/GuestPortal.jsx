@@ -112,7 +112,7 @@ function Step1Welcome({ booking, onNext }) {
           </span>
         </div>
         <div className="p-4">
-          <div className="grid grid-cols-2 gap-y-3 gap-x-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-5">
             <div>
               <div className="t-label text-ink3 mb-1">Room</div>
               <div className="t-h3 text-ink">{booking.room}</div>
@@ -188,7 +188,7 @@ function Step2Verify({ booking, data, onChange, onNext }) {
           onChange={(e) => set('address', e.target.value)} placeholder="Full permanent address..." rows={3} />
       </Field>
 
-      <div className="grid grid-cols-2 gap-y-3 gap-x-3.5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-3.5">
         <Field label="Emergency Contact Name">
           <input className="form-input" value={data.emergencyName}
             onChange={(e) => set('emergencyName', e.target.value)} placeholder="Name" />

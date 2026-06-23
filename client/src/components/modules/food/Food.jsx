@@ -206,7 +206,7 @@ function MealCatalog({ plans, onCreate, onToggle, onDelete }) {
               onChange={e => setForm(p => ({ ...p, desc: e.target.value }))}
             />
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               ['One-time ₹', 'oneTime'],
               ['Weekly ₹',   'weekly'],

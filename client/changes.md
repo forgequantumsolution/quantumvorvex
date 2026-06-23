@@ -6,6 +6,68 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-23 · Tablet responsiveness
+
+## Summary
+Made the app usable on tablets in **both orientations** (portrait ~768px, landscape ~1024px).
+The shell was already a slide-in drawer below 1024px, but module content kept desktop
+multi-column layouts on narrow screens. Converted bare fixed-count grids to responsive Tailwind
+column counts, wrapped wide tables/canvases so they scroll within their container instead of
+breaking the page, added a tablet tier + touch tap-target rules to the global stylesheet, and
+added a viewport overflow smoke test.
+
+Approach (per the agreed plan): Tailwind `md:`/`lg:` prefixes on components + a shared tablet
+tier in `index.css`. Breakpoints: `<md` (≤767) phone, `md` (768–1023) portrait tablet,
+`lg` (≥1024) landscape/desktop.
+
+## File changes
+
+### `src/index.css`
+- **Moved the sidebar→drawer breakpoint from 1024px to 1200px.** Below 1200px the sidebar is now
+  an off-canvas drawer (hamburger + overlay) and content takes the full width; the persistent
+  flex-row sidebar only shows at ≥1200px. Updated all related media queries (drawer, overlay,
+  hamburger, `.mobile-only`/`.desktop-only`, content padding) accordingly.
+- Added a **tablet tier** (`@media 768–1199px`): wrap card headers / module-header action rows,
+  tighten table cell padding + keep cells `nowrap`.
+- Added a **touch-ergonomics** block (`@media (hover:none) and (pointer:coarse)`): topbar icon
+  buttons + hamburger bumped to ~42px tap targets (desktop sizing untouched).
+
+### `src/components/layout/Sidebar.jsx`
+- `isDesktop` threshold moved from 1024px to **1200px** (matches the CSS drawer breakpoint), so the
+  collapse toggle is desktop-only and nav clicks auto-close the drawer below 1200px.
+- Lock body scroll while the drawer is open on mobile/tablet (prevents the page behind the
+  overlay from scrolling on touch).
+
+### `src/components/layout/Topbar.jsx`
+- Notification dropdown capped with `max-w-[calc(100vw-24px)]` so it never overflows narrow viewports.
+
+### Module grids → responsive (Tailwind prefixes)
+Converted bare `grid-cols-N` to responsive sequences (2-col→`grid-cols-1 md:grid-cols-2`,
+large panels→`lg:grid-cols-2`, 3-col→`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`,
+stat tiles 4-col→`grid-cols-2 lg:grid-cols-4`) across:
+`billing/Billing`, `dashboard/Dashboard`, `rooms/Rooms`, `reports/Reports`, `users/UsersRoles`,
+`guests/Guests`, `settings/Settings`, `documents/Documents`, `food/Food`, `housekeeping/Housekeeping`,
+`nightaudit/NightAudit`, `portal/GuestPortal`, `checkout/CheckOutModal`, `calendar/Calendar`,
+`setup/SetupWizard`. Grids already responsive or using `auto-fit/auto-fill minmax` were left as-is.
+
+### Wide content → horizontal scroll
+- `floorplan/FloorPlan.jsx` — wrapped the 8-col room canvas in `overflow-x-auto` and gave cells a
+  `minmax(70px,1fr)` floor so the floor row scrolls instead of squashing.
+- `guests/Guests.jsx`, `settings/Settings.jsx` — wrapped raw `<table>`s that lacked a scroll wrapper.
+- Calendar timeline and all `DataTable`-based tables already scroll (`overflow-x-auto`).
+
+### Not changed
+- Shared modals (`ui-tw/Modal`, `ui/Modal`) and `ui-tw/DataTable` were already fluid / scroll-wrapped.
+- `App.css` (unused Vite boilerplate).
+
+## Tests
+- Added `tests/tablet-responsive.spec.js`: logs in and visits every panel at 768×1024 and 1024×768,
+  asserting no horizontal page-level overflow (wide content must scroll within its own container).
+  Requires the live dev stack (frontend :5173 + seeded backend :5000), like the other specs.
+- `npm run build` passes.
+
+---
+
 # Session — 2026-06-21 · Booking room rate is GST-inclusive
 
 ## Summary

@@ -596,7 +596,7 @@ export default function Dashboard() {
         title="Keyboard Shortcuts"
         maxWidth="440px"
       >
-        <div className="grid grid-cols-2 gap-x-5 gap-y-2.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-2.5">
           {SHORTCUTS.map((s) => (
             <div
               key={s.key}
