@@ -5,6 +5,184 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-06-23 · Assign invoice number at booking creation (auto + editable)
+
+## Summary
+The tax-invoice serial is now assigned **when a booking is created** (auto-incrementing the per-day
+counter), instead of only on first invoice generation. The number is editable in the create form; a
+blank/unchanged value is auto-assigned server-side, a user-supplied value is used as-is.
+
+## `src/controllers/bookingsController.js`
+- Factored the counter logic into `reserveSerial(hotel, date)` — atomically advances that day's
+  `InvoiceCounter` and returns the serial. `assignInvoiceNo` (legacy invoice-generation fallback) now
+  delegates to it.
+- `peekSerial(hotel, date)` — returns the next serial **without** reserving it.
+- `getNextInvoiceNo` (`GET /bookings/next-invoice-no`) — preview of today's next serial for the form.
+- `createBooking`: assigns `invoiceNo` in a retry loop — uses the user-supplied number when present
+  (returns **409 `ERR_DUP_INVOICE_NO`** on a duplicate), otherwise reserves the next auto number
+  (retries on collision). Logs the assigned `invoiceNo`.
+- `isInvoiceNoConflict(e)` helper — detects a `P2002` specifically on `Booking.invoiceNo`.
+
+## `src/middleware/validate.js`
+- `createBooking`: added optional `invoiceNo` (`string`, ≤60, trimmed).
+
+## `src/routes/bookings.js`
+- Registered `GET /next-invoice-no` **before** `/:id` so it isn't captured as an id param.
+
+---
+
+# Session — 2026-06-23 · Date-based invoice serials (RA/2026-27/06/01)
+
+## Summary
+Changed the tax-invoice serial to the fixed shape **`<prefix><year>-<DD>/<MM>/<NN>`**, e.g.
+`RA/2026-27/06/01`. The hotel configures only the **prefix** (`RA/`) and **year** (`2026`); the
+`-DD/MM` is taken automatically from the **booking date** and `NN` is the running count of invoices for
+that day (2 digits, restarts at 01 daily).
+
+(Built up over two migrations in one session — `..._invoice_format_counters` first added a token
+template + counter table, then `..._invoice_prefix_year` simplified it to the prefix+year shape below.)
+
+## `prisma/schema.prisma`
+- `Hotel`: added `invoiceYear String?` (migration `20260623010000_invoice_prefix_year`); dropped the
+  short-lived `invoiceFormat` token column. `invoiceNextNumber` / `invoicePadding` kept for legacy
+  installs but unused for assignment.
+- New model `InvoiceCounter (id, hotelId, period, next)` with `@@unique([hotelId, period])`
+  (migration `20260623000000_invoice_format_counters`) — per-day running counter. `period` is the
+  serial with `NN` stripped, e.g. `RA/2026-27/06/`.
+
+## `src/controllers/bookingsController.js`
+- `serialBucket(hotel, date)` → `<prefix><year>-<DD>/<MM>/` (year falls back to the date's year);
+  `buildSerial(hotel, seq, date)` appends the 2-digit count.
+- `assignInvoiceNo(booking, hotel)` (was `(bookingId, hotelId)`) — uses the **booking's `createdAt`**
+  for the date, reserves the next number from `InvoiceCounter` for that day's bucket via an atomic
+  `upsert` (create → 1; update → increment). `reserved = counter.next - 1`; retries on `P2002` (counter
+  create race **or** serial taken by a manual edit). `getBookingInvoice` passes the `booking` object.
+
+---
+
+# Session — 2026-06-21 · Booking room rate is GST-inclusive
+
+## Summary
+The room rate entered for a booking is now treated as **GST-inclusive**: the booking total equals the
+entered amount, and GST is *extracted* from it for the breakdown rather than added on top. (Previously
+`amount = (subtotal − discount) + tax`; now `amount = (subtotal − discount) + extraCharges`, with the
+tax sitting inside.)
+
+## `src/controllers/bookingsController.js`
+- `computePricing`: `taxable = gross / (1 + taxRate/100)`, `taxAmount = gross − taxable`, where
+  `gross = subtotal − discount`. `amount = gross + extraCharges`. Extra charges stay outside the GST
+  breakdown; `checkOutBooking` (adds extra charges on top) is unchanged.
+
+## `src/utils/invoiceTemplate.js`
+- `buildInvoiceData`: the taxable (base) value is now `(subtotal − discount) − taxAmount` so the
+  CGST + SGST + taxable reconcile to the inclusive total. HTML/JSON/PDF invoices all flow from here.
+
+## Billing & guest invoices — rent inclusive, food/amenities on top
+Extended the same idea to monthly/guest invoices, but **only the rent is GST-inclusive**; food and
+amenities stay GST-exclusive (added on top). GST per invoice = `rentGst + faGst` where
+`rentGst = rent − rent/(1+rate)` and `faGst = (food+amenities)·rate/100`; `total = rent + food +
+amenities + faGst`. Taxable (base) value = `rent/(1+rate) + food + amenities`, so taxable + GST = total.
+- `src/controllers/billingController.js` — `generateInvoice`: per-component GST as above.
+- `src/controllers/guestsController.js` — `computeGuestBill` (room-only branch) and `checkoutGuest`
+  invoice generation: GST extracted from the room rate (`total = rent`, or `rent + untaxed extras`).
+  Guest invoices already taxed the room only, so this just flips rent to inclusive.
+
+## Note
+- Bookings/invoices created before this change were stored under the old "GST on top" model, so they
+  re-render with a different breakdown. No data migration was done (existing rows treated as test data).
+- Seed/demo invoice generators (`seed.js`, `seedDemo.js`) still use the old on-top math — sample data
+  only, left as-is.
+
+---
+
+# Session — 2026-06-21 · Revert Prisma CLI to 5.22 (undo half-finished v7 upgrade)
+
+## Summary
+The `prisma` CLI had been bumped to `^7.8.0` while `@prisma/client` stayed at `5.22.0` — a
+half-finished major upgrade that broke `prisma migrate`/`generate` (Prisma 7 drops the `url`
+datasource syntax and requires a `prisma.config.ts` + driver adapter). Reverted to keep CLI and client
+on the same major; no app-code or DB changes.
+
+## `package.json`
+- `devDependencies.prisma`: `^7.8.0` → `^5.22.0`, then `npm install`.
+
+## Result
+- CLI and `@prisma/client` both `5.22.0`; `prisma validate` passes; client regenerated with the new
+  `Booking.invoiceNo` / `Hotel.invoice*` / `Hotel.stampUrl` fields.
+- `npm run db:migrate` (`prisma migrate dev`) works again.
+- A deliberate Prisma 7 upgrade can be done later — it touches the DB connection layer (driver
+  adapter) and deploy pipeline (new `prisma.config.ts`, `pg` dependency, possible Node bump), so it
+  should be planned and tested on staging.
+
+---
+
+# Session — 2026-06-21 · Invoice config: serial numbering + invoice details
+
+## Summary
+Added an invoice config on the hotel record: a configurable serial number (prefix + running counter,
+padded), plus the bank details / place-of-supply / terms the invoice template already referenced but
+had no storage for. The tax-invoice serial is now assigned to a booking on first generation and is
+editable per invoice.
+
+## `prisma/schema.prisma` + migration `20260621000000_invoice_config`
+- `Hotel`: added `invoicePrefix` (default `INV-`), `invoiceNextNumber` (default 1), `invoicePadding`
+  (default 4), `placeOfSupply`, `bankAccountName`, `bankName`, `bankAccountNo`, `bankIfsc`.
+- `Booking`: added `invoiceNo String? @unique` — the assigned tax-invoice serial (NULL until first
+  generated; NULLs are distinct so the unique index allows many).
+
+## `src/controllers/bookingsController.js`
+- `buildSerial(hotel, n)` / `assignInvoiceNo(bookingId, hotelId)` — assign the next serial and durably
+  advance the hotel counter (increment-per-attempt so a rare collision moves forward, not loops).
+- `getBookingInvoice`: assigns a serial on first generation (any format) when the booking has none and
+  a hotel record exists; falls back to `bookingNo` if assignment fails. Applied before format branching
+  so the JSON/HTML/PDF outputs all carry the same number.
+- `updateInvoiceNo` (`PATCH /bookings/:id/invoice-no`): set/override a booking's serial. Validates
+  non-empty/≤60 chars; returns 409 on a duplicate (`P2002`).
+
+## `src/routes/bookings.js`
+- Registered `PATCH /:id/invoice-no` (write → requires MANAGE on bookings via `requirePermission`).
+
+> Tooling note: the `prisma` CLI had been bumped to **7.8.0** while `@prisma/client` stayed at
+> **5.22.0** — a half-finished major upgrade (Prisma 7 drops the `url` datasource syntax, needs a
+> `prisma.config.ts` + driver adapter) that broke `prisma migrate`/`generate`. Resolved by reverting
+> `prisma` to `^5.22.0` in package.json so CLI and client match again; schema validates and the client
+> was regenerated with the new fields. A deliberate Prisma 7 upgrade can be done later (touches the DB
+> connection layer, so test on staging first).
+
+# Session — 2026-06-20 · Stamp & signature image on tax invoices
+
+## Summary
+Added a hotel `stampUrl` field plus an upload endpoint so a combined stamp + authorised-signature
+image can be printed in the invoice signature box.
+
+## `prisma/schema.prisma` + migration `20260620000000_hotel_stamp_url`
+- New `Hotel.stampUrl String?` column (`ALTER TABLE "Hotel" ADD COLUMN "stampUrl" TEXT`).
+
+## `src/controllers/settingsController.js`
+- Upload filename now prefixes by field name (`logo-…` / `stamp-…`) instead of always `logo-…`.
+- Added `uploadStamp` (`POST /settings/stamp`) — saves the file to `/uploads`, stores `stampUrl` on
+  the hotel record, returns `{ stampUrl, hotel }`. Mirrors `uploadLogo`.
+
+## `src/routes/settings.js`
+- Registered `POST /settings/stamp` with `upload.single('stamp')`.
+
+## `src/utils/invoiceTemplate.js`
+- `buildInvoiceData` now surfaces `hotel.stampUrl`. The signature box renders the stamp image (when
+  set) above an "Authorised Signatory" label; falls back to the old "Signature" label when absent.
+
+## `src/controllers/bookingsController.js`
+- `getBookingInvoice` now inlines the logo/stamp as base64 **data URIs** (`inlineUploadAsset`) before
+  rendering, for both the HTML preview and the PDF. The `/uploads/…` images otherwise broke in the
+  in-app preview — it's shown via a `blob:` URL, where relative paths can't resolve and a remote host
+  may not be reachable. Inlining removes the dependency on URL resolution entirely (also drops the
+  now-unneeded `<base>`/`baseUrl` plumbing for the invoice). Path traversal is guarded via
+  `path.basename`, and non-`/uploads` values pass through untouched.
+
+> Note: requires `npx prisma generate` (with the dev server stopped) so the client picks up the new
+> `stampUrl` field before the upload endpoint works.
+
+---
+
 # Session — 2026-06-19 · Guest check-out: apply extra charges, record payment, serve the bill
 
 ## Summary

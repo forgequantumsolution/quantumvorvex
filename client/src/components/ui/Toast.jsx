@@ -24,7 +24,7 @@ export default function Toast() {
   if (!toasts.length) return null
 
   return (
-    <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-2 items-end">
+    <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-2 items-end">
       {toasts.map((toast) => {
         const borderColor = BORDER_COLORS[toast.type] || BORDER_COLORS.default
         const icon = ICONS[toast.type]

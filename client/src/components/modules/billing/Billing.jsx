@@ -46,8 +46,10 @@ function cashTypeBadge(type) {
 // ─── Invoice Print Modal ──────────────────────────────────────────────────────
 function InvoiceModal({ invoice, onClose }) {
   if (!invoice) return null
-  const subtotal = invoice.rent + invoice.food + invoice.amenities
-  const halfGst  = invoice.gstAmount / 2
+  // Rent is GST-inclusive, so its taxable (base) value is rent ÷ (1 + GST%); food &
+  // amenities are exclusive, so they're already net. Taxable + CGST + SGST = total.
+  const taxable = invoice.rent / (1 + (invoice.gstRate || 0) / 100) + invoice.food + invoice.amenities
+  const halfGst = invoice.gstAmount / 2
 
   return (
     <Modal
@@ -80,7 +82,7 @@ function InvoiceModal({ invoice, onClose }) {
         </div>
 
         {/* Invoice meta */}
-        <div className="grid grid-cols-2 gap-2.5 mb-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-5">
           {[
             ['Invoice No',  invoice.invoiceNo],
             ['Date',        formatDate(invoice.createdAt)],
@@ -125,11 +127,11 @@ function InvoiceModal({ invoice, onClose }) {
               </tr>
             ))}
 
-            {/* Subtotal */}
+            {/* Taxable value (rent is GST-inclusive, so its base is shown net of tax) */}
             <tr className="border-b border-line bg-surface2">
-              <td className="t-title px-3 py-[9px] text-ink2">Subtotal</td>
+              <td className="t-title px-3 py-[9px] text-ink2">Taxable Value</td>
               <td className="t-title px-3 py-[9px] text-right text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>
-                {formatCurrency(subtotal)}
+                {formatCurrency(taxable)}
               </td>
             </tr>
 
@@ -219,7 +221,7 @@ function CollectModal({ invoice, onClose, onConfirm }) {
       {/* Payment method */}
       <div className="mb-3">
         <label className="form-label block mb-[5px]">Payment Method</label>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           {['Cash', 'UPI', 'Card', 'Bank Transfer'].map(m => (
             <button key={m} onClick={() => setMethod(m)} className={`t-xs px-1.5 py-2 rounded-[7px] cursor-pointer text-center transition-all duration-150 ${method === m ? 'bg-[var(--gold-bg)] border-[1.5px] border-gold text-gold' : 'bg-surface2 border border-line text-ink2'}`}>{m}</button>
           ))}
@@ -324,9 +326,12 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
       .catch(() => setGuests([]))
   }, [isOpen])
 
-  const subtotal    = (parseFloat(form.rent) || 0) + (parseFloat(form.food) || 0) + (parseFloat(form.amenities) || 0)
-  const gstAmount   = Math.round(subtotal * (form.gstRate / 100))
-  const total       = subtotal + gstAmount
+  // Rent is GST-inclusive (tax extracted); food & amenities are GST-exclusive (added on top).
+  const r = parseFloat(form.rent) || 0, f = parseFloat(form.food) || 0, a = parseFloat(form.amenities) || 0
+  const entered     = r + f + a
+  const taxable     = r / (1 + form.gstRate / 100) + f + a
+  const gstAmount   = Math.round((r - r / (1 + form.gstRate / 100)) + (f + a) * (form.gstRate / 100))
+  const total       = r + f + a + (f + a) * (form.gstRate / 100)
 
   const handleGenerate = () => {
     if (!form.guestId || !form.period.trim() || !form.rent) return
@@ -379,7 +384,7 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
         </div>
 
         {/* Amount fields */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {[
             ['Rent ₹',       'rent'],
             ['Food ₹',       'food'],
@@ -412,11 +417,11 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
         </div>
 
         {/* Calculated total */}
-        {subtotal > 0 && (
+        {entered > 0 && (
           <div className="bg-[var(--gold-bg)] border border-[var(--gold-border)] rounded-md px-[14px] py-3">
             <div className="flex flex-col gap-[5px]">
               {[
-                ['Subtotal',              subtotal],
+                ['Taxable value',          taxable],
                 [`GST (${form.gstRate}%)`, gstAmount],
               ].map(([label, val]) => (
                 <div key={label} className="t-xs flex justify-between">

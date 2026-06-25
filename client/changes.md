@@ -6,6 +6,284 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-06-23 · Editable invoice number on the booking form
+
+## Summary
+The create-booking form now shows the auto-generated tax-invoice number (pre-filled from the server)
+and lets the user override it. Left unchanged, the server reserves the next number atomically so two
+same-day bookings can't collide.
+
+## `src/components/modules/bookings/BookingForm.jsx`
+- Added an **"Invoice no."** field in the Stay section, hint "Auto-generated — edit to override".
+- On mount, fetches `bookingsApi.nextInvoiceNo()` and pre-fills it (remembered as `autoInvoiceNo`).
+- On submit, sends `invoiceNo` **only if** the user edited it away from the suggestion; otherwise omits
+  it so the server auto-assigns.
+
+## `src/api/client.js`
+- `bookingsApi.nextInvoiceNo()` → `GET /bookings/next-invoice-no`.
+
+## `src/components/ui-tw/Field.jsx`
+- Added a `hint` prop — renders a muted helper line below the control when there's no `error`.
+
+## Summary
+Simplified the **Settings → Invoice → Invoice Numbering** card to just two fields — **Prefix** (`RA/`)
+and **Year** (`2026`) — with a prominent live preview. Everything after (`-DD/MM/NN`) is automatic:
+day/month from the booking date, `NN` the per-day count. Produces serials like `RA/2026-27/06/01`.
+
+## `src/components/modules/settings/Settings.jsx`
+- `InvoiceConfigTab`: removed the token-format field, token chips, preset button, and padding input
+  (an interim design). Now just **Prefix** + **Year** inputs and a boxed live preview.
+- `previewSerial(prefix, year, seq, d)` mirrors the server's `buildSerial`.
+- `handleSave` sends `invoicePrefix` + `invoiceYear` (no longer `invoiceFormat` / `invoicePadding` /
+  `invoiceNextNumber`); default settings object updated to `invoicePrefix: 'RA/'`, `invoiceYear: '2026'`.
+
+---
+
+# Session — 2026-06-23 · Room price entered at booking, not configured per room
+
+## Summary
+Removed room price configuration from the Rooms module. Rooms no longer carry a
+daily/monthly rate in the UI — the rate is entered directly during booking. Backend
+schema is untouched (`Room.dailyRate`/`monthlyRate` columns still exist with defaults
+but are no longer set or read from the UI). Settings → Room Types rates left as-is.
+
+## File changes
+
+### `src/components/modules/rooms/Rooms.jsx`
+- Removed the **Daily Rate** / **Monthly Rate** inputs from the Add Room form and from
+  the create payload (`EMPTY_FORM` and `handleAddRoom`).
+- Removed the rate cells from the room detail modal and the `₹/day` line on the room card.
+- Stopped mapping `dailyRate`/`monthlyRate` in `normalizeRoom`.
+
+### `src/components/modules/bookings/BookingForm.jsx`
+- `roomRate` no longer pre-fills from the selected room — starts empty with an
+  "Enter rate" placeholder. Removed the effect that overwrote the rate on room/stay-type change.
+- Dropped the `· ₹X/night` suffix from the room dropdown labels.
+- Added validation requiring a rate > 0 on submit (added to `validate`, `FIELD_ORDER`,
+  and the Rate `Field`) so a booking can't be created at ₹0 by accident.
+
+---
+
+# Session — 2026-06-23 · Tablet responsiveness
+
+## Summary
+Made the app usable on tablets in **both orientations** (portrait ~768px, landscape ~1024px).
+The shell was already a slide-in drawer below 1024px, but module content kept desktop
+multi-column layouts on narrow screens. Converted bare fixed-count grids to responsive Tailwind
+column counts, wrapped wide tables/canvases so they scroll within their container instead of
+breaking the page, added a tablet tier + touch tap-target rules to the global stylesheet, and
+added a viewport overflow smoke test.
+
+Approach (per the agreed plan): Tailwind `md:`/`lg:` prefixes on components + a shared tablet
+tier in `index.css`. Breakpoints: `<md` (≤767) phone, `md` (768–1023) portrait tablet,
+`lg` (≥1024) landscape/desktop.
+
+## File changes
+
+### `src/index.css`
+- **Moved the sidebar→drawer breakpoint from 1024px to 1200px.** Below 1200px the sidebar is now
+  an off-canvas drawer (hamburger + overlay) and content takes the full width; the persistent
+  flex-row sidebar only shows at ≥1200px. Updated all related media queries (drawer, overlay,
+  hamburger, `.mobile-only`/`.desktop-only`, content padding) accordingly.
+- Added a **tablet tier** (`@media 768–1199px`): wrap card headers / module-header action rows,
+  tighten table cell padding + keep cells `nowrap`.
+- Added a **touch-ergonomics** block (`@media (hover:none) and (pointer:coarse)`): topbar icon
+  buttons + hamburger bumped to ~42px tap targets (desktop sizing untouched).
+
+### `src/components/layout/Sidebar.jsx`
+- `isDesktop` threshold moved from 1024px to **1200px** (matches the CSS drawer breakpoint), so the
+  collapse toggle is desktop-only and nav clicks auto-close the drawer below 1200px.
+- Lock body scroll while the drawer is open on mobile/tablet (prevents the page behind the
+  overlay from scrolling on touch).
+
+### `src/components/layout/Topbar.jsx`
+- Notification dropdown capped with `max-w-[calc(100vw-24px)]` so it never overflows narrow viewports.
+
+### Module grids → responsive (Tailwind prefixes)
+Converted bare `grid-cols-N` to responsive sequences (2-col→`grid-cols-1 md:grid-cols-2`,
+large panels→`lg:grid-cols-2`, 3-col→`grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`,
+stat tiles 4-col→`grid-cols-2 lg:grid-cols-4`) across:
+`billing/Billing`, `dashboard/Dashboard`, `rooms/Rooms`, `reports/Reports`, `users/UsersRoles`,
+`guests/Guests`, `settings/Settings`, `documents/Documents`, `food/Food`, `housekeeping/Housekeeping`,
+`nightaudit/NightAudit`, `portal/GuestPortal`, `checkout/CheckOutModal`, `calendar/Calendar`,
+`setup/SetupWizard`. Grids already responsive or using `auto-fit/auto-fill minmax` were left as-is.
+
+### Wide content → horizontal scroll
+- `floorplan/FloorPlan.jsx` — wrapped the 8-col room canvas in `overflow-x-auto` and gave cells a
+  `minmax(70px,1fr)` floor so the floor row scrolls instead of squashing.
+- `guests/Guests.jsx`, `settings/Settings.jsx` — wrapped raw `<table>`s that lacked a scroll wrapper.
+- Calendar timeline and all `DataTable`-based tables already scroll (`overflow-x-auto`).
+
+### `src/components/ui-tw/DataTable.jsx`
+- Added `whitespace-nowrap` to all `<th>`/`<td>`. The table was `w-full`, so on a narrow
+  container (e.g. iPad Pro with the drawer layout) columns squeezed and cells wrapped ugly
+  (the Bookings "Stay" date column collapsed vertically) instead of scrolling. With nowrap the
+  table takes its natural width and the existing `overflow-x-auto` wrapper scrolls horizontally.
+  Affects every DataTable-based list (Bookings, Cancellations, Users, …). Columns can still opt
+  back into wrapping via their per-column `className`.
+
+### Not changed
+- Shared modals (`ui-tw/Modal`, `ui/Modal`) were already fluid.
+- `App.css` (unused Vite boilerplate).
+
+## Tests
+- Added `tests/tablet-responsive.spec.js`: logs in and visits every panel at 768×1024 and 1024×768,
+  asserting no horizontal page-level overflow (wide content must scroll within its own container).
+  Requires the live dev stack (frontend :5173 + seeded backend :5000), like the other specs.
+- `npm run build` passes.
+
+---
+
+# Session — 2026-06-21 · Booking room rate is GST-inclusive
+
+## Summary
+The room rate in the booking form is now **GST-inclusive** — the total stays equal to what's entered,
+and GST is shown extracted from it instead of added on top. Mirrors the server's `computePricing`.
+
+## File changes
+
+### `src/components/modules/bookings/BookingForm.jsx`
+- `pricing` preview: `gross = subtotal − discount`, `taxable = gross / (1 + GST%)`,
+  `taxAmount = gross − taxable` (rounded to 2dp), `total = gross + extraCharges`.
+- Pricing summary now reads **Room charge (incl. GST) → Taxable value → GST (X%) incl. → Total**.
+
+### `src/components/modules/bookings/ExtendStayModal.jsx`
+- Extension price preview uses the inclusive total (`gross + extraCharges`) so it matches the server.
+
+### `src/components/modules/billing/Billing.jsx`
+- Extended the model to monthly/guest invoices with **only rent GST-inclusive** (food & amenities stay
+  GST-on-top). Generate-invoice preview now extracts rent's GST and adds food/amenities' GST, showing
+  **Taxable value / GST / Total**. The printed invoice's "Subtotal" row became **Taxable Value** =
+  `rent/(1+GST%) + food + amenities`, so Taxable + CGST + SGST = Total reconciles.
+
+### Not changed
+- The booking **invoice** (`InvoiceModal`) is a viewer only — all math is server-side.
+
+---
+
+# Session — 2026-06-21 · Extend stay on a booking
+
+## Summary
+Added an **Extend** action to active bookings so front-desk staff can push back the check-out date
+(daily) or add months (monthly). The new dialog previews the recomputed total and additional amount
+due. No backend work — it reuses `PUT /bookings/:id` (`bookingsApi.update`), which already re-checks
+room availability and recomputes the stay total + balance.
+
+## File changes
+
+### `src/components/modules/bookings/ExtendStayModal.jsx` (new)
+- Focused modal on the shared `Modal` component. Daily stays pick a later check-out date (`min` = day
+  after current checkout, enforcing extend-not-shorten); monthly stays add whole months. Live price
+  preview mirrors the server's `computePricing` (new length, new total, additional due). Confirm sends
+  `{ toDate: <ISO> }` (daily) or `{ months: <new total> }` (monthly).
+- **Availability cap (A):** on open (daily), looks up the next live booking on the same room via
+  `bookingsApi.getAll({ roomId })` and caps the date picker's `max` to it, with a hint naming the next
+  booking ("Room is booked again from … — extend up to then"). Same-day turnover is allowed (new
+  checkout may equal the next check-in). Confirm is disabled past the cap, so a clash can't be submitted.
+
+### `src/components/modules/bookings/BookingsTable.jsx`
+- Added an `onExtend` prop and a ghost **Extend** button, shown only on `Confirmed`/`CheckedIn` rows.
+
+### `src/components/modules/bookings/Bookings.jsx`
+- Added `extendTarget` state, a `handleExtend` that calls `bookingsApi.update(...)` then toasts +
+  reloads, wired `onExtend={setExtendTarget}`, and rendered `<ExtendStayModal>` (conditionally, so the
+  modal's state re-initialises each open).
+- **Named conflict (B):** if the server still rejects with `ERR_ROOM_UNAVAILABLE` (e.g. an active guest
+  or a race), the error toast now names the blocker from the response's `conflict` object — booking no.
+  + date, or guest name — instead of a generic "unavailable" message.
+
+## Tests
+- `tests/extend-stay.spec.js` (new, Playwright): daily extension recomputes via `PUT` (200, nights +
+  amount up); the date picker caps to the next booking on the room (A); and the server returns the
+  blocking record on a clash for the named-conflict toast (B). Uses a clear-room finder (excludes rooms
+  with overlapping bookings or active guests) so runs are deterministic.
+
+---
+
+# Session — 2026-06-21 · Invoice config tab + editable invoice serial
+
+## Summary
+Added a new **Invoice** tab in Settings to configure the invoice serial (prefix / next number /
+padding), place of supply, bank details, and terms. The invoice preview now shows the serial in an
+editable field so it can be overridden per invoice.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- New `InvoiceConfigTab` — serial numbering (with a live "next will be …" preview), place of supply,
+  bank details, and terms & conditions; saves via `settingsApi.update({ hotel })`. Numeric fields are
+  coerced before sending. Added `invoice` to `ALL_TABS` (after Tax & Pricing) and wired its panel.
+- Seeded invoice defaults into `initSettings` so inputs are controlled before `GET /settings` loads.
+
+### `src/components/modules/bookings/InvoiceModal.jsx`
+- Fetches invoice JSON first (assigns + returns the serial), then the HTML preview, so both share one
+  number. Added an editable "Invoice No." field with an Update action → `bookingsApi.updateInvoiceNo`,
+  which reloads the preview. Object-URL lifecycle moved to a ref so the refreshed preview doesn't leak.
+
+### `src/api/client.js`
+- `bookingsApi.updateInvoiceNo(id, invoiceNo)` → `PATCH /bookings/:id/invoice-no`.
+
+### `src/utils/permissions.js`
+- Added `invoice` to the owner and manager settings-tab allow-lists.
+
+---
+
+# Session — 2026-06-20 · Settings: upload stamp & signature for invoices
+
+## Summary
+The tax invoice's signature box was just a label ("Signature" + hotel name). Added a way to upload a
+combined stamp + authorised-signature image in Settings → Hotel Profile, which then prints in the
+invoice signature area. Mirrors the existing logo-upload flow but uploads the image as-is (no crop),
+since the stamp is rectangular.
+
+## File changes
+
+### `src/components/modules/settings/Settings.jsx`
+- `HotelProfileTab`: added a "Stamp & Signature" uploader below the logo — rectangular preview tile,
+  direct upload on file select (no crop modal), stored via `settingsApi.uploadStamp`. Local preview
+  falls back to `settings.stampUrl` from `GET /settings` after reload.
+
+### `src/api/client.js`
+- `settingsApi.uploadStamp(form)` → `POST /settings/stamp` (multipart).
+
+---
+
+# Session — 2026-06-20 · Booking form: phone & email validation + error feedback
+
+## Summary
+The new-booking form had no validation for the guest phone or email, and validation errors only
+appeared inline — easy to miss since the "Create Booking" button sits at the bottom of a long form.
+Added input restriction + validation for phone and email, and on a failed submit the form now toasts
+the first error and scrolls/focuses the offending field. Booking submit failures now surface as a
+toast too (previously an inline text banner), and the global toast styling/position was corrected.
+
+## File changes
+
+### `src/components/modules/bookings/BookingForm.jsx`
+- Phone: new `setPhone` handler strips non-digits and caps at 10 characters; field is now `type="tel"`
+  with `inputMode="numeric"` and `maxLength={10}`. Validates to exactly 10 digits when provided
+  (stays optional).
+- Email: `validate()` now rejects malformed addresses (`/^[^\s@]+@[^\s@]+\.[^\s@]+$/`) when provided
+  (stays optional); wired `error={errors.guestEmail}` onto the field.
+- `validate()` now returns the error object instead of a boolean.
+- `handleSubmit`: on validation failure, toasts the first error (in field order
+  `guestName → guestPhone → guestEmail → roomId → toDate/months`) and scrolls + focuses that field.
+- Added `name` attributes to the validated fields so the scroll/focus lookup resolves them.
+- Booking-submit failures now `toast(...)` instead of `setApiError(...)` (no more inline text banner
+  for submit errors; the rooms-load banner on mount is unchanged).
+- Fixed toast type: all booking toasts use `'danger'` (the supported type) instead of `'error'`,
+  which had no icon and fell back to the default gold border.
+
+### `src/components/ui/Toast.jsx`
+- Moved the toast container from bottom-right (`bottom-5`) to top-right (`top-5`). Global change —
+  affects all toasts app-wide.
+
+### `src/index.css`
+- Renamed the `slideUp` toast keyframe to `slideDown` (enters from `-8px`) so toasts animate in from
+  above, matching the new top position.
+
+---
+
 # Session — 2026-06-19 · Documents upload respects the 4-doc limit
 
 ## Summary

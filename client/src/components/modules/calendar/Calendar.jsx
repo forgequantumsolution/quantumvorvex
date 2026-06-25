@@ -93,7 +93,7 @@ function NewBookingModal({ isOpen, onClose, onSave, preRoom, preDate }) {
         </>
       }
     >
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="col-span-full">
           <label className="form-label block mb-[5px]">Guest Name</label>
           <input className="form-input" placeholder="Full name" value={form.guestName} onChange={e => set('guestName', e.target.value)} />
@@ -146,7 +146,7 @@ function BookingDetailModal({ booking, room, onClose, onDelete }) {
       }}>
         {booking.status}
       </div>
-      <div className="grid grid-cols-2 gap-x-5 gap-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-3">
         {[
           ['Guest', booking.guestName],
           ['Room', room?.number || '—'],
@@ -404,7 +404,7 @@ export default function Calendar() {
       </div>
 
       {/* Summary stats */}
-      <div className="grid grid-cols-4 gap-3 mt-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
         {[
           { label: 'Total Rooms', value: filteredRooms.length, color: 'var(--text)' },
           { label: 'Occupied Today', value: bookings.filter(b => b.checkIn <= todayYMD && b.checkOut > todayYMD && b.status === 'occupied').length, color: 'var(--blue-text)' },

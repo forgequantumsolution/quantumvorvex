@@ -60,8 +60,8 @@ export function getAllowedPanels(user) {
 // ── Settings sub-tabs ──────────────────────────────────────────────────────────
 // The RBAC model is module-level (one `settings` module), so sub-tab visibility is
 // derived: owners see everything; anyone else with settings access sees the standard set.
-const OWNER_SETTINGS_TABS   = ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'pricing', 'notifications', 'appearance', 'branding', 'preferences', 'properties']
-const MANAGER_SETTINGS_TABS = ['profile', 'rooms', 'facilities', 'food', 'tax', 'documents', 'notifications', 'appearance', 'preferences']
+const OWNER_SETTINGS_TABS   = ['profile', 'rooms', 'facilities', 'food', 'tax', 'invoice', 'documents', 'pricing', 'notifications', 'appearance', 'branding', 'preferences', 'properties']
+const MANAGER_SETTINGS_TABS = ['profile', 'rooms', 'facilities', 'food', 'tax', 'invoice', 'documents', 'notifications', 'appearance', 'preferences']
 
 export function canAccessSettingsTab(user, tab) {
   if (isOwnerUser(user)) return OWNER_SETTINGS_TABS.includes(tab)

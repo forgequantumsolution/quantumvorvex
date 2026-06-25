@@ -326,7 +326,7 @@
     gap: 10px;
     min-width: 240px;
     max-width: 320px;
-    animation: slideUp 0.18s ease;
+    animation: slideDown 0.18s ease;
   }
   .toast-item.success { border-left-color: var(--green); }
   .toast-item.danger { border-left-color: var(--red); }
@@ -356,8 +356,8 @@
   .empty-state { text-align: center; padding: 44px 20px; color: var(--text3); }
 }
 
-@keyframes slideUp {
-  from { transform: translateY(8px); opacity: 0; }
+@keyframes slideDown {
+  from { transform: translateY(-8px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 
@@ -377,10 +377,10 @@
 #sidebar::-webkit-scrollbar { display: none; }
 
 /* ── Responsive sidebar ──────────────────────────────────────────────────────
-   Desktop (≥1024px): sidebar is part of the flex row, always visible.
-   Mobile  (<1024px): sidebar is a fixed drawer that slides in/out.
+   Desktop (≥1200px): sidebar is part of the flex row, always visible.
+   Mobile  (<1200px): sidebar is a fixed drawer that slides in/out.
    --------------------------------------------------------------------------- */
-@media (max-width: 1023px) {
+@media (max-width: 1199px) {
   #sidebar {
     position: fixed !important;
     left: 0 !important; top: 0 !important;
@@ -409,7 +409,7 @@
   /* Main area takes full width when sidebar is off-canvas */
   #main { width: 100% !important; }
 }
-@media (min-width: 1024px) {
+@media (min-width: 1200px) {
   #sb-overlay { display: none !important; }
   /* Hamburger hidden on desktop */
   .tb-hamburger { display: none !important; }
@@ -419,14 +419,14 @@
 @media (max-width: 639px) {
   #content { padding: 12px !important; }
 }
-@media (min-width: 640px) and (max-width: 1023px) {
+@media (min-width: 640px) and (max-width: 1199px) {
   #content { padding: 18px !important; }
 }
 
 /* ── Topbar elements — responsive visibility ─────────────────────────────── */
 /* Hamburger: show only on mobile */
 .tb-hamburger { display: none; }
-@media (max-width: 1023px) {
+@media (max-width: 1199px) {
   .tb-hamburger { display: flex !important; }
 }
 
@@ -446,7 +446,7 @@
 /* ── Mobile-only helper classes ──────────────────────────────────────────── */
 .mobile-only  { display: none !important; }
 .desktop-only { display: flex; }
-@media (max-width: 1023px) {
+@media (max-width: 1199px) {
   .mobile-only  { display: flex !important; }
   .desktop-only { display: none !important; }
 }
@@ -509,6 +509,38 @@
     width: 100%;
     flex-wrap: wrap;
   }
+}
+
+/* ── Tablet tier (768–1199px) ─────────────────────────────────────────────
+   Portrait/landscape tablets. The sidebar is already a drawer below 1200px
+   (see the responsive-sidebar block above); these rules tune the shared,
+   class-based content elements so module pages don't stay desktop-cramped.
+   Component-level grids use Tailwind md:/lg: prefixes instead.
+   -------------------------------------------------------------------------- */
+@media (min-width: 768px) and (max-width: 1199px) {
+  /* Cards: tighten chrome, let headers wrap their action rows */
+  .card-header { flex-wrap: wrap; gap: 8px; }
+
+  /* Tables: prevent column squeeze — scroll the card body, keep cells legible */
+  .card table  { font-size: 13px; }
+  .card td, .card th { padding: 9px 11px; white-space: nowrap; }
+
+  /* Module headers: let the title + actions wrap instead of overflowing */
+  .module-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .module-header-actions { flex-wrap: wrap; }
+}
+
+/* ── Touch ergonomics ─────────────────────────────────────────────────────
+   On touch devices (tablets/phones), enlarge the topbar's compact icon
+   buttons toward a ~44px tap target. Scoped to coarse pointers so the
+   mouse/desktop sizing is untouched.
+   -------------------------------------------------------------------------- */
+@media (hover: none) and (pointer: coarse) {
+  #topbar button { min-width: 42px; min-height: 42px; }
+  .tb-hamburger  { width: 42px !important; height: 42px !important; }
 }
 
 /* Print */

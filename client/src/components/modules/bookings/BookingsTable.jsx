@@ -9,7 +9,7 @@ import { dateRangeLabel, stayLabel } from '../../../utils/booking'
  */
 export default function BookingsTable({
   bookings, loading, busyId,
-  onConfirm, onCheckIn, onCheckOut, onCancel, onInvoice, onDelete, emptyMessage,
+  onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onDelete, emptyMessage,
 }) {
   const columns = [
     {
@@ -92,6 +92,9 @@ export default function BookingsTable({
             )}
             {b.status === 'CheckedIn' && (
               <Button size="sm" disabled={busy} onClick={() => onCheckOut(b)}>Check-out</Button>
+            )}
+            {onExtend && (b.status === 'Confirmed' || b.status === 'CheckedIn') && (
+              <Button variant="ghost" size="sm" disabled={busy} onClick={() => onExtend(b)}>Extend</Button>
             )}
             {['Pending', 'Confirmed'].includes(b.status) && (
               <Button variant="ghost" size="sm" disabled={busy} onClick={() => onCancel(b)}>Cancel</Button>

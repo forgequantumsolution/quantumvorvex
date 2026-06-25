@@ -14,6 +14,7 @@ const EMPTY = {
   fromDate: TODAY, toDate: '', months: 1,
   roomRate: '', discount: 0, taxRate: 12, extraCharges: 0, advance: 0,
   source: 'walk_in', specialRequests: '', notes: '',
+  invoiceNo: '',
 }
 
 const SOURCES = [
@@ -45,6 +46,10 @@ export default function BookingForm({ onSaved, onCancel }) {
   const [loadingRooms, setLoadingRooms] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [apiError, setApiError] = useState('')
+  // The auto-suggested invoice number; if the user leaves the field on this value
+  // we send nothing and let the server reserve the next one atomically (avoids
+  // two same-day bookings grabbing the same number).
+  const [autoInvoiceNo, setAutoInvoiceNo] = useState('')
 
   // ── ID documents ──
   // idDocs is keyed by ID type → { front, back } files
@@ -74,58 +79,65 @@ export default function BookingForm({ onSaved, onCancel }) {
 
   const set = (k) => (e) => setValues((v) => ({ ...v, [k]: e.target.value }))
 
+  // Phone: keep digits only, capped at 10.
+  const setPhone = (e) =>
+    setValues((v) => ({ ...v, guestPhone: e.target.value.replace(/\D/g, '').slice(0, 10) }))
+
   // Load rooms + hotel settings on mount
   useEffect(() => {
     setApiError('')
     setLoadingRooms(true)
-    Promise.all([roomsApi.getAll(), settingsApi.get().catch(() => ({ data: {} }))])
-      .then(([roomsRes, settingsRes]) => {
+    Promise.all([
+      roomsApi.getAll(),
+      settingsApi.get().catch(() => ({ data: {} })),
+      bookingsApi.nextInvoiceNo().catch(() => ({ data: {} })),
+    ])
+      .then(([roomsRes, settingsRes, invoiceRes]) => {
         const list = roomsRes.data?.rooms || roomsRes.data || []
         const available = list.filter((r) => r.status === 'available')
         const pool = available.length ? available : list
         setRooms(pool)
         setRoomTypes(settingsRes.data?.roomTypes || [])
         const gst = settingsRes.data?.hotel?.gstRate
+        const nextInvoiceNo = invoiceRes.data?.invoiceNo || ''
+        setAutoInvoiceNo(nextInvoiceNo)
         setValues((v) => ({
           ...EMPTY,
           ...v,
           roomId: pool[0]?.id || '',
-          roomRate: pool[0]?.dailyRate ?? '',
           taxRate: gst ?? v.taxRate,
+          invoiceNo: nextInvoiceNo,
         }))
       })
       .catch(() => setApiError('Could not load rooms. Is the backend running?'))
       .finally(() => setLoadingRooms(false))
   }, [])
 
-  const room = useMemo(() => rooms.find((r) => r.id === values.roomId), [rooms, values.roomId])
   const typeName = (r) => roomTypes.find((t) => t.id === r?.typeId)?.name || ''
 
-  // When the selected room or stay type changes, refresh the rate default
-  useEffect(() => {
-    if (!room) return
-    setValues((v) => ({
-      ...v,
-      roomRate: v.stayType === 'daily' ? room.dailyRate : room.monthlyRate,
-    }))
-  }, [values.roomId, values.stayType]) // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Live pricing preview (mirrors the server formula) ──
+  // The room rate is GST-inclusive, so GST is extracted from (subtotal − discount)
+  // rather than added on top; the total stays equal to what's entered (+ extras).
   const pricing = useMemo(() => {
     const rate = Number(values.roomRate) || 0
     const units = values.stayType === 'daily' ? nights(values.fromDate, values.toDate) : Number(values.months) || 0
     const subtotal = rate * units
-    const taxable = Math.max(0, subtotal - (Number(values.discount) || 0))
-    const taxAmount = (taxable * (Number(values.taxRate) || 0)) / 100
-    const total = taxable + taxAmount + (Number(values.extraCharges) || 0)
+    const gross = Math.max(0, subtotal - (Number(values.discount) || 0))
+    const taxable = +(gross / (1 + (Number(values.taxRate) || 0) / 100)).toFixed(2)
+    const taxAmount = +(gross - taxable).toFixed(2)
+    const total = gross + (Number(values.extraCharges) || 0)
     const balance = total - (Number(values.advance) || 0)
-    return { units, subtotal, taxAmount, total, balance }
+    return { units, subtotal, taxable, taxAmount, total, balance }
   }, [values])
 
   const validate = () => {
     const e = {}
     if (!values.guestName.trim()) e.guestName = 'Guest name is required'
+    if (values.guestPhone && values.guestPhone.length !== 10) e.guestPhone = 'Enter a valid 10-digit number'
+    if (values.guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.guestEmail.trim()))
+      e.guestEmail = 'Enter a valid email address'
     if (!values.roomId) e.roomId = 'Select a room'
+    if (!values.roomRate || Number(values.roomRate) <= 0) e.roomRate = 'Enter the room rate'
     if (values.stayType === 'daily') {
       if (!values.toDate) e.toDate = 'Check-out date is required'
       else if (nights(values.fromDate, values.toDate) < 1) e.toDate = 'Must be after check-in'
@@ -133,11 +145,23 @@ export default function BookingForm({ onSaved, onCancel }) {
       e.months = 'At least 1 month'
     }
     setErrors(e)
-    return Object.keys(e).length === 0
+    return e
   }
 
+  // Field order for "jump to first error" on a failed submit.
+  const FIELD_ORDER = ['guestName', 'guestPhone', 'guestEmail', 'roomId', 'roomRate', 'toDate', 'months']
+
   const handleSubmit = async () => {
-    if (!validate()) return
+    const e = validate()
+    const errorKeys = Object.keys(e)
+    if (errorKeys.length) {
+      const first = FIELD_ORDER.find((k) => e[k]) || errorKeys[0]
+      toast(e[first] || 'Please fix the highlighted fields', 'danger')
+      const el = document.querySelector(`[name="${first}"]`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el?.focus?.({ preventScroll: true })
+      return
+    }
     setSubmitting(true)
     setApiError('')
     try {
@@ -164,6 +188,11 @@ export default function BookingForm({ onSaved, onCancel }) {
         source: values.source,
         specialRequests: values.specialRequests.trim() || undefined,
         notes: values.notes.trim() || undefined,
+        // Only send an explicit number if the user edited it; otherwise let the
+        // server auto-assign so concurrent same-day bookings don't collide.
+        invoiceNo: values.invoiceNo.trim() && values.invoiceNo.trim() !== autoInvoiceNo
+          ? values.invoiceNo.trim()
+          : undefined,
       }
       const { data } = await bookingsApi.create(payload)
       const booking = data.booking
@@ -185,14 +214,14 @@ export default function BookingForm({ onSaved, onCancel }) {
         try {
           await bookingsApi.uploadDocuments(booking.id, form)
         } catch {
-          toast('Booking created, but some documents failed to upload.', 'error')
+          toast('Booking created, but some documents failed to upload.', 'danger')
         }
       }
 
       onSaved(booking)
     } catch (err) {
       const d = err.response?.data
-      setApiError(d?.message || d?.error || 'Could not create the booking. Please try again.')
+      toast(d?.message || d?.error || 'Could not create the booking. Please try again.', 'danger')
     } finally {
       setSubmitting(false)
     }
@@ -212,11 +241,13 @@ export default function BookingForm({ onSaved, onCancel }) {
         {/* ── Guest ── */}
         <h4 className="text-xs font-semibold uppercase tracking-wide text-ink3 mb-2">Guest details</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Field label="Guest name" value={values.guestName} onChange={set('guestName')}
+          <Field label="Guest name" name="guestName" value={values.guestName} onChange={set('guestName')}
                  placeholder="Full name" error={errors.guestName} required />
-          <Field label="Phone" value={values.guestPhone} onChange={set('guestPhone')} placeholder="+91 …" />
-          <Field label="Email" type="email" value={values.guestEmail} onChange={set('guestEmail')}
-                 placeholder="guest@example.com" />
+          <Field label="Phone" name="guestPhone" type="tel" inputMode="numeric" maxLength={10}
+                 value={values.guestPhone} onChange={setPhone} placeholder="10-digit number"
+                 error={errors.guestPhone} />
+          <Field label="Email" name="guestEmail" type="email" value={values.guestEmail} onChange={set('guestEmail')}
+                 placeholder="guest@example.com" error={errors.guestEmail} />
           <Field label="Nationality" value={values.nationality} onChange={set('nationality')} placeholder="Indian" />
           <Field label="Adults" type="number" min="1" value={values.adults} onChange={set('adults')} />
           <Field label="Children" type="number" min="0" value={values.children} onChange={set('children')} />
@@ -254,23 +285,25 @@ export default function BookingForm({ onSaved, onCancel }) {
         {/* ── Stay ── */}
         <h4 className="text-xs font-semibold uppercase tracking-wide text-ink3 mb-2 mt-5">Stay</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <Field label="Room" value={values.roomId} onChange={set('roomId')} error={errors.roomId}
+          <Field label="Room" name="roomId" value={values.roomId} onChange={set('roomId')} error={errors.roomId}
                  options={
                    loadingRooms
                      ? [{ value: '', label: 'Loading rooms…' }]
                      : rooms.length
-                       ? rooms.map((r) => ({ value: r.id, label: `Room ${r.number}${typeName(r) ? ` · ${typeName(r)}` : ''} · ₹${r.dailyRate}/night` }))
+                       ? rooms.map((r) => ({ value: r.id, label: `Room ${r.number}${typeName(r) ? ` · ${typeName(r)}` : ''}` }))
                        : [{ value: '', label: 'No rooms available' }]
                  } />
           <Field label="Booking source" value={values.source} onChange={set('source')} options={SOURCES} />
+          <Field label="Invoice no." value={values.invoiceNo} onChange={set('invoiceNo')}
+                 placeholder="Auto" hint="Auto-generated — edit to override" />
           <Field label="Stay type" value={values.stayType} onChange={set('stayType')}
                  options={[{ value: 'daily', label: 'Daily' }, { value: 'monthly', label: 'Monthly' }]} />
           <Field label="Check-in" type="date" value={values.fromDate} onChange={set('fromDate')} />
           {values.stayType === 'daily' ? (
-            <Field label="Check-out" type="date" value={values.toDate} onChange={set('toDate')}
+            <Field label="Check-out" name="toDate" type="date" value={values.toDate} onChange={set('toDate')}
                    error={errors.toDate} required />
           ) : (
-            <Field label="Months" type="number" min="1" value={values.months} onChange={set('months')}
+            <Field label="Months" name="months" type="number" min="1" value={values.months} onChange={set('months')}
                    error={errors.months} required />
           )}
         </div>
@@ -278,8 +311,8 @@ export default function BookingForm({ onSaved, onCancel }) {
         {/* ── Pricing ── */}
         <h4 className="text-xs font-semibold uppercase tracking-wide text-ink3 mb-2 mt-5">Pricing</h4>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Field label={`Rate (₹/${values.stayType === 'daily' ? 'night' : 'month'})`} type="number" min="0"
-                 value={values.roomRate} onChange={set('roomRate')} />
+          <Field label={`Rate (₹/${values.stayType === 'daily' ? 'night' : 'month'})`} name="roomRate" type="number" min="0"
+                 value={values.roomRate} onChange={set('roomRate')} placeholder="Enter rate" error={errors.roomRate} required />
           <Field label="Discount (₹)" type="number" min="0" value={values.discount} onChange={set('discount')} />
           <Field label="GST (%)" type="number" min="0" value={values.taxRate} onChange={set('taxRate')} />
           <Field label="Extra charges (₹)" type="number" min="0" value={values.extraCharges} onChange={set('extraCharges')} />
@@ -336,13 +369,15 @@ export default function BookingForm({ onSaved, onCancel }) {
         {/* ── Pricing summary ── */}
         <div className="mt-5 rounded-lg bg-gold-bg border border-gold-border px-4 py-3 text-sm">
           <div className="flex justify-between text-ink2">
-            <span>Subtotal{pricing.units ? ` · ${pricing.units} ${values.stayType === 'daily' ? 'night(s)' : 'month(s)'} × ${inr(values.roomRate)}` : ''}</span>
+            <span>Room charge (incl. GST){pricing.units ? ` · ${pricing.units} ${values.stayType === 'daily' ? 'night(s)' : 'month(s)'} × ${inr(values.roomRate)}` : ''}</span>
             <span>{inr(pricing.subtotal)}</span>
           </div>
           {Number(values.discount) > 0 && (
             <div className="flex justify-between text-ink2 mt-1"><span>Discount</span><span>− {inr(values.discount)}</span></div>
           )}
-          <div className="flex justify-between text-ink2 mt-1"><span>GST ({values.taxRate || 0}%)</span><span>{inr(pricing.taxAmount)}</span></div>
+          {/* GST is included in the room charge — shown extracted, not added on top. */}
+          <div className="flex justify-between text-ink2 mt-1"><span>Taxable value</span><span>{inr(pricing.taxable)}</span></div>
+          <div className="flex justify-between text-ink2 mt-1"><span>GST ({values.taxRate || 0}%) <span className="text-ink3">incl.</span></span><span>{inr(pricing.taxAmount)}</span></div>
           {Number(values.extraCharges) > 0 && (
             <div className="flex justify-between text-ink2 mt-1"><span>Extra charges</span><span>{inr(values.extraCharges)}</span></div>
           )}

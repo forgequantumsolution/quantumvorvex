@@ -1,6 +1,7 @@
 /**
  * Labelled form control. Renders an <input>, <select> (when `options` given),
- * or <textarea> (when `textarea`). Shows an optional `error` line.
+ * or <textarea> (when `textarea`). Shows an optional `error` line, or a muted
+ * `hint` line when there's no error.
  */
 const baseControl =
   'w-full bg-surface border border-line2 rounded-lg px-3 py-2 text-sm text-ink ' +
@@ -15,6 +16,7 @@ export default function Field({
   options,
   textarea,
   error,
+  hint,
   required,
   className = '',
   ...props
@@ -45,7 +47,9 @@ export default function Field({
         <input name={name} value={value} onChange={onChange} className={baseControl} {...props} />
       )}
 
-      {error && <span className="block text-[11.5px] text-danger mt-1">{error}</span>}
+      {error
+        ? <span className="block text-[11.5px] text-danger mt-1">{error}</span>
+        : hint && <span className="block text-[11.5px] text-ink3 mt-1">{hint}</span>}
     </label>
   )
 }
