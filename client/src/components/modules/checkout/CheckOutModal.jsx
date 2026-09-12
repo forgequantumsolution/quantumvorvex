@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import Modal from '../../ui/Modal'
+import CameraCapture from '../../ui/CameraCapture'
 import { formatCurrency } from '../../../utils/format'
+
+const STEPS = ['Bill Summary', 'Confirm & Pay', 'Guest Photo']
 
 const MAX_PROOF_BYTES = 10 * 1024 * 1024 // matches the server's 10MB limit
 
@@ -24,7 +27,10 @@ const DEFAULT_METHODS = [
  * partial "collect now" amount, payment reference) are opt-in via flags so the
  * guest flow stays a simple full-balance settlement.
  *
- * onConfirm receives: { extra, finalPayment, paymentMethod, paymentReference, notes, proofFile }
+ * A final step captures a check-out photo of the guest; it is optional, so a
+ * device without a working camera never blocks the check-out.
+ *
+ * onConfirm receives: { extra, finalPayment, paymentMethod, paymentReference, notes, proofFile, photoFile }
  */
 export default function CheckOutModal({
   isOpen,
@@ -55,6 +61,7 @@ export default function CheckOutModal({
   const [settled, setSettled] = useState(false)
   const [proof, setProof] = useState(null)
   const [proofError, setProofError] = useState('')
+  const [photo, setPhoto] = useState(null)
 
   if (!isOpen) return null
 
@@ -78,7 +85,7 @@ export default function CheckOutModal({
   }
 
   const handleConfirm = () => {
-    if (step === 1) { setStep(2); return }
+    if (step < 3) { setStep(step + 1); return }
     onConfirm({
       extra: extraNum,
       finalPayment: paymentNum,
@@ -86,6 +93,7 @@ export default function CheckOutModal({
       paymentReference: showReference ? reference.trim() : '',
       notes,
       proofFile: proof,
+      photoFile: photo,
     })
   }
 
@@ -94,6 +102,8 @@ export default function CheckOutModal({
     : allowPartialPayment && paymentNum > 0
       ? `Collect ${formatCurrency(paymentNum)} & Check Out`
       : 'Complete Check-Out'
+
+  const nextLabel = step === 1 ? 'Review & Confirm →' : step === 2 ? 'Next: Photo →' : confirmLabel
 
   return (
     <Modal
@@ -106,23 +116,23 @@ export default function CheckOutModal({
           <button
             className="btn btn-outline btn-sm"
             disabled={submitting}
-            onClick={step === 2 ? () => setStep(1) : onClose}
+            onClick={step > 1 ? () => setStep(step - 1) : onClose}
           >
-            {step === 2 ? 'Back' : 'Cancel'}
+            {step > 1 ? 'Back' : 'Cancel'}
           </button>
           <button
             className="btn btn-danger btn-sm"
             disabled={submitting || (step === 2 && !settled)}
             onClick={handleConfirm}
           >
-            {step === 1 ? 'Review & Confirm →' : confirmLabel}
+            {nextLabel}
           </button>
         </>
       }
     >
       {/* Step indicator */}
       <div className="flex gap-1.5 mb-5">
-        {['Bill Summary', 'Confirm & Pay'].map((s, i) => (
+        {STEPS.map((s, i) => (
           <div key={s} className="flex-1 text-center">
             <div className={`h-[3px] rounded-sm mb-[5px] ${step > i ? 'bg-gold' : 'bg-line'}`} />
             <span className={`text-[10.5px] font-semibold ${step > i ? 'text-gold' : 'text-ink3'}`}>{s}</span>
@@ -265,6 +275,23 @@ export default function CheckOutModal({
             <input type="checkbox" checked={settled} onChange={e => setSettled(e.target.checked)} />
             Payment received & key returned — confirm checkout
           </label>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <p className="t-sm text-ink3 mb-3">
+            Capture a check-out photo of the guest for the booking file. This is optional —
+            continue without one if the camera is unavailable.
+          </p>
+          {/* Mounted only on this step so the camera stops the moment the user
+              goes Back or the check-out completes. */}
+          <CameraCapture
+            facingMode="user"
+            namePrefix="checkout-photo"
+            disabled={submitting}
+            onChange={setPhoto}
+          />
         </>
       )}
     </Modal>

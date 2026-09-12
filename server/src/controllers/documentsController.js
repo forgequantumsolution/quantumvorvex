@@ -29,6 +29,16 @@ export const upload = multer({
   },
 })
 
+// A row sorts by whichever is newer: when it was created, or its most recent
+// upload — so both a new booking and a fresh scan on an old guest land on top.
+const lastActivity = (createdAt, documents = []) => {
+  const newest = documents.reduce(
+    (max, d) => Math.max(max, new Date(d.uploadedAt || 0).getTime()),
+    0
+  )
+  return new Date(Math.max(new Date(createdAt || 0).getTime(), newest)).toISOString()
+}
+
 // GET /documents
 export const getDocuments = async (req, res) => {
   try {
@@ -40,6 +50,7 @@ export const getDocuments = async (req, res) => {
         name: true,
         phone: true,
         status: true,
+        createdAt: true,
         idType: true,
         idNumber: true,
         room: { select: { number: true } },
@@ -76,7 +87,7 @@ export const getDocuments = async (req, res) => {
       const documents = [...g.documents, ...bookingDocs].sort(
         (a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt)
       )
-      return { ...g, documents, _count: { documents: documents.length } }
+      return { ...g, documents, lastActivityAt: lastActivity(g.createdAt, documents), _count: { documents: documents.length } }
     })
 
     // Documents captured at booking time live in BookingDocument linked only by
@@ -89,6 +100,7 @@ export const getDocuments = async (req, res) => {
         id: true,
         bookingNo: true,
         guestName: true,
+        createdAt: true,
         idType: true,
         idNumber: true,
         room: { select: { number: true } },
@@ -121,11 +133,19 @@ export const getDocuments = async (req, res) => {
         idNumber: b.idNumber,
         room: b.room,
         documents,
+        lastActivityAt: lastActivity(b.createdAt, documents),
         _count: { documents: documents.length },
       }
     })
 
-    return res.status(200).json({ guests: [...guests, ...orphanGuests] })
+    // Guests and pre-check-in bookings are two separate queries; interleave them
+    // by recency so a booking created a minute ago is the first row on the page
+    // instead of being appended after every existing guest.
+    const all = [...guests, ...orphanGuests].sort(
+      (a, b) => new Date(b.lastActivityAt) - new Date(a.lastActivityAt)
+    )
+
+    return res.status(200).json({ guests: all })
   } catch (err) {
     console.error('getDocuments error:', err)
     return res.status(500).json({ message: 'Internal server error.' })

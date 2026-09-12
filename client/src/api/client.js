@@ -115,6 +115,8 @@ export const bookingsApi = {
   getInvoice: (id, params) => api.get(`/bookings/${id}/invoice`, { params, responseType: 'blob' }),
   // Next auto invoice serial for today (create-form preview; not reserved).
   nextInvoiceNo: () => api.get('/bookings/next-invoice-no'),
+  // Returning-guest lookup: details from the most recent stay on this number.
+  lookupGuest: (phone) => api.get('/bookings/guest-lookup', { params: { phone } }),
   // Override the tax-invoice serial number for a booking.
   updateInvoiceNo: (id, invoiceNo) => api.patch(`/bookings/${id}/invoice-no`, { invoiceNo }),
   // Direct URL to open/print the invoice in a new tab.

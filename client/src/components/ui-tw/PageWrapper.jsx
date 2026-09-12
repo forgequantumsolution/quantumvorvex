@@ -41,8 +41,9 @@ export default function PageWrapper({ title, subtitle, icon, actions, stats, chi
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">{stats}</div>
       )}
 
-      {/* Content */}
-      {children}
+      {/* Content. The trailing space keeps the last row (pagination, row actions)
+          clear of the floating assistant button pinned to the bottom-right. */}
+      <div className="pb-16">{children}</div>
     </div>
   )
 }

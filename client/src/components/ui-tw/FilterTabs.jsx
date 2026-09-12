@@ -1,10 +1,14 @@
 /**
  * Segmented filter tabs. `tabs` = [{ id, label, count? }]; controlled by
  * `active` / `onChange(id)`.
+ *
+ * `wrap` off keeps the strip on one line — for toolbars that scroll it sideways
+ * rather than letting it grow a second row.
  */
-export default function FilterTabs({ tabs, active, onChange, className = '' }) {
+export default function FilterTabs({ tabs, active, onChange, wrap = true, className = '' }) {
   return (
-    <div className={`inline-flex flex-wrap items-center gap-1 bg-surface2 border border-line rounded-lg p-1 ${className}`}>
+    <div className={`inline-flex items-center gap-1 bg-surface2 border border-line rounded-lg p-1
+                     ${wrap ? 'flex-wrap' : 'flex-nowrap'} ${className}`}>
       {tabs.map((tab) => {
         const isActive = tab.id === active
         return (
@@ -14,6 +18,7 @@ export default function FilterTabs({ tabs, active, onChange, className = '' }) {
             onClick={() => onChange(tab.id)}
             className={[
               'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors',
+              'whitespace-nowrap',
               isActive
                 ? 'bg-surface text-ink shadow-soft'
                 : 'text-ink2 hover:text-ink',

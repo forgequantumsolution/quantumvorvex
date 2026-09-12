@@ -174,8 +174,9 @@ export const schemas = {
   // Booking — create. The server computes subtotal/tax/total/balance from these inputs.
   createBooking: z.object({
     // Guest
-    guestName:    z.string().min(2, 'Guest name is required').max(100).trim(),
-    guestPhone:   z.string().max(20).optional().nullable(),
+    guestName:    z.string().min(2, 'Guest name is required').max(200).trim(),  // may list several occupants, e.g. "Ravi Kumar, Sita Kumar"
+    // At least one number is required; may list several, e.g. "9876543210, 9123456780".
+    guestPhone:   z.string({ error: 'A phone number is required' }).min(10, 'A phone number is required').max(200).trim(),
     guestEmail:   z.preprocess(v => (v === '' ? undefined : v),
                     z.string().email('Invalid email').max(120).optional().nullable()),
     guestAddress: z.string().max(300).optional().nullable(),
@@ -206,8 +207,8 @@ export const schemas = {
 
   // Booking — general edit (all optional)
   updateBooking: z.object({
-    guestName:       z.string().min(2).max(100).trim().optional(),
-    guestPhone:      z.string().max(20).optional().nullable(),
+    guestName:       z.string().min(2).max(200).trim().optional(),  // may list several occupants
+    guestPhone:      z.string().max(200).optional().nullable(),  // may list multiple, e.g. "9876543210, 9123456780"
     guestEmail:      z.preprocess(v => (v === '' ? undefined : v),
                        z.string().email('Invalid email').max(120).optional().nullable()),
     guestAddress:    z.string().max(300).optional().nullable(),

@@ -569,15 +569,19 @@ export default function Guests() {
     }
   }
 
-  const handleCheckoutConfirm = async ({ notes, paymentMethod, paymentReference, finalPayment, extra, proofFile }) => {
+  const handleCheckoutConfirm = async ({ notes, paymentMethod, paymentReference, finalPayment, extra, proofFile, photoFile }) => {
     const guest = checkoutGuest
     if (!guest) return
     try {
-      // Attach the payment screenshot first so a failed upload aborts the check-out.
-      if (proofFile) {
+      // Attach the payment screenshot and check-out photo first so a failed
+      // upload aborts the check-out (labels stay aligned with the file order).
+      const attachments = []
+      if (proofFile) attachments.push(['payment_proof', proofFile])
+      if (photoFile) attachments.push(['checkout_photo', photoFile])
+      if (attachments.length) {
         const form = new FormData()
-        form.append('documents', proofFile)
-        form.append('docTypes', JSON.stringify(['payment_proof']))
+        attachments.forEach(([, file]) => form.append('documents', file))
+        form.append('docTypes', JSON.stringify(attachments.map(([label]) => label)))
         await guestsApi.uploadDocuments(guest.id, form)
       }
       await guestsApi.checkout(guest.id, {

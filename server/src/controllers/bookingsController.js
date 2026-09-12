@@ -104,7 +104,7 @@ const defaultTaxRate = async () => {
  * currently-active guests in that room. `ignoreBookingId` skips the booking
  * being edited. Returns the conflicting record (or null if free).
  */
-const findConflict = async (roomId, from, end, ignoreBookingId = null) => {
+const findConflict = async (roomId, from, end, ignoreBookingId = null, ignoreGuestId = null) => {
   const LIVE = ['Pending', 'Confirmed', 'CheckedIn']
 
   const bookingConflict = await prisma.booking.findFirst({
@@ -129,6 +129,9 @@ const findConflict = async (roomId, from, end, ignoreBookingId = null) => {
       roomId,
       status: 'Active',
       deletedAt: null,
+      // A checked-in booking owns the Active guest sitting in its room — it must
+      // not block its own edit/extension.
+      ...(ignoreGuestId ? { id: { not: ignoreGuestId } } : {}),
       checkInDate: { lt: end },
       OR: [
         { checkOutDate: null },
@@ -246,6 +249,65 @@ export const getBooking = async (req, res) => {
     return res.status(200).json({ booking })
   } catch (err) {
     logger.error('getBooking error', { error: err.message })
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /bookings/guest-lookup?phone=9876543210
+// Returning-guest lookup for the booking form: one number in, the details from
+// that guest's most recent stay out, so staff don't retype what we already hold.
+// The number is matched with `contains` because a booking's guestPhone can list
+// several comma-separated numbers.
+export const lookupGuestByPhone = async (req, res) => {
+  try {
+    const phone = String(req.query.phone || '').replace(/\D/g, '')
+    if (phone.length !== 10) return res.status(400).json({ message: 'Enter a 10-digit phone number.' })
+
+    const match = { deletedAt: null, guestPhone: { contains: phone } }
+    const [booking, guest, visits] = await Promise.all([
+      prisma.booking.findFirst({
+        where: match,
+        orderBy: { createdAt: 'desc' },
+        include: { room: { select: { number: true } } },
+      }),
+      prisma.guest.findFirst({
+        where: { deletedAt: null, phone: { contains: phone } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.booking.count({ where: match }),
+    ])
+
+    if (!booking && !guest) return res.status(200).json({ found: false })
+
+    // Prefer the booking (it carries occupancy + source); fall back to the guest
+    // record for walk-ins that were checked in without one.
+    return res.status(200).json({
+      found: true,
+      visits,
+      guest: {
+        guestName:    booking?.guestName    || guest?.name        || '',
+        guestPhone:   booking?.guestPhone   || guest?.phone       || phone,
+        guestEmail:   booking?.guestEmail   || guest?.email       || '',
+        guestAddress: booking?.guestAddress || guest?.address     || '',
+        nationality:  booking?.nationality  || guest?.nationality || '',
+        idType:       booking?.idType       || guest?.idType      || '',
+        idNumber:     booking?.idNumber     || guest?.idNumber    || '',
+        adults:       booking?.adults   ?? guest?.occupants ?? 1,
+        children:     booking?.children ?? 0,
+        source:       booking?.source   || guest?.source || null,
+      },
+      lastStay: booking
+        ? {
+            bookingNo:  booking.bookingNo,
+            fromDate:   booking.fromDate,
+            toDate:     booking.toDate,
+            status:     booking.status,
+            roomNumber: booking.room?.number || null,
+          }
+        : null,
+    })
+  } catch (err) {
+    logger.error('lookupGuestByPhone error', { error: err.message })
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }
@@ -425,7 +487,7 @@ export const updateBooking = async (req, res) => {
 
     // If dates changed, re-check availability
     if (b.fromDate || b.toDate !== undefined || b.months) {
-      const conflict = await findConflict(existing.roomId, from, end, id)
+      const conflict = await findConflict(existing.roomId, from, end, id, existing.guestId)
       if (conflict) {
         return res.status(409).json({ message: 'Room is no longer available for the new dates.', code: 'ERR_ROOM_UNAVAILABLE', conflict })
       }
@@ -461,7 +523,29 @@ export const updateBooking = async (req, res) => {
       paymentStatus: priced.paymentStatus,
     }
 
-    const booking = await prisma.booking.update({ where: { id }, data, include: bookingInclude })
+    // Once checked in, the booking is mirrored by a Guest record — correct both
+    // together so the Guests page doesn't keep showing the old details.
+    const guestData = existing.guestId ? {
+      ...(b.guestName    !== undefined && { name: b.guestName }),
+      ...(b.guestPhone   !== undefined && { phone: b.guestPhone || 'N/A' }),
+      ...(b.guestEmail   !== undefined && { email: b.guestEmail }),
+      ...(b.guestAddress !== undefined && { address: b.guestAddress }),
+      ...(b.nationality  !== undefined && { nationality: b.nationality }),
+      ...(b.idType       && { idType: b.idType }),
+      ...(b.idNumber     && { idNumber: b.idNumber }),
+      ...(b.adults !== undefined || b.children !== undefined
+        ? { occupants: (b.adults ?? existing.adults) + (b.children ?? existing.children) }
+        : {}),
+      checkOutDate: data.toDate,
+      months:       data.months,
+      roomRate:     data.roomRate,
+    } : null
+
+    const booking = await prisma.$transaction(async (tx) => {
+      const updated = await tx.booking.update({ where: { id }, data, include: bookingInclude })
+      if (guestData) await tx.guest.update({ where: { id: existing.guestId }, data: guestData })
+      return updated
+    })
     return res.status(200).json({ booking })
   } catch (err) {
     logger.error('updateBooking error', { error: err.message })
@@ -498,7 +582,8 @@ export const checkInBooking = async (req, res) => {
     }
 
     const idType   = req.body.idType   ?? booking.idType   ?? 'Other'
-    const idNumber = req.body.idNumber ?? booking.idNumber ?? `BKG-${booking.bookingNo}`
+    // bookingNo is already "BKG-1015" — prefixing it again produced "BKG-BKG-1015".
+    const idNumber = req.body.idNumber ?? booking.idNumber ?? booking.bookingNo
     const advance  = req.body.advance !== undefined ? req.body.advance : booking.advance
 
     const result = await prisma.$transaction(async (tx) => {

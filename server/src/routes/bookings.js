@@ -14,6 +14,7 @@ import {
   uploadBookingDocuments,
   getBookingInvoice,
   getNextInvoiceNo,
+  lookupGuestByPhone,
   updateInvoiceNo,
   uploadDocs,
 } from '../controllers/bookingsController.js'
@@ -28,6 +29,8 @@ router.get('/',      getBookings)
 router.get('/stats', getBookingStats)
 // Next auto invoice serial (preview for the create-booking form). Must precede /:id.
 router.get('/next-invoice-no', getNextInvoiceNo)
+// Returning-guest lookup by phone (create-booking form). Must precede /:id.
+router.get('/guest-lookup', lookupGuestByPhone)
 router.get('/:id',   getBooking)
 
 // Tax invoice (HTML, print-ready) generated from a completed booking

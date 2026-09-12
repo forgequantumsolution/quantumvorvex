@@ -3,6 +3,10 @@ import { LuTrash2 } from 'react-icons/lu'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
+import {
+  PageWrapper, StatCard, Card, DataTable, Pagination,
+  SearchInput, Button, EmptyState,
+} from '../../ui-tw'
 import { useToast } from '../../../hooks/useToast'
 import { documentsApi } from '../../../api/client'
 
@@ -14,11 +18,18 @@ function normalizeDocGuest(g) {
     id: g.id,
     docId: g.docId,
     guestName: g.name,
+    // Pre-check-in bookings come back as `booking:<id>` rows; they have no Guest
+    // record yet, which is what the Type filter separates on.
+    isBooking: String(g.id).startsWith('booking:'),
+    // Server sort key (newest of created / last upload) — kept so the client can
+    // re-sort without a refetch.
+    lastActivityAt: g.lastActivityAt || null,
     room: g.room?.number || '—',
     idType: g.idType || '—',
     idNumber: g.idNumber || '—',
     documents,
     uploaded,
+    photo: guestPhotoOf(documents),
     verified: documents.length > 0 && documents.every((d) => d.verified),
   }
 }
@@ -32,17 +43,47 @@ const DOC_SLOTS = [
 
 const MAX_DOCUMENTS = 4
 
+// Rows per page. Small on purpose: a KYC row is two lines tall, and the desk
+// scans this table rather than reading it top to bottom.
+const PAGE_SIZE = 8
+
 // docTypes are inconsistent across sources (slot keys like `idFront`, booking
 // labels like `ID Front`, seed values like `Photo`). Normalise to alphanumerics
 // so an existing doc can be matched back to the slot it fills.
 const normDocType = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
 
+// Machine-written docTypes (camera captures, check-out proof) would otherwise
+// show up raw as "guest_photo". Booking-time labels like "Aadhaar — Front" are
+// already readable and fall through unchanged.
+const DOC_LABELS = {
+  idfront: 'ID Front',
+  idback: 'ID Back',
+  guestphoto: 'Guest Photo',
+  photo: 'Guest Photo',
+  checkoutphoto: 'Check-out Photo',
+  paymentproof: 'Payment Proof',
+  additional: 'Additional Doc',
+}
+const prettyDocType = (s) => DOC_LABELS[normDocType(s)] || s || 'Document'
+
+const isImageUrl = (url) => /\.(jpe?g|png|webp|gif|avif)$/i.test(url || '')
+
+// The photo captured after booking; used as the row avatar in the table.
+const guestPhotoOf = (documents = []) =>
+  documents.find((d) => normDocType(d.docType) === 'guestphoto' && isImageUrl(d.url)) || null
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Verification is about sign-off, not completeness — how many of the 4 slots are
+ * filled is already its own column. The old rule required exactly 4 files before
+ * a row could ever read "Verified", so a guest whose two scans were both signed
+ * off still showed as "Incomplete" and the page reported zero verified.
+ */
 function getVerificationStatus(doc) {
-  if (doc.uploaded === 4 && doc.verified) return { label: '✓ Verified', type: 'green' }
-  if (doc.uploaded >= 3) return { label: 'Pending', type: 'amber' }
-  return { label: 'Incomplete', type: 'red' }
+  if (!doc.uploaded) return { key: 'incomplete', label: 'No files', type: 'red' }
+  if (doc.verified) return { key: 'verified', label: '✓ Verified', type: 'green' }
+  return { key: 'pending', label: 'Pending', type: 'amber' }
 }
 
 function getUploadBadgeType(uploaded) {
@@ -189,13 +230,70 @@ function UploadModal({ doc, onClose, onSave }) {
 
 // ─── View Docs Modal ──────────────────────────────────────────────────────────
 
+/**
+ * One document tile: the file preview above its label and actions. Falls back to
+ * a placeholder for PDFs and for images whose file is missing on disk (seeded
+ * demo rows point at files that were never shipped), so a dead link never
+ * renders as a broken image.
+ */
+function DocCard({ d, guestName, onDelete }) {
+  const [failed, setFailed] = useState(false)
+  const showImage = d.image && !failed
+
+  return (
+    <div className="rounded-lg border border-line bg-surface2 overflow-hidden flex flex-col">
+      <a
+        href={d.url}
+        target="_blank"
+        rel="noreferrer"
+        title="Open full size"
+        className="h-[168px] bg-surface flex items-center justify-center overflow-hidden"
+      >
+        {showImage ? (
+          <img
+            src={d.url}
+            alt={d.label}
+            loading="lazy"
+            onError={() => setFailed(true)}
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <div className="text-center px-3">
+            <div className="text-[26px] leading-none mb-1">{d.image ? '🖼' : '📄'}</div>
+            <div className="text-[11.5px] text-ink3">
+              {d.image ? 'Preview unavailable' : 'Open document'}
+            </div>
+          </div>
+        )}
+      </a>
+
+      <div className="px-3 py-2.5 border-t border-line flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="t-title truncate">{d.label}</div>
+          <div className="text-[11.5px] text-ink3">Uploaded {d.uploadDate}</div>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Badge type={d.verified ? 'green' : 'amber'}>{d.verified ? '✓' : 'Pending'}</Badge>
+          <button
+            className="btn btn-danger btn-xs inline-flex items-center"
+            title="Delete document"
+            onClick={() => onDelete({ id: d.key, label: d.label, guestName })}
+          >
+            <LuTrash2 size={14} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ViewDocsModal({ doc, onClose, onVerify, onDelete }) {
   if (!doc) return null
 
   const docList = (doc.documents || []).map((d) => ({
     key: d.id,
-    label: d.docType || 'Document',
-    icon: '📄',
+    label: prettyDocType(d.docType),
+    image: isImageUrl(d.url),
     url: d.url,
     uploadDate: d.uploadedAt ? new Date(d.uploadedAt).toLocaleDateString() : '—',
     verified: d.verified,
@@ -214,7 +312,7 @@ function ViewDocsModal({ doc, onClose, onVerify, onDelete }) {
           </span>
         </span>
       }
-      maxWidth="480px"
+      maxWidth="720px"
       footer={
         <>
           <button className="btn btn-outline btn-sm" onClick={onClose}>Close</button>
@@ -227,44 +325,29 @@ function ViewDocsModal({ doc, onClose, onVerify, onDelete }) {
       }
     >
       {/* Guest summary */}
-      <div className="bg-surface2 rounded-lg px-[14px] py-2.5 mb-4">
-        <div className="t-title mb-0.5">{doc.guestName}</div>
-        <div className="t-xs text-ink3">
-          Room {doc.room} &middot; {doc.idType} &middot; {doc.idNumber}
+      <div className="bg-surface2 rounded-lg px-[14px] py-2.5 mb-4 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="t-title mb-0.5">{doc.guestName}</div>
+          <div className="t-xs text-ink3">
+            Room {doc.room} &middot; {doc.idType} &middot; {doc.idNumber}
+          </div>
         </div>
+        <Badge type={getUploadBadgeType(docList.length)}>
+          {docList.length} file{docList.length !== 1 ? 's' : ''}
+        </Badge>
       </div>
 
-      {/* Document list */}
-      <div className="flex flex-col gap-2">
-        {docList.length === 0 && (
-          <div className="empty-state p-6">No documents uploaded yet</div>
-        )}
-        {docList.map(d => (
-          <div key={d.key} className="flex items-center justify-between bg-surface2 rounded-[7px] px-[14px] py-2.5">
-            <div className="flex items-center gap-2.5">
-              <span className="text-[18px]">{d.icon}</span>
-              <div>
-                <div className="t-title">
-                  {d.url ? <a href={d.url} target="_blank" rel="noreferrer" className="text-gold">{d.label}</a> : d.label}
-                </div>
-                <div className="text-[11.5px] text-ink3">Uploaded {d.uploadDate}</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge type={d.verified ? 'green' : 'amber'}>
-                {d.verified ? '✓ Verified' : 'Pending'}
-              </Badge>
-              <button
-                className="btn btn-danger btn-xs inline-flex items-center"
-                title="Delete document"
-                onClick={() => onDelete({ id: d.key, label: d.label, guestName: doc.guestName })}
-              >
-                <LuTrash2 size={14} />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Every uploaded file — ID front/back, PAN, passport, guest and
+          check-out photos — previewed together. */}
+      {docList.length === 0 ? (
+        <div className="empty-state p-6">No documents uploaded yet</div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {docList.map((d) => (
+            <DocCard key={d.key} d={d} guestName={doc.guestName} onDelete={onDelete} />
+          ))}
+        </div>
+      )}
     </Modal>
   )
 }
@@ -277,6 +360,9 @@ export default function Documents() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')   // all | verified | pending | incomplete
+  const [typeFilter, setTypeFilter] = useState('all')       // all | bookings | guests
+  const [page, setPage] = useState(1)
   const [uploadDoc, setUploadDoc] = useState(null)
   const [viewDoc, setViewDoc] = useState(null)
   const [deleteDocTarget, setDeleteDocTarget] = useState(null)   // single document { id, label, guestName }
@@ -299,16 +385,40 @@ export default function Documents() {
   useEffect(() => { load() }, [load])
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase()
-    return docs.filter(d =>
-      !q || d.guestName.toLowerCase().includes(q) || d.docId.toLowerCase().includes(q)
-    )
-  }, [docs, search])
+    const q = search.trim().toLowerCase()
+    return docs
+      .filter((d) => {
+        if (q && !`${d.guestName} ${d.docId}`.toLowerCase().includes(q)) return false
+        if (typeFilter === 'bookings' && !d.isBooking) return false
+        if (typeFilter === 'guests' && d.isBooking) return false
+        if (statusFilter !== 'all' && getVerificationStatus(d).key !== statusFilter) return false
+        return true
+      })
+      // The API already sorts newest-first; re-sort so a row whose documents were
+      // just added or deleted stays in the right place between refetches.
+      .sort((a, b) => new Date(b.lastActivityAt || 0) - new Date(a.lastActivityAt || 0))
+  }, [docs, search, statusFilter, typeFilter])
 
-  // Stats
+  const filtersActive = !!search.trim() || statusFilter !== 'all' || typeFilter !== 'all'
+
+  // Clamp rather than reset: deleting the last row of page 3 should land on
+  // page 2, not throw the user back to the top of the list.
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage = Math.min(page, pageCount)
+  const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  // A narrowed filter can leave the current page out of range.
+  useEffect(() => { setPage(1) }, [search, statusFilter, typeFilter])
+
+  const clearFilters = () => { setSearch(''); setStatusFilter('all'); setTypeFilter('all') }
+
+  // Stats, counted with the same rule the row badge uses — otherwise the header
+  // can claim "12 verified" while every row on screen reads "Incomplete".
   const totalGuests = docs.length
-  const verifiedCount = docs.filter(d => d.verified).length
-  const incompleteCount = docs.filter(d => d.uploaded < 3).length
+  const countBy = (key) => docs.filter((d) => getVerificationStatus(d).key === key).length
+  const verifiedCount = countBy('verified')
+  const pendingCount = countBy('pending')
+  const incompleteCount = countBy('incomplete')
 
   const handleUploadSave = async (doc, files) => {
     const selected = Object.entries(files).filter(([, file]) => file)
@@ -380,142 +490,183 @@ export default function Documents() {
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="mb-5 flex justify-between items-start gap-3 flex-wrap">
-        <div>
-          <h1 className="t-h1 m-0 tracking-[-0.03em]">
-            Documents
-          </h1>
-          <p className="t-sm mt-1 mb-0 text-ink3">KYC verification & ID management</p>
-        </div>
-        <button className="btn btn-outline btn-sm" onClick={load} disabled={loading}>↻ Refresh</button>
-      </div>
-
+    <PageWrapper
+      title="Documents"
+      subtitle="KYC verification & ID management"
+      icon="🗂"
+      actions={<Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>}
+      stats={
+        <>
+          <StatCard icon="👤" tone="blue"  label="Guests & bookings" value={totalGuests} />
+          <StatCard icon="✓"  tone="green" label="Verified" value={verifiedCount}   hint="every file signed off" />
+          <StatCard icon="◷"  tone="amber" label="Pending"  value={pendingCount}    hint="awaiting review" />
+          <StatCard icon="!"  tone="red"   label="No files" value={incompleteCount} hint="nothing uploaded yet" />
+        </>
+      }
+    >
       {error && (
-        <div className="t-sm mb-4 px-[14px] py-2.5 rounded-lg bg-danger-bg text-danger-text">
+        <div className="text-sm mb-4 px-3.5 py-2.5 rounded-lg bg-danger-bg text-danger-text">
           {error}
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-[18px]">
-        {[
-          { label: 'Total Guests', count: totalGuests, bar: 'stat-bar-blue' },
-          { label: 'Verified', count: verifiedCount, bar: 'stat-bar-green' },
-          { label: 'Incomplete', count: incompleteCount, bar: 'stat-bar-red' },
-        ].map(({ label, count, bar }) => (
-          <div key={label} className={`stat-card ${bar}`}>
-            <div className="t-label mb-1.5">{label}</div>
-            <div className="text-[26px] font-bold" style={{ fontFamily: 'var(--font-mono)' }}>{count}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Search */}
-      <div className="card mb-4">
-        <div className="px-4 py-3">
-          <div className="relative max-w-[360px]">
-            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink3 text-[15px]">⌕</span>
-            <input
-              className="form-input pl-[30px]"
-              placeholder="Search guest name or DOC ID..."
+      <Card
+        bodyClassName="divide-y divide-line"
+        title="KYC records"
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <SearchInput
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={setSearch}
+              placeholder="Search guest or DOC ID"
+              className="w-52"
             />
+            <select
+              className="form-select w-auto min-w-[120px] py-1.5 text-[13px]"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              aria-label="Filter by record type"
+            >
+              <option value="all">All types</option>
+              <option value="bookings">New bookings</option>
+              <option value="guests">Checked-in guests</option>
+            </select>
+            <select
+              className="form-select w-auto min-w-[120px] py-1.5 text-[13px]"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label="Filter by verification status"
+            >
+              <option value="all">All statuses</option>
+              <option value="verified">Verified</option>
+              <option value="pending">Pending</option>
+              <option value="incomplete">No files</option>
+            </select>
+            {filtersActive && (
+              <Button variant="ghost" onClick={clearFilters}>Clear</Button>
+            )}
           </div>
-        </div>
-      </div>
+        }
+      >
+        <DataTable
+          rows={pageRows}
+          rowKey={(d) => d.id}
+          empty={
+            <EmptyState
+              icon="🗂"
+              title={loading ? 'Loading documents…' : filtersActive ? 'No matching records' : 'No documents yet'}
+              message={
+                loading
+                  ? undefined
+                  : filtersActive
+                    ? 'Try a different search or clear the filters.'
+                    : 'ID scans captured on a booking show up here automatically.'
+              }
+            />
+          }
+          columns={[
+            {
+              key: 'docId',
+              header: 'Doc ID',
+              render: (doc) => (
+                <div>
+                  <span className="text-gold text-[12px] font-semibold font-mono">{doc.docId}</span>
+                  <div className="text-[11px] text-ink3 mt-0.5">
+                    {doc.isBooking ? 'Booking' : 'Guest'}
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: 'guest',
+              header: 'Guest',
+              render: (doc) => (
+                <div className="flex items-center gap-3 min-w-0">
+                  {doc.photo ? (
+                    <button
+                      type="button"
+                      title="View documents"
+                      onClick={() => setViewDoc(doc)}
+                      className="shrink-0 w-9 h-9 rounded-full overflow-hidden border border-line hover:border-gold"
+                    >
+                      <img src={doc.photo.url} alt={doc.guestName} loading="lazy" className="w-full h-full object-cover" />
+                    </button>
+                  ) : (
+                    <span
+                      className="shrink-0 w-9 h-9 rounded-full bg-surface2 border border-line flex items-center justify-center text-[13px] text-ink3"
+                      title="No guest photo on file"
+                    >
+                      {(doc.guestName || '?').trim().charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <div className="font-medium text-ink truncate">{doc.guestName}</div>
+                    <div className="text-[11.5px] text-ink3 mt-px">Room {doc.room}</div>
+                  </div>
+                </div>
+              ),
+            },
+            {
+              key: 'id',
+              header: 'Identification',
+              render: (doc) => (
+                <div>
+                  <div className="text-ink">{doc.idType}</div>
+                  <div className="text-[11.5px] text-ink3 font-mono tracking-[0.03em] mt-0.5">{doc.idNumber}</div>
+                </div>
+              ),
+            },
+            {
+              key: 'uploaded',
+              header: 'Files',
+              align: 'center',
+              render: (doc) => (
+                <Badge type={getUploadBadgeType(doc.uploaded)}>{doc.uploaded} / {MAX_DOCUMENTS}</Badge>
+              ),
+            },
+            {
+              key: 'status',
+              header: 'Verification',
+              align: 'center',
+              render: (doc) => {
+                const v = getVerificationStatus(doc)
+                return <Badge type={v.type}>{v.label}</Badge>
+              },
+            },
+            {
+              key: 'actions',
+              header: '',
+              align: 'right',
+              render: (doc) => (
+                <div className="flex items-center justify-end gap-1.5">
+                  <button className="btn btn-outline btn-xs" onClick={() => setViewDoc(doc)}>View</button>
+                  <button className="btn btn-outline btn-xs" onClick={() => setUploadDoc(doc)}>Upload</button>
+                  <button
+                    className="btn btn-xs bg-success-bg text-success-text disabled:opacity-30"
+                    disabled={!doc.uploaded || doc.verified}
+                    title={doc.verified ? 'Already verified' : 'Mark every file verified'}
+                    onClick={() => handleQuickVerify(doc)}
+                  >
+                    Verify
+                  </button>
+                  {/* Kept in the layout when empty so the action column never
+                      jitters between rows. */}
+                  <button
+                    className="btn btn-danger btn-xs inline-flex items-center disabled:opacity-30"
+                    disabled={!doc.documents.length}
+                    title="Delete all documents for this guest"
+                    onClick={() => setDeleteRowTarget(doc)}
+                  >
+                    <LuTrash2 size={14} />
+                  </button>
+                </div>
+              ),
+            },
+          ]}
+        />
 
-      {/* Table */}
-      <div className="card">
-        <div className="overflow-x-auto">
-          <table>
-            <thead>
-              <tr>
-                <th>DOC ID</th>
-                <th>Guest</th>
-                <th>ID Type</th>
-                <th>ID Number</th>
-                <th>Uploaded</th>
-                <th>Verification</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={7}>
-                    <div className="empty-state">{loading ? 'Loading documents…' : 'No documents found'}</div>
-                  </td>
-                </tr>
-              )}
-              {filtered.map(doc => {
-                const verStatus = getVerificationStatus(doc)
-                return (
-                  <tr key={doc.id}>
-                    {/* DOC ID */}
-                    <td>
-                      <span className="text-gold text-[12px] font-semibold" style={{ fontFamily: 'var(--font-mono)' }}>
-                        {doc.docId}
-                      </span>
-                    </td>
-                    {/* Guest */}
-                    <td>
-                      <div className="font-semibold text-ink">{doc.guestName}</div>
-                      <div className="text-[11.5px] text-ink3 mt-px">Room {doc.room}</div>
-                    </td>
-                    {/* ID Type */}
-                    <td>
-                      <Badge type="blue">{doc.idType}</Badge>
-                    </td>
-                    {/* ID Number */}
-                    <td>
-                      <span className="text-[12.5px] tracking-[0.03em]" style={{ fontFamily: 'var(--font-mono)' }}>
-                        {doc.idNumber}
-                      </span>
-                    </td>
-                    {/* Uploaded */}
-                    <td>
-                      <Badge type={getUploadBadgeType(doc.uploaded)}>
-                        {doc.uploaded} / 4
-                      </Badge>
-                    </td>
-                    {/* Verification */}
-                    <td>
-                      <Badge type={verStatus.type}>{verStatus.label}</Badge>
-                    </td>
-                    {/* Actions */}
-                    <td>
-                      <div className="flex gap-[5px]">
-                        <button className="btn btn-outline btn-xs" onClick={() => setViewDoc(doc)}>View Docs</button>
-                        <button className="btn btn-outline btn-xs" onClick={() => setUploadDoc(doc)}>Upload</button>
-                        {doc.uploaded > 0 && !doc.verified && (
-                          <button
-                            className="btn btn-xs bg-success-bg text-success-text"
-                            onClick={() => handleQuickVerify(doc)}
-                          >
-                            Verify
-                          </button>
-                        )}
-                        {doc.documents.length > 0 && (
-                          <button
-                            className="btn btn-danger btn-xs inline-flex items-center"
-                            title="Delete all documents for this guest"
-                            onClick={() => setDeleteRowTarget(doc)}
-                          >
-                            <LuTrash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+        <Pagination page={safePage} pageSize={PAGE_SIZE} total={filtered.length} onChange={setPage} />
+      </Card>
 
       {/* Modals */}
       <UploadModal
@@ -549,6 +700,6 @@ export default function Documents() {
         danger
         busy={deletingRow}
       />
-    </div>
+    </PageWrapper>
   )
 }

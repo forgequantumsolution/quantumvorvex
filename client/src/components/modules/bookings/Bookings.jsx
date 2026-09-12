@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { PageWrapper, StatCard, Card, FilterTabs, SearchInput, Button } from '../../ui-tw'
+import { LuTable2, LuLayoutGrid } from 'react-icons/lu'
+import { PageWrapper, StatCard, Card, FilterTabs, SearchInput, Button, Pagination, ViewToggle } from '../../ui-tw'
 import BookingsTable from './BookingsTable'
 import BookingForm from './BookingForm'
 import CancelModal from '../cancellations/CancelModal'
 import CheckOutModal from '../checkout/CheckOutModal'
 import ExtendStayModal from './ExtendStayModal'
+import EditBookingModal from './EditBookingModal'
 import InvoiceModal from './InvoiceModal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import { useToast } from '../../../hooks/useToast'
@@ -23,8 +25,31 @@ const TABS = [
   { id: 'Cancelled', label: 'Cancelled' },
 ]
 const TAB_IDS = TABS.map((t) => t.id)
-const PAGE_SIZE = 20
+const PAGE_SIZE = 8
 const EMPTY_COUNTS = { all: 0, Upcoming: 0, Confirmed: 0, CheckedIn: 0, CheckedOut: 0, Cancelled: 0 }
+
+const VIEWS = [
+  { id: 'table', label: 'Table', icon: <LuTable2 size={14} /> },
+  { id: 'cards', label: 'Cards', icon: <LuLayoutGrid size={14} /> },
+]
+// Remembered per browser — whichever layout someone works in, they land back in it.
+const VIEW_KEY = 'bookings:view'
+const storedView = () => {
+  try {
+    const v = localStorage.getItem(VIEW_KEY)
+    return VIEWS.some((x) => x.id === v) ? v : 'table'
+  } catch { return 'table' }
+}
+
+// On a room clash PUT /bookings/:id returns the blocking record — name it so staff
+// know who/what is in the way instead of a generic "unavailable".
+function updateErrorMessage(err, fallback) {
+  const data = err.response?.data
+  const c = data?.conflict
+  if (c?.type === 'booking') return `Room already booked (${c.bookingNo}) from ${formatDate(c.fromDate)}. Pick other dates.`
+  if (c?.type === 'guest') return `Room is occupied by ${c.name}. Pick other dates.`
+  return data?.message || fallback
+}
 
 export default function Bookings() {
   const toast = useToast()
@@ -48,9 +73,16 @@ export default function Bookings() {
   const [cancelTarget, setCancelTarget] = useState(null)
   const [checkOutTarget, setCheckOutTarget] = useState(null)
   const [extendTarget, setExtendTarget] = useState(null)
+  const [editTarget, setEditTarget] = useState(null)
   const [invoiceTarget, setInvoiceTarget] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [busyId, setBusyId] = useState(null)
+  const [view, setView] = useState(storedView)
+
+  const changeView = (next) => {
+    setView(next)
+    try { localStorage.setItem(VIEW_KEY, next) } catch { /* private mode — the session default is fine */ }
+  }
 
   // Debounce the search box so we hit the API at most once per pause in typing.
   // A new query always resets back to the first page.
@@ -102,6 +134,12 @@ export default function Bookings() {
   // and the aggregates may shift — reload both rather than patching in place.
   const reload = useCallback(() => { loadList(); loadStats() }, [loadList, loadStats])
 
+  // Deleting or filtering away the last row of the final page leaves us past the
+  // end of the list — fall back to page 1 rather than showing an empty table.
+  useEffect(() => {
+    if (!loading && !error && !bookings.length && page > 1) setPage(1)
+  }, [loading, error, bookings.length, page])
+
   // Follow a deep-link tab if the panel was opened with one (e.g. from Today).
   useEffect(() => {
     if (TAB_IDS.includes(navTab)) { setTab(navTab); setPage(1) }
@@ -112,7 +150,6 @@ export default function Bookings() {
 
   const handleTabChange = (next) => { setTab(next); setPage(1) }
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   // ── Actions ──
   const handleCreated = (booking) => {
@@ -139,17 +176,21 @@ export default function Bookings() {
 
   // Settle the bill + (optional) payment proof, then check out — via the modal.
   // The modal returns raw inputs; map `extra` onto the booking's existing charges.
-  const handleCheckOut = async ({ extra, finalPayment, paymentMethod, paymentReference, proofFile }) => {
+  const handleCheckOut = async ({ extra, finalPayment, paymentMethod, paymentReference, proofFile, photoFile }) => {
     const b = checkOutTarget
     if (!b) return
     const id = b.id
     setBusyId(id)
     try {
-      // Attach the payment screenshot first so a failed upload aborts the check-out.
-      if (proofFile) {
+      // Attach the payment screenshot and check-out photo first so a failed
+      // upload aborts the check-out (labels stay aligned with the file order).
+      const attachments = []
+      if (proofFile) attachments.push(['payment_proof', proofFile])
+      if (photoFile) attachments.push(['checkout_photo', photoFile])
+      if (attachments.length) {
         const form = new FormData()
-        form.append('documents', proofFile)
-        form.append('docTypes', JSON.stringify(['payment_proof']))
+        attachments.forEach(([, file]) => form.append('documents', file))
+        form.append('docTypes', JSON.stringify(attachments.map(([label]) => label)))
         await bookingsApi.uploadDocuments(id, form)
       }
       const extraCharges = (Number(b.extraCharges) || 0) + (Number(extra) || 0)
@@ -176,17 +217,25 @@ export default function Bookings() {
       setExtendTarget(null)
       reload()
     } catch (err) {
-      // On a room clash the API returns the blocking record — name it so staff know
-      // who/what is in the way instead of a generic "unavailable".
-      const data = err.response?.data
-      const c = data?.conflict
-      const msg =
-        c?.type === 'booking'
-          ? `Room already booked (${c.bookingNo}) from ${formatDate(c.fromDate)}. Pick an earlier date.`
-          : c?.type === 'guest'
-            ? `Room is occupied by ${c.name}. Pick an earlier date.`
-            : data?.message || 'Could not extend the stay'
-      toast(msg, 'error')
+      toast(updateErrorMessage(err, 'Could not extend the stay'), 'error')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
+  // Correct a booking that was entered wrong. Same PUT as an extension, so a date
+  // change is re-checked against the room's other bookings by the server.
+  const handleEdit = async (payload) => {
+    const b = editTarget
+    if (!b) return
+    setBusyId(b.id)
+    try {
+      await bookingsApi.update(b.id, payload)
+      toast(`Booking ${b.bookingNo} updated`)
+      setEditTarget(null)
+      reload()
+    } catch (err) {
+      toast(updateErrorMessage(err, 'Could not save the changes'), 'error')
     } finally {
       setBusyId(null)
     }
@@ -217,6 +266,8 @@ export default function Bookings() {
     >
       {showNew ? (
         <Card
+          // The form's summary rail is sticky, which an overflow-hidden ancestor breaks.
+          clip={false}
           title="New Booking"
           subtitle="Reserve a room and capture guest details"
           actions={
@@ -226,17 +277,28 @@ export default function Bookings() {
           <BookingForm onSaved={handleCreated} onCancel={() => setShowNew(false)} />
         </Card>
       ) : (
-        <Card
-          title="All Bookings"
-          actions={
-            <div className="flex items-center gap-2">
-              <SearchInput value={query} onChange={setQuery} placeholder="Search name, no. or room" className="w-56" />
-              <Button variant="ghost" onClick={reload} disabled={loading}>↻ Refresh</Button>
+        <Card>
+          {/* One toolbar line: status tabs on the left, search + refresh on the
+              right. The tabs already name the view, so a separate "All Bookings"
+              title row would only cost a line. If the two halves stop fitting the
+              search group wraps to its own line — the tab strip is never clipped,
+              and on a phone it scrolls sideways instead of stacking three rows. */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5
+                          px-4 sm:px-5 py-3 border-b border-line">
+            <div className="max-w-full shrink-0 -mx-1 px-1 overflow-x-auto
+                            [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <FilterTabs wrap={false} tabs={TABS.map((t) => ({ ...t, count: counts[t.id] }))}
+                          active={tab} onChange={handleTabChange} />
             </div>
-          }
-        >
-          <div className="px-5 py-3 border-b border-line">
-            <FilterTabs tabs={TABS.map((t) => ({ ...t, count: counts[t.id] }))} active={tab} onChange={handleTabChange} />
+            <div className="flex items-center gap-2 ml-auto grow sm:grow-0">
+              <SearchInput value={query} onChange={setQuery} placeholder="Search name, no. or room"
+                           className="grow sm:grow-0 sm:w-44 xl:w-52" />
+              <ViewToggle options={VIEWS} value={view} onChange={changeView} />
+              {/* Icon-only: with the tabs, search and view switch sharing this
+                  one line, a "Refresh" label is what tips it onto a second row. */}
+              <Button variant="ghost" onClick={reload} disabled={loading}
+                      title="Refresh" aria-label="Refresh bookings" className="px-2.5">↻</Button>
+            </div>
           </div>
 
           {error && (
@@ -253,26 +315,14 @@ export default function Bookings() {
             onCancel={setCancelTarget}
             onExtend={setExtendTarget}
             onInvoice={setInvoiceTarget}
+            onEdit={setEditTarget}
             onDelete={setDeleteTarget}
+            view={view}
             emptyMessage={debouncedQuery ? 'No bookings match your search.' : 'Create a booking to get started.'}
           />
 
-          {total > PAGE_SIZE && (
-            <div className="flex items-center justify-between px-5 py-3 border-t border-line text-sm text-muted">
-              <span>
-                Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
-              </span>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
-                  ← Prev
-                </Button>
-                <span>Page {page} of {totalPages}</span>
-                <Button variant="ghost" disabled={page >= totalPages || loading} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
-                  Next →
-                </Button>
-              </div>
-            </div>
-          )}
+          <Pagination page={page} pageSize={PAGE_SIZE} total={total} disabled={loading}
+                      onChange={setPage} />
         </Card>
       )}
       <CancelModal
@@ -297,6 +347,15 @@ export default function Bookings() {
           submitting={busyId === checkOutTarget.id}
           onClose={() => setCheckOutTarget(null)}
           onConfirm={handleCheckOut}
+        />
+      )}
+      {editTarget && (
+        <EditBookingModal
+          isOpen
+          booking={editTarget}
+          submitting={busyId === editTarget.id}
+          onClose={() => setEditTarget(null)}
+          onSave={handleEdit}
         />
       )}
       {extendTarget && (
