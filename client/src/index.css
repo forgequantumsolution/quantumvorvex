@@ -26,6 +26,10 @@
     --gold2: #b8923a;            /* deeper gold for hover (better contrast on white) */
     --gold-bg: rgba(201,168,76,0.12);
     --gold-border: rgba(201,168,76,0.40);
+    /* Chart marks: brand gold is only 2.3:1 on white, so data marks use a deeper
+       step that clears 3:1 (validated). Dark mode uses the brand gold itself. */
+    --chart-accent: #a8862e;
+    --chart-track: rgba(168,134,46,0.14);
     --green: #16a34a;
     --green-bg: #dcfce7;
     --green-text: #15803d;
@@ -51,6 +55,8 @@
   .dark {
     --main-bg: #0f0f0d;
     --surface: #1a1a18;
+    --chart-accent: #c9a84c;
+    --chart-track: rgba(201,168,76,0.16);
     --surface2: #222220;
     --border: #2e2e2c;
     --border2: #3a3a38;
@@ -250,6 +256,11 @@
     white-space: nowrap;
   }
   td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: middle; }
+  /* Dense comparison table (Portfolio): tighter cells so ~8 numeric columns fit. */
+  .pf-table th, .pf-table td { padding-left: 12px; padding-right: 12px; }
+  .pf-table th:first-child, .pf-table td:first-child { padding-left: 20px; }
+  .pf-table th:last-child, .pf-table td:last-child { padding-right: 20px; }
+  .pf-table tbody tr:last-child td { border-bottom: none; }
   tr:last-child td { border-bottom: none; }
   tbody tr:hover { background: var(--surface2); }
 
@@ -437,7 +448,12 @@
 @media (max-width: 767px) {
   .tb-pills  { display: none !important; }
   .tb-clock  { display: none !important; }
+  .tb-date   { display: none !important; }  /* make room for the property switcher */
+  .tb-slot   { display: none !important; }  /* pages keep their header in-page on phones */
 }
+/* Topbar slots (TopbarSlot.jsx): collapse when empty; a page title replaces the date. */
+.tb-slot:empty { display: none; }
+.tb-left:has(#topbar-title-slot:not(:empty)) .tb-date { display: none; }
 @media (max-width: 499px) {
   .tb-search       { display: none !important; }
   .tb-checkin-text { display: none !important; }

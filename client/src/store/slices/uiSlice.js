@@ -18,6 +18,9 @@ const initialState = {
   // Optional params handed to the incoming panel (e.g. a target sub-tab when
   // Today deep-links into Bookings). Cleared on any plain setActivePanel.
   activePanelParams: null,
+  // What the Portfolio dashboard shows: every property combined ('all') or just
+  // the active property ('property'). Driven by the topbar property switcher.
+  dashboardScope: 'all',
   searchOpen: false,
   // Generic "primary action" trigger fired by the contextual header button.
   // A page listens for its own panel name + a changing nonce, then runs its action.
@@ -42,6 +45,7 @@ const uiSlice = createSlice({
       state.activePanelParams = payload.params || null
     },
     setSearchOpen: (state, { payload }) => { state.searchOpen = payload },
+    setDashboardScope: (state, { payload }) => { state.dashboardScope = payload },
     // Navigate to the target panel and bump the nonce so that page runs its primary action.
     requestPrimaryAction: (state, { payload }) => {
       state.activePanel = payload
@@ -61,6 +65,7 @@ export const {
   setActivePanel,
   navigateTo,
   setSearchOpen,
+  setDashboardScope,
   requestPrimaryAction,
 } = uiSlice.actions
 

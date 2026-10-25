@@ -7,6 +7,9 @@
  * Prerequisite: reference data must already exist — run `npm run db:seed` first
  * (it creates the hotel, room types, rooms, food plans, amenities and users).
  *
+ * Seeds (and with --reset, wipes) the FIRST property only; other properties are
+ * never touched.
+ *
  * This script DOES NOT touch reference data (Hotel/RoomType/Room/FoodPlan/Amenity/
  * User). It populates the transactional + operational tables so every module —
  * Guests, Billing (ledger / cash register), Reports (revenue / occupancy), Bookings,
@@ -14,6 +17,7 @@
  * realistic, internally-consistent data.
  */
 import prisma from './prisma.js'
+import { runWithProperty, runUnscoped } from './propertyContext.js'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 
@@ -48,7 +52,6 @@ async function resetDemo() {
   await prisma.messageTemplate.deleteMany()
   await prisma.maintenanceSchedule.deleteMany()
   await prisma.guest.deleteMany()
-  await prisma.property.deleteMany()
 }
 
 async function main() {
@@ -409,6 +412,11 @@ async function main() {
   console.log('\n✅ Demo data seeded successfully!')
 }
 
-main()
+// Every query below is scoped to the first property by the tenant-aware client.
+runUnscoped(() => prisma.property.findFirst({ orderBy: { createdAt: 'asc' }, select: { id: true } }))
+  .then((property) => {
+    if (!property) throw new Error('No property found. Start the server or run `npm run db:seed` first.')
+    return runWithProperty(property.id, main)
+  })
   .catch((e) => { console.error('✗ Demo seed failed:', e); process.exit(1) })
   .finally(() => prisma.$disconnect())

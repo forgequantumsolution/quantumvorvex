@@ -8,12 +8,25 @@ const api = axios.create({
   withCredentials: true,
 })
 
-// ── Attach the persisted auth token to every request ─────────────────────────
+// ── Attach the persisted auth token + active property to every request ───────
+// The server scopes every request to X-Property-Id (falls back to the user's
+// first property when absent). The store mirrors the active property into
+// localStorage — see store/index.js.
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('qv_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
+  // A call may target another property explicitly (e.g. inviting someone into a
+  // property you're not currently in) — don't overwrite that.
+  const propertyId = localStorage.getItem('qv_property')
+  if (propertyId && !config.headers['X-Property-Id']) config.headers['X-Property-Id'] = propertyId
   return config
 })
+
+// For links opened in a new tab (no custom headers possible): ?propertyId=…
+const withProperty = (url) => {
+  const propertyId = localStorage.getItem('qv_property')
+  return propertyId ? `${url}${url.includes('?') ? '&' : '?'}propertyId=${encodeURIComponent(propertyId)}` : url
+}
 
 // ── Mock adapter — short-circuits all HTTP when VITE_MOCK=true ────────────────
 if (MOCK) {
@@ -50,9 +63,11 @@ api.interceptors.response.use(
         window.dispatchEvent(new CustomEvent('auth:unauthorized'))
       }
     }
-    // A 403 from the RBAC layer means the user's access may have changed (e.g. role
-    // edited). Nudge the app to resync the live permission map so the sidebar updates.
-    if (err.response?.status === 403 && err.response?.data?.code === 'ERR_FORBIDDEN' && !isAuthCall) {
+    // A 403 from the RBAC layer means the user's access may have changed (role edited,
+    // removed from / archived property). Nudge the app to resync the live permission
+    // map + property list so the sidebar and property switcher update.
+    const ACCESS_CODES = ['ERR_FORBIDDEN', 'ERR_PROPERTY_FORBIDDEN', 'ERR_NO_PROPERTY']
+    if (err.response?.status === 403 && ACCESS_CODES.includes(err.response?.data?.code) && !isAuthCall) {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('auth:forbidden'))
       }
@@ -120,7 +135,7 @@ export const bookingsApi = {
   // Override the tax-invoice serial number for a booking.
   updateInvoiceNo: (id, invoiceNo) => api.patch(`/bookings/${id}/invoice-no`, { invoiceNo }),
   // Direct URL to open/print the invoice in a new tab.
-  invoiceUrl: (id) => `${api.defaults.baseURL}/bookings/${id}/invoice?print=1`,
+  invoiceUrl: (id) => withProperty(`${api.defaults.baseURL}/bookings/${id}/invoice?print=1`),
 }
 
 export const documentsApi = {
@@ -184,9 +199,24 @@ export const housekeepingApi = {
 
 export const usersApi = {
   getAll: ()         => api.get('/users'),
-  create: (data)     => api.post('/users', data),
-  update: (id, data) => api.put(`/users/${id}`, data),
-  remove: (id)       => api.delete(`/users/${id}`),
+  create: (data)     => api.post('/users', data),       // assigned to the active property
+  // Create an account directly in a given property (owner inviting staff to a branch).
+  createIn: (propertyId, data) => api.post('/users', data, { headers: { 'X-Property-Id': propertyId } }),
+  update: (id, data) => api.put(`/users/${id}`, data),  // role change applies to the active property
+  remove: (id)       => api.delete(`/users/${id}`),     // non-owners: removes from the active property only
+  // Owner-only: every property the user can open + their role at each.
+  setAccess: (id, access) => api.put(`/users/${id}/access`, { access }), // [{ propertyId, roleId }]
+}
+
+export const propertiesApi = {
+  getAll:     ()         => api.get('/properties'),           // properties the caller can open
+  summary:    ()         => api.get('/properties/summary'),   // portfolio stats per property + totals
+  create:     (data)     => api.post('/properties', data),    // { name, code?, address?, phone?, email?, gstin?, copyFromPropertyId? }
+  update:     (id, data) => api.put(`/properties/${id}`, data), // { name?, code?, status: 'active'|'archived' }
+  getMembers: (id)       => api.get(`/properties/${id}/members`),
+  // Give a person access to a property with a role there, or change that role.
+  setMember:    (id, userId, roleId) => api.put(`/properties/${id}/members/${userId}`, { roleId }),
+  removeMember: (id, userId)         => api.delete(`/properties/${id}/members/${userId}`),
 }
 
 export const rolesApi = {

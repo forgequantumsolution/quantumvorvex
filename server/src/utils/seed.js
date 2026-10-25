@@ -6,16 +6,19 @@
 import prisma from './prisma.js'
 import bcrypt from 'bcryptjs'
 import { ensureSystemRoles } from './rbac.js'
+import { ensureProperties } from './properties.js'
+import { runWithProperty, runUnscoped } from './propertyContext.js'
 
-async function seed() {
+// Seeds reference data into the FIRST property (created if the DB is empty).
+// Every property-owned query below is scoped to it by the tenant-aware client.
+async function seed(propertyId) {
   console.log('🌱 Seeding Quantum Vorvex database...')
 
-  // Hotel profile
+  // Hotel profile (the property's settings row)
   const hotel = await prisma.hotel.upsert({
-    where: { id: 'default' },
+    where: { propertyId },
     update: {},
     create: {
-      id: 'default',
       name: 'Quantum Vorvex',
       ownerName: 'Ramesh Gupta',
       phone: '9876543210',
@@ -38,7 +41,7 @@ async function seed() {
   ]
   const createdTypes = {}
   for (const rt of roomTypes) {
-    const t = await prisma.roomType.upsert({ where: { name: rt.name }, update: rt, create: rt })
+    const t = await prisma.roomType.upsert({ where: { propertyId_name: { propertyId, name: rt.name } }, update: rt, create: rt })
     createdTypes[rt.name] = t.id
   }
   console.log('✓ Room types')
@@ -106,7 +109,7 @@ async function seed() {
     { name: 'No Meals', description: 'Self-catering option', oneTimeRate: 0, weeklyRate: 0, monthlyRate: 0 },
   ]
   for (const fp of foodPlans) {
-    await prisma.foodPlan.upsert({ where: { name: fp.name }, update: fp, create: fp })
+    await prisma.foodPlan.upsert({ where: { propertyId_name: { propertyId, name: fp.name } }, update: fp, create: fp })
   }
   console.log('✓ Food plans')
 
@@ -123,7 +126,7 @@ async function seed() {
     { name: 'Geyser', dailyRate: 0, monthlyRate: 0, chargeable: false },
   ]
   for (const a of amenities) {
-    await prisma.amenity.upsert({ where: { name: a.name }, update: a, create: a })
+    await prisma.amenity.upsert({ where: { propertyId_name: { propertyId, name: a.name } }, update: a, create: a })
   }
   console.log('✓ Amenities')
 
@@ -151,6 +154,15 @@ async function seed() {
     update: { roleId: roleIds.Staff },
     create: { name: 'Arjun Patel', email: 'staff@quantumvorvex.com', password: staffHash, roleId: roleIds.Staff, phone: '9876543212' },
   })
+  // Non-owners only reach a property through PropertyAccess.
+  for (const [email, roleId] of [['manager@quantumvorvex.com', roleIds.Manager], ['staff@quantumvorvex.com', roleIds.Staff]]) {
+    const user = await prisma.user.findUnique({ where: { email }, select: { id: true } })
+    await prisma.propertyAccess.upsert({
+      where:  { userId_propertyId: { userId: user.id, propertyId } },
+      update: { roleId },
+      create: { userId: user.id, propertyId, roleId },
+    })
+  }
   // Legacy admin login — also an Owner.
   const legacyHash = await bcrypt.hash('admin123', 12)
   await prisma.user.upsert({
@@ -181,6 +193,8 @@ async function seed() {
   console.log('   Login: admin@hotel.com / admin123')
 }
 
-seed()
+ensureProperties()
+  .then(() => runUnscoped(() => prisma.property.findFirst({ orderBy: { createdAt: 'asc' }, select: { id: true } })))
+  .then((property) => runWithProperty(property.id, () => seed(property.id)))
   .catch(e => { console.error(e); process.exit(1) })
   .finally(() => prisma.$disconnect())

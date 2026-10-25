@@ -11,7 +11,8 @@ function shapeRole(role) {
     description: role.description,
     isSystem:    role.isSystem,
     isOwner:     role.isOwner,
-    userCount:   role._count?.users ?? undefined,
+    // Owner roles are held org-wide (User.roleId); other roles per property.
+    userCount:   role._count ? (role.isOwner ? role._count.users : role._count.propertyAccess) : undefined,
     permissions: Object.fromEntries((role.permissions || []).map((p) => [p.module, p.level])),
   }
 }
@@ -38,7 +39,7 @@ export const getModules = async (req, res) => {
 export const getRoles = async (req, res) => {
   try {
     const roles = await prisma.role.findMany({
-      include: { permissions: true, _count: { select: { users: true } } },
+      include: { permissions: true, _count: { select: { users: true, propertyAccess: true } } },
       orderBy: [{ isOwner: 'desc' }, { isSystem: 'desc' }, { createdAt: 'asc' }],
     })
     res.json(roles.map(shapeRole))
@@ -60,7 +61,7 @@ export const createRole = async (req, res) => {
         isOwner:  false,
         permissions: { create: perms },
       },
-      include: { permissions: true, _count: { select: { users: true } } },
+      include: { permissions: true, _count: { select: { users: true, propertyAccess: true } } },
     })
     await audit(req, 'role.create', { entity: 'role', entityId: role.id, detail: role.name })
     res.status(201).json(shapeRole(role))
@@ -100,7 +101,7 @@ export const updateRole = async (req, res) => {
 
     const updated = await prisma.role.findUnique({
       where: { id },
-      include: { permissions: true, _count: { select: { users: true } } },
+      include: { permissions: true, _count: { select: { users: true, propertyAccess: true } } },
     })
     res.json(shapeRole(updated))
   } catch (e) {
@@ -115,11 +116,11 @@ export const deleteRole = async (req, res) => {
     const { id } = req.params
     const role = await prisma.role.findUnique({
       where: { id },
-      include: { _count: { select: { users: true } } },
+      include: { _count: { select: { users: true, propertyAccess: true } } },
     })
     if (!role) return res.status(404).json({ error: 'Role not found.' })
     if (role.isSystem) return res.status(400).json({ error: 'System roles cannot be deleted.' })
-    if (role._count.users > 0) {
+    if (role._count.users > 0 || role._count.propertyAccess > 0) {
       return res.status(400).json({ error: 'Reassign the users on this role before deleting it.' })
     }
     await prisma.role.delete({ where: { id } })

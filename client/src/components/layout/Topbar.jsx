@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { LuMenu, LuSearch, LuBell, LuPlus } from 'react-icons/lu'
 import { useAppSelector, useUiActions } from '../../store/hooks'
+import PropertySwitcher from './PropertySwitcher'
+import { TopbarSlotTarget } from './TopbarSlot'
 
 const MOCK_NOTIFS = [
   { id: 1, type: 'danger',  icon: '!', title: 'Overdue Invoice',    msg: 'INV-005 — Kavya Reddy (₹12,096)',      time: '2h ago',    read: false },
@@ -27,6 +29,7 @@ const PRIMARY_ACTIONS = {
   bookings:      { label: 'New Booking',   target: 'bookings'      },
   cancellations: { label: 'Cancel Booking', target: 'cancellations' },
   maintenance:   { label: 'New Ticket',    target: 'maintenance'   },
+  portfolio:     null, // the page puts its own actions in the topbar slot
 }
 const DEFAULT_ACTION = { label: 'New Booking', target: 'bookings' }
 
@@ -34,7 +37,7 @@ export default function Topbar() {
   const activePanel = useAppSelector((s) => s.ui.activePanel)
   const { setActivePanel, toggleSidebar, setSearchOpen, requestPrimaryAction } = useUiActions()
 
-  const primaryAction = PRIMARY_ACTIONS[activePanel] || DEFAULT_ACTION
+  const primaryAction = activePanel in PRIMARY_ACTIONS ? PRIMARY_ACTIONS[activePanel] : DEFAULT_ACTION
 
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifs,    setNotifs]    = useState(MOCK_NOTIFS)
@@ -67,13 +70,19 @@ export default function Topbar() {
         <LuMenu size={18} />
       </button>
 
-      {/* Today's date — the page renders its own full heading, so the topbar
-          only provides lightweight orientation */}
-      <div className="flex-1 min-w-0">
-        <div className="text-[11.5px] text-ink3 font-medium">
+      {/* Which property the app is working in (and switching it), plus today's
+          date — the page renders its own full heading, so the topbar only
+          provides lightweight orientation */}
+      <div className="tb-left flex-1 min-w-0 flex items-center gap-4">
+        <PropertySwitcher />
+        {/* A page may put its title here (see TopbarSlot) — the date then hides. */}
+        <TopbarSlotTarget name="title" className="min-w-0" />
+        <div className="tb-date text-[11.5px] text-ink3 font-medium whitespace-nowrap">
           {todayLabel()}
         </div>
       </div>
+
+      <TopbarSlotTarget name="actions" className="flex items-center gap-2.5 shrink-0" />
 
       {/* Search — opens the global Ctrl+K search */}
       <button onClick={() => setSearchOpen(true)} className={iconBtnClass} {...hoverGold} aria-label="Search" title="Search (Ctrl+K)">
@@ -148,9 +157,12 @@ export default function Topbar() {
       </div>
 
       {/* Primary action — contextual to the current page */}
-      <button onClick={() => requestPrimaryAction(primaryAction.target)} className="btn btn-primary btn-sm shrink-0 gap-[5px]">
-        <LuPlus size={15} /><span className="tb-checkin-text">{primaryAction.label}</span>
-      </button>
+      {primaryAction && (
+        <button onClick={() => requestPrimaryAction(primaryAction.target)} className="btn btn-primary btn-sm shrink-0 gap-[5px]">
+          <LuPlus size={15} /><span className="tb-checkin-text">{primaryAction.label}</span>
+        </button>
+      )}
+      <TopbarSlotTarget name="primary" className="shrink-0" />
     </div>
   )
 }

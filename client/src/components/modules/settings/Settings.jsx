@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Cropper from 'react-easy-crop'
-import Tabs from '../../ui/Tabs'
 import Modal from '../../ui/Modal'
 import { getCroppedBlob, blobToDataUrl } from '../../../utils/cropImage'
 import { useAppSelector, useHotelActions, useUiActions } from '../../../store/hooks'
@@ -8,6 +7,12 @@ import { useToast } from '../../../hooks/useToast'
 import api, { settingsApi, pricingApi, remindersApi } from '../../../api/client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { canAccessSettingsTab } from '../../../utils/permissions'
+import PropertyManager from '../properties/PropertyManager'
+import {
+  LuHotel, LuBuilding2, LuStamp, LuBedDouble, LuSparkles, LuUtensils, LuTrendingUp,
+  LuPercent, LuReceipt, LuFileText, LuBell, LuPalette, LuSlidersHorizontal,
+  LuMapPin, LuPencil, LuChevronDown,
+} from 'react-icons/lu'
 import {
   ACCENT_PRESETS, RADIUS_PRESETS, getAppearance, saveAppearance, applyAppearance,
 } from '../../../utils/theme'
@@ -92,7 +97,7 @@ const initKycDocs = [
 function Field({ label, children, fullWidth }) {
   return (
     <div className={`flex flex-col gap-[5px] ${fullWidth ? 'col-[1/-1]' : ''}`}>
-      <label className="form-label text-[12px] font-semibold">{label}</label>
+      <label className="form-label">{label}</label>
       {children}
     </div>
   )
@@ -285,29 +290,56 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
     : 'HM'
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Logo */}
-      <div className="flex items-center gap-4">
-        <div
-          onClick={() => fileRef.current?.click()}
-          className="w-20 h-20 rounded-full border-2 border-gold flex items-center justify-center cursor-pointer overflow-hidden shrink-0"
-          style={{ background: logoSrc ? 'transparent' : 'var(--gold-bg, #3a2e0a)' }}
-          title="Click to upload logo"
-        >
-          {logoSrc ? (
-            <img src={logoSrc} alt="Logo" className="w-full h-full object-cover" />
-          ) : (
-            <span className="t-h1 text-gold">
-              {initials}
-            </span>
-          )}
-        </div>
-        <div>
-          <button className="btn btn-outline text-[12px]" onClick={() => fileRef.current?.click()}>
-            Upload Logo
-          </button>
-          <p className="mt-1 mb-0 text-[11px] text-ink3">PNG, JPG up to 2MB · you can crop after selecting</p>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+    <div className="flex flex-col gap-5">
+      {/* Brand assets: logo + stamp side by side */}
+      <div className="card">
+        <div className="card-header"><span className="card-title">Logo &amp; Stamp</span></div>
+        <div className="card-body grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="flex items-center gap-4">
+            <div
+              onClick={() => fileRef.current?.click()}
+              className="w-16 h-16 rounded-full border-2 border-gold flex items-center justify-center cursor-pointer overflow-hidden shrink-0"
+              style={{ background: logoSrc ? 'transparent' : 'var(--gold-bg, #3a2e0a)' }}
+              title="Click to upload logo"
+            >
+              {logoSrc ? (
+                <img src={logoSrc} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                <span className="t-h2 text-gold">{initials}</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="t-title mb-0.5">Hotel logo</div>
+              <p className="t-xs text-ink3 m-0 mb-2">PNG or JPG, up to 2MB. You can crop after selecting.</p>
+              <button className="btn btn-outline btn-sm" onClick={() => fileRef.current?.click()}>
+                Upload logo
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+            </div>
+          </div>
+
+          {/* Stamp & signature (printed on tax invoices) */}
+          <div className="flex items-center gap-4">
+            <div
+              onClick={() => stampFileRef.current?.click()}
+              className="w-24 h-16 rounded-lg border-2 border-dashed border-line2 flex items-center justify-center cursor-pointer overflow-hidden shrink-0 bg-surface2"
+              title="Click to upload stamp & signature"
+            >
+              {stampSrc ? (
+                <img src={stampSrc} alt="Stamp & signature" className="w-full h-full object-contain" />
+              ) : (
+                <span className="text-[10.5px] text-ink3 text-center px-1.5 leading-tight">No stamp yet</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="t-title mb-0.5">Stamp &amp; signature</div>
+              <p className="t-xs text-ink3 m-0 mb-2">Printed on tax invoices. PNG or JPG, up to 5MB.</p>
+              <button className="btn btn-outline btn-sm" onClick={() => stampFileRef.current?.click()} disabled={stampUploading}>
+                {stampUploading ? 'Uploading…' : 'Upload stamp'}
+              </button>
+              <input ref={stampFileRef} type="file" accept="image/*" className="hidden" onChange={handleStampSelect} />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -323,58 +355,38 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
         onComplete={uploadCropped}
       />
 
-      {/* Stamp & signature (printed on tax invoices) */}
-      <div className="flex items-center gap-4">
-        <div
-          onClick={() => stampFileRef.current?.click()}
-          className="w-32 h-20 rounded-lg border-2 border-dashed border-line flex items-center justify-center cursor-pointer overflow-hidden shrink-0 bg-surface2"
-          title="Click to upload stamp & signature"
-        >
-          {stampSrc ? (
-            <img src={stampSrc} alt="Stamp & signature" className="w-full h-full object-contain" />
-          ) : (
-            <span className="t-xs text-ink3 text-center px-1.5 leading-tight">Stamp &amp; Signature</span>
-          )}
+      <div className="card">
+        <div className="card-header"><span className="card-title">Business Details</span></div>
+        <div className="card-body grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
+          <Field label="Hotel Name">
+            <input className="form-input" value={settings.name}
+              onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
+          </Field>
+          <Field label="Owner Name">
+            <input className="form-input" value={settings.ownerName}
+              onChange={e => setSettings(s => ({ ...s, ownerName: e.target.value }))} />
+          </Field>
+          <Field label="Phone">
+            <input className="form-input" value={settings.phone}
+              onChange={e => setSettings(s => ({ ...s, phone: e.target.value }))} />
+          </Field>
+          <Field label="Email">
+            <input className="form-input" type="email" value={settings.email}
+              onChange={e => setSettings(s => ({ ...s, email: e.target.value }))} />
+          </Field>
+          <Field label="GSTIN">
+            <input className="form-input t-mono" value={settings.gstin}
+              onChange={e => setSettings(s => ({ ...s, gstin: e.target.value }))} />
+          </Field>
+          <Field label="License No.">
+            <input className="form-input" value={settings.licenseNo}
+              onChange={e => setSettings(s => ({ ...s, licenseNo: e.target.value }))} />
+          </Field>
+          <Field label="Address" fullWidth>
+            <textarea className="form-textarea resize-y" rows={2} value={settings.address}
+              onChange={e => setSettings(s => ({ ...s, address: e.target.value }))} />
+          </Field>
         </div>
-        <div>
-          <button className="btn btn-outline text-[12px]" onClick={() => stampFileRef.current?.click()} disabled={stampUploading}>
-            {stampUploading ? 'Uploading…' : 'Upload Stamp & Signature'}
-          </button>
-          <p className="mt-1 mb-0 text-[11px] text-ink3">Printed in the signature area of tax invoices · PNG, JPG up to 5MB</p>
-          <input ref={stampFileRef} type="file" accept="image/*" className="hidden" onChange={handleStampSelect} />
-        </div>
-      </div>
-
-      {/* Form grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="Hotel Name">
-          <input className="form-input" value={settings.name}
-            onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
-        </Field>
-        <Field label="Owner Name">
-          <input className="form-input" value={settings.ownerName}
-            onChange={e => setSettings(s => ({ ...s, ownerName: e.target.value }))} />
-        </Field>
-        <Field label="Phone">
-          <input className="form-input" value={settings.phone}
-            onChange={e => setSettings(s => ({ ...s, phone: e.target.value }))} />
-        </Field>
-        <Field label="Email" fullWidth>
-          <input className="form-input" type="email" value={settings.email}
-            onChange={e => setSettings(s => ({ ...s, email: e.target.value }))} />
-        </Field>
-        <Field label="GSTIN">
-          <input className="form-input" value={settings.gstin}
-            onChange={e => setSettings(s => ({ ...s, gstin: e.target.value }))} />
-        </Field>
-        <Field label="License No.">
-          <input className="form-input" value={settings.licenseNo}
-            onChange={e => setSettings(s => ({ ...s, licenseNo: e.target.value }))} />
-        </Field>
-        <Field label="Address" fullWidth>
-          <textarea className="form-textarea resize-y" rows={3} value={settings.address}
-            onChange={e => setSettings(s => ({ ...s, address: e.target.value }))} />
-        </Field>
       </div>
 
       <SaveButton onClick={handleSave} saving={saving} />
@@ -1497,7 +1509,19 @@ function NotificationsTab({ addToast }) {
 function PropertiesTab({ settings, setSettings, addToast }) {
   const [editingMain, setEditingMain] = useState(false)
   const [saving, setSaving] = useState(false)
+  const snapshot = useRef(null)
   const { setHotelName, setOwnerName } = useHotelActions()
+
+  function startEdit() {
+    snapshot.current = settings
+    setEditingMain(true)
+  }
+
+  // Cancel throws away unsaved typing instead of leaving it in the page state.
+  function cancelEdit() {
+    if (snapshot.current) setSettings(snapshot.current)
+    setEditingMain(false)
+  }
 
   async function handleSaveProperty() {
     setSaving(true)
@@ -1517,137 +1541,92 @@ function PropertiesTab({ settings, setSettings, addToast }) {
     }
   }
 
-  const thStyle = {
-    padding: '8px 12px',
-    borderBottom: '1px solid var(--border)',
-    color: 'var(--text3)',
-    fontWeight: 600,
-    fontSize: 11,
-    textAlign: 'left',
-    whiteSpace: 'nowrap',
-  }
+  const set = (key, num) => e => setSettings(s => ({ ...s, [key]: num ? Number(e.target.value) : e.target.value }))
+  const initials = (settings.name || '?').split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  const details = [
+    { label: 'Owner',       value: settings.ownerName },
+    { label: 'Phone',       value: settings.phone },
+    { label: 'Email',       value: settings.email, wide: true },
+    { label: 'GSTIN',       value: settings.gstin, mono: true },
+    { label: 'Total Rooms', value: settings.totalRooms },
+  ]
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Current Property Card */}
+      {/* Current Property — the active property's own profile */}
       <div className="card">
-        <div className="card-header flex items-center justify-between">
-          <span className="card-title">Current Property</span>
-          <button
-            className="btn btn-outline text-[12px] px-[14px] py-[5px]"
-            onClick={() => setEditingMain(v => !v)}
-          >
-            {editingMain ? 'Close' : 'Edit'}
-          </button>
-        </div>
-        <div className="card-body">
-          {!editingMain ? (
-            <div className="flex flex-col gap-2.5">
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="t-h2">
-                  {settings.name}
-                </span>
-                <span className="px-2.5 py-0.5 rounded-[20px] bg-[rgba(34,197,94,0.15)] text-[#22c55e] text-[11px] font-bold">
-                  Active
-                </span>
-              </div>
-              <p className="t-sm m-0 text-ink3">{settings.address}</p>
-              <div className="t-sm flex gap-6 flex-wrap">
-                <span><span className="text-ink3">GSTIN:</span> {settings.gstin}</span>
-                <span><span className="text-ink3">Rooms:</span> {settings.totalRooms}</span>
-              </div>
+        <div className="flex items-start gap-4 p-5 sm:p-6 flex-wrap">
+          <span className="w-12 h-12 rounded-xl bg-[var(--gold-bg)] border border-[var(--gold-border)] text-gold text-[16px] font-bold flex items-center justify-center shrink-0">
+            {initials}
+          </span>
+          <div className="flex-1 min-w-[200px]">
+            <div className="t-label mb-1">Current property</div>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h3 className="t-h2 m-0">{settings.name}</h3>
+              <span className="badge badge-green">Active</span>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label="Hotel Name">
-                <input className="form-input" value={settings.name}
-                  onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
-              </Field>
-              <Field label="Owner Name">
-                <input className="form-input" value={settings.ownerName}
-                  onChange={e => setSettings(s => ({ ...s, ownerName: e.target.value }))} />
-              </Field>
-              <Field label="Phone">
-                <input className="form-input" value={settings.phone}
-                  onChange={e => setSettings(s => ({ ...s, phone: e.target.value }))} />
-              </Field>
-              <Field label="Email">
-                <input className="form-input" type="email" value={settings.email}
-                  onChange={e => setSettings(s => ({ ...s, email: e.target.value }))} />
-              </Field>
-              <Field label="GSTIN">
-                <input className="form-input" value={settings.gstin}
-                  onChange={e => setSettings(s => ({ ...s, gstin: e.target.value }))} />
-              </Field>
-              <Field label="Total Rooms">
-                <input className="form-input" type="number" min={1} value={settings.totalRooms}
-                  onChange={e => setSettings(s => ({ ...s, totalRooms: Number(e.target.value) }))} />
-              </Field>
-              <Field label="Address" fullWidth>
-                <textarea className="form-textarea resize-y" rows={3} value={settings.address}
-                  onChange={e => setSettings(s => ({ ...s, address: e.target.value }))} />
-              </Field>
-              <div className="col-[1/-1]">
-                <button className="btn btn-primary text-[12px]"
-                  onClick={handleSaveProperty} disabled={saving}>
-                  {saving ? 'Saving…' : 'Save Property'}
-                </button>
-              </div>
-            </div>
+            {settings.address && (
+              <p className="t-sm text-ink2 mt-1.5 mb-0 flex items-start gap-1.5">
+                <LuMapPin size={14} className="text-ink3 mt-[3px] shrink-0" aria-hidden />
+                {settings.address}
+              </p>
+            )}
+          </div>
+          {!editingMain && (
+            <button className="btn btn-outline btn-sm shrink-0" onClick={startEdit}>
+              <LuPencil size={13} aria-hidden /> Edit details
+            </button>
           )}
         </div>
+
+        {!editingMain ? (
+          <dl className="m-0 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] border-t border-line bg-surface2">
+            {details.map(d => (
+              <div key={d.label} className={`px-5 sm:px-6 py-4 min-w-0 ${d.wide ? 'col-span-2 md:col-span-1' : ''}`}>
+                <dt className="t-label mb-1 whitespace-nowrap">{d.label}</dt>
+                <dd className={`m-0 text-[13.5px] font-medium text-ink truncate ${d.mono ? 't-mono text-[13px]' : ''}`} title={String(d.value ?? '')}>
+                  {d.value || <span className="text-ink3 font-normal">Not set</span>}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <div className="border-t border-line">
+            <div className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
+              <Field label="Hotel Name">
+                <input className="form-input" value={settings.name} onChange={set('name')} autoFocus />
+              </Field>
+              <Field label="Owner Name">
+                <input className="form-input" value={settings.ownerName} onChange={set('ownerName')} />
+              </Field>
+              <Field label="Phone">
+                <input className="form-input" value={settings.phone} onChange={set('phone')} />
+              </Field>
+              <Field label="Email">
+                <input className="form-input" type="email" value={settings.email} onChange={set('email')} />
+              </Field>
+              <Field label="GSTIN">
+                <input className="form-input t-mono" value={settings.gstin} onChange={set('gstin')} />
+              </Field>
+              <Field label="Total Rooms">
+                <input className="form-input" type="number" min={1} value={settings.totalRooms} onChange={set('totalRooms', true)} />
+              </Field>
+              <Field label="Address" fullWidth>
+                <textarea className="form-textarea resize-y" rows={2} value={settings.address} onChange={set('address')} />
+              </Field>
+            </div>
+            <div className="flex justify-end gap-2 px-5 sm:px-6 py-3.5 border-t border-line bg-surface2">
+              <button className="btn btn-outline" onClick={cancelEdit} disabled={saving}>Cancel</button>
+              <button className="btn btn-primary" onClick={handleSaveProperty} disabled={saving}>
+                {saving ? 'Saving…' : 'Save Property'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Multi-property section */}
-      <div className="card">
-        <div className="card-header flex items-center justify-between">
-          <span className="card-title">Multi-Property Management</span>
-          <button
-            className="btn btn-primary text-[12px] px-[14px] py-[5px] opacity-50 cursor-not-allowed"
-            onClick={() => addToast('Multi-property feature available in Pro plan', 'info')}
-            title="Upgrade to Pro"
-          >
-            + Add Property
-          </button>
-        </div>
-        <div className="card-body">
-          {/* Info banner */}
-          <div className="t-sm flex items-center gap-2.5 px-[14px] py-2.5 rounded-lg bg-[rgba(201,168,76,0.08)] border border-[rgba(201,168,76,0.3)] mb-4 text-ink3">
-            <span className="t-h3">🔒</span>
-            Upgrade to Multi-Property plan to manage multiple hotels from one account.
-          </div>
-
-          {/* Demo table — greyed out */}
-          <div className="opacity-45 pointer-events-none overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  {['Property', 'Address', 'Rooms', 'Manager', 'Status'].map(h => (
-                    <th key={h} style={thStyle}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-line">
-                  <td className="t-title px-3 py-2.5">
-                    Quantum Vorvex — Branch
-                  </td>
-                  <td className="t-sm px-3 py-2.5 text-ink3">
-                    456, MG Road, Bangalore
-                  </td>
-                  <td className="t-sm px-3 py-2.5 text-ink3">24</td>
-                  <td className="t-sm px-3 py-2.5 text-ink3">Priya Sharma</td>
-                  <td className="px-3 py-2.5">
-                    <span className="px-2.5 py-0.5 rounded-[20px] bg-[rgba(34,197,94,0.15)] text-[#22c55e] text-[11px] font-bold">
-                      Active
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+      {/* Every property: add, rename, archive / restore, who has access */}
+      <PropertyManager />
     </div>
   )
 }
@@ -2192,20 +2171,21 @@ function InvoiceConfigTab({ settings, setSettings, addToast }) {
 }
 
 // ─── Settings (Root) ──────────────────────────────────────────────────────────
+// Grouped so 13 sections stay scannable: the sidebar renders one heading per group.
 const ALL_TABS = [
-  { id: 'profile',       label: 'Hotel Profile'  },
-  { id: 'rooms',         label: 'Room Config'    },
-  { id: 'facilities',    label: 'Facilities'     },
-  { id: 'food',          label: 'Food Plans'     },
-  { id: 'tax',           label: 'Tax & Pricing'  },
-  { id: 'invoice',       label: 'Invoice'        },
-  { id: 'documents',     label: 'Documents'      },
-  { id: 'pricing',       label: 'Pricing Rules'  },
-  { id: 'notifications', label: 'Notifications'  },
-  { id: 'appearance',    label: 'Appearance'     },
-  { id: 'branding',      label: 'Branding'       },
-  { id: 'preferences',   label: 'Preferences'    },
-  { id: 'properties',    label: 'Properties'     },
+  { id: 'profile',       label: 'Hotel Profile',  group: 'Property',      icon: LuHotel,             description: 'Name, contact details, logo and stamp printed on documents' },
+  { id: 'properties',    label: 'Properties',     group: 'Property',      icon: LuBuilding2,         description: 'Every property you run, and who has access to each' },
+  { id: 'branding',      label: 'Branding',       group: 'Property',      icon: LuStamp,             description: 'Logo, identity and brand text shown across the app' },
+  { id: 'rooms',         label: 'Room Config',    group: 'Rooms & Rates', icon: LuBedDouble,         description: 'Hotel capacity and the room types you sell' },
+  { id: 'facilities',    label: 'Facilities',     group: 'Rooms & Rates', icon: LuSparkles,          description: 'In-room facilities and chargeable amenities' },
+  { id: 'food',          label: 'Food Plans',     group: 'Rooms & Rates', icon: LuUtensils,          description: 'Meal plans and their one-time, weekly and monthly rates' },
+  { id: 'pricing',       label: 'Pricing Rules',  group: 'Rooms & Rates', icon: LuTrendingUp,        description: 'Dynamic pricing rules and competitor rates' },
+  { id: 'tax',           label: 'Tax & Pricing',  group: 'Billing',       icon: LuPercent,           description: 'GST, late fees and seasonal pricing' },
+  { id: 'invoice',       label: 'Invoice',        group: 'Billing',       icon: LuReceipt,           description: 'Invoice numbering, bank details and terms' },
+  { id: 'documents',     label: 'Documents',      group: 'Guests',        icon: LuFileText,          description: 'KYC documents collected at check-in and expiry reminders' },
+  { id: 'notifications', label: 'Notifications',  group: 'Guests',        icon: LuBell,              description: 'Automated guest message templates and schedule' },
+  { id: 'appearance',    label: 'Appearance',     group: 'System',        icon: LuPalette,           description: 'Theme, accent colour and layout density' },
+  { id: 'preferences',   label: 'Preferences',    group: 'System',        icon: LuSlidersHorizontal, description: 'Regional formats, notifications and session' },
 ]
 
 const TAB_IDS = ALL_TABS.map(t => t.id)
@@ -2218,7 +2198,9 @@ function tabFromUrl(fallback = 'profile') {
 }
 
 export default function Settings({ onRunSetup }) {
-  const [activeTab, setActiveTab] = useState(tabFromUrl)
+  // A deep link (navigateTo({ panel: 'settings', params: { tab } })) wins over the URL.
+  const panelParams = useAppSelector(s => s.ui.activePanelParams)
+  const [activeTab, setActiveTab] = useState(() => (TAB_IDS.includes(panelParams?.tab) ? panelParams.tab : tabFromUrl()))
   const [settings, setSettings]   = useState(initSettings)
   const [roomTypes, setRoomTypes] = useState(initRoomTypes)
   const [foodPlans, setFoodPlans] = useState(initFoodPlans)
@@ -2269,14 +2251,41 @@ export default function Settings({ onRunSetup }) {
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
+  const panels = {
+    profile: (
+      <HotelProfileTab
+        settings={settings}
+        setSettings={setSettings}
+        addToast={addToast}
+        setHotelName={setHotelName}
+        setOwnerName={setOwnerName}
+      />
+    ),
+    rooms: (
+      <RoomConfigTab settings={settings} setSettings={setSettings}
+        roomTypes={roomTypes} setRoomTypes={setRoomTypes} addToast={addToast} />
+    ),
+    facilities:    <FacilitiesTab amenities={amenities} setAmenities={setAmenities} addToast={addToast} />,
+    food:          <FoodPlansTab plans={foodPlans} setPlans={setFoodPlans} addToast={addToast} />,
+    tax:           <TaxPricingTab settings={settings} setSettings={setSettings} addToast={addToast} />,
+    invoice:       <InvoiceConfigTab settings={settings} setSettings={setSettings} addToast={addToast} />,
+    documents:     <DocumentsTab settings={settings} setSettings={setSettings} addToast={addToast} />,
+    pricing:       <PricingRulesTab addToast={addToast} />,
+    notifications: <NotificationsTab addToast={addToast} />,
+    appearance:    <AppearanceTab settings={settings} addToast={addToast} />,
+    branding:      <BrandingTab settings={settings} setSettings={setSettings} addToast={addToast} />,
+    preferences:   <PreferencesTab settings={settings} addToast={addToast} />,
+    properties:    <PropertiesTab settings={settings} setSettings={setSettings} addToast={addToast} />,
+  }
+  const activeMeta = tabs.find(t => t.id === validActiveTab)
+  const ActiveIcon = activeMeta?.icon
+
   return (
-    <div className="p-6">
+    <div className="max-w-[1240px]">
       {/* Header */}
       <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="t-h1 m-0 tracking-[-0.02em]">
-            Settings
-          </h1>
+          <h1 className="t-h1 m-0">Settings</h1>
           <p className="t-sm mt-1 mb-0 text-ink3">
             Configure hotel profile, room types, pricing, and system preferences
           </p>
@@ -2292,54 +2301,84 @@ export default function Settings({ onRunSetup }) {
         )} */}
       </div>
 
-      <Tabs tabs={tabs} active={validActiveTab} onChange={setActiveTab}>
-        <div data-tab-id="profile">
-          <HotelProfileTab
-            settings={settings}
-            setSettings={setSettings}
-            addToast={addToast}
-            setHotelName={setHotelName}
-            setOwnerName={setOwnerName}
-          />
-        </div>
-        <div data-tab-id="rooms">
-          <RoomConfigTab settings={settings} setSettings={setSettings}
-            roomTypes={roomTypes} setRoomTypes={setRoomTypes} addToast={addToast} />
-        </div>
-        <div data-tab-id="facilities">
-          <FacilitiesTab amenities={amenities} setAmenities={setAmenities} addToast={addToast} />
-        </div>
-        <div data-tab-id="food">
-          <FoodPlansTab plans={foodPlans} setPlans={setFoodPlans} addToast={addToast} />
-        </div>
-        <div data-tab-id="tax">
-          <TaxPricingTab settings={settings} setSettings={setSettings} addToast={addToast} />
-        </div>
-        <div data-tab-id="invoice">
-          <InvoiceConfigTab settings={settings} setSettings={setSettings} addToast={addToast} />
-        </div>
-        <div data-tab-id="documents">
-          <DocumentsTab settings={settings} setSettings={setSettings} addToast={addToast} />
-        </div>
-        <div data-tab-id="pricing">
-          <PricingRulesTab addToast={addToast} />
-        </div>
-        <div data-tab-id="notifications">
-          <NotificationsTab addToast={addToast} />
-        </div>
-        <div data-tab-id="appearance">
-          <AppearanceTab settings={settings} addToast={addToast} />
-        </div>
-        <div data-tab-id="branding">
-          <BrandingTab settings={settings} setSettings={setSettings} addToast={addToast} />
-        </div>
-        <div data-tab-id="preferences">
-          <PreferencesTab settings={settings} addToast={addToast} />
-        </div>
-        <div data-tab-id="properties">
-          <PropertiesTab settings={settings} setSettings={setSettings} addToast={addToast} />
-        </div>
-      </Tabs>
+      <div className="flex flex-col lg:flex-row lg:items-start gap-4 lg:gap-7">
+        <SettingsNav tabs={tabs} active={validActiveTab} onChange={setActiveTab} />
+
+        <section className="flex-1 min-w-0" aria-labelledby="settings-section-title">
+          {activeMeta && (
+            <div className="flex items-center gap-3 mb-5 pb-4 border-b border-line">
+              <span className="w-9 h-9 rounded-lg bg-[var(--gold-bg)] text-gold flex items-center justify-center shrink-0">
+                {ActiveIcon && <ActiveIcon size={17} aria-hidden />}
+              </span>
+              <div className="min-w-0">
+                <h2 id="settings-section-title" className="t-h3 text-[16px] m-0">{activeMeta.label}</h2>
+                <p className="t-xs text-ink3 mt-0.5 mb-0">{activeMeta.description}</p>
+              </div>
+            </div>
+          )}
+          {panels[validActiveTab]}
+        </section>
+      </div>
     </div>
+  )
+}
+
+// Left rail on desktop (grouped, sticky); a grouped select on narrow screens,
+// where a 13-item rail or tab strip would push the content off-screen.
+function SettingsNav({ tabs, active, onChange }) {
+  const groups = []
+  for (const t of tabs) {
+    const g = groups.find(x => x.name === t.group)
+    if (g) g.items.push(t)
+    else groups.push({ name: t.group, items: [t] })
+  }
+
+  return (
+    <>
+      <div className="lg:hidden relative">
+        <label htmlFor="settings-section" className="sr-only">Settings section</label>
+        <LuChevronDown size={16} aria-hidden className="absolute right-3 top-1/2 -translate-y-1/2 text-ink3 pointer-events-none" />
+        <select id="settings-section" className="form-select appearance-none pr-9 py-2.5 text-[14px] font-medium"
+          value={active} onChange={e => onChange(e.target.value)}>
+          {groups.map(g => (
+            <optgroup key={g.name} label={g.name}>
+              {g.items.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+            </optgroup>
+          ))}
+        </select>
+      </div>
+
+      <nav aria-label="Settings sections"
+        className="hidden lg:flex flex-col gap-4 w-[196px] shrink-0 sticky top-0 -ml-2.5">
+        {groups.map(g => (
+          <div key={g.name}>
+            <div className="t-label text-[10.5px] px-2.5 mb-1">{g.name}</div>
+            <ul className="list-none m-0 p-0 flex flex-col gap-0.5">
+              {g.items.map(t => {
+                const isActive = t.id === active
+                const Icon = t.icon
+                return (
+                  <li key={t.id}>
+                    <button
+                      type="button"
+                      onClick={() => onChange(t.id)}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-md border-none cursor-pointer text-left text-[13px] transition-colors duration-[140ms] ${
+                        isActive
+                          ? 'bg-[var(--gold-bg)] text-ink font-semibold'
+                          : 'bg-transparent text-ink2 font-medium hover:bg-surface2 hover:text-ink'
+                      }`}
+                    >
+                      <Icon size={15} aria-hidden className={isActive ? 'text-gold' : 'text-ink3'} />
+                      {t.label}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))}
+      </nav>
+    </>
   )
 }

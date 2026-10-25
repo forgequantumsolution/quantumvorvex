@@ -33,7 +33,7 @@ export const createRoom = async (req, res) => {
     let roomType
     if (typeName) {
       roomType = await prisma.roomType.upsert({
-        where: { name: typeName },
+        where: { propertyId_name: { propertyId: req.propertyId, name: typeName } },
         update: typeData || {},
         create: {
           name: typeName,
@@ -92,12 +92,15 @@ export const updateRoom = async (req, res) => {
 
     if (typeName) {
       const roomType = await prisma.roomType.upsert({
-        where: { name: typeName },
+        where: { propertyId_name: { propertyId: req.propertyId, name: typeName } },
         update: {},
         create: { name: typeName },
       })
       updateData.typeId = roomType.id
     } else if (typeId) {
+      // The type must belong to this property (the scoped lookup hides others).
+      const roomType = await prisma.roomType.findUnique({ where: { id: typeId }, select: { id: true } })
+      if (!roomType) return res.status(400).json({ message: 'Room type not found.' })
       updateData.typeId = typeId
     }
 

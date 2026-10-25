@@ -7,10 +7,68 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── MULTI-PROPERTY ──────────────────────────────────────────────────────────
+// One owner runs several properties. Every operational record (rooms, guests,
+// bookings, invoices, catalogs, …) belongs to exactly one Property via a required
+// `propertyId`. Queries are scoped automatically per request by the tenant-aware
+// Prisma client (src/utils/prisma.js) — controllers never filter by hand.
+//
+// Access: users whose org role isOwner see every property. Everyone else gets
+// access per property through PropertyAccess, with a role *for that property*
+// (e.g. Manager at one hotel, Staff at another).
+
+model Property {
+  id        String   @id @default(cuid())
+  name      String
+  // Short human code shown in the property switcher and on reports (e.g. "MUM").
+  code      String   @unique
+  status    String   @default("active") // active | archived (archived = read-only, hidden from staff)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  settings             Hotel?
+  access               PropertyAccess[]
+  rooms                Room[]
+  roomTypes            RoomType[]
+  guests               Guest[]
+  bookings             Booking[]
+  invoices             Invoice[]
+  payments             Payment[]
+  notifications        Notification[]
+  foodPlans            FoodPlan[]
+  amenities            Amenity[]
+  pricingRules         PricingRule[]
+  competitorRates      CompetitorRate[]
+  messageTemplates     MessageTemplate[]
+  maintenanceRequests  MaintenanceRequest[]
+  maintenanceSchedules MaintenanceSchedule[]
+  linenRecords         LinenRecord[]
+  roomInspections      RoomInspection[]
+}
+
+// A non-owner user's membership of one property, with the role they hold there.
+model PropertyAccess {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, propertyId])
+  @@index([propertyId])
+}
+
 // ─── CORE ────────────────────────────────────────────────────────────────────
 
+// Per-property business profile + configuration (one row per Property). The model
+// keeps its historical name "Hotel" to avoid churning every settings call site.
 model Hotel {
   id                 String   @id @default(cuid())
+  propertyId         String   @unique
+  property           Property @relation(fields: [propertyId], references: [id])
   name               String   @default("Quantum Vorvex")
   ownerName          String   @default("Admin")
   phone              String?
@@ -19,7 +77,7 @@ model Hotel {
   licenseNo          String?
   address            String?
   logoUrl            String?
-  stampUrl           String?   // stamp + authorised-signatory image shown on invoices
+  stampUrl           String? // stamp + authorised-signatory image shown on invoices
   gstRate            Float    @default(12)
   gstType            String   @default("CGST+SGST")
   gstApplyOn         String   @default("All")
@@ -45,10 +103,10 @@ model Hotel {
   bankAccountNo      String?
   bankIfsc           String?
   // JSON-encoded config blobs for Settings tabs that have no dedicated table.
-  documentsConfig    String?   // { kycDocs:[{id,label,required,maxMB,enabled}], expiryReminderDays }
-  branding           String?   // { tagline, loginTitle, footerNote, logoUrl }
-  preferences        String?   // { language, currency, dateFormat, timeFormat, itemsPerPage, soundAlerts, emailDigest, autoLogout }
-  appearance         String?   // { accent, density, radius }
+  documentsConfig    String? // { kycDocs:[{id,label,required,maxMB,enabled}], expiryReminderDays }
+  branding           String? // { tagline, loginTitle, footerNote, logoUrl }
+  preferences        String? // { language, currency, dateFormat, timeFormat, itemsPerPage, soundAlerts, emailDigest, autoLogout }
+  appearance         String? // { accent, density, radius }
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 }
@@ -57,6 +115,7 @@ model Hotel {
 // the serial with the running number stripped (e.g. "RA/2026-27/06/") — so NN
 // restarts at 1 each booking day. `next` is the value to assign on the next
 // invoice in that bucket. Incremented atomically; (hotelId, period) is unique.
+// Hotel is per-property, so hotelId already partitions the series per property.
 model InvoiceCounter {
   id      String @id @default(cuid())
   hotelId String
@@ -66,61 +125,56 @@ model InvoiceCounter {
   @@unique([hotelId, period])
 }
 
-model Property {
-  id        String   @id @default(cuid())
-  name      String
-  address   String?
-  phone     String?
-  gstin     String?
-  status    String   @default("active")
-  createdAt DateTime @default(now())
-  rooms     Room[]
-}
-
 model RoomType {
-  id              String @id @default(cuid())
-  name            String @unique
-  dailyRate       Float  @default(500)
-  monthlyRate     Float  @default(10000)
-  peakDailyRate   Float  @default(700)
-  peakMonthlyRate Float  @default(14000)
-  maxOccupancy    Int    @default(2)
+  id              String   @id @default(cuid())
+  propertyId      String
+  property        Property @relation(fields: [propertyId], references: [id])
+  name            String
+  dailyRate       Float    @default(500)
+  monthlyRate     Float    @default(10000)
+  peakDailyRate   Float    @default(700)
+  peakMonthlyRate Float    @default(14000)
+  maxOccupancy    Int      @default(2)
   rooms           Room[]
+
+  @@unique([propertyId, name])
 }
 
 model Room {
-  id                 String              @id @default(cuid())
-  // Uniqueness is enforced by a PARTIAL unique index (number WHERE deletedAt IS NULL)
-  // so a soft-deleted room frees its number for reuse. Prisma can't express partial
-  // indexes, so the index is managed in raw SQL — see the room_number_partial_unique
-  // migration. Do not re-add @unique here or it will recreate the full index.
-  number             String
-  qrToken            String?             @unique
-  typeId             String
-  type               RoomType            @relation(fields: [typeId], references: [id])
-  floor              Int                 @default(1)
-  status             String              @default("available")
-  dailyRate          Float               @default(500)
-  monthlyRate        Float               @default(10000)
-  propertyId         String?
-  property           Property?           @relation(fields: [propertyId], references: [id])
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  guests             Guest[]
-  bookings           Booking[]
+  id                  String               @id @default(cuid())
+  // Uniqueness is enforced by a PARTIAL unique index ((propertyId, number) WHERE
+  // deletedAt IS NULL) so a soft-deleted room frees its number for reuse and two
+  // properties can both have a "101". Prisma can't express partial indexes, so the
+  // index is managed in raw SQL — see the multi_property migration. Do not add
+  // @unique / @@unique on number here or it will recreate a full index.
+  number              String
+  qrToken             String?              @unique
+  typeId              String
+  type                RoomType             @relation(fields: [typeId], references: [id])
+  floor               Int                  @default(1)
+  status              String               @default("available")
+  dailyRate           Float                @default(500)
+  monthlyRate         Float                @default(10000)
+  propertyId          String
+  property            Property             @relation(fields: [propertyId], references: [id])
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  guests              Guest[]
+  bookings            Booking[]
   maintenanceRequests MaintenanceRequest[]
-  housekeepingStatus HousekeepingStatus?
+  housekeepingStatus  HousekeepingStatus?
 
   // Soft delete: when set, the room is hidden from inventory/board/reports.
   // The record (and its bookings/QR token) is preserved. NULL = live.
-  deletedAt          DateTime?
+  deletedAt DateTime?
 
   @@index([deletedAt])
+  @@index([propertyId])
 }
 
 model Guest {
-  id              String     @id @default(cuid())
-  docId           String     @unique
+  id              String               @id @default(cuid())
+  docId           String
   name            String
   phone           String
   email           String?
@@ -129,45 +183,47 @@ model Guest {
   nationality     String?
   idType          String
   idNumber        String
-  tags            String     @default("[]")
+  tags            String               @default("[]")
   notes           String?
   address         String?
   emergencyName   String?
   emergencyPhone  String?
-  stayType        String     @default("daily")
+  stayType        String               @default("daily")
   roomId          String
-  room            Room       @relation(fields: [roomId], references: [id])
+  room            Room                 @relation(fields: [roomId], references: [id])
   checkInDate     DateTime
   checkOutDate    DateTime?
   months          Int?
   roomRate        Float
   deposit         Float?
-  occupants       Int        @default(1)
+  occupants       Int                  @default(1)
   specialRequests String?
-  status          String     @default("Active")
+  status          String               @default("Active")
   foodPlan        String?
-  stayCount       Int        @default(1)
-  amenities       String     @default("[]")
-  facilities      String     @default("[]")
-  source          String     @default("walk_in")
-  whatsappOptIn   Boolean    @default(true)
-  selfCheckedIn   Boolean    @default(false)
+  stayCount       Int                  @default(1)
+  amenities       String               @default("[]")
+  facilities      String               @default("[]")
+  source          String               @default("walk_in")
+  whatsappOptIn   Boolean              @default(true)
+  selfCheckedIn   Boolean              @default(false)
   signature       String?
-  propertyId      String?
+  propertyId      String
+  property        Property             @relation(fields: [propertyId], references: [id])
   documents       Document[]
   invoices        Invoice[]
   payments        Payment[]
   reminders       Reminder[]
   bookings        Booking[]
   communications  GuestCommunication[]
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
 
   // Soft delete: when set, the guest is hidden from lists/stats/reports and no
   // longer blocks their room, but the record (and its invoices/payments/docs)
   // is preserved. NULL = live.
-  deletedAt       DateTime?
+  deletedAt DateTime?
 
+  @@unique([propertyId, docId])
   @@index([deletedAt])
 }
 
@@ -182,111 +238,121 @@ model Document {
 }
 
 model Invoice {
-  id          String    @id @default(cuid())
-  invoiceNo   String    @unique
-  guestId     String
-  guest       Guest     @relation(fields: [guestId], references: [id])
-  period      String
-  rent        Float
-  food        Float     @default(0)
-  amenities   Float     @default(0)
-  gstRate     Float
-  gstAmount   Float
-  total       Float
-  amountPaid  Float     @default(0)
-  hsnCode     String?
-  gstSlab     Float?
-  status      String    @default("Pending")
-  createdAt   DateTime  @default(now())
-  paidAt      DateTime?
-  payments    Payment[]
+  id         String    @id @default(cuid())
+  propertyId String
+  property   Property  @relation(fields: [propertyId], references: [id])
+  invoiceNo  String
+  guestId    String
+  guest      Guest     @relation(fields: [guestId], references: [id])
+  period     String
+  rent       Float
+  food       Float     @default(0)
+  amenities  Float     @default(0)
+  gstRate    Float
+  gstAmount  Float
+  total      Float
+  amountPaid Float     @default(0)
+  hsnCode    String?
+  gstSlab    Float?
+  status     String    @default("Pending")
+  createdAt  DateTime  @default(now())
+  paidAt     DateTime?
+  payments   Payment[]
 
   // Soft delete: when set, the invoice is hidden from billing lists/stats, the
   // guest ledger, the cash register and revenue/GST reports, but the row (and
   // its payments) is preserved. NULL = live.
-  deletedAt   DateTime?
+  deletedAt DateTime?
 
+  @@unique([propertyId, invoiceNo])
   @@index([deletedAt])
 }
 
 model Payment {
-  id        String   @id @default(cuid())
-  guestId   String
-  guest     Guest    @relation(fields: [guestId], references: [id])
-  invoiceId String?
-  invoice   Invoice? @relation(fields: [invoiceId], references: [id])
-  amount    Float
-  method    String   @default("cash")
-  reference String?
-  type      String   @default("collection")
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  guestId    String
+  guest      Guest    @relation(fields: [guestId], references: [id])
+  invoiceId  String?
+  invoice    Invoice? @relation(fields: [invoiceId], references: [id])
+  amount     Float
+  method     String   @default("cash")
+  reference  String?
+  type       String   @default("collection")
+  createdAt  DateTime @default(now())
+
+  @@index([propertyId, createdAt])
 }
 
 model Booking {
-  id                  String    @id @default(cuid())
-  bookingNo           String    @unique
-  // Tax-invoice serial, assigned on first invoice generation from the hotel's
+  id        String  @id @default(cuid())
+  bookingNo String
+  // Tax-invoice serial, assigned on first invoice generation from the property's
   // invoice config (prefix + running counter). Editable per invoice. NULL until
-  // an invoice has been generated. Unique across bookings (NULLs are distinct).
-  invoiceNo           String?   @unique
+  // an invoice has been generated. Unique per property (NULLs are distinct).
+  invoiceNo String?
 
   // ── Guest details (inline) + optional link to a Guest record ──
-  guestName           String
-  guestPhone          String?
-  guestEmail          String?
-  guestAddress        String?
-  nationality         String?
-  idType              String?
-  idNumber            String?
-  adults              Int       @default(1)
-  children            Int       @default(0)
-  guestId             String?
-  guest               Guest?    @relation(fields: [guestId], references: [id])
+  guestName    String
+  guestPhone   String?
+  guestEmail   String?
+  guestAddress String?
+  nationality  String?
+  idType       String?
+  idNumber     String?
+  adults       Int     @default(1)
+  children     Int     @default(0)
+  guestId      String?
+  guest        Guest?  @relation(fields: [guestId], references: [id])
 
   // ── Room + stay ──
-  roomId              String
-  room                Room      @relation(fields: [roomId], references: [id])
-  stayType            String    @default("daily")     // daily | monthly
-  fromDate            DateTime
-  toDate              DateTime?
-  months              Int?
-  nights              Int?
+  roomId   String
+  room     Room      @relation(fields: [roomId], references: [id])
+  stayType String    @default("daily") // daily | monthly
+  fromDate DateTime
+  toDate   DateTime?
+  months   Int?
+  nights   Int?
 
   // ── Pricing breakdown ──
-  roomRate            Float     @default(0)
-  subtotal            Float     @default(0)
-  discount            Float     @default(0)
-  taxRate             Float     @default(0)
-  taxAmount           Float     @default(0)
-  extraCharges        Float     @default(0)
-  amount              Float                            // grand total
-  advance             Float     @default(0)
-  balance             Float     @default(0)
-  paymentStatus       String    @default("unpaid")     // unpaid | partial | paid
+  roomRate      Float  @default(0)
+  subtotal      Float  @default(0)
+  discount      Float  @default(0)
+  taxRate       Float  @default(0)
+  taxAmount     Float  @default(0)
+  extraCharges  Float  @default(0)
+  amount        Float // grand total
+  advance       Float  @default(0)
+  balance       Float  @default(0)
+  paymentStatus String @default("unpaid") // unpaid | partial | paid
 
   // ── Meta + lifecycle ──
-  notes               String?
-  specialRequests     String?
-  source              String    @default("walk_in")    // walk_in | phone | website | ota | referral | corporate
-  status              String    @default("Pending")    // Pending | Confirmed | CheckedIn | CheckedOut | Cancelled | NoShow
-  confirmedAt         DateTime?
-  checkedInAt         DateTime?
-  checkedOutAt        DateTime?
-  cancelledAt         DateTime?
-  cancelReason        String?
+  notes           String?
+  specialRequests String?
+  source          String    @default("walk_in") // walk_in | phone | website | ota | referral | corporate
+  status          String    @default("Pending") // Pending | Confirmed | CheckedIn | CheckedOut | Cancelled | NoShow
+  confirmedAt     DateTime?
+  checkedInAt     DateTime?
+  checkedOutAt    DateTime?
+  cancelledAt     DateTime?
+  cancelReason    String?
 
   selfCheckinToken    String?
-  selfCheckinComplete Boolean   @default(false)
-  propertyId          String?
+  selfCheckinComplete Boolean           @default(false)
+  propertyId          String
+  property            Property          @relation(fields: [propertyId], references: [id])
   documents           BookingDocument[]
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
   // Soft delete: when set, the booking is hidden from all lists/stats and no
   // longer blocks its room, but the record (and its payment/invoice history)
   // is preserved. NULL = live.
-  deletedAt           DateTime?
+  deletedAt DateTime?
 
+  @@unique([propertyId, bookingNo])
+  @@unique([propertyId, invoiceNo])
   @@index([deletedAt])
 }
 
@@ -304,30 +370,38 @@ model BookingDocument {
 }
 
 model Notification {
-  id        String   @id @default(cuid())
-  type      String   @default("info")
-  message   String
-  dismissed Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  type       String   @default("info")
+  message    String
+  dismissed  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([propertyId])
 }
 
 model User {
-  id             String   @id @default(cuid())
-  name           String
-  email          String   @unique
-  password       String
-  roleId         String?
-  roleRef        Role?    @relation(fields: [roleId], references: [id])
+  id                 String           @id @default(cuid())
+  name               String
+  email              String           @unique
+  password           String
+  // Organisation-level role. If it isOwner the user has full access to every
+  // property. For everyone else, per-property roles live in PropertyAccess and
+  // this field is only the default role offered when assigning a new property.
+  roleId             String?
+  roleRef            Role?            @relation(fields: [roleId], references: [id])
+  propertyAccess     PropertyAccess[]
   // Protected super-admin (seeded on every boot): role/status immutable, cannot be deleted.
-  isSuperAdmin   Boolean  @default(false)
-  status         String   @default("active")
-  phone          String?
+  isSuperAdmin       Boolean          @default(false)
+  status             String           @default("active")
+  phone              String?
   // Set when an account is created/reset with the shared default password.
   // Wired but not yet enforced (password change is optional for now).
-  mustChangePassword Boolean @default(false)
-  sessionVersion Int      @default(0)   // bumped on every login (and on role/password change) → stale tokens rejected
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  mustChangePassword Boolean          @default(false)
+  sessionVersion     Int              @default(0) // bumped on every login (and on role/password change) → stale tokens rejected
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 
   @@index([roleId])
 }
@@ -344,22 +418,23 @@ enum AccessLevel {
 }
 
 model Role {
-  id          String           @id @default(cuid())
-  name        String           @unique
-  description String?
-  isSystem    Boolean          @default(false)  // seeded roles: protected from deletion
-  isOwner     Boolean          @default(false)  // implicit full access — bypasses permission checks
-  users       User[]
-  permissions RolePermission[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id             String           @id @default(cuid())
+  name           String           @unique
+  description    String?
+  isSystem       Boolean          @default(false) // seeded roles: protected from deletion
+  isOwner        Boolean          @default(false) // implicit full access — bypasses permission checks
+  users          User[]
+  propertyAccess PropertyAccess[]
+  permissions    RolePermission[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
 
 model RolePermission {
   id     String      @id @default(cuid())
   roleId String
   role   Role        @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  module String                          // one of the module keys (validated in code)
+  module String // one of the module keys (validated in code)
   level  AccessLevel @default(NONE)
 
   @@unique([roleId, module])
@@ -369,9 +444,9 @@ model RolePermission {
 // Audit trail for authorization-sensitive actions (role/user/permission/password changes).
 model AuditLog {
   id        String   @id @default(cuid())
-  userId    String?                       // actor (no FK — survives user deletion)
-  action    String                        // e.g. role.create, user.role_change, user.password_change
-  entity    String?                       // role | user | …
+  userId    String? // actor (no FK — survives user deletion)
+  action    String // e.g. role.create, user.role_change, user.password_change
+  entity    String? // role | user | …
   entityId  String?
   detail    String?
   ip        String?
@@ -385,7 +460,7 @@ model AuditLog {
 model PasswordResetToken {
   id        String    @id @default(cuid())
   userId    String
-  tokenHash String                       // sha256 of the raw token (raw value only ever sent in email)
+  tokenHash String // sha256 of the raw token (raw value only ever sent in email)
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
@@ -396,7 +471,7 @@ model PasswordResetToken {
 model LoginOtp {
   id        String    @id @default(cuid())
   email     String
-  codeHash  String                       // sha256 of the 6-digit code
+  codeHash  String // sha256 of the 6-digit code
   expiresAt DateTime
   attempts  Int       @default(0)
   usedAt    DateTime?
@@ -406,41 +481,57 @@ model LoginOtp {
 }
 
 model FoodPlan {
-  id          String  @id @default(cuid())
-  name        String  @unique
+  id          String   @id @default(cuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id])
+  name        String
   description String?
-  oneTimeRate Float   @default(0)
-  weeklyRate  Float   @default(0)
-  monthlyRate Float   @default(0)
-  active      Boolean @default(true)
+  oneTimeRate Float    @default(0)
+  weeklyRate  Float    @default(0)
+  monthlyRate Float    @default(0)
+  active      Boolean  @default(true)
+
+  @@unique([propertyId, name])
 }
 
 model Amenity {
-  id          String  @id @default(cuid())
-  name        String  @unique
-  dailyRate   Float   @default(0)
-  monthlyRate Float   @default(0)
-  chargeable  Boolean @default(true)
+  id          String   @id @default(cuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id])
+  name        String
+  dailyRate   Float    @default(0)
+  monthlyRate Float    @default(0)
+  chargeable  Boolean  @default(true)
+
+  @@unique([propertyId, name])
 }
 
 // ─── ADDON 1: SMART PRICING ───────────────────────────────────────────────────
 
 model PricingRule {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id])
   name        String
   triggerType String
   threshold   Float
   adjustment  Float
-  active      Boolean @default(true)
+  active      Boolean  @default(true)
   createdAt   DateTime @default(now())
+
+  @@index([propertyId])
 }
 
 model CompetitorRate {
   id           String   @id @default(cuid())
+  propertyId   String
+  property     Property @relation(fields: [propertyId], references: [id])
   name         String
   roomType     String
   theirRate    Float
   recordedDate DateTime @default(now())
+
+  @@index([propertyId])
 }
 
 // ─── ADDON 2: WHATSAPP / MESSAGING ───────────────────────────────────────────
@@ -458,32 +549,40 @@ model Reminder {
 }
 
 model MessageTemplate {
-  id      String  @id @default(cuid())
-  trigger String  @unique
-  content String
-  active  Boolean @default(true)
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  trigger    String
+  content    String
+  active     Boolean  @default(true)
+
+  @@unique([propertyId, trigger])
 }
 
 // ─── ADDON 3: MAINTENANCE ─────────────────────────────────────────────────────
 
 model MaintenanceRequest {
   id          String            @id @default(cuid())
-  ticketNo    String            @unique
+  propertyId  String
+  property    Property          @relation(fields: [propertyId], references: [id])
+  ticketNo    String
   roomId      String
   room        Room              @relation(fields: [roomId], references: [id])
-  category    String            @default("Other")   // Plumbing | Electrical | HVAC | Furniture | Housekeeping | Other
+  category    String            @default("Other") // Plumbing | Electrical | HVAC | Furniture | Housekeeping | Other
   title       String
-  issueType   String?                                // legacy alias for category
+  issueType   String? // legacy alias for category
   description String?
-  priority    String            @default("Medium")   // Low | Medium | High | Urgent
+  priority    String            @default("Medium") // Low | Medium | High | Urgent
   reportedBy  String            @default("Front Desk")
   assignedTo  String?
-  status      String            @default("Open")     // Open | In Progress | Resolved
+  status      String            @default("Open") // Open | In Progress | Resolved
   photoUrl    String?
   notes       MaintenanceNote[]
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   resolvedAt  DateTime?
+
+  @@unique([propertyId, ticketNo])
 }
 
 model MaintenanceNote {
@@ -497,12 +596,16 @@ model MaintenanceNote {
 
 model MaintenanceSchedule {
   id         String    @id @default(cuid())
+  propertyId String
+  property   Property  @relation(fields: [propertyId], references: [id])
   roomType   String
   task       String
   frequency  String
   assignedTo String?
   lastDone   DateTime?
   nextDue    DateTime
+
+  @@index([propertyId])
 }
 
 // ─── ADDON 4: STAFF ───────────────────────────────────────────────────────────
@@ -526,18 +629,26 @@ model HousekeepingStatus {
 
 model LinenRecord {
   id          String   @id @default(cuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id])
   roomId      String
   lastChanged DateTime
   nextDue     DateTime
   changedBy   String
+
+  @@index([propertyId])
 }
 
 model RoomInspection {
-  id        String   @id @default(cuid())
-  roomId    String
-  staffId   String
-  checklist String   @default("[]")
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  roomId     String
+  staffId    String
+  checklist  String   @default("[]")
+  createdAt  DateTime @default(now())
+
+  @@index([propertyId])
 }
 
 // ─── ADDON 15: GUEST PORTAL ───────────────────────────────────────────────────
@@ -558,10 +669,10 @@ model GuestCommunication {
   id        String   @id @default(cuid())
   guestId   String
   guest     Guest    @relation(fields: [guestId], references: [id], onDelete: Cascade)
-  channel   String   @default("note")    // whatsapp | sms | email | call | note
+  channel   String   @default("note") // whatsapp | sms | email | call | note
   direction String   @default("outbound") // inbound | outbound
   subject   String?
   content   String
-  staff     String?                        // who logged / sent it
+  staff     String? // who logged / sent it
   createdAt DateTime @default(now())
 }

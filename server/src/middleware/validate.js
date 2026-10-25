@@ -107,6 +107,35 @@ export const schemas = {
     phone:    z.string().max(20).optional().nullable(),
     status:   z.enum(['active', 'inactive']).optional(),
   }),
+  // Owner-only: the full set of properties a non-owner user can open, with the
+  // role they hold at each. Replaces the user's existing assignments.
+  setUserAccess: z.object({
+    access: z.array(z.object({
+      propertyId: z.string().min(1),
+      roleId:     z.string().cuid('Invalid role'),
+    })).max(200),
+  }),
+
+  // Properties (owner-only)
+  setPropertyMember: z.object({
+    roleId: z.string().cuid('Invalid role'),
+  }),
+  createProperty: z.object({
+    name:    z.string().min(2).max(100).trim(),
+    code:    z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{2,10}$/, 'Code must be 2–10 letters, digits or dashes').optional(),
+    address: z.string().max(300).optional().nullable(),
+    phone:   z.string().max(20).optional().nullable(),
+    email:   z.string().email().optional().nullable(),
+    gstin:   z.string().max(20).optional().nullable(),
+    // Copy room types, food plans, amenities and tax/invoice settings from an
+    // existing property so a new branch starts configured.
+    copyFromPropertyId: z.string().min(1).optional().nullable(),
+  }),
+  updateProperty: z.object({
+    name:   z.string().min(2).max(100).trim().optional(),
+    code:   z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{2,10}$/, 'Code must be 2–10 letters, digits or dashes').optional(),
+    status: z.enum(['active', 'archived']).optional(),
+  }),
 
   // Roles (RBAC). Module/level pairs are additionally validated against the central
   // MODULES list in the controller. permissions may be an array or a {module:level} map.
@@ -136,7 +165,6 @@ export const schemas = {
     status:      z.enum(['available', 'occupied', 'maintenance', 'reserved']).default('available'),
     dailyRate:   z.number().positive().max(100000),
     monthlyRate: z.number().positive().max(3000000),
-    propertyId:  z.string().cuid().optional().nullable(),
   }),
 
   // Guests

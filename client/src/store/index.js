@@ -70,4 +70,16 @@ if (typeof window !== 'undefined') {
     const { token, currentUser } = store.getState().auth
     if (token || currentUser) store.dispatch(clearCredentials())
   })
+
+  // Mirror the active property into localStorage, where the axios client reads it
+  // for the X-Property-Id header (same pattern as the token; avoids a store ↔ api
+  // import cycle). Covers login, switching, and rehydration on reload.
+  let lastPropertyId
+  store.subscribe(() => {
+    const id = store.getState().auth.activePropertyId
+    if (id === lastPropertyId) return
+    lastPropertyId = id
+    if (id) localStorage.setItem('qv_property', id)
+    else localStorage.removeItem('qv_property')
+  })
 }

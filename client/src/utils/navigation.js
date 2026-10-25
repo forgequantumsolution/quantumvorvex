@@ -1,7 +1,7 @@
 import {
   LuLayoutDashboard, LuCalendarCheck, LuCalendarX, LuWrench,
   LuUsers, LuBedDouble, LuFileText, LuUtensils, LuSparkles,
-  LuCreditCard, LuChartColumn, LuUserCog, LuSettings,
+  LuCreditCard, LuChartColumn, LuUserCog, LuSettings, LuBuilding2,
 } from 'react-icons/lu'
 
 // Single source of truth for the app's navigation structure — consumed by the
@@ -10,6 +10,7 @@ export const NAV_SECTIONS = [
   {
     label: 'Overview',
     items: [
+      { id: 'portfolio',     label: 'Portfolio',     Icon: LuBuilding2 },
       { id: 'today',         label: 'Today',         Icon: LuLayoutDashboard },
     ],
   },

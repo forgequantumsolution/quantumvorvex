@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
+import { runUnscoped, runWithProperty } from '../utils/propertyContext.js'
 
 const YEAR = 2026
 
@@ -94,10 +95,12 @@ export const getPublicRoom = async (req, res) => {
   try {
     const token = req.query.t
     if (!token) return res.status(400).json({ message: 'Missing QR token.', code: 'ERR_QR_MISSING' })
-    const room = await prisma.room.findUnique({
+    // Public route: no property context yet — the QR token (globally unique)
+    // identifies the room, and with it the property.
+    const room = await runUnscoped(() => prisma.room.findUnique({
       where: { qrToken: String(token) },
       select: { number: true, floor: true },
-    })
+    }))
     if (!room) return res.status(404).json({ message: 'This QR code is not recognised.', code: 'ERR_QR_INVALID' })
     res.json({ room })
   } catch (e) {
@@ -112,41 +115,47 @@ export const getPublicRoom = async (req, res) => {
 export const createGuestRequest = async (req, res) => {
   try {
     const { qrToken, category, title, description } = req.body
-    const room = await prisma.room.findUnique({ where: { qrToken } })
+    const room = await runUnscoped(() => prisma.room.findUnique({ where: { qrToken } }))
     if (!room) return res.status(404).json({ message: 'This QR code is not recognised.', code: 'ERR_QR_INVALID' })
 
-    const ticketNo = await generateTicketNo()
-    const request = await prisma.maintenanceRequest.create({
-      data: {
-        ticketNo,
-        roomId: room.id,
-        category: category || 'Other',
-        issueType: category || 'Other',
-        title,
-        description: description ?? null,
-        priority: 'Medium',
-        reportedBy: `Guest – Room ${room.number}`,
-        status: 'Open',
-      },
-      include,
-    })
-
-    // A guest-reported issue also moves the room into maintenance.
-    if (room.status !== 'maintenance') {
-      await prisma.room.update({ where: { id: room.id }, data: { status: 'maintenance' } })
-    }
-
-    // Surface guest-reported issues to the team.
-    await prisma.notification.create({
-      data: { type: 'info', message: `Guest reported: ${title} in Room ${room.number} (${ticketNo})` },
-    })
-
-    logger.info('Guest maintenance ticket created', { event: 'MAINTENANCE', ticketNo, source: 'guest-qr' })
+    // Everything below is written into the room's own property.
+    const ticketNo = await runWithProperty(room.propertyId, () => createGuestTicket(room, { category, title, description }))
+    logger.info('Guest maintenance ticket created', { event: 'MAINTENANCE', ticketNo, source: 'guest-qr', propertyId: room.propertyId })
     res.status(201).json({ ticketNo, room: { number: room.number } })
   } catch (e) {
     logger.error('createGuestRequest error', { error: e.message })
     res.status(500).json({ message: 'Internal server error.' })
   }
+}
+
+// Creates the ticket, flags the room and notifies staff — inside the room's property.
+const createGuestTicket = async (room, { category, title, description }) => {
+  const ticketNo = await generateTicketNo()
+  const request = await prisma.maintenanceRequest.create({
+    data: {
+      ticketNo,
+      roomId: room.id,
+      category: category || 'Other',
+      issueType: category || 'Other',
+      title,
+      description: description ?? null,
+      priority: 'Medium',
+      reportedBy: `Guest – Room ${room.number}`,
+      status: 'Open',
+    },
+    include,
+  })
+
+  // A guest-reported issue also moves the room into maintenance.
+  if (room.status !== 'maintenance') {
+    await prisma.room.update({ where: { id: room.id }, data: { status: 'maintenance' } })
+  }
+
+  // Surface guest-reported issues to the team.
+  await prisma.notification.create({
+    data: { type: 'info', message: `Guest reported: ${title} in Room ${room.number} (${ticketNo})` },
+  })
+  return ticketNo
 }
 
 // PUT /maintenance/:id

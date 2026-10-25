@@ -8,7 +8,7 @@ import Tabs from '../../ui/Tabs'
 import FormikField from '../../ui/FormikField'
 import { useToast } from '../../../hooks/useToast'
 import { useAppSelector, useAppDispatch } from '../../../store/hooks'
-import { setCredentials } from '../../../store/slices/authSlice'
+import { setCredentials, selectActiveProperty, selectProperties } from '../../../store/slices/authSlice'
 import { useCan } from '../../../hooks/useCan'
 import { usersApi, rolesApi, authApi } from '../../../api/client'
 import { userSchema } from '../../../validation/userSchema'
@@ -43,7 +43,7 @@ function Avatar({ name, color = '#6b7280', size = 34 }) {
 }
 
 // ─── Add / Edit User Modal ──────────────────────────────────────────────────────
-function UserModal({ isOpen, onClose, user, roles, onSave }) {
+function UserModal({ isOpen, onClose, user, roles, propertyName, onSave }) {
   const isEdit = !!user
   const isSuper = !!user?.isSuperAdmin
   const defaultRoleId = roles.find((r) => r.name === 'Staff')?.id || roles[0]?.id || ''
@@ -99,6 +99,13 @@ function UserModal({ isOpen, onClose, user, roles, onSave }) {
                 This is the protected super-admin — role and status are locked. You can still update the name and password.
               </p>
             )}
+            {!isSuper && propertyName && (
+              <p className="mt-[-6px] mb-0 text-[11px] text-ink3">
+                {isEdit ? 'The role applies at ' : 'The user gets access to '}
+                <strong className="text-ink2">{propertyName}</strong>
+                {isEdit ? '. Owner gives access to every property.' : ' with this role. Owner gives access to every property.'}
+              </p>
+            )}
             {isEdit ? (
               <FormikField
                 name="password"
@@ -122,7 +129,26 @@ function UserModal({ isOpen, onClose, user, roles, onSave }) {
 }
 
 // ─── Users Tab ──────────────────────────────────────────────────────────────────
-function UsersTab({ users, roles, canManage, onAdd, onEdit, onToggleStatus, onDelete }) {
+// Where a user works: owners everywhere, everyone else per property with a role.
+function AccessChips({ user }) {
+  if (user.isOwner) return <Badge type="gold">All properties</Badge>
+  if (!user.access?.length) return <span className="t-xs text-ink3">None</span>
+  return (
+    <div className="flex flex-wrap gap-1">
+      {user.access.map((a) => (
+        <span
+          key={a.propertyId}
+          title={`${a.propertyName} — ${a.roleName}`}
+          className="inline-flex items-center gap-1 text-[10.5px] px-1.5 py-[2px] rounded-[4px] bg-surface2 border border-line text-ink2 whitespace-nowrap"
+        >
+          <strong style={{ fontFamily: 'var(--font-mono)' }}>{a.propertyCode}</strong> {a.roleName}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function UsersTab({ users, roles, canManage, isOwner, multiProperty, onAdd, onEdit, onAccess, onToggleStatus, onDelete }) {
   return (
     <div>
       {canManage && (
@@ -136,7 +162,8 @@ function UsersTab({ users, roles, canManage, onAdd, onEdit, onToggleStatus, onDe
             <tr>
               <th>User</th>
               <th>Phone</th>
-              <th>Role</th>
+              <th>{multiProperty ? 'Role here' : 'Role'}</th>
+              {multiProperty && <th>Properties</th>}
               <th>Status</th>
               <th>Created</th>
               {canManage && <th>Actions</th>}
@@ -160,7 +187,12 @@ function UsersTab({ users, roles, canManage, onAdd, onEdit, onToggleStatus, onDe
                   </div>
                 </td>
                 <td className="text-[12px]" style={{ fontFamily: 'var(--font-mono)' }}>{u.phone || '—'}</td>
-                <td><Badge type={u.roleRef?.isOwner ? 'gold' : 'purple'}>{u.roleRef?.name || '—'}</Badge></td>
+                <td>
+                  {u.roleRef
+                    ? <Badge type={u.roleRef.isOwner ? 'gold' : 'purple'}>{u.roleRef.name}</Badge>
+                    : <span className="t-xs text-ink3">{multiProperty ? 'No access here' : '—'}</span>}
+                </td>
+                {multiProperty && <td className="max-w-[260px]"><AccessChips user={u} /></td>}
                 <td>
                   <Badge type={u.status === 'active' ? 'green' : 'grey'}>
                     {u.status === 'active' ? 'Active' : 'Inactive'}
@@ -171,6 +203,9 @@ function UsersTab({ users, roles, canManage, onAdd, onEdit, onToggleStatus, onDe
                   <td>
                     <div className="flex gap-[5px] flex-nowrap">
                       <button className="btn btn-xs btn-outline" onClick={() => onEdit(u)}>Edit</button>
+                      {isOwner && !u.isOwner && (
+                        <button className="btn btn-xs btn-outline" onClick={() => onAccess(u)}>Access</button>
+                      )}
                       {!u.isSuperAdmin && (
                         <>
                           <button
@@ -179,7 +214,7 @@ function UsersTab({ users, roles, canManage, onAdd, onEdit, onToggleStatus, onDe
                           >
                             {u.status === 'active' ? 'Deactivate' : 'Reactivate'}
                           </button>
-                          <button className="btn btn-xs btn-danger" onClick={() => onDelete(u)}>Delete</button>
+                          <button className="btn btn-xs btn-danger" onClick={() => onDelete(u)}>{isOwner ? 'Delete' : 'Remove'}</button>
                         </>
                       )}
                     </div>
@@ -192,6 +227,97 @@ function UsersTab({ users, roles, canManage, onAdd, onEdit, onToggleStatus, onDe
       </div>
       {users.length === 0 && <div className="empty-state">No users yet.</div>}
     </div>
+  )
+}
+
+// ─── Property Access Modal (owner) ──────────────────────────────────────────────
+// Pick every property a non-owner can open and the role they hold at each one.
+function AccessModal({ user, properties, roles, onClose, onSave }) {
+  const assignable = roles.filter((r) => !r.isOwner)
+  const fallbackRole = assignable.find((r) => r.name === 'Staff')?.id || assignable[0]?.id || ''
+  const [access, setAccess] = useState(() =>
+    Object.fromEntries((user.access || []).map((a) => [a.propertyId, a.roleId])),
+  )
+  const [saving, setSaving] = useState(false)
+
+  const toggle = (id) => setAccess((a) => {
+    const next = { ...a }
+    if (next[id]) delete next[id]
+    else next[id] = user.roleRef && !user.roleRef.isOwner ? user.roleRef.id : fallbackRole
+    return next
+  })
+  const setRole = (id, roleId) => setAccess((a) => ({ ...a, [id]: roleId }))
+
+  async function save() {
+    setSaving(true)
+    await onSave(Object.entries(access).map(([propertyId, roleId]) => ({ propertyId, roleId })))
+    setSaving(false)
+  }
+
+  const count = Object.keys(access).length
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      title={`Property Access — ${user.name}`}
+      footer={
+        <>
+          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={save} disabled={saving}>
+            {saving ? 'Saving…' : 'Save Access'}
+          </button>
+        </>
+      }
+    >
+      <p className="t-sm text-ink3 mt-0 mb-3.5">
+        Choose the properties {user.name} can open and the role they have at each one.
+      </p>
+      <div className="overflow-x-auto">
+        <table>
+          <thead>
+            <tr><th className="w-[44px]">Access</th><th>Property</th><th className="min-w-[160px]">Role there</th></tr>
+          </thead>
+          <tbody>
+            {properties.map((p) => {
+              const on = !!access[p.id]
+              return (
+                <tr key={p.id} className={on ? '' : 'opacity-60'}>
+                  <td className="text-center">
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      onChange={() => toggle(p.id)}
+                      aria-label={`Access to ${p.name}`}
+                      className="w-4 h-4 cursor-pointer accent-[var(--gold)]"
+                    />
+                  </td>
+                  <td>
+                    <div className="t-title">{p.name}</div>
+                    <div className="t-xs text-ink3" style={{ fontFamily: 'var(--font-mono)' }}>
+                      {p.code}{p.status === 'archived' ? ' · archived' : ''}
+                    </div>
+                  </td>
+                  <td>
+                    <select
+                      className="form-select t-xs px-1.5 py-1 min-w-[140px]"
+                      value={access[p.id] || ''}
+                      disabled={!on}
+                      onChange={(e) => setRole(p.id, e.target.value)}
+                    >
+                      {!on && <option value="">—</option>}
+                      {assignable.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      {count === 0 && (
+        <p className="t-xs text-danger mt-3 mb-0">With no properties selected, {user.name} won't be able to use the app.</p>
+      )}
+    </Modal>
   )
 }
 
@@ -393,6 +519,10 @@ export default function UsersRoles() {
   const currentUser = useAppSelector((s) => s.auth.currentUser)
   const canManageUsers = useCan('users', 'MANAGE')                 // user CRUD needs users:manage
   const canManageRoles = !!currentUser?.isOwner // role management is owner-only
+  const isOwner = !!currentUser?.isOwner
+  const activeProperty = useAppSelector(selectActiveProperty)
+  const properties = useAppSelector(selectProperties)
+  const multiProperty = isOwner || properties.length > 1
   const addToast = useToast()
 
   const [activeTab, setActiveTab] = useState('users')
@@ -404,6 +534,7 @@ export default function UsersRoles() {
 
   const [userModal, setUserModal] = useState(null)     // { user } | { user: null } | null
   const [roleModal, setRoleModal] = useState(null)     // { role } | { role: null } | null
+  const [accessModal, setAccessModal] = useState(null) // user | null
   const [confirm, setConfirm]     = useState(null)     // { kind: 'user'|'role', item } | null
   const [deleting, setDeleting]   = useState(false)
 
@@ -445,6 +576,17 @@ export default function UsersRoles() {
     }
   }
 
+  async function saveAccess(access) {
+    try {
+      await usersApi.setAccess(accessModal.id, access)
+      addToast(`Property access updated for ${accessModal.name}.`, 'success')
+      setAccessModal(null)
+      loadAll()
+    } catch (err) {
+      addToast(err.response?.data?.error || 'Could not update property access.', 'error')
+    }
+  }
+
   async function toggleUserStatus(u) {
     const status = u.status === 'active' ? 'inactive' : 'active'
     try {
@@ -462,9 +604,14 @@ export default function UsersRoles() {
     const { kind, item } = confirm
     setDeleting(true)
     try {
-      if (kind === 'user') await usersApi.remove(item.id)
-      else await rolesApi.remove(item.id)
-      addToast(kind === 'user' ? 'User deleted.' : 'Role deleted.', 'success')
+      let message = 'Role deleted.'
+      if (kind === 'user') {
+        const { data } = await usersApi.remove(item.id)
+        message = data?.removedFromProperty ? `${item.name} removed from ${activeProperty?.name || 'this property'}.` : 'User deleted.'
+      } else {
+        await rolesApi.remove(item.id)
+      }
+      addToast(message, 'success')
       setConfirm(null)
       loadAll()
     } catch (err) {
@@ -504,7 +651,11 @@ export default function UsersRoles() {
         <div>
           <h1 className="t-h1 m-0 tracking-[-0.02em]">Users &amp; Roles</h1>
           <p className="t-sm mt-[3px] mb-0 text-ink3">
-            Accounts and what each role can access
+            {!multiProperty
+              ? 'Accounts and what each role can access'
+              : isOwner
+                ? <>Everyone in your organisation · roles shown for <strong className="text-ink2">{activeProperty?.name}</strong></>
+                : <>The team at <strong className="text-ink2">{activeProperty?.name}</strong></>}
           </p>
         </div>
       </div>
@@ -520,8 +671,11 @@ export default function UsersRoles() {
             users={users}
             roles={roles}
             canManage={canManageUsers}
+            isOwner={isOwner}
+            multiProperty={multiProperty}
             onAdd={() => setUserModal({ user: null })}
             onEdit={(u) => setUserModal({ user: u })}
+            onAccess={(u) => setAccessModal(u)}
             onToggleStatus={toggleUserStatus}
             onDelete={(u) => setConfirm({ kind: 'user', item: u })}
           />
@@ -546,8 +700,19 @@ export default function UsersRoles() {
           isOpen
           onClose={() => setUserModal(null)}
           user={userModal.user}
-          roles={roles}
+          // Only an owner may hand out the org-wide Owner role.
+          roles={isOwner ? roles : roles.filter((r) => !r.isOwner)}
+          propertyName={multiProperty ? activeProperty?.name : null}
           onSave={saveUser}
+        />
+      )}
+      {accessModal && (
+        <AccessModal
+          user={accessModal}
+          properties={properties}
+          roles={roles}
+          onClose={() => setAccessModal(null)}
+          onSave={saveAccess}
         />
       )}
       {roleModal && (
@@ -566,12 +731,14 @@ export default function UsersRoles() {
         onConfirm={runDelete}
         busy={deleting}
         danger
-        title={confirm?.kind === 'role' ? 'Delete role' : 'Delete user'}
-        confirmLabel="Delete"
+        title={confirm?.kind === 'role' ? 'Delete role' : isOwner ? 'Delete user' : 'Remove from property'}
+        confirmLabel={confirm?.kind === 'user' && !isOwner ? 'Remove' : 'Delete'}
         message={
           confirm?.kind === 'role'
             ? <>Delete the <strong className="text-ink">{confirm?.item?.name}</strong> role? This cannot be undone.</>
-            : <>Delete <strong className="text-ink">{confirm?.item?.name}</strong>? This cannot be undone.</>
+            : isOwner
+              ? <>Delete <strong className="text-ink">{confirm?.item?.name}</strong>? This removes their account from every property and cannot be undone.</>
+              : <>Remove <strong className="text-ink">{confirm?.item?.name}</strong> from <strong className="text-ink">{activeProperty?.name}</strong>? Their access to other properties is not affected.</>
         }
       />
     </div>

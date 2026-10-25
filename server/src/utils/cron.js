@@ -1,7 +1,17 @@
 import cron from 'node-cron'
 import prisma from './prisma.js'
+import { runWithProperty } from './propertyContext.js'
 
+// Runs once per active property so every query is scoped and each notification
+// lands in the property it concerns.
 const checkOverdueGuests = async () => {
+  const properties = await prisma.property.findMany({ where: { status: 'active' }, select: { id: true } })
+  for (const { id } of properties) {
+    await runWithProperty(id, () => checkPropertyOverdue(id))
+  }
+}
+
+const checkPropertyOverdue = async (propertyId) => {
   try {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -52,10 +62,10 @@ const checkOverdueGuests = async () => {
     }
 
     if (overdueGuests.length > 0 || unpaidInvoices.length > 0) {
-      console.log(`[CRON] Processed ${overdueGuests.length} overdue guests, ${unpaidInvoices.length} overdue invoices.`)
+      console.log(`[CRON] Property ${propertyId}: processed ${overdueGuests.length} overdue guests, ${unpaidInvoices.length} overdue invoices.`)
     }
   } catch (err) {
-    console.error('[CRON] Error during overdue check:', err.message)
+    console.error(`[CRON] Error during overdue check for property ${propertyId}:`, err.message)
   }
 }
 

@@ -6,6 +6,85 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-10-25 · Assign staff from the property (Team & access)
+
+- `components/modules/properties/PropertyTeam.jsx` *(new)* — per-property team panel in Settings →
+  Properties ("Team & access"): list who works there with their role **at that property** (change it
+  inline), remove access, **add an existing person** with a role, or **invite a new person** (account
+  created directly in that property, temporary password shown once). Owners are listed as having
+  implicit access. Links to Users & Roles for creating roles such as Receptionist.
+- `PropertyManager.jsx` — a newly created property opens straight onto its team panel.
+- `api/client.js` — `propertiesApi.setMember` / `removeMember`, `usersApi.createIn(propertyId, data)`;
+  an explicit `X-Property-Id` on a request is no longer overwritten by the active property.
+
+---
+
+# Session — 2026-10-24 · Portfolio page redesign (industry-standard KPIs)
+
+## Summary
+Rebuilt `components/modules/portfolio/Portfolio.jsx` (nav label now **Portfolio**) around what hotel
+groups compare: tonight's occupancy as the hero figure; a KPI row with ADR, RevPAR, in-house,
+arrivals/departures, collections (month + today) and outstanding; a 14-night "on the books" forecast
+chart (hover tooltip per night, tonight emphasised); a **Needs attention** list (overbooking risk,
+out-of-order rooms, dues, sold-out nights — icon + text, each opens the right panel in that property);
+and a sortable **comparison table** with occupancy meter and a 7-night strip per property (row click
+or Enter switches property). Stacked cards under 768px; skeleton loading; error state with retry;
+search above 4 properties; archived properties behind a toggle.
+
+## Page header in the topbar
+- `components/layout/TopbarSlot.jsx` *(new)* — `title` / `actions` / `primary` slots in the Topbar
+  that a page fills via a portal, so its header shares the topbar row. Empty slots collapse; a page
+  title hides the date; a panel can set `PRIMARY_ACTIONS[panel] = null` to replace "New Booking".
+  Below 768px the slots are hidden and the page shows its header in-page.
+- Portfolio uses it: switcher │ Portfolio · summary … refresh · search · bell · **Add property**.
+
+## Styling
+- `index.css` — `--chart-accent` / `--chart-track` tokens. Brand gold is 2.3:1 on white, so chart
+  marks use `#a8862e` in light mode (validated ≥ 3:1) and brand gold in dark mode. `.pf-table` dense
+  cell padding for the comparison table.
+- Occupancy is a single-hue meter (not red/green) — high occupancy is good, not an alarm.
+
+---
+
+# Session — 2026-10-24 · Multi-property: switcher, portfolio, property & access management
+
+## Summary
+Frontend for the backend multi-property work (see `../server/CHANGES.md`). The app always works in
+one **active property**; every request carries it as `X-Property-Id`, and switching property reloads
+the current page with that property's data. Permissions shown in the UI are the user's role **at the
+active property**.
+
+## State + API
+- `store/slices/authSlice.js` — new `activePropertyId`, `setActiveProperty`, selectors
+  `selectProperties` / `selectActiveProperty`. Whenever the user or active property changes,
+  `currentUser.roleName` / `currentUser.permissions` are set from that property's entry in
+  `currentUser.properties`, so `useCan`, `canAccess` and the sidebar need no changes.
+- `store/index.js` — mirrors `activePropertyId` to `localStorage.qv_property`.
+- `api/client.js` — sends `X-Property-Id`; `invoiceUrl` adds `?propertyId=` for new-tab links;
+  `ERR_PROPERTY_FORBIDDEN` / `ERR_NO_PROPERTY` trigger the same access resync as `ERR_FORBIDDEN`;
+  new `propertiesApi`, `usersApi.setAccess`.
+
+## UI
+- `components/layout/PropertySwitcher.jsx` *(new)*, in the Topbar — code chip, name and your role
+  there; dropdown to switch, plus "All properties overview" and (owners) "Manage properties". Plain
+  label when you only have one property. The date is hidden under 768px to make room.
+- `components/modules/portfolio/Portfolio.jsx` *(new)* — **All Properties** panel (sidebar →
+  Overview): totals + a card per property (occupancy, in-house, arrivals, collected this month,
+  outstanding); a card switches to that property. Visible to owners and multi-property users.
+- `components/modules/properties/PropertyManager.jsx` *(new)* — replaces the "Pro plan" placeholder in
+  Settings → Properties: add (optionally copying another property's setup), rename / change code,
+  archive / restore, and "Who has access" per property.
+- `components/modules/users/UsersRoles.jsx` — "Role here" + "Properties" columns; owners get an
+  **Access** modal (tick properties, pick the role at each); non-owner admins "Remove" a user from the
+  current property instead of deleting the account; the Owner role is hidden from non-owners.
+- `App.jsx` — the active panel is keyed on the property (switching reloads it); a "No property
+  assigned" screen for users with no access; the sidebar name follows the active property (falls
+  back to the property name when the user can't read Settings).
+- `Settings.jsx` — accepts `navigateTo({ panel: 'settings', params: { tab } })`.
+- `utils/permissions.js` — `canSeePortfolio`; `utils/navigation.js` — "All Properties" nav item.
+
+---
+
 # Session — 2026-06-23 · Editable invoice number on the booking form
 
 ## Summary
