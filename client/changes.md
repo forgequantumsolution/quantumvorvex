@@ -6,6 +6,14 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-10-31 · Room prices for PGs
+
+- `components/modules/rooms/Rooms.jsx` — Add/Edit room no longer requires a daily price; any one price is
+  enough, so a PG can set monthly rent only. Rooms with 2+ beds show rent per bed (month/day) above the
+  whole-room prices. Room cards show the bed rent when set, otherwise the room's monthly and daily prices.
+
+---
+
 # Session — 2026-10-31 · Organization logo on invoices
 
 - `components/modules/billing/Billing.jsx` — the Billing invoice header showed hardcoded "Quantum Vorvex",

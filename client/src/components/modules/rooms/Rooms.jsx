@@ -323,11 +323,7 @@ function RoomEditForm({ room, onSave, onCancel }) {
         </div>
         {input('Floor', 'floor', 'number', { min: 1 })}
       </div>
-      <div className="grid grid-cols-2 gap-3 mt-3">
-        {input('Price / day (₹)', 'dailyRate', 'number', { min: 0, placeholder: 'e.g. 1500' })}
-        {input('Price / month (₹)', 'monthlyRate', 'number', { min: 0, placeholder: 'Optional' })}
-      </div>
-      <BedFields form={form} errors={errors} set={set} />
+      <BedAndPriceFields form={form} errors={errors} set={set} />
       <div className="flex justify-end gap-2 mt-3">
         <Button variant="outline" size="sm" onClick={onCancel} disabled={busy}>Cancel</Button>
         <Button variant="primary" size="sm" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</Button>
@@ -337,9 +333,9 @@ function RoomEditForm({ room, onSave, onCancel }) {
 }
 
 // API fields for the room's own prices (whole room, per day / per month).
-// A blank monthly price is left out: new rooms then take their type's rate.
+// A blank price is left out: new rooms then take their type's rate.
 const pricePayload = (form) => ({
-  dailyRate: Number(form.dailyRate),
+  ...(form.dailyRate !== '' && { dailyRate: Number(form.dailyRate) }),
   ...(form.monthlyRate !== '' && { monthlyRate: Number(form.monthlyRate) }),
 })
 
@@ -353,9 +349,11 @@ const bedPayload = (form) => {
   }
 }
 
-// Bed count + default per-bed rents (shared by Add room and the room detail).
-// Per-bed rents only matter once there's more than one bed to let separately.
-function BedFields({ form, set, errors = {} }) {
+// Bed count + prices (shared by Add room and the room detail). Per-bed rents only
+// matter once there's more than one bed to let separately. No single price is
+// required, so a PG can set monthly rent only; addRoomErrors wants at least one.
+function BedAndPriceFields({ form, set, errors = {} }) {
+  const hasBeds = Number(form.bedCount) > 1
   const input = (label, key, extra) => (
     <div>
       <label className="form-label block mb-[5px]">{label}</label>
@@ -365,16 +363,31 @@ function BedFields({ form, set, errors = {} }) {
     </div>
   )
   return (
-    <div className="mt-3">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {input('Beds', 'bedCount', { min: 1, max: 50, placeholder: '1' })}
-        {Number(form.bedCount) > 1 && input('Rent / bed / month (₹)', 'bedMonthlyRate', { placeholder: 'e.g. 6000' })}
-        {Number(form.bedCount) > 1 && input('Rent / bed / night (₹)', 'bedDailyRate', { placeholder: 'Optional' })}
+    <div className="mt-3 flex flex-col gap-3">
+      <div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {input('Beds', 'bedCount', { min: 1, max: 50, placeholder: '1' })}
+        </div>
+        <p className="t-xs text-ink3 mt-1.5 mb-0">
+          {hasBeds
+            ? 'At booking you choose: the whole room, or single beds (PG) — one booking per person.'
+            : 'Single bed — always booked as a whole room.'}
+        </p>
       </div>
-      <p className="t-xs text-ink3 mt-1.5 mb-0">
-        {Number(form.bedCount) > 1
-          ? 'At booking you choose: the whole room, or single beds (PG) — one booking per person.'
-          : 'Single bed — always booked as a whole room.'}
+      {hasBeds && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {input('Rent per bed / month (₹)', 'bedMonthlyRate', { placeholder: 'e.g. 6000' })}
+          {input('Rent per bed / day (₹)', 'bedDailyRate', { placeholder: 'Optional' })}
+        </div>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {input(hasBeds ? 'Whole room / month (₹)' : 'Price / month (₹)', 'monthlyRate', { placeholder: hasBeds ? 'Optional' : 'e.g. 9000' })}
+        {input(hasBeds ? 'Whole room / day (₹)' : 'Price / day (₹)', 'dailyRate', { placeholder: hasBeds ? 'Optional' : 'e.g. 1500' })}
+      </div>
+      <p className="t-xs text-ink3 m-0">
+        {hasBeds
+          ? 'Enter at least one price. For a PG, rent per bed / month is enough.'
+          : 'Enter at least one price: monthly for a PG, daily for a hotel, or both.'}
       </p>
     </div>
   )
@@ -480,12 +493,17 @@ function addRoomErrors(form) {
   const floor = Number(form.floor)
   if (form.floor === '') e.floor = 'Enter the floor'
   else if (!Number.isInteger(floor) || floor < 1 || floor > 100) e.floor = 'Floor must be 1–100'
-  if (!(Number(form.dailyRate) > 0)) e.dailyRate = 'Enter the price per day'
+  if (form.dailyRate !== '' && !(Number(form.dailyRate) > 0)) e.dailyRate = 'Must be more than 0'
   if (form.monthlyRate !== '' && !(Number(form.monthlyRate) > 0)) e.monthlyRate = 'Must be more than 0'
   const beds = Number(form.bedCount)
   if (!Number.isInteger(beds) || beds < 1 || beds > 50) e.bedCount = 'Beds must be 1–50'
   if (form.bedMonthlyRate !== '' && Number(form.bedMonthlyRate) < 0) e.bedMonthlyRate = 'Can’t be negative'
   if (form.bedDailyRate !== '' && Number(form.bedDailyRate) < 0) e.bedDailyRate = 'Can’t be negative'
+  // Any one price is enough. Bed rents only count while the room has several beds.
+  const prices = [form.dailyRate, form.monthlyRate, ...(beds > 1 ? [form.bedMonthlyRate, form.bedDailyRate] : [])]
+  if (!prices.some(p => Number(p) > 0) && !e.dailyRate && !e.monthlyRate) {
+    e[beds > 1 ? 'bedMonthlyRate' : 'monthlyRate'] = 'Enter at least one price'
+  }
   return e
 }
 
@@ -511,9 +529,9 @@ function AddRoomForm({ form, onChange, errors = {}, apiError }) {
   )
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
       {apiError && (
-        <div className="md:col-span-2 t-sm px-3.5 py-2.5 rounded-lg bg-danger-bg text-danger-text" role="alert">
+        <div className="md:col-span-3 t-sm px-3.5 py-2.5 rounded-lg bg-danger-bg text-danger-text" role="alert">
           {apiError}
         </div>
       )}
@@ -534,11 +552,9 @@ function AddRoomForm({ form, onChange, errors = {}, apiError }) {
       </div>
 
       {field('Floor', 'floor', 'number', { placeholder: 'e.g. 1', min: 1, required: true })}
-      {field('Price / day (₹)', 'dailyRate', 'number', { placeholder: 'e.g. 1500', min: 0, required: true })}
-      {field('Price / month (₹)', 'monthlyRate', 'number', { placeholder: 'Optional — for monthly stays', min: 0 })}
 
-      <div className="md:col-span-2 -mt-3">
-        <BedFields form={form} errors={errors} set={k => e => onChange(k, e.target.value)} />
+      <div className="md:col-span-3 -mt-3">
+        <BedAndPriceFields form={form} errors={errors} set={k => e => onChange(k, e.target.value)} />
       </div>
     </div>
   )
@@ -938,6 +954,20 @@ export default function Rooms() {
 }
 
 // ─── Room Card ────────────────────────────────────────────────────────────────
+// A room with bed rents shows those; any other room shows its own prices.
+const roomPriceLabel = (room) => {
+  const inr = (n) => `₹${Number(n).toLocaleString('en-IN')}`
+  const bed = [
+    room.bedMonthlyRate && `${inr(room.bedMonthlyRate)}/bed/mo`,
+    room.bedDailyRate && `${inr(room.bedDailyRate)}/bed/day`,
+  ].filter(Boolean)
+  if (isBedRoom(room) && bed.length) return bed.join(' · ')
+  return [
+    room.monthlyRate && `${inr(room.monthlyRate)}/mo`,
+    room.dailyRate && `${inr(room.dailyRate)}/day`,
+  ].filter(Boolean).join(' · ')
+}
+
 function RoomCard({ room, onClick }) {
   // Bed-by-bed fill only while the room is actually let that way.
   const label = hasBedStays(room)
@@ -955,12 +985,8 @@ function RoomCard({ room, onClick }) {
       <span className="block text-[13px] text-ink2 mt-1.5 truncate">
         {room.type}{isBedRoom(room) ? ` · ${room.bedCount} beds` : ''}
       </span>
-      {(room.dailyRate || room.bedMonthlyRate) && (
-        <span className="block t-xs text-ink3 mt-0.5 truncate">
-          {room.dailyRate ? `₹${Number(room.dailyRate).toLocaleString('en-IN')}/night` : ''}
-          {room.dailyRate && room.bedMonthlyRate ? ' · ' : ''}
-          {room.bedMonthlyRate ? `₹${Number(room.bedMonthlyRate).toLocaleString('en-IN')}/bed/mo` : ''}
-        </span>
+      {roomPriceLabel(room) && (
+        <span className="block t-xs text-ink3 mt-0.5 truncate">{roomPriceLabel(room)}</span>
       )}
       {hasBedStays(room) ? (
         <BedSummary room={room} />
