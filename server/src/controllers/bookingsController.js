@@ -1,10 +1,14 @@
 import path from 'path'
+import crypto from 'crypto'
 import fs from 'fs'
 import multer from 'multer'
 import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
-import { renderInvoiceHtml, buildInvoiceData } from '../utils/invoiceTemplate.js'
+import { renderInvoiceHtml, buildInvoiceData, hotelLogo, inlineUploadAsset } from '../utils/invoiceTemplate.js'
 import { htmlToPdf } from '../utils/pdf.js'
+import {
+  isTenancy, OPEN_END, tenancyTotals, billDueRent, invoiceTenancy, payTenancyInvoices,
+} from '../utils/pgRent.js'
 
 const DAY_MS = 86400000
 
@@ -99,44 +103,51 @@ const defaultTaxRate = async () => {
   return hotel?.gstRate ?? 0
 }
 
+const LIVE_STATUSES = ['Pending', 'Confirmed', 'CheckedIn']
+
+// Overlap filter for live bookings: existing.from < newEnd AND existing.end > newFrom.
+// An open-ended stay (no toDate) blocks everything after its start.
+const bookingOverlap = (from, end) => ({
+  status: { in: LIVE_STATUSES },
+  deletedAt: null,
+  fromDate: { lt: end },
+  OR: [{ toDate: null }, { toDate: { gt: from } }],
+})
+
+const guestOverlap = (from, end) => ({
+  status: 'Active',
+  deletedAt: null,
+  checkInDate: { lt: end },
+  OR: [{ checkOutDate: null }, { checkOutDate: { gt: from } }],
+})
+
 /**
- * Is `roomId` free for [from, end)? Conflicts with other live bookings and with
- * currently-active guests in that room. `ignoreBookingId` skips the booking
- * being edited. Returns the conflicting record (or null if free).
+ * Is `roomId` (or one bed of it) free for [from, end)? Conflicts with other live
+ * bookings and with currently-active guests in that room. With `bedNo` only that
+ * bed — or a whole-room stay — clashes; without it any stay in the room does.
+ * `ignoreBookingId` skips the booking being edited. Returns the conflicting
+ * record (or null if free).
  */
-const findConflict = async (roomId, from, end, ignoreBookingId = null, ignoreGuestId = null) => {
-  const LIVE = ['Pending', 'Confirmed', 'CheckedIn']
+const findConflict = async (roomId, from, end, ignoreBookingId = null, ignoreGuestId = null, bedNo = null) => {
+  const sameBed = bedNo != null ? { OR: [{ bedNo }, { bedNo: null }] } : {}
 
   const bookingConflict = await prisma.booking.findFirst({
     where: {
       roomId,
-      status: { in: LIVE },
-      deletedAt: null,
       ...(ignoreBookingId ? { id: { not: ignoreBookingId } } : {}),
-      // overlap: existing.from < newEnd  AND  existing.end > newFrom
-      fromDate: { lt: end },
-      OR: [
-        { toDate: null },                 // open-ended stay blocks everything after its start
-        { toDate: { gt: from } },
-      ],
+      AND: [bookingOverlap(from, end), sameBed],
     },
-    select: { id: true, bookingNo: true, fromDate: true, toDate: true },
+    select: { id: true, bookingNo: true, fromDate: true, toDate: true, bedNo: true },
   })
   if (bookingConflict) return { type: 'booking', ...bookingConflict }
 
   const guestConflict = await prisma.guest.findFirst({
     where: {
       roomId,
-      status: 'Active',
-      deletedAt: null,
       // A checked-in booking owns the Active guest sitting in its room — it must
       // not block its own edit/extension.
       ...(ignoreGuestId ? { id: { not: ignoreGuestId } } : {}),
-      checkInDate: { lt: end },
-      OR: [
-        { checkOutDate: null },
-        { checkOutDate: { gt: from } },
-      ],
+      AND: [guestOverlap(from, end), sameBed],
     },
     select: { id: true, name: true },
   })
@@ -145,8 +156,71 @@ const findConflict = async (roomId, from, end, ignoreBookingId = null, ignoreGue
   return null
 }
 
+// Bed 1 → "A", 2 → "B" … (matches client/src/utils/beds.js).
+const bedLabel = (n) => (n >= 1 && n <= 26 ? String.fromCharCode(64 + n) : String(n))
+
+// Human message for a findConflict hit, naming the bed when there is one.
+const conflictMessage = (room, conflict, bedNo) => {
+  const where = bedNo != null ? `Bed ${bedLabel(bedNo)} in Room ${room.number}` : `Room ${room.number}`
+  const who = conflict.type === 'booking' ? conflict.bookingNo : conflict.name
+  return `${where} is not available for these dates (conflicts with ${who}).`
+}
+
+// A room with 2+ beds can be booked whole or bed by bed — chosen per booking.
+const hasBeds = (room) => (room?.bedCount || 1) > 1
+
+// A bed number only makes sense on a room with several beds, and must exist in it.
+// Returns an error message, or null when the (room, bedNo) pair is valid.
+const bedError = (room, bedNo) => {
+  if (bedNo == null) return null
+  if (!hasBeds(room)) return `Room ${room.number} has a single bed — book it whole.`
+  if (bedNo < 1 || bedNo > room.bedCount) return `Room ${room.number} has no Bed ${bedLabel(bedNo)}.`
+  return null
+}
+
+// Default per-unit rate for a booking: the bed rate for one bed; for the whole
+// of a multi-bed room with a bed rate, beds × bed rate; else the room rate.
+const defaultRate = (room, stayType, bedNo) => {
+  const bedRate = stayType === 'daily' ? room.bedDailyRate : room.bedMonthlyRate
+  if (bedRate && bedNo != null) return bedRate
+  if (bedRate && hasBeds(room)) return bedRate * room.bedCount
+  return stayType === 'daily' ? room.dailyRate : room.monthlyRate
+}
+
+/**
+ * Re-derive a room's status after a stay starts or ends. A room with beds is
+ * "occupied" only once every bed (or the whole room) is checked in, so a PG room
+ * with a free bed stays bookable; it drops back to "available" when that is no
+ * longer true. Whole-room rooms keep their fixed transition (`fallback`).
+ */
+const syncRoomStatus = async (tx, roomId, fallback) => {
+  const room = await tx.room.findUnique({
+    where: { id: roomId },
+    select: { bedCount: true, status: true },
+  })
+  if (!room) return
+  if (!hasBeds(room)) {
+    await tx.room.update({ where: { id: roomId }, data: { status: fallback } })
+    return
+  }
+  const inHouse = await tx.booking.findMany({
+    where: { roomId, status: 'CheckedIn', deletedAt: null },
+    select: { bedNo: true },
+  })
+  const full = inHouse.some((b) => b.bedNo == null)
+    || new Set(inHouse.map((b) => b.bedNo)).size >= room.bedCount
+  const next = full ? 'occupied' : room.status === 'occupied' ? 'available' : room.status
+  if (next !== room.status) await tx.room.update({ where: { id: roomId }, data: { status: next } })
+}
+
 const bookingInclude = {
   room: { include: { type: true } },
+  // Overdue rent months of a tenancy, so lists can flag late payers.
+  invoices: {
+    where: { status: 'Overdue', deletedAt: null },
+    select: { total: true, amountPaid: true, createdAt: true },
+    orderBy: { createdAt: 'asc' },
+  },
   guest: { select: { id: true, name: true, phone: true, status: true } },
   documents: { orderBy: { uploadedAt: 'asc' } },
 }
@@ -291,7 +365,9 @@ export const lookupGuestByPhone = async (req, res) => {
         guestAddress: booking?.guestAddress || guest?.address     || '',
         nationality:  booking?.nationality  || guest?.nationality || '',
         idType:       booking?.idType       || guest?.idType      || '',
-        idNumber:     booking?.idNumber     || guest?.idNumber    || '',
+        // Check-in falls back to the booking number when no ID was given — that
+        // is not a real ID, so don't carry it into a new booking.
+        idNumber:     [booking?.idNumber, guest?.idNumber].find((x) => x && !/^BKG-/i.test(x)) || '',
         adults:       booking?.adults   ?? guest?.occupants ?? 1,
         children:     booking?.children ?? 0,
         source:       booking?.source   || guest?.source || null,
@@ -312,6 +388,89 @@ export const lookupGuestByPhone = async (req, res) => {
   }
 }
 
+// Check the stay shape shared by single and group creates. Returns
+// { from, end } or { error } (a 400 message).
+const resolveStay = (b) => {
+  const from = new Date(b.fromDate)
+  // A PG tenancy has no fixed end: it runs, billed monthly, until move-out.
+  if (isTenancy(b)) return { from, end: OPEN_END }
+  if (b.stayType === 'daily' && !b.toDate) return { error: 'Check-out date is required for a daily stay.' }
+  if (b.stayType === 'monthly' && !b.months) return { error: 'Number of months is required for a monthly stay.' }
+  const end  = stayEnd(b.stayType, from, b.toDate, b.months)
+  if (end <= from) return { error: 'Check-out must be after check-in.', code: 'ERR_DATE_RANGE' }
+  return { from, end }
+}
+
+// Row data for one booking from validated input `b` (stay fields + one guest).
+const buildBookingData = (b, room, from, taxRate) => {
+  const bedNo    = b.bedNo ?? null
+  const roomRate = b.roomRate ?? defaultRate(room, b.stayType, bedNo)
+  const tenancy  = isTenancy(b)
+  // A tenancy bills nothing up front — rent is invoiced month by month from
+  // move-in — so its account starts at zero with the advance held as credit.
+  const priced   = tenancy
+    ? { nights: null, subtotal: 0, taxAmount: 0, ...tenancyTotals({ amount: 0, advance: b.advance ?? 0 }) }
+    : computePricing({ ...b, roomRate, taxRate })
+  return {
+    guestName:    b.guestName,
+    guestPhone:   b.guestPhone ?? null,
+    guestEmail:   b.guestEmail ?? null,
+    guestAddress: b.guestAddress ?? null,
+    nationality:  b.nationality ?? null,
+    idType:       b.idType ?? null,
+    idNumber:     b.idNumber ?? null,
+    adults:       b.adults ?? 1,
+    children:     b.children ?? 0,
+    roomId:       room.id,
+    bedNo,
+    groupId:      b.groupId ?? null,
+    stayType:     b.stayType,
+    fromDate:     from,
+    toDate:       !tenancy && b.toDate ? new Date(b.toDate) : null,
+    months:       !tenancy && b.stayType === 'monthly' ? b.months : null,
+    nights:       priced.nights,
+    roomRate,
+    subtotal:     priced.subtotal,
+    discount:     tenancy ? 0 : b.discount ?? 0,
+    taxRate,
+    taxAmount:    priced.taxAmount,
+    extraCharges: tenancy ? 0 : b.extraCharges ?? 0,
+    amount:       priced.amount,
+    advance:      b.advance ?? 0,
+    balance:      priced.balance,
+    paymentStatus: priced.paymentStatus,
+    securityDeposit: b.securityDeposit ?? 0,
+    notes:           b.notes ?? null,
+    specialRequests: b.specialRequests ?? null,
+    source:       b.source,
+    status:       'Confirmed',
+    confirmedAt:  new Date(),
+  }
+}
+
+// Insert a booking with a fresh booking number and a tax-invoice serial: the
+// user's `userInvoiceNo` as-is, else the next auto serial (retried on a clash).
+// Throws { code: 'ERR_DUP_INVOICE_NO' } when a manual number is already taken.
+const insertBooking = async (data, hotel, userInvoiceNo = null) => {
+  const bookingNo = await generateBookingNo()
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const invoiceNo = userInvoiceNo
+      ?? (hotel?.id ? await reserveSerial(hotel, new Date()) : null)
+    try {
+      return await prisma.booking.create({ data: { ...data, bookingNo, invoiceNo }, include: bookingInclude })
+    } catch (e) {
+      if (isInvoiceNoConflict(e)) {
+        // A manual number that's already taken is a user error; auto-numbers
+        // just retry with the next value.
+        if (userInvoiceNo) throw Object.assign(new Error('dup invoice'), { code: 'ERR_DUP_INVOICE_NO' })
+        continue
+      }
+      throw e
+    }
+  }
+  throw new Error('Could not assign a unique invoice number')
+}
+
 // POST /bookings
 export const createBooking = async (req, res) => {
   try {
@@ -319,103 +478,155 @@ export const createBooking = async (req, res) => {
     const room = await prisma.room.findUnique({ where: { id: b.roomId }, include: { type: true } })
     if (!room) return res.status(404).json({ message: 'Room not found.', code: 'ERR_ROOM_NOT_FOUND' })
 
-    if (b.stayType === 'daily' && !b.toDate) {
-      return res.status(400).json({ message: 'Check-out date is required for a daily stay.', code: 'ERR_VALIDATION' })
-    }
-    if (b.stayType === 'monthly' && !b.months) {
-      return res.status(400).json({ message: 'Number of months is required for a monthly stay.', code: 'ERR_VALIDATION' })
-    }
-
-    const from = new Date(b.fromDate)
-    const end  = stayEnd(b.stayType, from, b.toDate, b.months)
-    if (end <= from) {
-      return res.status(400).json({ message: 'Check-out must be after check-in.', code: 'ERR_DATE_RANGE' })
-    }
+    const stay = resolveStay(b)
+    if (stay.error) return res.status(400).json({ message: stay.error, code: stay.code || 'ERR_VALIDATION' })
+    const bedMsg = bedError(room, b.bedNo)
+    if (bedMsg) return res.status(400).json({ message: bedMsg, code: 'ERR_VALIDATION' })
 
     // Double-booking prevention
-    const conflict = await findConflict(b.roomId, from, end)
+    const conflict = await findConflict(b.roomId, stay.from, stay.end, null, null, b.bedNo ?? null)
     if (conflict) {
       return res.status(409).json({
-        message: `Room ${room.number} is not available for these dates (conflicts with ${conflict.type === 'booking' ? conflict.bookingNo : conflict.name}).`,
+        message: conflictMessage(room, conflict, b.bedNo ?? null),
         code: 'ERR_ROOM_UNAVAILABLE',
         conflict,
       })
     }
 
-    const roomRate = b.roomRate ?? (b.stayType === 'daily' ? room.dailyRate : room.monthlyRate)
-    const taxRate  = b.taxRate ?? (await defaultTaxRate())
-    const priced   = computePricing({ ...b, roomRate, taxRate })
-
-    const bookingNo = await generateBookingNo()
+    const taxRate = b.taxRate ?? (await defaultTaxRate())
     const hotel = await prisma.hotel.findFirst()
     // The tax-invoice serial is assigned now, at booking creation: auto-numbered
     // from the day counter unless the user supplied one (editable in the form).
     const userInvoiceNo =
       typeof b.invoiceNo === 'string' && b.invoiceNo.trim() ? b.invoiceNo.trim() : null
-
-    const data = {
-      bookingNo,
-      guestName:    b.guestName,
-      guestPhone:   b.guestPhone ?? null,
-      guestEmail:   b.guestEmail ?? null,
-      guestAddress: b.guestAddress ?? null,
-      nationality:  b.nationality ?? null,
-      idType:       b.idType ?? null,
-      idNumber:     b.idNumber ?? null,
-      adults:       b.adults,
-      children:     b.children,
-      roomId:       b.roomId,
-      stayType:     b.stayType,
-      fromDate:     from,
-      toDate:       b.toDate ? new Date(b.toDate) : null,
-      months:       b.stayType === 'monthly' ? b.months : null,
-      nights:       priced.nights,
-      roomRate,
-      subtotal:     priced.subtotal,
-      discount:     b.discount,
-      taxRate,
-      taxAmount:    priced.taxAmount,
-      extraCharges: b.extraCharges,
-      amount:       priced.amount,
-      advance:      b.advance,
-      balance:      priced.balance,
-      paymentStatus: priced.paymentStatus,
-      notes:           b.notes ?? null,
-      specialRequests: b.specialRequests ?? null,
-      source:       b.source,
-      status:       'Confirmed',
-      confirmedAt:  new Date(),
-    }
+    // A tenancy has no stay invoice: its rent invoices come from Billing monthly.
+    const tenancy = isTenancy(b)
 
     let booking
-    for (let attempt = 0; attempt < 20; attempt++) {
-      // A user-supplied number is used as-is; otherwise reserve the next auto one.
-      const invoiceNo = userInvoiceNo
-        ?? (hotel?.id ? await reserveSerial(hotel, new Date()) : null)
-      try {
-        booking = await prisma.booking.create({ data: { ...data, invoiceNo }, include: bookingInclude })
-        break
-      } catch (e) {
-        if (isInvoiceNoConflict(e)) {
-          // A manual number that's already taken is a user error; auto-numbers
-          // just retry with the next value.
-          if (userInvoiceNo) {
-            return res.status(409).json({
-              message: 'That invoice number is already used by another booking.',
-              code: 'ERR_DUP_INVOICE_NO',
-            })
-          }
-          continue
-        }
-        throw e
+    try {
+      booking = await insertBooking(
+        buildBookingData(b, room, stay.from, taxRate),
+        tenancy ? null : hotel,
+        tenancy ? null : userInvoiceNo,
+      )
+    } catch (e) {
+      if (e.code === 'ERR_DUP_INVOICE_NO') {
+        return res.status(409).json({ message: 'That invoice number is already used by another booking.', code: e.code })
       }
+      throw e
     }
-    if (!booking) throw new Error('Could not assign a unique invoice number')
 
-    logger.info('Booking created', { event: 'BOOKING', bookingNo, invoiceNo: booking.invoiceNo, roomId: b.roomId })
+    logger.info('Booking created', { event: 'BOOKING', bookingNo: booking.bookingNo, invoiceNo: booking.invoiceNo, roomId: b.roomId })
     return res.status(201).json({ booking })
   } catch (err) {
     logger.error('createBooking error', { error: err.message })
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// POST /bookings/group — several people into one room let by bed (PG). Shared
+// stay fields come once; each occupant brings their own bed, guest details,
+// rent, advance and security deposit and becomes their own booking (own
+// invoice, dues, check-in/out), linked by a common groupId. All or nothing.
+export const createBookingGroup = async (req, res) => {
+  try {
+    const { occupants, ...shared } = req.body   // validated + coerced by Zod
+    const room = await prisma.room.findUnique({ where: { id: shared.roomId }, include: { type: true } })
+    if (!room) return res.status(404).json({ message: 'Room not found.', code: 'ERR_ROOM_NOT_FOUND' })
+    if (!hasBeds(room)) {
+      return res.status(400).json({ message: `Room ${room.number} has a single bed — book it whole.`, code: 'ERR_VALIDATION' })
+    }
+
+    // Every occupant is on a bed, so a monthly group is a set of tenancies.
+    const tenancy = isTenancy(shared)
+    const stay = resolveStay({ ...shared, bedNo: occupants[0].bedNo })
+    if (stay.error) return res.status(400).json({ message: stay.error, code: stay.code || 'ERR_VALIDATION' })
+
+    const beds = occupants.map((o) => o.bedNo)
+    if (new Set(beds).size !== beds.length) {
+      return res.status(400).json({ message: 'Each occupant needs a different bed.', code: 'ERR_VALIDATION' })
+    }
+    for (const bedNo of beds) {
+      const bedMsg = bedError(room, bedNo)
+      if (bedMsg) return res.status(400).json({ message: bedMsg, code: 'ERR_VALIDATION' })
+      const conflict = await findConflict(room.id, stay.from, stay.end, null, null, bedNo)
+      if (conflict) {
+        return res.status(409).json({ message: conflictMessage(room, conflict, bedNo), code: 'ERR_ROOM_UNAVAILABLE', conflict })
+      }
+    }
+
+    const taxRate = shared.taxRate ?? (await defaultTaxRate())
+    const hotel   = await prisma.hotel.findFirst()
+    const groupId = crypto.randomUUID()
+
+    // Sequential: booking numbers derive from the latest row. Booking creation
+    // reserves invoice serials outside a transaction, so a failure part-way is
+    // rolled back by removing the rows already written.
+    const created = []
+    try {
+      for (const o of occupants) {
+        const data = buildBookingData({ ...shared, ...o, groupId, adults: 1, children: 0 }, room, stay.from, taxRate)
+        created.push(await insertBooking(data, tenancy ? null : hotel))
+      }
+    } catch (e) {
+      if (created.length) await prisma.booking.deleteMany({ where: { id: { in: created.map((c) => c.id) } } })
+      throw e
+    }
+
+    logger.info('Booking group created', { event: 'BOOKING', groupId, roomId: room.id, count: created.length })
+    return res.status(201).json({ groupId, bookings: created })
+  } catch (err) {
+    logger.error('createBookingGroup error', { error: err.message })
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /bookings/bed-availability?roomId=&from=&to=
+// Per-bed status of a room let by bed over [from, to): free, or who holds it.
+// Drives the bed picker on the booking form.
+export const getBedAvailability = async (req, res) => {
+  try {
+    const { roomId } = req.query
+    const from = new Date(req.query.from)
+    // No `to` = an open-ended tenancy: the bed must be free from `from` onward.
+    const end  = req.query.to ? new Date(req.query.to) : OPEN_END
+    if (!roomId || isNaN(from) || isNaN(end) || end <= from) {
+      return res.status(400).json({ message: 'roomId and from (and to after it, if given) are required.' })
+    }
+    const room = await prisma.room.findUnique({ where: { id: roomId } })
+    if (!room) return res.status(404).json({ message: 'Room not found.' })
+
+    const [bookings, guests] = await Promise.all([
+      prisma.booking.findMany({
+        where: { roomId, ...bookingOverlap(from, end) },
+        select: { id: true, bookingNo: true, bedNo: true, guestName: true, status: true, fromDate: true, toDate: true },
+        orderBy: { fromDate: 'asc' },
+      }),
+      prisma.guest.findMany({
+        where: { roomId, ...guestOverlap(from, end) },
+        select: { id: true, name: true, bedNo: true, checkOutDate: true },
+      }),
+    ])
+
+    const count = hasBeds(room) ? room.bedCount : 1
+    const beds = Array.from({ length: count }, (_, i) => {
+      const bedNo = i + 1
+      const holds = (x) => x.bedNo == null || x.bedNo === bedNo
+      const bk = bookings.find(holds)
+      // Guests that came from a booking are already covered by it.
+      const gs = !bk && guests.find(holds)
+      const heldBy = bk
+        ? { type: 'booking', bookingNo: bk.bookingNo, name: bk.guestName.split(',')[0].trim(), status: bk.status, until: bk.toDate }
+        : gs ? { type: 'guest', name: gs.name, until: gs.checkOutDate } : null
+      return { bedNo, label: bedLabel(bedNo), free: !heldBy, heldBy }
+    })
+    return res.status(200).json({
+      room: { id: room.id, number: room.number, bedCount: room.bedCount },
+      beds,
+      freeCount: beds.filter((x) => x.free).length,
+    })
+  } catch (err) {
+    logger.error('getBedAvailability error', { error: err.message })
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }
@@ -482,18 +693,37 @@ export const updateBooking = async (req, res) => {
       advance:      b.advance ?? existing.advance,
     }
 
-    const from = new Date(merged.fromDate)
-    const end  = stayEnd(merged.stayType, from, merged.toDate, merged.months)
+    const tenancy = isTenancy(existing)
+    if (tenancy && merged.advance < existing.advanceApplied) {
+      return res.status(400).json({
+        message: `₹${existing.advanceApplied} of the advance is already set against rent invoices — it can't go below that.`,
+        code: 'ERR_VALIDATION',
+      })
+    }
 
-    // If dates changed, re-check availability
-    if (b.fromDate || b.toDate !== undefined || b.months) {
-      const conflict = await findConflict(existing.roomId, from, end, id, existing.guestId)
+    const from = new Date(merged.fromDate)
+    const end  = tenancy ? OPEN_END : stayEnd(merged.stayType, from, merged.toDate, merged.months)
+
+    // Moving to another bed of the same room (PG).
+    const bedNo = b.bedNo !== undefined ? b.bedNo : existing.bedNo
+    const bedMsg = b.bedNo !== undefined ? bedError(existing.room, bedNo) : null
+    if (bedMsg) return res.status(400).json({ message: bedMsg, code: 'ERR_VALIDATION' })
+
+    // If dates or bed changed, re-check availability
+    if (b.fromDate || b.toDate !== undefined || b.months || bedNo !== existing.bedNo) {
+      const conflict = await findConflict(existing.roomId, from, end, id, existing.guestId, bedNo)
       if (conflict) {
-        return res.status(409).json({ message: 'Room is no longer available for the new dates.', code: 'ERR_ROOM_UNAVAILABLE', conflict })
+        const what = bedNo != null ? `Bed ${bedLabel(bedNo)}` : 'Room'
+        return res.status(409).json({ message: `${what} is no longer available for these dates.`, code: 'ERR_ROOM_UNAVAILABLE', conflict })
       }
     }
 
-    const priced = computePricing(merged)
+    // A tenancy's amount is the rent already invoiced; a new rate applies from the
+    // next month's invoice, and a changed advance only changes the credit.
+    const priced = tenancy
+      ? { nights: null, subtotal: existing.subtotal, taxAmount: existing.taxAmount,
+          ...tenancyTotals({ amount: existing.amount, advance: merged.advance }) }
+      : computePricing(merged)
     const data = {
       ...(b.guestName !== undefined && { guestName: b.guestName }),
       ...(b.guestPhone !== undefined && { guestPhone: b.guestPhone }),
@@ -507,13 +737,15 @@ export const updateBooking = async (req, res) => {
       ...(b.notes !== undefined && { notes: b.notes }),
       ...(b.specialRequests !== undefined && { specialRequests: b.specialRequests }),
       ...(b.source !== undefined && { source: b.source }),
+      ...(b.securityDeposit !== undefined && { securityDeposit: b.securityDeposit }),
+      bedNo,
       fromDate:     from,
-      toDate:       merged.toDate ? new Date(merged.toDate) : null,
-      months:       merged.stayType === 'monthly' ? merged.months : null,
+      toDate:       !tenancy && merged.toDate ? new Date(merged.toDate) : null,
+      months:       !tenancy && merged.stayType === 'monthly' ? merged.months : null,
       roomRate:     merged.roomRate,
-      discount:     merged.discount,
+      discount:     tenancy ? existing.discount : merged.discount,
       taxRate:      merged.taxRate,
-      extraCharges: merged.extraCharges,
+      extraCharges: tenancy ? existing.extraCharges : merged.extraCharges,
       advance:      merged.advance,
       nights:       priced.nights,
       subtotal:     priced.subtotal,
@@ -539,6 +771,7 @@ export const updateBooking = async (req, res) => {
       checkOutDate: data.toDate,
       months:       data.months,
       roomRate:     data.roomRate,
+      bedNo,
     } : null
 
     const booking = await prisma.$transaction(async (tx) => {
@@ -605,6 +838,7 @@ export const checkInBooking = async (req, res) => {
           months:         booking.months,
           roomRate:       booking.roomRate,
           deposit:        advance,
+          bedNo:          booking.bedNo,
           occupants:      booking.adults + booking.children,
           specialRequests: booking.specialRequests,
           source:         booking.source,
@@ -612,21 +846,30 @@ export const checkInBooking = async (req, res) => {
         },
       })
 
+      const now = new Date()
+      const tenancy = isTenancy(booking)
+      // Move-in starts a tenancy's first rent month: bill it now (the advance
+      // is credited against it), later months come from the daily job.
+      const moveIn = new Date(now.getFullYear(), now.getMonth(), now.getDate())
       const updated = await tx.booking.update({
         where: { id },
         data: {
           status: 'CheckedIn',
-          checkedInAt: new Date(),
+          checkedInAt: now,
           guestId: guest.id,
           advance,
-          balance: +(booking.amount - advance).toFixed(2),
-          paymentStatus: advance <= 0 ? 'unpaid' : advance >= booking.amount ? 'paid' : 'partial',
+          ...(tenancy
+            ? { ...tenancyTotals({ amount: booking.amount, advance }), rentBilledUntil: moveIn }
+            : {
+                balance: +(booking.amount - advance).toFixed(2),
+                paymentStatus: advance <= 0 ? 'unpaid' : advance >= booking.amount ? 'paid' : 'partial',
+              }),
         },
-        include: bookingInclude,
       })
+      if (tenancy) await billDueRent(tx, updated, now)
 
-      await tx.room.update({ where: { id: booking.roomId }, data: { status: 'occupied' } })
-      return updated
+      await syncRoomStatus(tx, booking.roomId, 'occupied')
+      return tx.booking.findUnique({ where: { id }, include: bookingInclude })
     })
 
     logger.info('Booking checked in', { event: 'BOOKING', bookingNo: booking.bookingNo })
@@ -646,6 +889,8 @@ export const checkOutBooking = async (req, res) => {
     if (booking.status !== 'CheckedIn') {
       return res.status(400).json({ message: 'Only a checked-in booking can be checked out.' })
     }
+
+    if (isTenancy(booking)) return checkOutTenancy(req, res, booking)
 
     const extraCharges = req.body.extraCharges !== undefined ? req.body.extraCharges : booking.extraCharges
     const addedExtra   = extraCharges - booking.extraCharges
@@ -681,7 +926,7 @@ export const checkOutBooking = async (req, res) => {
           })
         }
       }
-      await tx.room.update({ where: { id: booking.roomId }, data: { status: 'available' } })
+      await syncRoomStatus(tx, booking.roomId, 'available')
       return updated
     })
 
@@ -693,31 +938,123 @@ export const checkOutBooking = async (req, res) => {
   }
 }
 
-// GET /bookings/:id/invoice?format=html|json&print=1
-// Generates a GST tax invoice from a completed (checked-out) booking, pulling
-// guest/room/hotel data from the tables and rendering the standard template.
-// Inline a locally-served `/uploads/<file>` asset as a base64 data URI so the
-// invoice's logo/stamp render with no dependency on URL resolution — relative
-// paths don't resolve inside the blob: preview, and a remote host may be
-// unreachable from the PDF renderer. Returns the original value untouched if
-// it isn't a local upload or can't be read.
-const MIME_BY_EXT = {
-  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
-}
-const inlineUploadAsset = (url) => {
-  if (typeof url !== 'string' || !url.startsWith('/uploads/')) return url
+// GET /bookings/:id/rent — a tenancy's rent account: each month's invoice, what
+// is due now, unapplied credit and when the next month is billed.
+export const getRentAccount = async (req, res) => {
   try {
-    const file = path.basename(url) // guard against path traversal
-    const abs = path.join(path.resolve('uploads'), file)
-    if (!fs.existsSync(abs)) return url
-    const mime = MIME_BY_EXT[path.extname(file).toLowerCase()] || 'application/octet-stream'
-    return `data:${mime};base64,${fs.readFileSync(abs).toString('base64')}`
-  } catch {
-    return url
+    const booking = await prisma.booking.findUnique({ where: { id: req.params.id } })
+    if (!booking) return res.status(404).json({ message: 'Booking not found.' })
+    if (!isTenancy(booking)) return res.status(400).json({ message: 'Not a monthly tenancy.' })
+    const invoices = await prisma.invoice.findMany({
+      where: { bookingId: booking.id, deletedAt: null },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, invoiceNo: true, period: true, total: true, amountPaid: true, status: true, createdAt: true, paidAt: true },
+    })
+    return res.status(200).json({
+      invoices,
+      rent: booking.roomRate,
+      due: booking.balance,
+      credit: Math.max(0, +(booking.advance - booking.advanceApplied).toFixed(2)),
+      nextBillOn: booking.status === 'CheckedIn' ? booking.rentBilledUntil : null,
+    })
+  } catch (err) {
+    logger.error('getRentAccount error', { error: err.message })
+    return res.status(500).json({ message: 'Internal server error.' })
   }
 }
 
+// POST /bookings/:id/collect-rent { amount, method, reference } — take a rent
+// payment on the booking itself: it settles open months oldest first, and any
+// extra is kept as credit for the next month. No re-entry of the tenancy.
+export const collectRent = async (req, res) => {
+  try {
+    const amount = Number(req.body.amount)
+    if (!(amount > 0)) return res.status(400).json({ message: 'Enter the amount received.' })
+    const booking = await prisma.booking.findUnique({ where: { id: req.params.id } })
+    if (!booking) return res.status(404).json({ message: 'Booking not found.' })
+    if (!isTenancy(booking)) return res.status(400).json({ message: 'Not a monthly tenancy.' })
+    if (!booking.guestId) return res.status(400).json({ message: 'Check the tenant in first.' })
+    const method = req.body.method || 'cash'
+    const reference = req.body.reference || null
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const applied = await payTenancyInvoices(tx, booking, amount, method, reference)
+      if (amount > applied) {
+        await tx.payment.create({
+          data: { guestId: booking.guestId, amount: +(amount - applied).toFixed(2), method, reference, type: 'advance' },
+        })
+      }
+      return tx.booking.update({
+        where: { id: booking.id },
+        data: {
+          advanceApplied: +(booking.advanceApplied + applied).toFixed(2),
+          ...tenancyTotals({ amount: booking.amount, advance: booking.advance + amount }),
+        },
+        include: bookingInclude,
+      })
+    })
+    logger.info('Rent collected', { event: 'BOOKING', bookingNo: booking.bookingNo, amount })
+    return res.status(200).json({ booking: updated })
+  } catch (err) {
+    logger.error('collectRent error', { error: err.message })
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// Move-out of a PG tenancy. Extra charges become a final invoice; the payment
+// collected settles open rent invoices oldest first, and anything over is kept
+// as a recorded collection. The security deposit is refunded at the desk.
+const checkOutTenancy = async (req, res, booking) => {
+  try {
+    const extra         = Number(req.body.extraCharges) > booking.extraCharges ? req.body.extraCharges - booking.extraCharges : 0
+    const finalPayment  = Number(req.body.finalPayment) || 0
+    const paymentMethod = req.body.paymentMethod || 'cash'
+    const reference     = req.body.paymentReference || null
+
+    const result = await prisma.$transaction(async (tx) => {
+      const b = { ...booking }
+      if (extra > 0 && b.guestId) {
+        await invoiceTenancy(tx, b, { period: 'Move-out charges', rent: extra })
+      }
+      let applied = 0
+      if (finalPayment > 0 && b.guestId) {
+        applied = await payTenancyInvoices(tx, b, finalPayment, paymentMethod, reference)
+        if (finalPayment > applied) {
+          await tx.payment.create({
+            data: { guestId: b.guestId, amount: +(finalPayment - applied).toFixed(2), method: paymentMethod, reference, type: 'collection' },
+          })
+        }
+      }
+      const advance = b.advance + finalPayment
+      const updated = await tx.booking.update({
+        where: { id: b.id },
+        data: {
+          status: 'CheckedOut',
+          checkedOutAt: new Date(),
+          extraCharges: b.extraCharges + extra,
+          advanceApplied: +(b.advanceApplied + applied).toFixed(2),
+          ...tenancyTotals({ amount: b.amount, advance }),
+        },
+        include: bookingInclude,
+      })
+      if (b.guestId) {
+        await tx.guest.update({ where: { id: b.guestId }, data: { status: 'CheckedOut', checkOutDate: new Date() } })
+      }
+      await syncRoomStatus(tx, b.roomId, 'available')
+      return updated
+    })
+
+    logger.info('Tenancy checked out', { event: 'BOOKING', bookingNo: booking.bookingNo })
+    return res.status(200).json({ booking: result })
+  } catch (err) {
+    logger.error('checkOutTenancy error', { error: err.message })
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /bookings/:id/invoice?format=html|json&print=1
+// Generates a GST tax invoice from a completed (checked-out) booking, pulling
+// guest/room/hotel data from the tables and rendering the standard template.
 // The tax-invoice serial is "<prefix><year>-<DD>/<MM>/<NN>":
 //   prefix + year are configured by the hotel (e.g. "RA/" + "2026"); DD/MM come
 //   from the BOOKING DATE; NN is the running count for that day (2 digits).
@@ -816,6 +1153,14 @@ export const getBookingInvoice = async (req, res) => {
       },
     })
     if (!booking) return res.status(404).json({ message: 'Booking not found.' })
+    // A monthly tenancy's invoice lists every rent month billed (and any move-out
+    // charges) as its own line, from the monthly invoices raised on it.
+    if (isTenancy(booking)) {
+      booking.rentInvoices = await prisma.invoice.findMany({
+        where: { bookingId: booking.id, deletedAt: null },
+        orderBy: { createdAt: 'asc' },
+      })
+    }
 
     // Invoice/proforma is available once a booking is real (confirmed onward).
     if (!['Confirmed', 'CheckedIn', 'CheckedOut'].includes(booking.status)) {
@@ -848,7 +1193,7 @@ export const getBookingInvoice = async (req, res) => {
     // document is loaded (blob: preview, PDF renderer, direct tab).
     const renderHotel = {
       ...hotel,
-      logoUrl: inlineUploadAsset(hotel.logoUrl),
+      logoUrl: inlineUploadAsset(hotelLogo(hotel)),
       stampUrl: inlineUploadAsset(hotel.stampUrl),
     }
 
@@ -932,7 +1277,7 @@ export const cancelBooking = async (req, res) => {
       // If it was checked in, free the room + close the guest stay
       if (booking.status === 'CheckedIn') {
         if (booking.guestId) await tx.guest.update({ where: { id: booking.guestId }, data: { status: 'Cancelled' } })
-        await tx.room.update({ where: { id: booking.roomId }, data: { status: 'available' } })
+        await syncRoomStatus(tx, booking.roomId, 'available')
       }
       return updated
     })
@@ -966,9 +1311,19 @@ export const noShowBooking = async (req, res) => {
 // and stops blocking its room, while its payment/invoice history is preserved.
 export const deleteBooking = async (req, res) => {
   try {
-    await prisma.booking.update({
-      where: { id: req.params.id },
-      data: { deletedAt: new Date() },
+    const booking = await prisma.booking.findUnique({ where: { id: req.params.id } })
+    if (!booking) return res.status(404).json({ message: 'Booking not found.' })
+    await prisma.$transaction(async (tx) => {
+      await tx.booking.update({ where: { id: booking.id }, data: { deletedAt: new Date() } })
+      // A deleted in-house stay must release its room/bed too: its Guest record
+      // would otherwise stay Active and keep blocking it.
+      if (booking.guestId) {
+        await tx.guest.updateMany({
+          where: { id: booking.guestId, status: 'Active' },
+          data: { deletedAt: new Date() },
+        })
+      }
+      if (booking.status === 'CheckedIn') await syncRoomStatus(tx, booking.roomId, 'available')
     })
     return res.status(200).json({ message: 'Booking deleted.' })
   } catch (err) {

@@ -61,6 +61,7 @@ const from = (b) => ({
   taxRate: b.taxRate ?? 0,
   extraCharges: b.extraCharges ?? 0,
   advance: b.advance ?? 0,
+  securityDeposit: b.securityDeposit ?? 0,
   source: b.source || 'walk_in',
   specialRequests: b.specialRequests || '',
   notes: b.notes || '',
@@ -82,6 +83,9 @@ export default function EditBookingModal({ isOpen, booking, submitting = false, 
   const [errors, setErrors] = useState({})
 
   const isMonthly = booking?.stayType === 'monthly'
+  // PG tenancy: no end date or stay total — rent is invoiced monthly, so only the
+  // rate for coming months, the GST, the advance and the deposit are editable.
+  const tenancy = isMonthly && !booking?.months
   const set = (k) => (e) => setValues((v) => ({ ...v, [k]: e.target.value }))
 
   // Mirrors the server's computePricing: the rate is GST-inclusive, so tax is
@@ -102,7 +106,9 @@ export default function EditBookingModal({ isOpen, booking, submitting = false, 
     if (values.guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.guestEmail.trim()))
       e.guestEmail = 'Enter a valid email address'
     if (!values.fromDate) e.fromDate = 'Check-in date is required'
-    if (isMonthly) {
+    if (tenancy) {
+      // open-ended
+    } else if (isMonthly) {
       if (!values.months || Number(values.months) < 1) e.months = 'At least 1 month'
     } else if (!values.toDate || nights(values.fromDate, values.toDate) < 1) {
       e.toDate = 'Must be after check-in'
@@ -126,14 +132,15 @@ export default function EditBookingModal({ isOpen, booking, submitting = false, 
       adults: Number(values.adults) || 1,
       children: Number(values.children) || 0,
       fromDate: new Date(values.fromDate).toISOString(),
-      ...(isMonthly
+      ...(tenancy ? {} : isMonthly
         ? { months: Number(values.months) }
         : { toDate: new Date(values.toDate).toISOString() }),
       roomRate: Number(values.roomRate) || 0,
-      discount: Number(values.discount) || 0,
       taxRate: Number(values.taxRate) || 0,
-      extraCharges: Number(values.extraCharges) || 0,
       advance: Number(values.advance) || 0,
+      ...(tenancy
+        ? { securityDeposit: Number(values.securityDeposit) || 0 }
+        : { discount: Number(values.discount) || 0, extraCharges: Number(values.extraCharges) || 0 }),
       source: values.source,
       specialRequests: values.specialRequests.trim() || null,
       notes: values.notes.trim() || null,
@@ -177,6 +184,22 @@ export default function EditBookingModal({ isOpen, booking, submitting = false, 
           <Field className="col-span-2" label="ID number" value={values.idNumber} onChange={set('idNumber')} />
         </Section>
 
+        {tenancy ? (
+        <Section title="Tenancy (PG · billed monthly)">
+          <Field className="col-span-2" label="Move-in" name="fromDate" type="date" value={values.fromDate}
+                 onChange={set('fromDate')} error={errors.fromDate} disabled={booking.status === 'CheckedIn'} />
+          <Field className="col-span-2" label="Rent / month" name="roomRate" type="number" min="0"
+                 value={values.roomRate} onChange={set('roomRate')} error={errors.roomRate}
+                 hint="Applies from the next rent invoice" />
+          <Field label="GST %" type="number" min="0" max="30" value={values.taxRate} onChange={set('taxRate')} />
+          <Field label="Advance received" type="number" min="0" value={values.advance}
+                 onChange={set('advance')} />
+          <Field className="col-span-2" label="Security deposit" type="number" min="0" value={values.securityDeposit}
+                 onChange={set('securityDeposit')} hint="Refundable — not part of the rent" />
+          <Field className="col-span-2 sm:col-span-4" label="Notes" textarea value={values.notes}
+                 onChange={set('notes')} placeholder="Internal notes" />
+        </Section>
+        ) : (
         <Section title={`Stay & charges${isMonthly ? ' (monthly)' : ''}`}>
           <Field className="col-span-2" label="Check-in" name="fromDate" type="date" value={values.fromDate}
                  onChange={set('fromDate')} error={errors.fromDate} />
@@ -198,8 +221,23 @@ export default function EditBookingModal({ isOpen, booking, submitting = false, 
           <Field className="col-span-2 sm:col-span-4" label="Notes" textarea value={values.notes}
                  onChange={set('notes')} placeholder="Internal notes" />
         </Section>
+        )}
 
-        {/* Live preview of what the server will recompute. */}
+        {tenancy ? (
+        <div className="rounded-xl border border-gold-border bg-gold-bg px-4 py-3 text-sm space-y-1">
+          <div className="flex items-baseline justify-between text-ink2">
+            <span>Rent billed so far</span><span className="tabular-nums">{formatCurrency(booking.amount)}</span>
+          </div>
+          <div className="flex items-baseline justify-between text-ink2">
+            <span>Received</span><span className="tabular-nums">{formatCurrency(Number(values.advance) || 0)}</span>
+          </div>
+          <div className="flex items-baseline justify-between font-medium text-gold pt-2 mt-1 border-t border-gold-border">
+            <span>Rent due</span>
+            <span className="tabular-nums">{formatCurrency(Math.max(0, booking.amount - (Number(values.advance) || 0)))}</span>
+          </div>
+        </div>
+        ) : (
+        /* Live preview of what the server will recompute. */
         <div className="rounded-xl border border-gold-border bg-gold-bg px-4 py-3 text-sm">
           <div className="flex items-baseline justify-between text-ink2">
             <span>New stay</span>
@@ -221,6 +259,7 @@ export default function EditBookingModal({ isOpen, booking, submitting = false, 
             </span>
           </div>
         </div>
+        )}
 
         <p className="text-[11.5px] text-ink3">
           Changing the dates re-checks the room's availability — if it clashes with another booking the

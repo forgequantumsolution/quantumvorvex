@@ -35,7 +35,7 @@ export default function Field({
             const val = typeof opt === 'object' ? opt.value : opt
             const lbl = typeof opt === 'object' ? opt.label : opt
             return (
-              <option key={val} value={val}>
+              <option key={val} value={val} disabled={typeof opt === 'object' && !!opt.disabled}>
                 {lbl}
               </option>
             )

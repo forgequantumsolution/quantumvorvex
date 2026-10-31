@@ -269,6 +269,7 @@ export async function getMockResponse(method, url) {
   // Billing
   if (path === '/billing' && m === 'get')          return { invoices: INVOICES, total: INVOICES.length }
   if (path === '/billing/ledger')        return { guest: { id: GUESTS[0].id, name: GUESTS[0].name, docId: 'DOC-0001' }, entries: LEDGER_ENTRIES, closingBalance: LEDGER_ENTRIES.length ? LEDGER_ENTRIES[LEDGER_ENTRIES.length - 1].balance : 0 }
+  if (path === '/billing/letterhead')    return { hotel: SETTINGS_HOTEL }
   if (path === '/billing/cash-register') return { date: d(0).split('T')[0], transactions: CASH_TXNS, totalIn: CASH_TXNS.reduce((s, t) => s + t.cashIn, 0), totalOut: CASH_TXNS.reduce((s, t) => s + t.cashOut, 0), net: CASH_TXNS.reduce((s, t) => s + t.cashIn - t.cashOut, 0) }
   if (path === '/billing/generate' && m === 'post') return { invoice: INVOICES[0], message: 'Invoice generated.' }
   if (path.match(/^\/billing\/[^/]+\/collect$/))   return { invoice: { ...INVOICES[0], status: 'paid' }, message: 'Payment collected.' }

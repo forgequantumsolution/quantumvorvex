@@ -1,4 +1,6 @@
 import prisma from '../utils/prisma.js'
+import { runRentBilling, tenancyTotals } from '../utils/pgRent.js'
+import { hotelLogo, inlineUploadAsset } from '../utils/invoiceTemplate.js'
 
 // GET /billing?status=&search=&page=&pageSize=
 // Pagination is opt-in: with no page/pageSize the full matching set is returned.
@@ -128,20 +130,58 @@ export const generateInvoice = async (req, res) => {
   }
 }
 
+// POST /billing/pg-rent — bill every PG tenancy whose rent month has started
+// (normally done by the daily job; this is the manual "bill now").
+export const billPgRent = async (req, res) => {
+  try {
+    const count = await runRentBilling(new Date())
+    return res.status(200).json({ created: count })
+  } catch (err) {
+    console.error('billPgRent error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
 // PUT /billing/:id/collect
 export const collectPayment = async (req, res) => {
   try {
     const { id } = req.params
 
-    const invoice = await prisma.invoice.update({
-      where: { id },
-      data: {
-        status: 'Paid',
-        paidAt: new Date(),
-      },
-      include: {
-        guest: { select: { id: true, name: true, docId: true } },
-      },
+    const invoice = await prisma.$transaction(async (tx) => {
+      const before = await tx.invoice.findUnique({ where: { id } })
+      if (!before) throw Object.assign(new Error('not found'), { code: 'P2025' })
+      const collected = +(before.total - (before.amountPaid || 0)).toFixed(2)
+
+      const updated = await tx.invoice.update({
+        where: { id },
+        data: {
+          status: 'Paid',
+          paidAt: new Date(),
+          amountPaid: before.total,
+        },
+        include: {
+          guest: { select: { id: true, name: true, docId: true } },
+        },
+      })
+
+      // A PG rent invoice also settles that much of the tenancy's running account.
+      if (before.bookingId && collected > 0) {
+        const booking = await tx.booking.findUnique({ where: { id: before.bookingId } })
+        if (booking) {
+          await tx.payment.create({
+            data: { guestId: before.guestId, invoiceId: id, amount: collected, method: req.body?.method || 'cash', type: 'collection' },
+          })
+          const advance = booking.advance + collected
+          await tx.booking.update({
+            where: { id: booking.id },
+            data: {
+              advanceApplied: +(booking.advanceApplied + collected).toFixed(2),
+              ...tenancyTotals({ amount: booking.amount, advance }),
+            },
+          })
+        }
+      }
+      return updated
     })
 
     return res.status(200).json({ invoice, message: 'Payment collected successfully.' })
@@ -262,6 +302,26 @@ export const getCashRegister = async (req, res) => {
     })
   } catch (err) {
     console.error('getCashRegister error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /billing/letterhead — the property's logo and details for the invoice header.
+export const getLetterhead = async (req, res) => {
+  try {
+    const hotel = await prisma.hotel.findFirst()
+    return res.status(200).json({
+      hotel: {
+        name: hotel?.name || '',
+        address: hotel?.address || null,
+        phone: hotel?.phone || null,
+        email: hotel?.email || null,
+        gstin: hotel?.gstin || null,
+        logoUrl: inlineUploadAsset(hotelLogo(hotel)),
+      },
+    })
+  } catch (err) {
+    console.error('getLetterhead error:', err)
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }

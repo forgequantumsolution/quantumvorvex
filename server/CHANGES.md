@@ -5,6 +5,51 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-10-31 · Organization logo on invoices
+
+- `src/utils/invoiceTemplate.js` — new `hotelLogo(hotel)`: uses `Hotel.logoUrl` (Hotel Profile), else the
+  logo inside `Hotel.branding` (Branding tab), which invoices previously ignored. `inlineUploadAsset`
+  moved here from `bookingsController.js`.
+- `src/controllers/bookingsController.js` — the booking tax invoice uses `hotelLogo`.
+- `src/controllers/billingController.js` + `src/routes/billing.js` — `GET /billing/letterhead` returns the
+  property's name, address, phone, email, GSTIN and logo (as a data URI) under the `billing` permission.
+
+---
+
+# Session — 2026-10-31 · PG / per-bed booking
+
+A room can now be let **whole** (hotel) or **by bed** (PG / hostel). A bed booking is an ordinary
+booking with `bedNo`, so invoices, payments, dues and check-in/out work per occupant unchanged.
+
+## `prisma/schema.prisma` + migration `20261031000000_pg_beds`
+- `Room.rentMode` (`room` | `bed`, default `room`), `Room.bedCount` (default 1),
+  `Room.bedDailyRate` / `Room.bedMonthlyRate` (default per-bed rents, nullable).
+- `Booking.bedNo` (1-based; NULL = whole room), `Booking.groupId` (bookings created together),
+  `Booking.securityDeposit` (refundable — held, **not** part of `amount`/`balance`). `Guest.bedNo`.
+
+## `src/controllers/bookingsController.js`
+- Availability is per bed: a bed booking clashes only with the same bed or a whole-room stay; a
+  whole-room booking clashes with any stay in the room. Conflict messages name the bed.
+- `POST /bookings` / `PUT /bookings/:id` accept `bedNo` and `securityDeposit` (bed validated
+  against the room; moving bed re-checks availability). Default rate = the bed rate for a bed.
+- `POST /bookings/group` — `{ roomId, stayType, fromDate, toDate|months, taxRate, source, notes,
+  occupants: [{ bedNo, guestName, guestPhone, guestEmail, idType, idNumber, roomRate, advance,
+  securityDeposit }] }` → one booking per occupant (own booking no. + invoice serial) sharing a
+  `groupId`. All-or-nothing: validated up front, created rows removed if one insert fails.
+- `GET /bookings/bed-availability?roomId=&from=&to=` — per-bed `{ bedNo, label, free, heldBy }`.
+- Room status on check-in/out/cancel: a bed room is `occupied` only when every bed (or the whole
+  room) is checked in, so a PG room with a free bed stays bookable. Whole-room rooms unchanged.
+
+## `src/controllers/roomsController.js`
+- Create/update accept `rentMode`, `bedCount`, `bedDailyRate`, `bedMonthlyRate`. Update refuses
+  (409) to drop beds or switch to whole-room while a live booking holds a bed that would vanish.
+- `GET /rooms` includes each room's live stays (`bookings`: bedNo, guest, status, dates, balance).
+
+## `src/utils/invoiceTemplate.js`
+- A bed booking's invoice line reads e.g. `DOUBLE · BED B`.
+
+---
+
 # Session — 2026-10-25 · Per-property member endpoints
 
 - `PUT /properties/:id/members/:userId` *(owner)* `{ roleId }` — give a person access to one property

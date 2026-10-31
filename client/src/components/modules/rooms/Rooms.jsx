@@ -1,15 +1,18 @@
 import { useState, useEffect, useCallback } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import {
-  LuTrash2, LuRefreshCw, LuPlus, LuSearch, LuLayoutGrid, LuColumns3, LuQrCode,
+  LuTrash2, LuRefreshCw, LuPlus, LuSearch, LuLayoutGrid, LuColumns3, LuQrCode, LuPencil,
   LuPrinter, LuDownload, LuDoorClosed, LuX,
 } from 'react-icons/lu'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
 import Button from '../../ui/Button'
+import { Pagination } from '../../ui-tw'
 import { roomsApi } from '../../../api/client'
 import { useToast } from '../../../hooks/useToast'
+import { bedFillLabel, bedOccupancy, hasBedStays, isBedRoom } from '../../../utils/beds'
+import { formatDate } from '../../../utils/format'
 
 // Flatten an API room (type is a relation object) to the shape the UI renders.
 const normalizeRoom = (r) => ({
@@ -19,6 +22,12 @@ const normalizeRoom = (r) => ({
   status: r.status,
   type: r.type?.name || (typeof r.type === 'string' ? r.type : 'Standard'),
   qrToken: r.qrToken,
+  bedCount: r.bedCount || 1,
+  dailyRate: r.dailyRate,
+  monthlyRate: r.monthlyRate,
+  bedDailyRate: r.bedDailyRate,
+  bedMonthlyRate: r.bedMonthlyRate,
+  bookings: r.bookings || [],
 })
 
 // Public URL a guest reaches when scanning the room's maintenance QR.
@@ -50,8 +59,30 @@ const STATUS_COLOR = {
 
 const STATUSES = ['available', 'occupied', 'reserved', 'maintenance']
 
+// Rooms per page (server-paginated): three rows of cards on a laptop screen.
+const PAGE_SIZE = 24
+
 const EMPTY_FORM = {
-  number: '', type: 'Single', floor: '', maxOccupancy: '',
+  number: '', type: 'Single', floor: '', dailyRate: '', monthlyRate: '',
+  bedCount: '1', bedMonthlyRate: '', bedDailyRate: '',
+}
+
+// Per-bed state colours: in-house, booked (not yet arrived), free.
+const BED_COLOR = { in: 'var(--red)', booked: 'var(--blue)', free: 'var(--green)' }
+const BED_STATE_LABEL = { in: 'Occupied', booked: 'Booked', free: 'Free' }
+
+// One dot per bed of a PG room — the at-a-glance fill level on cards and lists.
+function BedDots({ beds }) {
+  return (
+    <span className="inline-flex items-center gap-[3px]" aria-hidden>
+      {beds.map(b => (
+        <span key={b.bedNo} className="w-[7px] h-[7px] rounded-full"
+          style={b.state === 'free'
+            ? { boxShadow: `inset 0 0 0 1.5px ${BED_COLOR.free}` }
+            : { background: BED_COLOR[b.state] }} />
+      ))}
+    </span>
+  )
 }
 
 function StatusDot({ status, className = '' }) {
@@ -91,27 +122,40 @@ function KanbanColumn({ status, rooms, onSelect }) {
 }
 
 // ─── Room Detail Modal Content ────────────────────────────────────────────────
-function RoomDetail({ room, onClose, onStatusChange, onShowQr, onDelete }) {
+function RoomDetail({ room, onClose, onStatusChange, onShowQr, onDelete, onSaveRoom }) {
+  const [editing, setEditing] = useState(false)
   if (!room) return null
 
   // Occupancy is driven by check-in/out, so it isn't offered as a manual choice.
   const choices = STATUSES.filter(s => s !== 'occupied')
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       {/* Summary */}
-      <div className="flex items-center gap-4 rounded-xl border border-line bg-surface2 p-4">
-        <span className="w-14 h-14 rounded-xl bg-surface border border-line flex items-center justify-center text-[20px] font-bold text-ink tabular-nums shrink-0">
+      <div className="flex items-center gap-3 rounded-xl border border-line bg-surface2 px-3 py-2.5">
+        <span className="w-11 h-11 rounded-lg bg-surface border border-line flex items-center justify-center text-[16px] font-bold text-ink tabular-nums shrink-0">
           {room.number}
         </span>
         <div className="flex-1 min-w-0">
           <div className="t-title">{room.type} room</div>
-          <div className="t-xs text-ink3 mt-0.5">Floor {room.floor}</div>
+          <div className="t-xs text-ink3 mt-0.5">
+            Floor {room.floor}{isBedRoom(room) ? ` · ${room.bedCount} beds` : ''}
+          </div>
         </div>
         <Badge type={STATUS_BADGE[room.status] || 'grey'}>
           <StatusDot status={room.status} /> {STATUS_LABEL[room.status]}
         </Badge>
+        {!editing && (
+          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+            <LuPencil size={13} aria-hidden /> Edit
+          </Button>
+        )}
       </div>
+
+      {editing && (
+        <RoomEditForm room={room} onCancel={() => setEditing(false)}
+          onSave={async (data) => { await onSaveRoom(room.id, data); setEditing(false) }} />
+      )}
 
       {/* Guest info if occupied */}
       {room.status === 'occupied' && room.guest && (
@@ -129,6 +173,8 @@ function RoomDetail({ room, onClose, onStatusChange, onShowQr, onDelete }) {
         </div>
       )}
 
+      {isBedRoom(room) && <BedsPanel room={room} />}
+
       {/* Status */}
       <div>
         <p className="t-label mb-2">Set status</p>
@@ -142,7 +188,7 @@ function RoomDetail({ room, onClose, onStatusChange, onShowQr, onDelete }) {
                 type="button"
                 disabled={active || blocked}
                 onClick={() => { onStatusChange(room.id, s); onClose() }}
-                className={`flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border text-[13px] font-medium transition-colors duration-150 ${
+                className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-[13px] font-medium transition-colors duration-150 ${
                   active
                     ? 'border-gold bg-[var(--gold-bg)] text-ink cursor-default'
                     : blocked
@@ -158,7 +204,7 @@ function RoomDetail({ room, onClose, onStatusChange, onShowQr, onDelete }) {
       </div>
 
       {/* Other actions */}
-      <div className="flex items-center gap-2 pt-4 border-t border-line flex-wrap">
+      <div className="flex items-center gap-2 pt-3 border-t border-line flex-wrap">
         <Button variant="outline" size="sm" onClick={() => onShowQr(room)}>
           <LuQrCode size={15} aria-hidden /> Maintenance QR
         </Button>
@@ -166,6 +212,170 @@ function RoomDetail({ room, onClose, onStatusChange, onShowQr, onDelete }) {
           <LuTrash2 size={15} aria-hidden /> Delete room
         </Button>
       </div>
+    </div>
+  )
+}
+
+// ─── Beds of a PG room: who is in each, and until when ────────────────────────
+function BedsPanel({ room }) {
+  const beds = bedOccupancy(room)
+  const free = beds.filter(b => b.state === 'free').length
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-2">
+        <p className="t-label m-0">Beds</p>
+        <span className="t-xs text-ink3">{bedFillLabel(free, beds.length)}</span>
+      </div>
+      <ul className="m-0 p-0 list-none rounded-xl border border-line divide-y divide-line overflow-hidden">
+        {beds.map(b => (
+          <li key={b.bedNo} className="flex items-center gap-3 px-3.5 py-2.5 bg-surface">
+            <span className="w-8 h-8 rounded-lg border border-line bg-surface2 flex items-center justify-center text-[13px] font-bold text-ink shrink-0">
+              {b.label}
+            </span>
+            <div className="flex-1 min-w-0">
+              {b.booking ? (
+                <>
+                  <p className="t-title m-0 truncate">{b.booking.guestName.split(',')[0]}</p>
+                  <p className="t-xs text-ink3 mt-0.5 mb-0 truncate">
+                    {b.booking.bookingNo}
+                    {b.state === 'booked' ? ` · arrives ${formatDate(b.booking.fromDate)}` : ''}
+                    {b.booking.toDate ? ` · until ${formatDate(b.booking.toDate)}` : ''}
+                    {b.booking.balance > 0 ? ` · ₹${Number(b.booking.balance).toLocaleString('en-IN')} due` : ''}
+                  </p>
+                </>
+              ) : (
+                <p className="t-sm text-ink3 m-0">Vacant</p>
+              )}
+            </div>
+            <span className="flex items-center gap-1.5 t-xs font-medium text-ink2 shrink-0">
+              <span className="w-2 h-2 rounded-full" style={{ background: BED_COLOR[b.state] }} aria-hidden />
+              {BED_STATE_LABEL[b.state]}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+// ─── Edit a room: number, type, floor, beds and per-bed rents ─────────────────
+// Whole room or bed by bed is chosen per booking; beds here only say how many
+// there are and what a single bed rents for.
+const ROOM_TYPES = ['Single', 'Double', 'Suite', 'Deluxe']
+
+function RoomEditForm({ room, onSave, onCancel }) {
+  const [form, setForm] = useState({
+    number: room.number,
+    type: room.type,
+    floor: String(room.floor),
+    dailyRate: String(room.dailyRate ?? ''),
+    monthlyRate: String(room.monthlyRate ?? ''),
+    bedCount: String(room.bedCount || 1),
+    bedMonthlyRate: String(room.bedMonthlyRate ?? ''),
+    bedDailyRate: String(room.bedDailyRate ?? ''),
+  })
+  const [errors, setErrors] = useState({})
+  const [busy, setBusy] = useState(false)
+  const set = (k) => (e) => {
+    setForm(f => ({ ...f, [k]: e.target.value }))
+    if (errors[k]) setErrors(x => { const n = { ...x }; delete n[k]; return n })
+  }
+  const types = ROOM_TYPES.includes(form.type) ? ROOM_TYPES : [form.type, ...ROOM_TYPES]
+
+  const save = async () => {
+    const errs = addRoomErrors(form)
+    setErrors(errs)
+    if (Object.keys(errs).length) return
+    setBusy(true)
+    try {
+      await onSave({
+        number: form.number.trim(),
+        floor: parseInt(form.floor, 10),
+        ...(form.type !== room.type && { typeName: form.type }),
+        ...pricePayload(form),
+        ...bedPayload(form),
+      })
+    } catch {
+      // toast shown by the page; keep the form open to fix it
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const input = (label, key, type = 'text', extra = {}) => (
+    <div>
+      <label className="form-label block mb-[5px]">{label}</label>
+      <input className={`form-input ${errors[key] ? '!border-danger-text' : ''}`} type={type} name={key}
+        value={form[key]} onChange={set(key)} aria-invalid={!!errors[key]} {...extra} />
+      <FieldError msg={errors[key]} />
+    </div>
+  )
+
+  return (
+    <div className="rounded-xl border border-gold-border bg-[var(--gold-bg)] p-3">
+      <div className="grid grid-cols-3 gap-3">
+        {input('Room number', 'number', 'text', { maxLength: 10 })}
+        <div>
+          <label className="form-label block mb-[5px]">Type</label>
+          <select className="form-select" value={form.type} onChange={set('type')}>
+            {types.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        {input('Floor', 'floor', 'number', { min: 1 })}
+      </div>
+      <div className="grid grid-cols-2 gap-3 mt-3">
+        {input('Price / day (₹)', 'dailyRate', 'number', { min: 0, placeholder: 'e.g. 1500' })}
+        {input('Price / month (₹)', 'monthlyRate', 'number', { min: 0, placeholder: 'Optional' })}
+      </div>
+      <BedFields form={form} errors={errors} set={set} />
+      <div className="flex justify-end gap-2 mt-3">
+        <Button variant="outline" size="sm" onClick={onCancel} disabled={busy}>Cancel</Button>
+        <Button variant="primary" size="sm" onClick={save} disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</Button>
+      </div>
+    </div>
+  )
+}
+
+// API fields for the room's own prices (whole room, per day / per month).
+// A blank monthly price is left out: new rooms then take their type's rate.
+const pricePayload = (form) => ({
+  dailyRate: Number(form.dailyRate),
+  ...(form.monthlyRate !== '' && { monthlyRate: Number(form.monthlyRate) }),
+})
+
+// API fields for the bed setup form.
+const bedPayload = (form) => {
+  const bedCount = parseInt(form.bedCount, 10) || 1
+  return {
+    bedCount,
+    bedMonthlyRate: bedCount > 1 && form.bedMonthlyRate !== '' ? Number(form.bedMonthlyRate) : null,
+    bedDailyRate: bedCount > 1 && form.bedDailyRate !== '' ? Number(form.bedDailyRate) : null,
+  }
+}
+
+// Bed count + default per-bed rents (shared by Add room and the room detail).
+// Per-bed rents only matter once there's more than one bed to let separately.
+function BedFields({ form, set, errors = {} }) {
+  const input = (label, key, extra) => (
+    <div>
+      <label className="form-label block mb-[5px]">{label}</label>
+      <input className={`form-input ${errors[key] ? '!border-danger-text' : ''}`} type="number" min="0"
+        name={key} value={form[key]} onChange={set(key)} aria-invalid={!!errors[key]} {...extra} />
+      <FieldError msg={errors[key]} />
+    </div>
+  )
+  return (
+    <div className="mt-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {input('Beds', 'bedCount', { min: 1, max: 50, placeholder: '1' })}
+        {Number(form.bedCount) > 1 && input('Rent / bed / month (₹)', 'bedMonthlyRate', { placeholder: 'e.g. 6000' })}
+        {Number(form.bedCount) > 1 && input('Rent / bed / night (₹)', 'bedDailyRate', { placeholder: 'Optional' })}
+      </div>
+      <p className="t-xs text-ink3 mt-1.5 mb-0">
+        {Number(form.bedCount) > 1
+          ? 'At booking you choose: the whole room, or single beds (PG) — one booking per person.'
+          : 'Single bed — always booked as a whole room.'}
+      </p>
     </div>
   )
 }
@@ -262,23 +472,52 @@ function RoomQrCode({ room }) {
 }
 
 // ─── Add Room Form ────────────────────────────────────────────────────────────
-function AddRoomForm({ form, onChange }) {
+// Field-level problems with the Add room form; empty object when it can be saved.
+function addRoomErrors(form) {
+  const e = {}
+  if (!form.number.trim()) e.number = 'Enter a room number'
+  else if (form.number.trim().length > 10) e.number = 'Use at most 10 characters'
+  const floor = Number(form.floor)
+  if (form.floor === '') e.floor = 'Enter the floor'
+  else if (!Number.isInteger(floor) || floor < 1 || floor > 100) e.floor = 'Floor must be 1–100'
+  if (!(Number(form.dailyRate) > 0)) e.dailyRate = 'Enter the price per day'
+  if (form.monthlyRate !== '' && !(Number(form.monthlyRate) > 0)) e.monthlyRate = 'Must be more than 0'
+  const beds = Number(form.bedCount)
+  if (!Number.isInteger(beds) || beds < 1 || beds > 50) e.bedCount = 'Beds must be 1–50'
+  if (form.bedMonthlyRate !== '' && Number(form.bedMonthlyRate) < 0) e.bedMonthlyRate = 'Can’t be negative'
+  if (form.bedDailyRate !== '' && Number(form.bedDailyRate) < 0) e.bedDailyRate = 'Can’t be negative'
+  return e
+}
+
+function FieldError({ msg }) {
+  return msg ? <p className="t-xs text-danger-text mt-1 mb-0">{msg}</p> : null
+}
+
+function AddRoomForm({ form, onChange, errors = {}, apiError }) {
   const field = (label, key, type = 'text', extra = {}) => (
     <div key={key}>
-      <label className="form-label block mb-[5px]">{label}</label>
+      <label className="form-label block mb-[5px]">{label}{extra.required && <span className="text-danger-text"> *</span>}</label>
       <input
-        className="form-input"
+        className={`form-input ${errors[key] ? '!border-danger-text' : ''}`}
         type={type}
+        name={key}
         value={form[key]}
         onChange={e => onChange(key, e.target.value)}
+        aria-invalid={!!errors[key]}
         {...extra}
       />
+      <FieldError msg={errors[key]} />
     </div>
   )
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-      {field('Room Number', 'number', 'text', { placeholder: 'e.g. 105' })}
+      {apiError && (
+        <div className="md:col-span-2 t-sm px-3.5 py-2.5 rounded-lg bg-danger-bg text-danger-text" role="alert">
+          {apiError}
+        </div>
+      )}
+      {field('Room Number', 'number', 'text', { placeholder: 'e.g. 105', required: true })}
 
       {/* Room Type select */}
       <div>
@@ -294,8 +533,13 @@ function AddRoomForm({ form, onChange }) {
         </select>
       </div>
 
-      {field('Floor', 'floor', 'number', { placeholder: '1', min: 1 })}
-      {field('Max Occupancy', 'maxOccupancy', 'number', { placeholder: '2', min: 1 })}
+      {field('Floor', 'floor', 'number', { placeholder: 'e.g. 1', min: 1, required: true })}
+      {field('Price / day (₹)', 'dailyRate', 'number', { placeholder: 'e.g. 1500', min: 0, required: true })}
+      {field('Price / month (₹)', 'monthlyRate', 'number', { placeholder: 'Optional — for monthly stays', min: 0 })}
+
+      <div className="md:col-span-2 -mt-3">
+        <BedFields form={form} errors={errors} set={k => e => onChange(k, e.target.value)} />
+      </div>
     </div>
   )
 }
@@ -316,33 +560,51 @@ export default function Rooms() {
   const [deleting, setDeleting]       = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [addForm, setAddForm]         = useState(EMPTY_FORM)
+  const [addErrors, setAddErrors]     = useState({})
+  const [addApiError, setAddApiError] = useState('')
+  const [adding, setAdding]           = useState(false)
+
+  // Server pagination: `rooms` is the current page (already filtered by status,
+  // floor and search on the server); `stats` covers every room for the header.
+  const [page, setPage]   = useState(1)
+  const [total, setTotal] = useState(0)
+  const [stats, setStats] = useState({ total: 0, counts: {}, floors: [], beds: { total: 0, taken: 0 } })
+  const [query, setQuery] = useState('')   // debounced `search`
+
+  useEffect(() => {
+    const id = setTimeout(() => setQuery(search.trim()), 300)
+    return () => clearTimeout(id)
+  }, [search])
+  // Any filter change starts again from the first page.
+  useEffect(() => { setPage(1) }, [filter, floor, query])
 
   const load = useCallback(async () => {
     setLoading(true); setError('')
     try {
-      const { data } = await roomsApi.getAll()
+      const { data } = await roomsApi.getAll({
+        page, pageSize: PAGE_SIZE,
+        ...(filter !== 'all' && { status: filter }),
+        ...(floor !== 'all' && { floor }),
+        ...(query && { q: query }),
+      })
       setRooms((data.rooms || []).map(normalizeRoom))
+      setTotal(data.total ?? 0)
+      if (data.stats) setStats(data.stats)
     } catch {
       setError('Could not load rooms. Make sure the backend is running.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [page, filter, floor, query])
 
   useEffect(() => { load() }, [load])
 
-  // ── Filtering ──────────────────────────────────────────────────────────────
-  const filtered = rooms.filter(r => {
-    const matchesFilter = filter === 'all' || r.status === filter
-    const matchesFloor  = floor === 'all' || String(r.floor) === floor
-    const q = search.trim().toLowerCase()
-    const matchesSearch = !q || r.number.toLowerCase().includes(q) || r.type.toLowerCase().includes(q)
-    return matchesFilter && matchesFloor && matchesSearch
-  })
-  const floors = [...new Set(rooms.map(r => r.floor))].sort((a, b) => a - b)
-  const byFloor = floors
-    .map(f => ({ floor: f, rooms: filtered.filter(r => r.floor === f) }))
-    .filter(g => g.rooms.length)
+  // ── Grouping (the current page, by floor) ──────────────────────────────────
+  const filtered = rooms
+  const floors = stats.floors
+  const byFloor = [...new Set(rooms.map(r => r.floor))]
+    .sort((a, b) => a - b)
+    .map(f => ({ floor: f, rooms: rooms.filter(r => r.floor === f) }))
   const isFiltered = filter !== 'all' || floor !== 'all' || !!search.trim()
   const clearFilters = () => { setFilter('all'); setFloor('all'); setSearch('') }
 
@@ -352,27 +614,61 @@ export default function Rooms() {
     setRooms(rs => rs.map(r => r.id === id ? { ...r, status: newStatus } : r))
     try {
       await roomsApi.update(id, { status: newStatus })
+      load()   // refresh the header counts (and the page, if a filter is on)
     } catch {
       setRooms(prev)
-      addToast('Could not update room status', 'error')
+      addToast('Could not update room status', 'danger')
     }
   }
 
+  const closeAddModal = () => {
+    setShowAddModal(false); setAddForm(EMPTY_FORM); setAddErrors({}); setAddApiError('')
+  }
+
   const handleAddRoom = async () => {
-    if (!addForm.number.trim() || !addForm.floor) return
+    const errs = addRoomErrors(addForm)
+    setAddErrors(errs)
+    setAddApiError('')
+    const first = Object.keys(errs)[0]
+    if (first) {
+      addToast(errs[first], 'danger')
+      document.querySelector(`[name="${first}"]`)?.focus()
+      return
+    }
+    setAdding(true)
     try {
       await roomsApi.create({
         number: addForm.number.trim(),
         typeName: addForm.type,
         floor: parseInt(addForm.floor, 10),
         status: 'available',
+        ...pricePayload(addForm),
+        ...bedPayload(addForm),
       })
-      setAddForm(EMPTY_FORM)
-      setShowAddModal(false)
       addToast(`Room ${addForm.number.trim()} added`, 'success')
+      closeAddModal()
       load()
     } catch (err) {
-      addToast(err.response?.data?.message || 'Could not add room', 'error')
+      const msg = err.response?.data?.message || err.response?.data?.error
+        || (err.response ? 'Could not add room' : 'Could not reach the server — is the backend running?')
+      setAddApiError(msg)
+      addToast(msg, 'danger')
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  // Room detail → Edit: number, type, floor, beds and per-bed rents.
+  const handleSaveRoom = async (id, data) => {
+    try {
+      const { data: res } = await roomsApi.update(id, data)
+      addToast(`Room ${res.room.number} updated`, 'success')
+      const next = normalizeRoom({ ...res.room, bookings: rooms.find(r => r.id === id)?.bookings })
+      setRooms(rs => rs.map(r => r.id === id ? next : r))
+      setSelectedRoom(next)
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not update the room', 'danger')
+      throw err
     }
   }
 
@@ -385,31 +681,87 @@ export default function Rooms() {
       setDeleteRoom(null)
       load()
     } catch (err) {
-      addToast(err.response?.data?.message || 'Could not delete room', 'error')
+      addToast(err.response?.data?.message || 'Could not delete room', 'danger')
     } finally {
       setDeleting(false)
     }
   }
 
   // ── Stats ──────────────────────────────────────────────────────────────────
-  const counts = Object.fromEntries(STATUSES.map(st => [st, rooms.filter(r => r.status === st).length]))
-  const occupancy = rooms.length ? Math.round((counts.occupied / rooms.length) * 100) : 0
+  // Whole-property figures from the server, not just the visible page.
+  const roomCount = stats.total
+  const counts = Object.fromEntries(STATUSES.map(st => [st, stats.counts[st] || 0]))
+  const occupancy = roomCount ? Math.round((counts.occupied / roomCount) * 100) : 0
+  // Rooms let bed by bed are also counted in beds.
+  const bedsTotal = stats.beds.total
+  const bedsTaken = stats.beds.taken
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div>
 
-      {/* ── Page Header ────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between mb-5 gap-4 flex-wrap">
-        <div>
-          <h1 className="t-h1 m-0">Rooms</h1>
-          <p className="t-sm text-ink3 mt-1 mb-0">
-            {rooms.length ? `${rooms.length} rooms across ${floors.length} floor${floors.length === 1 ? '' : 's'}` : 'Manage room inventory'}
-          </p>
+      {/* ── Header ── title, counts and actions on one line */}
+      <div className="flex items-center justify-between mb-3 gap-3 flex-wrap">
+        <div className="flex items-baseline gap-2.5 min-w-0">
+          <h1 className="t-h2 m-0">Rooms</h1>
+          <span className="t-xs text-ink3 truncate">
+            {roomCount ? `${roomCount} room${roomCount === 1 ? '' : 's'} · ${floors.length} floor${floors.length === 1 ? '' : 's'}` : 'Manage room inventory'}
+          </span>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-            <LuRefreshCw size={14} aria-hidden className={loading ? 'animate-spin' : ''} /> Refresh
+        {/* Search, floor and view sit on the header line, beside Add room. */}
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <div className="relative w-[220px] max-w-full">
+            <LuSearch size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-ink3 pointer-events-none" aria-hidden />
+            <input
+              className="form-input h-8 py-1 pl-8 text-[13px]"
+              type="search"
+              placeholder="Search number or type"
+              aria-label="Search rooms"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+
+          <select className="form-select h-8 py-1 text-[13px] w-auto min-w-[120px]" value={floor} onChange={e => setFloor(e.target.value)} aria-label="Floor">
+            <option value="all">All floors</option>
+            {floors.map(f => <option key={f} value={String(f)}>Floor {f}</option>)}
+          </select>
+
+          {isFiltered && (
+            <button type="button" onClick={clearFilters}
+              className="inline-flex items-center gap-1 px-2 py-1 bg-transparent border-0 cursor-pointer t-xs font-medium text-ink2 hover:text-ink">
+              <LuX size={13} aria-hidden /> Clear
+            </button>
+          )}
+
+          {isFiltered && <span className="t-xs text-ink3 hidden sm:inline">{total} of {roomCount}</span>}
+
+          <div className="flex bg-surface2 border border-line rounded-lg p-[2px] gap-[2px] shrink-0" role="group" aria-label="View">
+            {[
+              { key: 'grid',   Icon: LuLayoutGrid, title: 'Floor view'  },
+              { key: 'kanban', Icon: LuColumns3,   title: 'Status board' },
+            ].map(({ key, Icon: ViewIcon, title }) => {
+              const Icon = ViewIcon
+              const active = view === key
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  title={title}
+                  aria-label={title}
+                  aria-pressed={active}
+                  onClick={() => setView(key)}
+                  className={`w-7 h-6 flex items-center justify-center rounded-md border-0 cursor-pointer transition-colors duration-150 ${
+                    active ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(0,0,0,0.08)]' : 'bg-transparent text-ink3 hover:text-ink'
+                  }`}
+                >
+                  <Icon size={14} aria-hidden />
+                </button>
+              )
+            })}
+          </div>
+          <Button variant="outline" size="sm" onClick={load} disabled={loading} title="Refresh" aria-label="Refresh">
+            <LuRefreshCw size={14} aria-hidden className={loading ? 'animate-spin' : ''} />
           </Button>
           <Button variant="primary" size="sm" onClick={() => setShowAddModal(true)}>
             <LuPlus size={15} aria-hidden /> Add room
@@ -418,120 +770,60 @@ export default function Rooms() {
       </div>
 
       {error && (
-        <div className="t-sm mb-4 px-[14px] py-2.5 rounded-lg bg-danger-bg text-danger-text">
+        <div className="t-sm mb-3 px-3 py-2 rounded-lg bg-danger-bg text-danger-text">
           {error}
         </div>
       )}
 
-      {/* ── Status summary — each tile filters the rooms below ─────────────── */}
-      <div className="card mb-5">
-        <div className="px-5 pt-4 pb-3.5">
-          <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2.5">
-            <div className="flex items-baseline gap-2">
-              <span className="text-[22px] font-bold text-ink tabular-nums leading-none">{occupancy}%</span>
-              <span className="t-sm text-ink2">occupancy</span>
+      {/* ── One control bar: occupancy, status filters, search / floor / view ── */}
+      <div className="card mb-4">
+        <div className="flex items-center gap-x-4 gap-y-2 px-3.5 py-2.5 flex-wrap">
+          <div className="flex items-center gap-2.5 shrink-0" title={`${counts.occupied} of ${roomCount} rooms occupied`}>
+            <span className="text-[17px] font-bold text-ink tabular-nums leading-none">{occupancy}%</span>
+            <span className="t-xs text-ink3">occupied</span>
+            <div className="flex w-24 h-1.5 rounded-full overflow-hidden bg-surface2 gap-px" role="img"
+              aria-label={STATUSES.map(st => `${counts[st]} ${STATUS_LABEL[st].toLowerCase()}`).join(', ')}>
+              {roomCount > 0 && STATUSES.map(st => counts[st] > 0 && (
+                <span key={st} style={{ width: `${(counts[st] / roomCount) * 100}%`, background: STATUS_COLOR[st] }} />
+              ))}
             </div>
-            <span className="t-xs text-ink3">{counts.occupied} of {rooms.length} rooms occupied</span>
+            {bedsTotal > 0 && <span className="t-xs text-ink3">· beds {bedsTaken}/{bedsTotal}</span>}
           </div>
-          <div className="flex h-2 rounded-full overflow-hidden bg-surface2 gap-[2px]" role="img"
-            aria-label={STATUSES.map(st => `${counts[st]} ${STATUS_LABEL[st].toLowerCase()}`).join(', ')}>
-            {rooms.length > 0 && STATUSES.map(st => counts[st] > 0 && (
-              <span key={st} style={{ width: `${(counts[st] / rooms.length) * 100}%`, background: STATUS_COLOR[st] }} />
-            ))}
-          </div>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 border-t border-line">
-          {[{ id: 'all', label: 'All rooms', count: rooms.length }, ...STATUSES.map(st => ({ id: st, label: STATUS_LABEL[st], count: counts[st] }))].map((t, i) => {
-            const active = filter === t.id
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => setFilter(active && t.id !== 'all' ? 'all' : t.id)}
-                aria-pressed={active}
-                className={`relative text-left px-5 py-3.5 border-0 cursor-pointer transition-colors duration-150 ${
-                  i > 0 ? 'lg:border-l lg:border-solid lg:border-line' : ''
-                } ${active ? 'bg-[var(--gold-bg)]' : 'bg-transparent hover:bg-surface2'}`}
-              >
-                {active && <span className="absolute left-0 right-0 bottom-0 h-[2px] bg-gold" aria-hidden />}
-                <span className="flex items-center gap-1.5 t-xs font-medium text-ink2">
+
+          {/* Status chips — each filters the rooms below. */}
+          <div className="flex items-center gap-1 flex-wrap">
+            {[{ id: 'all', label: 'All', count: roomCount }, ...STATUSES.map(st => ({ id: st, label: STATUS_LABEL[st], count: counts[st] }))].map(t => {
+              const active = filter === t.id
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setFilter(active && t.id !== 'all' ? 'all' : t.id)}
+                  aria-pressed={active}
+                  className={`inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full border text-[12px] font-medium cursor-pointer transition-colors duration-150 ${
+                    active ? 'border-gold bg-[var(--gold-bg)] text-ink' : 'border-line bg-surface text-ink2 hover:border-line2'
+                  }`}
+                >
                   {t.id !== 'all' && <StatusDot status={t.id} />}
                   {t.label}
-                </span>
-                <span className="block text-[20px] font-bold text-ink tabular-nums mt-1 leading-none">{t.count}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* ── Search / floor / view ──────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 mb-4 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-[320px]">
-          <LuSearch size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink3 pointer-events-none" aria-hidden />
-          <input
-            className="form-input pl-9"
-            type="search"
-            placeholder="Search room number or type"
-            aria-label="Search rooms"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
+                  <span className="tabular-nums text-ink3">{t.count}</span>
+                </button>
+              )
+            })}
+          </div>
         </div>
 
-        <select className="form-select w-auto min-w-[130px]" value={floor} onChange={e => setFloor(e.target.value)} aria-label="Floor">
-          <option value="all">All floors</option>
-          {floors.map(f => <option key={f} value={String(f)}>Floor {f}</option>)}
-        </select>
-
-        {isFiltered && (
-          <button type="button" onClick={clearFilters}
-            className="inline-flex items-center gap-1 px-2 py-1.5 bg-transparent border-0 cursor-pointer t-xs font-medium text-ink2 hover:text-ink">
-            <LuX size={13} aria-hidden /> Clear
-          </button>
-        )}
-
-        <div className="flex-1" />
-
-        <span className="t-xs text-ink3 hidden sm:inline">
-          {isFiltered ? `${filtered.length} of ${rooms.length} rooms` : `${rooms.length} rooms`}
-        </span>
-
-        <div className="flex bg-surface2 border border-line rounded-lg p-[3px] gap-[3px] shrink-0" role="group" aria-label="View">
-          {[
-            { key: 'grid',   Icon: LuLayoutGrid, title: 'Floor view'  },
-            { key: 'kanban', Icon: LuColumns3,   title: 'Status board' },
-          ].map(({ key, Icon: ViewIcon, title }) => {
-            const Icon = ViewIcon
-            const active = view === key
-            return (
-              <button
-                key={key}
-                type="button"
-                title={title}
-                aria-label={title}
-                aria-pressed={active}
-                onClick={() => setView(key)}
-                className={`w-8 h-7 flex items-center justify-center rounded-md border-0 cursor-pointer transition-colors duration-150 ${
-                  active ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(0,0,0,0.08)]' : 'bg-transparent text-ink3 hover:text-ink'
-                }`}
-              >
-                <Icon size={15} aria-hidden />
-              </button>
-            )
-          })}
-        </div>
       </div>
 
       {/* ── Empty state ────────────────────────────────────────────────────── */}
       {!loading && filtered.length === 0 && (
-        <div className="card py-14 px-6 text-center">
+        <div className="card py-10 px-6 text-center">
           <span className="w-12 h-12 mx-auto mb-3 rounded-xl bg-surface2 text-ink3 flex items-center justify-center">
             <LuDoorClosed size={22} aria-hidden />
           </span>
-          <p className="t-title m-0">{rooms.length ? 'No rooms match these filters' : 'No rooms yet'}</p>
-          <p className="t-xs text-ink3 mt-1 mb-4">{rooms.length ? 'Try a different status, floor or search.' : 'Add your first room to start taking bookings.'}</p>
-          {rooms.length
+          <p className="t-title m-0">{roomCount ? 'No rooms match these filters' : 'No rooms yet'}</p>
+          <p className="t-xs text-ink3 mt-1 mb-4">{roomCount ? 'Try a different status, floor or search.' : 'Add your first room to start taking bookings.'}</p>
+          {roomCount
             ? <Button variant="outline" size="sm" onClick={clearFilters}>Clear filters</Button>
             : <Button variant="primary" size="sm" onClick={() => setShowAddModal(true)}><LuPlus size={15} aria-hidden /> Add room</Button>}
         </div>
@@ -539,16 +831,16 @@ export default function Rooms() {
 
       {/* ── Floor View ─────────────────────────────────────────────────────── */}
       {view === 'grid' && filtered.length > 0 && (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           {byFloor.map(g => {
             const free = g.rooms.filter(r => r.status === 'available').length
             return (
               <section key={g.floor} aria-labelledby={`floor-${g.floor}`}>
-                <div className="flex items-baseline gap-2.5 mb-2.5">
-                  <h2 id={`floor-${g.floor}`} className="t-h3 m-0">Floor {g.floor}</h2>
+                <div className="flex items-baseline gap-2 mb-1.5">
+                  <h2 id={`floor-${g.floor}`} className="text-[13px] font-semibold text-ink m-0">Floor {g.floor}</h2>
                   <span className="t-xs text-ink3">{g.rooms.length} room{g.rooms.length === 1 ? '' : 's'} · {free} available</span>
                 </div>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(132px,1fr))] gap-2.5">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3.5">
                   {g.rooms.map(room => (
                     <RoomCard key={room.id} room={room} onClick={() => setSelectedRoom(room)} />
                   ))}
@@ -573,6 +865,10 @@ export default function Rooms() {
         </div>
       )}
 
+      {/* ── Pages (server-side) ── */}
+      <Pagination className="mt-4" page={page} pageSize={PAGE_SIZE} total={total}
+                  disabled={loading} onChange={setPage} />
+
       {/* ── Room Detail Modal ───────────────────────────────────────────────── */}
       <Modal
         isOpen={!!selectedRoom}
@@ -584,6 +880,7 @@ export default function Rooms() {
           onClose={() => setSelectedRoom(null)}
           onStatusChange={handleStatusChange}
           onShowQr={(room) => { setSelectedRoom(null); setQrRoom(room) }}
+          onSaveRoom={handleSaveRoom}
           onDelete={(room) => { setSelectedRoom(null); setDeleteRoom(room) }}
         />
       </Modal>
@@ -612,20 +909,29 @@ export default function Rooms() {
       {/* ── Add Room Modal ──────────────────────────────────────────────────── */}
       <Modal
         isOpen={showAddModal}
-        onClose={() => { setShowAddModal(false); setAddForm(EMPTY_FORM) }}
+        onClose={closeAddModal}
         title="Add New Room"
         footer={
           <>
-            <Button variant="outline" onClick={() => { setShowAddModal(false); setAddForm(EMPTY_FORM) }}>
+            <Button variant="outline" onClick={closeAddModal} disabled={adding}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={handleAddRoom}>
-              Save Room
+            <Button variant="primary" onClick={handleAddRoom} disabled={adding}>
+              {adding ? 'Saving…' : 'Save Room'}
             </Button>
           </>
         }
       >
-        <AddRoomForm form={addForm} onChange={(key, val) => setAddForm(p => ({ ...p, [key]: val }))} />
+        <AddRoomForm
+          form={addForm}
+          errors={addErrors}
+          apiError={addApiError}
+          onChange={(key, val) => {
+            setAddForm(p => ({ ...p, [key]: val }))
+            // Clear a field's error as soon as it's edited.
+            if (addErrors[key]) setAddErrors(e => { const n = { ...e }; delete n[key]; return n })
+          }}
+        />
       </Modal>
     </div>
   )
@@ -633,20 +939,58 @@ export default function Rooms() {
 
 // ─── Room Card ────────────────────────────────────────────────────────────────
 function RoomCard({ room, onClick }) {
+  // Bed-by-bed fill only while the room is actually let that way.
+  const label = hasBedStays(room)
+    ? bedFillLabel(bedOccupancy(room).filter(b => b.state === 'free').length, room.bedCount)
+    : STATUS_LABEL[room.status]
   return (
     <button
       type="button"
       onClick={onClick}
-      aria-label={`Room ${room.number}, ${room.type}, ${STATUS_LABEL[room.status]}`}
-      className="group relative text-left bg-surface border border-line rounded-xl px-3.5 pt-3.5 pb-3 cursor-pointer overflow-hidden transition-all duration-150 hover:border-gold hover:shadow-[var(--shadow)] hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-gold"
+      aria-label={`Room ${room.number}, ${room.type}, ${label}`}
+      className="group relative text-left bg-surface border border-line rounded-xl px-5 pt-5 pb-4 min-h-[150px] flex flex-col cursor-pointer overflow-hidden transition-all duration-150 hover:border-gold hover:shadow-[var(--shadow)] hover:-translate-y-px focus-visible:outline-2 focus-visible:outline-gold"
     >
       <span className="absolute left-0 right-0 top-0 h-[3px]" style={{ background: STATUS_COLOR[room.status] }} aria-hidden />
-      <span className="block text-[20px] font-bold text-ink tabular-nums leading-tight">{room.number}</span>
-      <span className="block t-xs text-ink3 mt-0.5 truncate">{room.type}</span>
-      <span className="flex items-center gap-1.5 mt-3 text-[12px] font-medium text-ink2">
-        <StatusDot status={room.status} />
-        {STATUS_LABEL[room.status]}
+      <span className="block text-[26px] font-bold text-ink tabular-nums leading-none">{room.number}</span>
+      <span className="block text-[13px] text-ink2 mt-1.5 truncate">
+        {room.type}{isBedRoom(room) ? ` · ${room.bedCount} beds` : ''}
       </span>
+      {(room.dailyRate || room.bedMonthlyRate) && (
+        <span className="block t-xs text-ink3 mt-0.5 truncate">
+          {room.dailyRate ? `₹${Number(room.dailyRate).toLocaleString('en-IN')}/night` : ''}
+          {room.dailyRate && room.bedMonthlyRate ? ' · ' : ''}
+          {room.bedMonthlyRate ? `₹${Number(room.bedMonthlyRate).toLocaleString('en-IN')}/bed/mo` : ''}
+        </span>
+      )}
+      {hasBedStays(room) ? (
+        <BedSummary room={room} />
+      ) : (
+        <span className="flex items-center gap-1.5 mt-auto pt-3 text-[13px] font-medium text-ink2">
+          <StatusDot status={room.status} />
+          {STATUS_LABEL[room.status]}
+        </span>
+      )}
     </button>
+  )
+}
+
+// Bed fill of a PG room on its card: one dot per bed + "1 of 3 free".
+function BedSummary({ room }) {
+  const beds = bedOccupancy(room)
+  const free = beds.filter(b => b.state === 'free').length
+  // Maintenance still overrides — a room out of service has no free beds to sell.
+  if (room.status === 'maintenance') {
+    return (
+      <span className="flex items-center gap-1.5 mt-auto pt-2.5 text-[12.5px] font-medium text-ink2">
+        <StatusDot status="maintenance" /> {STATUS_LABEL.maintenance}
+      </span>
+    )
+  }
+  return (
+    // Dots on their own line: beside the label they force a wrap at card width.
+    <span className="flex flex-col items-start gap-1 mt-auto pt-2.5 text-[12.5px] font-medium text-ink2 whitespace-nowrap">
+      <BedDots beds={beds} />
+      {bedFillLabel(free, beds.length)}
+    </span>
   )
 }

@@ -105,9 +105,12 @@ export const billingApi = {
   getAll: (params) => api.get('/billing', { params }),
   getStats: (params) => api.get('/billing/stats', { params }),
   generate: (data) => api.post('/billing/generate', data),
+  // Raise PG rent invoices that have fallen due now (a daily job also does this).
+  billPgRent: ()   => api.post('/billing/pg-rent'),
   collect: (id)    => api.put(`/billing/${id}/collect`),
   delete: (id)     => api.delete(`/billing/${id}`),
   getPdf: (id)     => api.get(`/billing/${id}/pdf`, { responseType: 'blob' }),
+  getLetterhead:   ()        => api.get('/billing/letterhead'),
   getLedger:       (guestId) => api.get('/billing/ledger', { params: { guestId } }),
   getCashRegister: (date)    => api.get('/billing/cash-register', { params: { date } }),
 }
@@ -117,6 +120,13 @@ export const bookingsApi = {
   getStats: (params)   => api.get('/bookings/stats', { params }),
   getOne:   (id)       => api.get(`/bookings/${id}`),
   create:   (data)     => api.post('/bookings', data),
+  // PG: several occupants into one room let by bed — one booking per bed.
+  createGroup: (data)  => api.post('/bookings/group', data),
+  // PG: per-bed free/held status of a room over [from, to) (ISO strings).
+  bedAvailability: (params) => api.get('/bookings/bed-availability', { params }),
+  // Monthly tenancy: rent account (months billed, due, credit) and collect rent.
+  rentAccount: (id)    => api.get(`/bookings/${id}/rent`),
+  collectRent: (id, data) => api.post(`/bookings/${id}/collect-rent`, data),
   update:   (id, data) => api.put(`/bookings/${id}`, data),
   confirm:  (id)       => api.post(`/bookings/${id}/confirm`),
   checkIn:  (id, data) => api.post(`/bookings/${id}/check-in`, data || {}),

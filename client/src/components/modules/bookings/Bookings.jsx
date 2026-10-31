@@ -8,12 +8,14 @@ import CheckOutModal from '../checkout/CheckOutModal'
 import ExtendStayModal from './ExtendStayModal'
 import EditBookingModal from './EditBookingModal'
 import InvoiceModal from './InvoiceModal'
+import CollectRentModal from './CollectRentModal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import { useToast } from '../../../hooks/useToast'
 import { useAppSelector, usePrimaryAction } from '../../../store/hooks'
 import { bookingsApi } from '../../../api/client'
 import { formatCurrency, formatDate } from '../../../utils/format'
 import { stayLabel } from '../../../utils/booking'
+import { bedLabel } from '../../../utils/beds'
 import { normalizeBooking as normalize } from '../../../utils/normalizeBooking'
 
 const TABS = [
@@ -46,7 +48,7 @@ const storedView = () => {
 function updateErrorMessage(err, fallback) {
   const data = err.response?.data
   const c = data?.conflict
-  if (c?.type === 'booking') return `Room already booked (${c.bookingNo}) from ${formatDate(c.fromDate)}. Pick other dates.`
+  if (c?.type === 'booking') return `${c.bedNo ? `Bed ${bedLabel(c.bedNo)}` : 'Room'} already booked (${c.bookingNo}) from ${formatDate(c.fromDate)}. Pick other dates.`
   if (c?.type === 'guest') return `Room is occupied by ${c.name}. Pick other dates.`
   return data?.message || fallback
 }
@@ -72,6 +74,7 @@ export default function Bookings() {
   const [showNew, setShowNew] = useState(false)
   const [cancelTarget, setCancelTarget] = useState(null)
   const [checkOutTarget, setCheckOutTarget] = useState(null)
+  const [rentTarget, setRentTarget] = useState(null)
   const [extendTarget, setExtendTarget] = useState(null)
   const [editTarget, setEditTarget] = useState(null)
   const [invoiceTarget, setInvoiceTarget] = useState(null)
@@ -153,7 +156,15 @@ export default function Bookings() {
 
   // ── Actions ──
   const handleCreated = (booking) => {
-    toast(`Booking ${booking.bookingNo} created for ${booking.guestName}`)
+    if (booking.group) {
+      // PG: one booking per bed, created together.
+      const n = booking.bookings.length
+      toast(n === 1
+        ? `Booking ${booking.bookings[0].bookingNo} created for ${booking.bookings[0].guestName}`
+        : `${n} bed bookings created in Room ${booking.roomNumber}`)
+    } else {
+      toast(`Booking ${booking.bookingNo} created for ${booking.guestName}`)
+    }
     setShowNew(false)
     reload()
   }
@@ -314,6 +325,7 @@ export default function Bookings() {
             onConfirm={handleConfirm}
             onCancel={setCancelTarget}
             onExtend={setExtendTarget}
+            onRent={setRentTarget}
             onInvoice={setInvoiceTarget}
             onEdit={setEditTarget}
             onDelete={setDeleteTarget}
@@ -336,14 +348,16 @@ export default function Bookings() {
           isOpen
           guestName={checkOutTarget.guestName}
           folio={checkOutTarget.bookingNo}
-          room={`${checkOutTarget.roomNumber} · ${checkOutTarget.roomType}`}
+          room={`${checkOutTarget.roomNumber}${checkOutTarget.bed ? ` · Bed ${checkOutTarget.bed}` : ''} · ${checkOutTarget.roomType}`}
           stayPeriod={`${formatDate(checkOutTarget.checkedInAt || checkOutTarget.fromDate)} · ${stayLabel(checkOutTarget)}`}
-          lineItems={[['Total amount', checkOutTarget.amount]]}
+          lineItems={[[checkOutTarget.tenancy ? 'Rent billed so far' : 'Total amount', checkOutTarget.amount]]}
           advance={checkOutTarget.advance}
           balanceDue={checkOutTarget.balanceDue}
           allowExtraCharges
           allowPartialPayment
-          footnote={`Confirming releases Room ${checkOutTarget.roomNumber} and moves the guest to checked-out history.`}
+          footnote={`Confirming releases ${checkOutTarget.bed ? `Bed ${checkOutTarget.bed} of ` : ''}Room ${checkOutTarget.roomNumber} and moves the guest to checked-out history.${
+            // A PG deposit is held, not billed — remind the desk to settle it.
+            checkOutTarget.securityDeposit > 0 ? ` Security deposit of ${formatCurrency(checkOutTarget.securityDeposit)} is held — refund it, less any dues.` : ''}`}
           submitting={busyId === checkOutTarget.id}
           onClose={() => setCheckOutTarget(null)}
           onConfirm={handleCheckOut}
@@ -365,6 +379,17 @@ export default function Bookings() {
           submitting={busyId === extendTarget.id}
           onClose={() => setExtendTarget(null)}
           onConfirm={handleExtend}
+        />
+      )}
+      {rentTarget && (
+        <CollectRentModal
+          booking={rentTarget}
+          onClose={() => setRentTarget(null)}
+          onCollected={(_, amount) => {
+            toast(`${formatCurrency(amount)} rent collected from ${rentTarget.guestName.split(',')[0]}`)
+            setRentTarget(null)
+            reload()
+          }}
         />
       )}
       <InvoiceModal

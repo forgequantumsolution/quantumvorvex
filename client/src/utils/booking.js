@@ -19,12 +19,15 @@ export function balance(b) {
 
 // Human-readable stay duration ("3 nights" or "2 months").
 export function stayLabel(b) {
+  // PG tenancy: open-ended, rent billed monthly.
+  if (b.stayType === 'monthly' && !b.months) return 'Monthly rent · until move-out'
   if (b.stayType === 'monthly') return `${b.months} month${b.months !== 1 ? 's' : ''}`
   return `${b.nights} night${b.nights !== 1 ? 's' : ''}`
 }
 
 // "08 Jun → 11 Jun" or "from 08 Jun (monthly)".
 export function dateRangeLabel(b) {
+  if (b.stayType === 'monthly' && !b.months) return `From ${formatDate(b.fromDate)}`
   if (b.stayType === 'monthly') return `${formatDate(b.fromDate)} · ${stayLabel(b)}`
   return `${formatDate(b.fromDate)} → ${formatDate(b.toDate)}`
 }

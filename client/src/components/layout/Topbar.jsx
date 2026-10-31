@@ -24,20 +24,18 @@ function todayLabel() {
 }
 
 // Contextual primary action per page — label + the panel whose action it triggers.
+// "New Booking" belongs to the Bookings page only; pages not listed get none.
 const PRIMARY_ACTIONS = {
-  today:         { label: 'New Booking',   target: 'bookings'      },
   bookings:      { label: 'New Booking',   target: 'bookings'      },
   cancellations: { label: 'Cancel Booking', target: 'cancellations' },
   maintenance:   { label: 'New Ticket',    target: 'maintenance'   },
-  portfolio:     null, // the page puts its own actions in the topbar slot
 }
-const DEFAULT_ACTION = { label: 'New Booking', target: 'bookings' }
 
 export default function Topbar() {
   const activePanel = useAppSelector((s) => s.ui.activePanel)
   const { setActivePanel, toggleSidebar, setSearchOpen, requestPrimaryAction } = useUiActions()
 
-  const primaryAction = activePanel in PRIMARY_ACTIONS ? PRIMARY_ACTIONS[activePanel] : DEFAULT_ACTION
+  const primaryAction = PRIMARY_ACTIONS[activePanel] || null
 
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifs,    setNotifs]    = useState(MOCK_NOTIFS)

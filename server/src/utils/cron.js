@@ -1,6 +1,7 @@
 import cron from 'node-cron'
 import prisma from './prisma.js'
 import { runWithProperty } from './propertyContext.js'
+import { runRentBilling } from './pgRent.js'
 
 // Runs once per active property so every query is scoped and each notification
 // lands in the property it concerns.
@@ -69,12 +70,33 @@ const checkPropertyOverdue = async (propertyId) => {
   }
 }
 
+// PG tenancies: raise each tenant's rent invoice when their month starts.
+const billPgRentAllProperties = async () => {
+  const properties = await prisma.property.findMany({ where: { status: 'active' }, select: { id: true } })
+  for (const { id } of properties) {
+    try {
+      const n = await runWithProperty(id, () => runRentBilling(new Date()))
+      if (n) console.log(`[CRON] Property ${id}: ${n} PG rent invoice(s) created.`)
+    } catch (err) {
+      console.error(`[CRON] PG rent billing failed for property ${id}:`, err.message)
+    }
+  }
+}
+
 export const startCronJobs = () => {
   // Run at midnight every day: '0 0 * * *'
   cron.schedule('0 0 * * *', async () => {
     console.log('[CRON] Running midnight overdue check...')
     await checkOverdueGuests()
   })
+
+  // 00:10 daily (after the overdue check): bill PG rent for months starting today.
+  cron.schedule('10 0 * * *', async () => {
+    console.log('[CRON] Billing PG rent...')
+    await billPgRentAllProperties()
+  })
+  // Catch up on start, in case the server was down at midnight.
+  billPgRentAllProperties()
 
   console.log('[CRON] Scheduled jobs started.')
 }

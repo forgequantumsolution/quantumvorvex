@@ -6,6 +6,10 @@ import { useToast } from '../../../hooks/useToast'
 import { formatDate } from '../../../utils/format'
 import PhoneFields from './PhoneFields'
 import NameFields from './NameFields'
+import UploadZone from './UploadZone'
+import PgOccupants from './PgOccupants'
+import { occupantErrors, occField } from './occupants'
+import { bedFillLabel, bedLabel, bedOccupancy, hasBedStays, isBedRoom } from '../../../utils/beds'
 import {
   TODAY, joinPhones, phoneErrors, phoneFieldName, splitPhones, MAX_PHONES,
   joinNames, nameErrors, nameFieldName, splitNames, MAX_NAMES,
@@ -39,9 +43,38 @@ const ID_TYPES = ['Aadhaar', 'PAN', 'Passport', 'Driving License', 'Voter ID', '
 const slugify = (s) =>
   (s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
+// Can this room take a new booking right now? A PG room with a free bed is kept
+// "available" by the server; full / maintenance / reserved rooms are not.
+const isBookable = (r) => r.status === 'available'
+
 function nights(from, to) {
   if (!from || !to) return 0
   return Math.max(0, Math.round((new Date(to) - new Date(from)) / DAY_MS))
+}
+
+// GST-inclusive pricing for one stay (mirrors the server's computePricing).
+function priceStay({ rate, units, discount = 0, taxRate = 0, extra = 0, advance = 0 }) {
+  const subtotal = (Number(rate) || 0) * units
+  const gross = Math.max(0, subtotal - (Number(discount) || 0))
+  const taxable = +(gross / (1 + (Number(taxRate) || 0) / 100)).toFixed(2)
+  const taxAmount = +(gross - taxable).toFixed(2)
+  const total = gross + (Number(extra) || 0)
+  const balance = total - (Number(advance) || 0)
+  return { units, subtotal, taxable, taxAmount, total, balance }
+}
+
+// [from, to) of the stay being entered, as ISO strings — or null while the
+// dates are incomplete. Monthly stays run 30 days a month, as on the server.
+// An open-ended PG tenancy has no `to`: the bed must be free from `from` on.
+function stayRange(v, openEnded) {
+  if (!v.fromDate) return null
+  const from = new Date(v.fromDate)
+  if (openEnded) return isNaN(from) ? null : { from: from.toISOString() }
+  const to = v.stayType === 'daily'
+    ? (v.toDate ? new Date(v.toDate) : null)
+    : new Date(from.getTime() + (Number(v.months) || 0) * 30 * DAY_MS)
+  if (!to || isNaN(from) || isNaN(to) || to <= from) return null
+  return { from: from.toISOString(), to: to.toISOString() }
 }
 
 /**
@@ -89,6 +122,13 @@ export default function BookingForm({ onSaved, onCancel }) {
   // we send nothing and let the server reserve the next one atomically (avoids
   // two same-day bookings grabbing the same number).
   const [autoInvoiceNo, setAutoInvoiceNo] = useState('')
+
+  // ── PG (room let by bed) ──
+  // bookBy: 'bed' = one booking per occupant on their own bed; 'room' = the
+  // ordinary whole-room booking (allowed on a PG room only when every bed is free).
+  const [bookBy, setBookBy] = useState('room')
+  const [occupants, setOccupants] = useState([])
+  const [bedAvail, setBedAvail] = useState({ loading: false, beds: null })
 
   // ── ID documents ──
   // idDocs is keyed by ID type → { front, back } files
@@ -202,8 +242,9 @@ export default function BookingForm({ onSaved, onCancel }) {
     ])
       .then(([roomsRes, settingsRes, invoiceRes]) => {
         const list = roomsRes.data?.rooms || roomsRes.data || []
-        const available = list.filter((r) => r.status === 'available')
-        const pool = available.length ? available : list
+        // Every room is listed so staff can see why one can't be picked; bookable
+        // ones first. A PG room with a free bed stays "available" (server-side).
+        const pool = [...list].sort((a, b) => Number(!isBookable(a)) - Number(!isBookable(b)))
         setRooms(pool)
         setRoomTypes(settingsRes.data?.roomTypes || [])
         const gst = settingsRes.data?.hotel?.gstRate
@@ -212,7 +253,7 @@ export default function BookingForm({ onSaved, onCancel }) {
         setValues((v) => ({
           ...EMPTY,
           ...v,
-          roomId: pool[0]?.id || '',
+          roomId: pool.find(isBookable)?.id || '',
           taxRate: gst ?? v.taxRate,
           invoiceNo: nextInvoiceNo,
         }))
@@ -223,32 +264,125 @@ export default function BookingForm({ onSaved, onCancel }) {
 
   const typeName = (r) => roomTypes.find((t) => t.id === r?.typeId)?.name || ''
 
+  const selectedRoom = rooms.find((r) => r.id === values.roomId)
+  const pgRoom = isBedRoom(selectedRoom)
+  const pgMode = pgRoom && bookBy === 'bed'
+  // Any monthly booking (whole room or bed) is a tenancy: booked once, open-ended
+  // until move-out, with each month's rent invoiced automatically and collected
+  // on the booking — never re-entered. Daily stays keep fixed dates.
+  const tenancyMode = values.stayType === 'monthly'
+  const bedRate = (r, stayType) => (stayType === 'daily' ? r?.bedDailyRate : r?.bedMonthlyRate) || ''
+
+  // Whole room or bed by bed is the operator's choice per booking. A new room
+  // starts on "whole room", unless it's already being let bed by bed.
+  const roomHasBedStays = hasBedStays(selectedRoom)
+  useEffect(() => {
+    setOccupants([])
+    setBookBy(roomHasBedStays ? 'bed' : 'room')
+  }, [values.roomId, roomHasBedStays])
+
+  // The rate follows the room: its nightly rate for a daily stay, its monthly
+  // rate for a monthly one — refilled when either changes, unless the operator
+  // has typed their own (clearing the field hands it back to the room).
+  const [rateEdited, setRateEdited] = useState(false)
+  // A room with several beds and a per-bed rent is priced as beds × bed rent
+  // when booked whole (3 × ₹6,000 = ₹18,000); otherwise the room's own rate.
+  const roomRateFor = (r, stayType) => {
+    const bed = stayType === 'daily' ? r?.bedDailyRate : r?.bedMonthlyRate
+    if (isBedRoom(r) && bed) return bed * r.bedCount
+    return (stayType === 'daily' ? r?.dailyRate : r?.monthlyRate) || ''
+  }
+  const autoRate = roomRateFor(selectedRoom, values.stayType)
+  const perBed = isBedRoom(selectedRoom)
+    && (values.stayType === 'daily' ? selectedRoom?.bedDailyRate : selectedRoom?.bedMonthlyRate)
+  useEffect(() => {
+    if (!rateEdited) setValues((v) => ({ ...v, roomRate: autoRate ? String(autoRate) : '' }))
+  }, [autoRate, rateEdited])
+  const setRate = (e) => {
+    const v = e.target.value
+    setRateEdited(v !== '')
+    setValues((x) => ({ ...x, roomRate: v }))
+  }
+
+  // Switching to bed booking defaults to monthly (PG); the operator can still
+  // change the stay type for a nightly bed (hostel).
+  const chooseBookBy = (mode) => {
+    setBookBy(mode)
+    if (mode === 'bed') setValues((v) => ({ ...v, stayType: 'monthly' }))
+  }
+
+  // A stay-type switch changes the unit (night ↔ month): refresh rents that are
+  // still the room's default; ones typed by hand are left alone.
+  useEffect(() => {
+    setOccupants((list) => list.map((o) => (o.rateAuto ? { ...o, rate: String(bedRate(selectedRoom, values.stayType)) } : o)))
+    // selectedRoom is derived from roomId, which resets the list itself.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values.stayType])
+
+  // Which beds are free for the dates being entered — refetched as they change.
+  const range = stayRange(values, tenancyMode)
+  const rangeKey = range ? `${range.from}|${range.to || 'open'}` : ''
+  useEffect(() => {
+    if (!pgRoom || !range) { setBedAvail({ loading: false, beds: null }); return }
+    let cancelled = false
+    setBedAvail((a) => ({ ...a, loading: true }))
+    bookingsApi.bedAvailability({ roomId: values.roomId, ...range })
+      .then(({ data }) => { if (!cancelled) setBedAvail({ loading: false, beds: data.beds }) })
+      .catch(() => { if (!cancelled) setBedAvail({ loading: false, beds: null }) })
+    return () => { cancelled = true }
+    // range is rebuilt each render; rangeKey is its stable identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [values.roomId, pgRoom, rangeKey])
+
+  // Unknown until the dates are in — don't block whole-room before then (the
+  // server re-checks every bed on save anyway).
+  const allBedsFree = !bedAvail.beds || bedAvail.beds.every((b) => b.free)
+  // Whole-room only while every bed is free; fall back if a bed gets taken.
+  useEffect(() => {
+    if (pgRoom && bookBy === 'room' && bedAvail.beds && !allBedsFree) setBookBy('bed')
+  }, [pgRoom, bookBy, bedAvail.beds, allBedsFree])
+
   // ── Live pricing preview (mirrors the server formula) ──
   // The room rate is GST-inclusive, so GST is extracted from (subtotal − discount)
   // rather than added on top; the total stays equal to what's entered (+ extras).
-  const pricing = useMemo(() => {
-    const rate = Number(values.roomRate) || 0
-    const units = values.stayType === 'daily' ? nights(values.fromDate, values.toDate) : Number(values.months) || 0
-    const subtotal = rate * units
-    const gross = Math.max(0, subtotal - (Number(values.discount) || 0))
-    const taxable = +(gross / (1 + (Number(values.taxRate) || 0) / 100)).toFixed(2)
-    const taxAmount = +(gross - taxable).toFixed(2)
-    const total = gross + (Number(values.extraCharges) || 0)
-    const balance = total - (Number(values.advance) || 0)
-    return { units, subtotal, taxable, taxAmount, total, balance }
-  }, [values])
+  // A tenancy is shown as its first month — the bill raised at move-in.
+  const units = tenancyMode ? 1
+    : values.stayType === 'daily' ? nights(values.fromDate, values.toDate) : Number(values.months) || 0
+  const pricing = useMemo(() => priceStay({
+    rate: values.roomRate, units, discount: values.discount, taxRate: values.taxRate,
+    extra: values.extraCharges, advance: values.advance,
+  }), [values, units])
+
+  // PG: each occupant is priced as their own stay; the rail shows them and the sum.
+  const occPricing = useMemo(() => occupants.map((o) => ({
+    o, ...priceStay({ rate: o.rate, units, taxRate: values.taxRate, advance: o.advance }),
+  })), [occupants, units, values.taxRate])
+  const pgTotals = occPricing.reduce((t, p) => ({
+    subtotal: t.subtotal + p.subtotal,
+    taxAmount: t.taxAmount + p.taxAmount,
+    total: t.total + p.total,
+    advance: t.advance + (Number(p.o.advance) || 0),
+    // Advance beyond the first month is credit for the next, not a negative due.
+    balance: t.balance + Math.max(0, p.balance),
+    deposit: t.deposit + (Number(p.o.deposit) || 0),
+  }), { subtotal: 0, taxAmount: 0, total: 0, advance: 0, balance: 0, deposit: 0 })
 
   const validate = () => {
     const e = {}
-    Object.assign(e, nameErrors(values.guestNames), phoneErrors(values.guestPhones))
-    if (values.guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.guestEmail.trim()))
-      e.guestEmail = 'Enter a valid email address'
+    if (pgMode) {
+      if (!occupants.length) e.beds = 'Select at least one bed'
+      Object.assign(e, occupantErrors(occupants, bedAvail.beds))
+    } else {
+      Object.assign(e, nameErrors(values.guestNames), phoneErrors(values.guestPhones))
+      if (values.guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.guestEmail.trim()))
+        e.guestEmail = 'Enter a valid email address'
+      if (!values.roomRate || Number(values.roomRate) <= 0) e.roomRate = 'Enter the room rate'
+    }
     if (!values.roomId) e.roomId = 'Select a room'
-    if (!values.roomRate || Number(values.roomRate) <= 0) e.roomRate = 'Enter the room rate'
     if (values.stayType === 'daily') {
       if (!values.toDate) e.toDate = 'Check-out date is required'
       else if (nights(values.fromDate, values.toDate) < 1) e.toDate = 'Must be after check-in'
-    } else if (!values.months || Number(values.months) < 1) {
+    } else if (!tenancyMode && (!values.months || Number(values.months) < 1)) {
       e.months = 'At least 1 month'
     }
     setErrors(e)
@@ -256,9 +390,12 @@ export default function BookingForm({ onSaved, onCancel }) {
   }
 
   // Field order for "jump to first error" on a failed submit.
-  const FIELD_ORDER = [...values.guestNames.map((_, i) => nameFieldName(i)),
-                       ...values.guestPhones.map((_, i) => phoneFieldName(i)),
-                       'guestEmail', 'roomId', 'roomRate', 'toDate', 'months']
+  const FIELD_ORDER = pgMode
+    ? ['roomId', 'toDate', 'months', 'beds',
+       ...occupants.flatMap((o) => ['bed', 'name', 'phone', 'email', 'rate'].map((k) => occField(o, k)))]
+    : [...values.guestNames.map((_, i) => nameFieldName(i)),
+       ...values.guestPhones.map((_, i) => phoneFieldName(i)),
+       'guestEmail', 'roomId', 'roomRate', 'toDate', 'months']
 
   const handleSubmit = async () => {
     const e = validate()
@@ -266,13 +403,17 @@ export default function BookingForm({ onSaved, onCancel }) {
     if (errorKeys.length) {
       const first = FIELD_ORDER.find((k) => e[k]) || errorKeys[0]
       toast(e[first] || 'Please fix the highlighted fields', 'danger')
-      const el = document.querySelector(`[name="${first}"]`)
+      const el = document.querySelector(`[name="${first}"], [data-field="${first}"]`)
       el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       el?.focus?.({ preventScroll: true })
       return
     }
     setSubmitting(true)
     setApiError('')
+    if (pgMode) {
+      try { await submitGroup() } finally { setSubmitting(false) }
+      return
+    }
     try {
       const payload = {
         // Names and numbers each travel as one comma-separated string; the
@@ -290,7 +431,8 @@ export default function BookingForm({ onSaved, onCancel }) {
         stayType: values.stayType,
         fromDate: new Date(values.fromDate).toISOString(),
         toDate: values.stayType === 'daily' ? new Date(values.toDate).toISOString() : undefined,
-        months: values.stayType === 'monthly' ? Number(values.months) : undefined,
+        // Monthly = open-ended tenancy: no fixed number of months.
+        months: undefined,
         roomRate: Number(values.roomRate) || 0,
         discount: Number(values.discount) || 0,
         taxRate: Number(values.taxRate) || 0,
@@ -340,6 +482,60 @@ export default function BookingForm({ onSaved, onCancel }) {
     }
   }
 
+  // PG: one booking per occupant on their own bed, then each one's ID scans.
+  const submitGroup = async () => {
+    const shared = {
+      roomId: values.roomId,
+      stayType: values.stayType,
+      fromDate: new Date(values.fromDate).toISOString(),
+      toDate: values.stayType === 'daily' ? new Date(values.toDate).toISOString() : undefined,
+      months: values.stayType === 'monthly' && !tenancyMode ? Number(values.months) : undefined,
+      taxRate: Number(values.taxRate) || 0,
+      source: values.source,
+      specialRequests: values.specialRequests.trim() || undefined,
+      notes: values.notes.trim() || undefined,
+    }
+    const list = occupants.map((o) => ({
+      bedNo: o.bedNo,
+      guestName: o.name.trim(),
+      guestPhone: o.phone.replace(/\D/g, ''),
+      guestEmail: o.email.trim() || undefined,
+      idType: o.idType || undefined,
+      idNumber: o.idNumber.trim() || undefined,
+      roomRate: Number(o.rate) || 0,
+      advance: Number(o.advance) || 0,
+      securityDeposit: Number(o.deposit) || 0,
+    }))
+    let bookings
+    try {
+      const { data } = await bookingsApi.createGroup({ ...shared, occupants: list })
+      bookings = data.bookings
+    } catch (err) {
+      const d = err.response?.data
+      toast(d?.message || d?.error || 'Could not create the bookings. Please try again.', 'danger')
+      // A bed may have just been taken — refresh the picker so it shows why.
+      if (err.response?.status === 409 && range) {
+        bookingsApi.bedAvailability({ roomId: values.roomId, ...range })
+          .then(({ data }) => setBedAvail({ loading: false, beds: data.beds })).catch(() => {})
+      }
+      return
+    }
+
+    // Bookings come back in occupant order; attach each one's ID scans.
+    let failed = 0
+    await Promise.all(occupants.map(async (o, i) => {
+      const files = [[`${o.idType} — Front`, o.front], [`${o.idType} — Back`, o.back]].filter(([, f]) => f)
+      if (!files.length || !bookings[i]) return
+      const form = new FormData()
+      files.forEach(([, f]) => form.append('documents', f))
+      form.append('docTypes', JSON.stringify(files.map(([label]) => label)))
+      try { await bookingsApi.uploadDocuments(bookings[i].id, form) } catch { failed++ }
+    }))
+    if (failed) toast('Bookings created, but some ID scans failed to upload.', 'danger')
+
+    onSaved({ group: true, bookings, roomNumber: selectedRoom?.number })
+  }
+
   // Attach the captured guest photo to the booking, then finish. The booking
   // already exists, so an upload failure is reported but never discards it.
   const savePhoto = async (file) => {
@@ -360,17 +556,35 @@ export default function BookingForm({ onSaved, onCancel }) {
   const inr = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
 
   // Summary-rail context: which room, how long, and how many files are queued.
-  const selectedRoom = rooms.find((r) => r.id === values.roomId)
   const roomLabel = selectedRoom
-    ? `Room ${selectedRoom.number}${typeName(selectedRoom) ? ` · ${typeName(selectedRoom)}` : ''}`
+    ? `Room ${selectedRoom.number}${typeName(selectedRoom) ? ` · ${typeName(selectedRoom)}` : ''}${
+        pgMode ? ` · ${occupants.length} bed${occupants.length === 1 ? '' : 's'}` : ''}`
     : 'No room selected'
+  // Room picker option. Rooms that can't take a booking now are shown greyed out
+  // with the reason, rather than hidden or (worse) offered.
+  const roomOption = (r) => {
+    const name = `Room ${r.number}${typeName(r) ? ` · ${typeName(r)}` : ''}`
+    const reason = r.status === 'maintenance' ? 'under maintenance'
+      : r.status === 'reserved' ? 'reserved'
+      : r.status === 'occupied' ? (hasBedStays(r) ? `full · ${r.bedCount}/${r.bedCount} beds` : 'occupied') : ''
+    if (reason) return { value: r.id, label: `${name} — ${reason}`, disabled: true }
+    if (!isBedRoom(r)) return { value: r.id, label: name }
+    // Partly let bed by bed: say how many are free; otherwise just the bed count.
+    if (!hasBedStays(r)) return { value: r.id, label: `${name} · ${r.bedCount} beds` }
+    const free = bedOccupancy(r).filter((b) => b.state === 'free').length
+    return { value: r.id, label: `${name} · ${bedFillLabel(free, r.bedCount)}` }
+  }
+  const bookableCount = rooms.filter(isBookable).length
   const unitWord = values.stayType === 'daily' ? 'night' : 'month'
-  const stayLabel = pricing.units
-    ? `${pricing.units} ${unitWord}${pricing.units === 1 ? '' : 's'}`
+  const stayLabel = tenancyMode ? 'Monthly · until move-out'
+    : pricing.units ? `${pricing.units} ${unitWord}${pricing.units === 1 ? '' : 's'}`
     : 'Dates not set'
-  const attachedCount =
-    values.idTypes.reduce((n, t) => n + [idDocs[t]?.front, idDocs[t]?.back].filter(Boolean).length, 0) +
-    extraDocs.filter((d) => d.file).length
+  const attachedCount = pgMode
+    ? occupants.reduce((n, o) => n + [o.front, o.back].filter(Boolean).length, 0)
+    : values.idTypes.reduce((n, t) => n + [idDocs[t]?.front, idDocs[t]?.back].filter(Boolean).length, 0) +
+      extraDocs.filter((d) => d.file).length
+  const shownTotal = pgMode ? pgTotals.total : pricing.total
+  const shownBalance = pgMode ? pgTotals.balance : pricing.balance
 
   return (
     <div>
@@ -387,7 +601,8 @@ export default function BookingForm({ onSaved, onCancel }) {
         <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-5 items-start">
           <div className="min-w-0 space-y-4">
 
-            {/* ── Guest ── */}
+            {/* ── Guest ── (a PG bed booking takes guests per bed, below) */}
+            {!pgMode && (
             <Section title="Guest details" hint="Name and phone are required">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-x-4 gap-y-3.5">
                 <NameFields className="lg:col-span-4" names={values.guestNames} errors={errors}
@@ -436,6 +651,7 @@ export default function BookingForm({ onSaved, onCancel }) {
                        onChange={set('children')} />
               </div>
             </Section>
+            )}
 
             {/* ── Stay ── */}
             <Section title="Stay & room" hint={stayLabel}>
@@ -444,17 +660,74 @@ export default function BookingForm({ onSaved, onCancel }) {
                        options={
                          loadingRooms
                            ? [{ value: '', label: 'Loading rooms…' }]
-                           : rooms.length
-                             ? rooms.map((r) => ({ value: r.id, label: `Room ${r.number}${typeName(r) ? ` · ${typeName(r)}` : ''}` }))
-                             : [{ value: '', label: 'No rooms available' }]
+                           : bookableCount
+                             ? rooms.map(roomOption)
+                             : [{ value: '', label: 'No room or bed is free right now' }, ...rooms.map(roomOption)]
                        } />
                 <Field label="Booking source" value={values.source} onChange={set('source')} options={SOURCES} />
-                <Field label="Invoice no." value={values.invoiceNo} onChange={set('invoiceNo')}
-                       placeholder="Auto" hint="Auto-generated — edit to override" />
+                {pgMode || tenancyMode ? (
+                  <div>
+                    <span className="block text-xs font-medium text-ink2 mb-1.5">Invoices</span>
+                    <p className="text-[12px] text-ink3 rounded-lg border border-dashed border-line2 px-3 py-2 m-0">
+                      {tenancyMode
+                        ? `Rent invoice every month${pgMode ? ' per person' : ''} — automatic`
+                        : 'Auto — one invoice per person'}
+                    </p>
+                  </div>
+                ) : (
+                  <Field label="Invoice no." value={values.invoiceNo} onChange={set('invoiceNo')}
+                         placeholder="Auto" hint="Auto-generated — edit to override" />
+                )}
+                {pgRoom && (
+                  <div className="sm:col-span-2 lg:col-span-3">
+                    <span className="block text-xs font-medium text-ink2 mb-1.5">
+                      Book this room · {selectedRoom.bedCount} beds
+                    </span>
+                    <div className="inline-flex rounded-lg border border-line2 bg-surface2 p-[3px] gap-[3px]" role="radiogroup">
+                      {[
+                        { id: 'room', label: 'Whole room', sub: allBedsFree ? 'one party, all beds' : 'needs every bed free' },
+                        { id: 'bed', label: 'By bed (PG)', sub: 'one booking per person' },
+                      ].map((o) => {
+                        const active = bookBy === o.id
+                        const disabled = o.id === 'room' && !allBedsFree
+                        return (
+                          <button key={o.id} type="button" role="radio" aria-checked={active} disabled={disabled}
+                                  onClick={() => chooseBookBy(o.id)}
+                                  className={`px-3 py-1.5 rounded-md text-left transition-colors ${
+                                    active ? 'bg-surface text-ink shadow-[0_1px_2px_rgba(0,0,0,0.08)]'
+                                      : disabled ? 'text-ink3 opacity-50 cursor-not-allowed' : 'text-ink2 hover:text-ink'
+                                  }`}>
+                            <span className="block text-[12.5px] font-semibold">{o.label}</span>
+                            <span className="block text-[10.5px] text-ink3">{o.sub}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {!allBedsFree && (
+                      // Say why "Whole room" is off rather than leave a dead button.
+                      <p className="text-[11.5px] text-ink3 mt-1.5 mb-0">
+                        Whole room needs every bed free —{' '}
+                        {bedAvail.beds.filter((b) => !b.free)
+                          .map((b) => `Bed ${b.label} (${b.heldBy.name}${b.heldBy.until ? ` till ${formatDate(b.heldBy.until)}` : ''})`)
+                          .join(', ')}{' '}
+                        {bedAvail.beds.filter((b) => !b.free).length === 1 ? 'is' : 'are'} taken for these dates.
+                        Change the dates, or book the free beds.
+                      </p>
+                    )}
+                  </div>
+                )}
                 <Field label="Stay type" value={values.stayType} onChange={set('stayType')}
                        options={[{ value: 'daily', label: 'Daily' }, { value: 'monthly', label: 'Monthly' }]} />
-                <Field label="Check-in" type="date" value={values.fromDate} onChange={set('fromDate')} />
-                {values.stayType === 'daily' ? (
+                <Field label={tenancyMode ? 'Move-in' : 'Check-in'} type="date" value={values.fromDate}
+                       onChange={set('fromDate')} />
+                {tenancyMode ? (
+                  <div>
+                    <span className="block text-xs font-medium text-ink2 mb-1.5">Stay</span>
+                    <p className="text-[12px] text-ink2 rounded-lg border border-gold-border bg-gold-bg px-3 py-2 m-0">
+                      Until move-out · rent billed every month
+                    </p>
+                  </div>
+                ) : values.stayType === 'daily' ? (
                   <Field label="Check-out" name="toDate" type="date" value={values.toDate} onChange={set('toDate')}
                          error={errors.toDate} required />
                 ) : (
@@ -464,26 +737,75 @@ export default function BookingForm({ onSaved, onCancel }) {
               </div>
             </Section>
 
+            {/* ── PG occupants ── */}
+            {pgMode && (
+              <Section
+                title="Beds & occupants"
+                hint={occupants.length ? `${occupants.length} bed${occupants.length === 1 ? '' : 's'} selected` : 'Pick beds'}
+              >
+                <div data-field="beds">
+                  <PgOccupants
+                    beds={bedAvail.beds}
+                    loading={bedAvail.loading}
+                    occupants={occupants}
+                    onChange={setOccupants}
+                    errors={errors}
+                    unit={unitWord}
+                    defaultRate={bedRate(selectedRoom, values.stayType)}
+                    idTypes={ID_TYPES}
+                    onScan={setDocCamera}
+                  />
+                  {errors.beds && <p className="text-[11.5px] text-danger mt-2 mb-0">{errors.beds}</p>}
+                </div>
+              </Section>
+            )}
+
             {/* ── Pricing ── */}
+            {pgMode ? (
+              <Section title="Pricing" hint="Rent, advance & deposit are set per bed above">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3.5 items-end">
+                  <Field label="GST (%)" type="number" min="0" value={values.taxRate} onChange={set('taxRate')}
+                         hint="Included in the rent" />
+                  <p className="md:col-span-2 text-[11.5px] text-ink3 m-0 pb-1">
+                    Security deposits are held and refunded at check-out — they are not part of the bill.
+                  </p>
+                </div>
+              </Section>
+            ) : (
             <Section title="Pricing" hint="GST is included in the rate">
               {/* Five across only at 2xl: at 1280 the summary rail leaves the form
                   ~580px, where "Extra charges (₹)" wraps and drags its input out of
                   line with the row. Three-up keeps every label on one line. */}
               <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-5 gap-x-4 gap-y-3.5">
                 <Field label={`Rate (₹/${values.stayType === 'daily' ? 'night' : 'month'})`} name="roomRate" type="number"
-                       min="0" value={values.roomRate} onChange={set('roomRate')} placeholder="Enter rate"
+                       min="0" value={values.roomRate} onChange={setRate} placeholder="Enter rate"
+                       hint={selectedRoom && autoRate
+                         ? (rateEdited
+                           ? <>Room rate ₹{Number(autoRate).toLocaleString('en-IN')} ·{' '}
+                               <button type="button" className="text-gold hover:underline"
+                                       onClick={() => setRateEdited(false)}>use it</button></>
+                           : perBed
+                             ? `${selectedRoom.bedCount} beds × ₹${Number(perBed).toLocaleString('en-IN')} — edit to override`
+                             : `From Room ${selectedRoom.number} — edit to override`)
+                         : undefined}
                        error={errors.roomRate} required />
-                <Field label="Discount (₹)" type="number" min="0" value={values.discount} onChange={set('discount')} />
+                {!tenancyMode && (
+                  <Field label="Discount (₹)" type="number" min="0" value={values.discount} onChange={set('discount')} />
+                )}
                 <Field label="GST (%)" type="number" min="0" value={values.taxRate} onChange={set('taxRate')} />
-                <Field label="Extra charges (₹)" type="number" min="0" value={values.extraCharges} onChange={set('extraCharges')} />
+                {!tenancyMode && (
+                  <Field label="Extra charges (₹)" type="number" min="0" value={values.extraCharges} onChange={set('extraCharges')} />
+                )}
                 <Field label="Advance paid (₹)" type="number" min="0" value={values.advance} onChange={set('advance')} />
               </div>
             </Section>
+            )}
 
             {/* ── ID & documents ──
                 The scan slots are generated from the ID types picked here, so the
                 two belong in one panel: picking "Aadhaar" reveals its front/back
                 tiles right below instead of further down the page. */}
+            {!pgMode && (
             <Section
               title="Identification & documents"
               hint={attachedCount ? `${attachedCount} file${attachedCount === 1 ? '' : 's'} attached` : 'Optional'}
@@ -602,6 +924,7 @@ export default function BookingForm({ onSaved, onCancel }) {
                 ＋ Add another document (PAN, Passport…)
               </button>
             </Section>
+            )}
 
             {/* ── Notes ── */}
             <Section title="Notes" hint="Optional">
@@ -623,9 +946,51 @@ export default function BookingForm({ onSaved, onCancel }) {
                 <p className="text-[11.5px] text-ink3 mt-0.5">{roomLabel} · {stayLabel}</p>
               </div>
 
+              {pgMode ? (
+              <div className="px-4 py-3 text-[13px] space-y-1.5">
+                {occPricing.length === 0 && <p className="text-ink3 text-[12px] m-0">No beds selected yet.</p>}
+                {occPricing.map(({ o, total, balance }) => (
+                  <div key={o.key} className="pb-1.5 border-b border-gold-border/60 last:border-b-0">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="min-w-0 truncate text-ink">
+                        <span className="font-semibold text-gold">Bed {bedLabel(o.bedNo)}</span>
+                        {' · '}{o.name.trim() || 'Unnamed'}
+                      </span>
+                      <span className="shrink-0 tabular-nums text-ink">{inr(total)}</span>
+                    </div>
+                    <div className="text-[11px] text-ink3 mt-0.5">
+                      {tenancyMode ? `${inr(o.rate)}/month` : units ? `${units} × ${inr(o.rate)}` : 'Dates not set'}
+                      {' · '}adv {inr(o.advance)} · due {inr(Math.max(0, balance))}
+                      {Number(o.deposit) > 0 && ` · dep ${inr(o.deposit)}`}
+                    </div>
+                  </div>
+                ))}
+                <SumRow label={`GST (${values.taxRate || 0}%) incl.`} value={inr(pgTotals.taxAmount)} />
+
+                <div className="flex items-baseline justify-between pt-2 mt-2 border-t border-gold-border">
+                  <span className="font-display font-bold text-ink">{tenancyMode ? 'Rent / month' : 'Total rent'}</span>
+                  <span className="font-display font-bold text-lg text-gold">{inr(pgTotals.total)}</span>
+                </div>
+                <SumRow label={tenancyMode ? 'Advance (set against rent)' : 'Advance collected'} value={inr(pgTotals.advance)} />
+                <div className="flex items-baseline justify-between font-semibold text-ink">
+                  <span>{tenancyMode ? 'Due at move-in' : 'Balance due'}</span><span>{inr(pgTotals.balance)}</span>
+                </div>
+                {pgTotals.deposit > 0 && (
+                  <SumRow label="Security deposits (held)" value={inr(pgTotals.deposit)} />
+                )}
+                {tenancyMode && (
+                  <p className="text-[11px] text-ink3 m-0 pt-1.5">
+                    Book once. The first month is billed at move-in, then each person's rent invoice is
+                    raised automatically every month — collect it from the booking with "Collect rent".
+                  </p>
+                )}
+              </div>
+              ) : (
               <div className="px-4 py-3 text-[13px] space-y-1.5">
                 <SumRow
-                  label={`Room charge (incl. GST)${pricing.units ? ` · ${pricing.units} × ${inr(values.roomRate)}` : ''}`}
+                  label={tenancyMode
+                    ? 'Rent / month (incl. GST)'
+                    : `Room charge (incl. GST)${pricing.units ? ` · ${pricing.units} × ${inr(values.roomRate)}` : ''}`}
                   value={inr(pricing.subtotal)}
                 />
                 {Number(values.discount) > 0 && <SumRow label="Discount" value={`− ${inr(values.discount)}`} />}
@@ -634,15 +999,22 @@ export default function BookingForm({ onSaved, onCancel }) {
                 {Number(values.extraCharges) > 0 && <SumRow label="Extra charges" value={inr(values.extraCharges)} />}
 
                 <div className="flex items-baseline justify-between pt-2 mt-2 border-t border-gold-border">
-                  <span className="font-display font-bold text-ink">Total</span>
+                  <span className="font-display font-bold text-ink">{tenancyMode ? 'First month' : 'Total'}</span>
                   <span className="font-display font-bold text-lg text-gold">{inr(pricing.total)}</span>
                 </div>
 
-                <SumRow label="Advance" value={inr(values.advance)} />
+                <SumRow label={tenancyMode ? 'Advance (set against rent)' : 'Advance'} value={inr(values.advance)} />
                 <div className="flex items-baseline justify-between font-semibold text-ink">
-                  <span>Balance due</span><span>{inr(pricing.balance)}</span>
+                  <span>{tenancyMode ? 'Due at move-in' : 'Balance due'}</span><span>{inr(Math.max(0, pricing.balance))}</span>
                 </div>
+                {tenancyMode && (
+                  <p className="text-[11px] text-ink3 m-0 pt-1.5">
+                    Book once. Each month's rent invoice is raised automatically — collect it from the
+                    booking with "Collect rent". No details to re-enter.
+                  </p>
+                )}
               </div>
+              )}
 
               <div className="px-4 py-2.5 border-t border-gold-border text-[11.5px] text-ink3">
                 {attachedCount
@@ -658,13 +1030,15 @@ export default function BookingForm({ onSaved, onCancel }) {
       <div className="flex flex-wrap items-center justify-end gap-2 px-5 py-3.5 border-t border-line bg-surface2">
         {/* Below xl the summary rail has scrolled away, so repeat the total here. */}
         <div className="mr-auto text-[12.5px] text-ink3 xl:hidden">
-          Total <span className="font-semibold text-ink">{inr(pricing.total)}</span>
+          Total <span className="font-semibold text-ink">{inr(shownTotal)}</span>
           <span className="mx-1.5 text-line2">·</span>
-          Balance <span className="font-semibold text-ink">{inr(pricing.balance)}</span>
+          Balance <span className="font-semibold text-ink">{inr(shownBalance)}</span>
         </div>
         <Button variant="ghost" onClick={onCancel} disabled={submitting}>Cancel</Button>
         <Button onClick={handleSubmit} icon="＋" disabled={submitting || loadingRooms}>
-          {submitting ? 'Saving…' : 'Create Booking'}
+          {submitting
+            ? 'Saving…'
+            : pgMode && occupants.length > 1 ? `Create ${occupants.length} Bookings` : 'Create Booking'}
         </Button>
       </div>
 
@@ -701,96 +1075,6 @@ export default function BookingForm({ onSaved, onCancel }) {
         onSkip={() => onSaved(photoFor)}
       />
       )}
-    </div>
-  )
-}
-
-/**
- * A tile for a single image/PDF file, fillable either way: pick a file, or scan
- * it with the camera. onScan is omitted for slots where scanning makes no sense.
- *
- * Once filled, the tile previews the actual scan so the operator can see the ID
- * is legible before submitting — a filename alone hides a blurry capture.
- */
-function UploadZone({ label, file, onPick, onScan }) {
-  const isImage = !!file?.type?.startsWith('image/')
-  // Built during render (not in an effect) so the preview paints with the file;
-  // the effect below only revokes it once it is no longer in use.
-  const previewUrl = useMemo(
-    () => (isImage ? URL.createObjectURL(file) : null),
-    [file, isImage],
-  )
-  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }, [previewUrl])
-
-  // Upload is a <label> wrapping a hidden input; scan is a real button. Keeping
-  // them siblings stops a scan click from also opening the file picker.
-  const actions = (
-    <div className="grid grid-cols-2 divide-x divide-line2 border-t border-line2">
-      <label className="flex items-center justify-center gap-1.5 py-2 text-[11.5px] font-medium text-ink2 cursor-pointer hover:bg-gold-bg hover:text-gold transition-colors">
-        <span className="text-[13px] leading-none">⬆</span>
-        {file ? 'Replace' : 'Upload'}
-        <input
-          type="file"
-          accept="image/*,.pdf"
-          className="hidden"
-          onChange={(e) => onPick(e.target.files?.[0] || null)}
-        />
-      </label>
-      <button
-        type="button"
-        onClick={onScan}
-        disabled={!onScan}
-        className="flex items-center justify-center gap-1.5 py-2 text-[11.5px] font-medium text-ink2 hover:bg-gold-bg hover:text-gold transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
-      >
-        <span className="text-[13px] leading-none">📷</span>
-        {file ? 'Rescan' : 'Scan'}
-      </button>
-    </div>
-  )
-
-  return (
-    <div>
-      {label && <span className="block text-xs font-medium text-ink2 mb-1.5">{label}</span>}
-      <div
-        className={`rounded-lg border overflow-hidden transition-colors ${
-          file ? 'border-gold' : 'border-dashed border-line2 hover:border-gold'
-        }`}
-      >
-        <div className="relative h-24 bg-surface2 flex items-center justify-center">
-          {file ? (
-            <>
-              {previewUrl ? (
-                <img src={previewUrl} alt={label || 'Attached document'} className="w-full h-full object-cover" />
-              ) : (
-                <div className="text-center px-3">
-                  <div className="text-xl leading-none mb-1">📄</div>
-                  <div className="text-[10.5px] text-ink3 break-all line-clamp-2">{file.name}</div>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={() => onPick(null)}
-                title="Remove"
-                aria-label="Remove file"
-                className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/55 text-white text-xs leading-none flex items-center justify-center hover:bg-danger-text transition-colors"
-              >
-                ✕
-              </button>
-              {previewUrl && (
-                <span className="absolute bottom-0 inset-x-0 bg-black/55 text-white text-[10px] px-2 py-0.5 truncate">
-                  {file.name}
-                </span>
-              )}
-            </>
-          ) : (
-            <div className="text-center">
-              <div className="text-lg text-ink3 leading-none mb-0.5">🪪</div>
-              <div className="text-[10.5px] text-ink3">JPG, PNG or PDF</div>
-            </div>
-          )}
-        </div>
-        {actions}
-      </div>
     </div>
   )
 }

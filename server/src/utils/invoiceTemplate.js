@@ -7,6 +7,41 @@
  *
  * Used by bookingsController.getBookingInvoice once a stay is complete.
  */
+import fs from 'fs'
+import path from 'path'
+
+// The property's logo. Settings has two uploads: Hotel Profile (Hotel.logoUrl)
+// and Branding (inside the Hotel.branding JSON). Hotel Profile wins if both exist.
+export const hotelLogo = (hotel) => {
+  if (hotel?.logoUrl) return hotel.logoUrl
+  try {
+    return JSON.parse(hotel?.branding || '{}').logoUrl || null
+  } catch {
+    return null
+  }
+}
+
+// Inline a locally-served `/uploads/<file>` asset as a base64 data URI so the
+// invoice's logo/stamp render with no dependency on URL resolution — relative
+// paths don't resolve inside the blob: preview, and a remote host may be
+// unreachable from the PDF renderer. Returns the original value untouched if
+// it isn't a local upload or can't be read.
+const MIME_BY_EXT = {
+  '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif', '.webp': 'image/webp', '.svg': 'image/svg+xml',
+}
+export const inlineUploadAsset = (url) => {
+  if (typeof url !== 'string' || !url.startsWith('/uploads/')) return url
+  try {
+    const file = path.basename(url) // guard against path traversal
+    const abs = path.join(path.resolve('uploads'), file)
+    if (!fs.existsSync(abs)) return url
+    const mime = MIME_BY_EXT[path.extname(file).toLowerCase()] || 'application/octet-stream'
+    return `data:${mime};base64,${fs.readFileSync(abs).toString('base64')}`
+  } catch {
+    return url
+  }
+}
 
 // Default SAC for hotel room accommodation services (GST).
 const DEFAULT_SAC = '996311'
@@ -88,12 +123,19 @@ const panFromGstin = (gstin) =>
  * Splits the booking's tax into CGST + SGST (intra-state default).
  */
 export const buildInvoiceData = (booking, hotel = {}) => {
-  const taxAmount = +(booking.taxAmount || 0).toFixed(2)
+  // Monthly tenancy: totals come from its monthly rent invoices.
+  const rent = booking.rentInvoices || []
+  const taxAmount = rent.length
+    ? +rent.reduce((n, i) => n + (i.gstAmount || 0), 0).toFixed(2)
+    : +(booking.taxAmount || 0).toFixed(2)
   // Room rate is GST-inclusive: (subtotal − discount) already contains the tax, so
   // the taxable (base) value is what remains once the extracted GST is removed.
-  const taxable = +(Math.max(0, (booking.subtotal || 0) - (booking.discount || 0)) - taxAmount).toFixed(2)
+  const gross = rent.length
+    ? rent.reduce((n, i) => n + (i.total || 0), 0)
+    : Math.max(0, (booking.subtotal || 0) - (booking.discount || 0))
+  const taxable = +(gross - taxAmount).toFixed(2)
   const halfTax = +(taxAmount / 2).toFixed(2)
-  const total = +(booking.amount || 0).toFixed(2)
+  const total = rent.length ? +gross.toFixed(2) : +(booking.amount || 0).toFixed(2)
   const received = +(booking.advance || 0).toFixed(2)
   const balance = +(booking.balance ?? total - received).toFixed(2)
   const taxRate = booking.taxRate || 0
@@ -108,8 +150,30 @@ export const buildInvoiceData = (booking, hotel = {}) => {
       date: fmtDate(p.createdAt),
     }))
 
+  const service = ((booking.room?.type?.name || 'ROOM')
+    + (booking.bedNo ? ` · Bed ${booking.bedNo <= 26 ? String.fromCharCode(64 + booking.bedNo) : booking.bedNo}` : '')).toUpperCase()
+  const sac = booking.hsnCode || DEFAULT_SAC
+  // One line per rent month ("31 Oct – 29 Nov 2026" → from / to), else the stay.
+  const lines = rent.length
+    ? rent.map((i) => {
+        const [from, to] = String(i.period).split(' – ')
+        const isRent = !!to
+        return {
+          service: isRent ? `${service} — RENT` : String(i.period).toUpperCase(),
+          sac,
+          checkIn: isRent ? from : '—',
+          checkOut: isRent ? to : '—',
+          nights: isRent ? '1 month' : '—',
+          taxAmount: +(i.gstAmount || 0).toFixed(2),
+          taxRate: i.gstRate ?? taxRate,
+          total: +(i.total || 0).toFixed(2),
+        }
+      })
+    : null
+
   return {
     invoiceNo: booking.invoiceNo || booking.bookingNo,
+    tenancy: rent.length > 0,
     invoiceDate: fmtDate(booking.checkedOutAt || new Date()),
     hotel: {
       name: hotel.name || 'Hotel',
@@ -118,7 +182,7 @@ export const buildInvoiceData = (booking, hotel = {}) => {
       phone: hotel.phone || null,
       email: hotel.email || null,
       address: hotel.address || null,
-      logoUrl: hotel.logoUrl || null,
+      logoUrl: hotelLogo(hotel),
       stampUrl: hotel.stampUrl || null,
       placeOfSupply: hotel.placeOfSupply || hotel.state || null,
       bank: hotel.bankName
@@ -134,18 +198,31 @@ export const buildInvoiceData = (booking, hotel = {}) => {
     guest: {
       name: booking.guestName,
       phone: booking.guestPhone,
+      email: booking.guestEmail || null,
       address: booking.guestAddress,
     },
-    line: {
-      service: (booking.room?.type?.name || 'ROOM').toUpperCase(),
-      sac: booking.hsnCode || DEFAULT_SAC,
+    stay: {
+      bookingNo: booking.bookingNo,
+      room: booking.room?.number || null,
+      roomType: booking.room?.type?.name || null,
+      bed: booking.bedNo ? (booking.bedNo <= 26 ? String.fromCharCode(64 + booking.bedNo) : String(booking.bedNo)) : null,
+      from: fmtDate(booking.checkedInAt || booking.fromDate),
+      to: rent.length ? (booking.checkedOutAt ? fmtDate(booking.checkedOutAt) : 'Ongoing') : fmtDate(booking.toDate || booking.checkedOutAt),
+      length: rent.length ? `${rent.filter((i) => String(i.period).includes(' – ')).length} month(s) · monthly rent`
+        : booking.stayType === 'monthly' ? `${booking.months || 1} month(s)` : `${booking.nights || 1} night(s)`,
+      guests: (booking.adults || 0) + (booking.children || 0) || 1,
+    },
+    // A PG bed is billed as that bed, e.g. "SUITE · BED B".
+    lines: lines || [{
+      service,
+      sac,
       checkIn: fmtDate(booking.fromDate),
       checkOut: fmtDate(booking.toDate || booking.checkedOutAt),
       nights: booking.nights || booking.months || 1,
       taxAmount,
       taxRate,
       total,
-    },
+    }],
     totals: {
       taxable,
       cgst: halfTax,
@@ -169,7 +246,13 @@ export const buildInvoiceData = (booking, hotel = {}) => {
 export const renderInvoiceHtml = (booking, hotel = {}, opts = {}) => {
   const d = buildInvoiceData(booking, hotel)
   const h = d.hotel
-  const halfRate = (d.totals.taxRate / 2).toFixed(2).replace(/\.00$/, '')
+  const t = d.totals
+  const halfRate = (t.taxRate / 2).toFixed(2).replace(/\.00$/, '')
+  const status = t.balance <= 0 ? { label: 'Paid', cls: 'paid' }
+    : t.received > 0 ? { label: 'Partly paid', cls: 'part' } : { label: 'Payment due', cls: 'due' }
+  const lineTax = d.lines.reduce((n, l) => n + l.taxAmount, 0)
+  const roomLine = [d.stay.room && `Room ${d.stay.room}`, d.stay.roomType, d.stay.bed && `Bed ${d.stay.bed}`]
+    .filter(Boolean).join(' · ')
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -178,198 +261,226 @@ export const renderInvoiceHtml = (booking, hotel = {}, opts = {}) => {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Tax Invoice ${esc(d.invoiceNo)}</title>
 <style>
+  :root {
+    --ink: #111827; --ink2: #374151; --muted: #6b7280; --faint: #9ca3af;
+    --line: #e5e7eb; --soft: #f9fafb; --accent: #b8892b; --accent-soft: #fbf6ea;
+    --green: #15803d; --green-bg: #dcfce7; --amber: #b45309; --amber-bg: #fef3c7; --red: #b91c1c; --red-bg: #fee2e2;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2937; background: #f3f4f6; padding: 24px; }
-  .sheet { width: 800px; margin: 0 auto; background: #fff; border: 3px double #c79a3a; padding: 0; }
-  .pad { padding: 22px 28px; }
-  .row { display: flex; }
-  .between { justify-content: space-between; }
-  .header { border-bottom: 2px solid #c79a3a; }
-  .brand { display: flex; align-items: center; gap: 16px; }
-  .brand img { max-height: 64px; max-width: 120px; object-fit: contain; }
-  .hotel-name { font-size: 26px; font-weight: 800; letter-spacing: 1px; color: #1e3a5f; }
-  .muted { color: #6b7280; font-size: 12px; line-height: 1.5; }
-  .muted b { color: #374151; }
-  .tax-tag { text-align: right; }
-  .tax-tag .t { font-size: 18px; font-weight: 800; color: #1e3a5f; letter-spacing: 1px; }
-  .tax-tag .o { display: inline-block; margin-top: 6px; border: 1px solid #9ca3af; padding: 2px 8px; font-size: 10px; color: #6b7280; text-transform: uppercase; }
-  .meta { border-bottom: 1px solid #e5e7eb; }
-  .meta .label { font-size: 11px; font-weight: 700; color: #1e3a5f; }
-  .meta .val { font-size: 13px; }
-  .billto { border-bottom: 1px solid #e5e7eb; }
-  .billto .label { font-size: 11px; font-weight: 700; color: #1e3a5f; margin-bottom: 3px; }
-  .billto .name { font-size: 16px; font-weight: 700; }
+  body { font-family: Inter, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: var(--ink);
+         background: #eef0f3; padding: 28px 16px; font-size: 12.5px; line-height: 1.45;
+         -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sheet { width: 210mm; max-width: 100%; min-height: 297mm; margin: 0 auto; background: #fff;
+           box-shadow: 0 6px 28px rgba(17,24,39,.10); position: relative; display: flex; flex-direction: column; }
+  .bar { height: 6px; background: var(--accent); }
+  .wrap { padding: 30px 38px 26px; flex: 1; display: flex; flex-direction: column; }
+
+  /* Header */
+  .head { display: flex; justify-content: space-between; gap: 24px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+  .brand { display: flex; gap: 14px; align-items: flex-start; min-width: 0; }
+  .brand img { height: 56px; max-width: 120px; object-fit: contain; }
+  .brand .name { font-size: 21px; font-weight: 800; letter-spacing: -.2px; }
+  .brand .info { color: var(--muted); font-size: 11.5px; margin-top: 4px; }
+  .brand .info b { color: var(--ink2); font-weight: 600; }
+  .doc { text-align: right; flex-shrink: 0; }
+  .doc .title { font-size: 11px; font-weight: 700; letter-spacing: 2.5px; color: var(--accent); text-transform: uppercase; }
+  .doc .no { font-size: 20px; font-weight: 800; margin-top: 4px; letter-spacing: -.2px; }
+  .doc .kv { margin-top: 8px; font-size: 11.5px; color: var(--muted); }
+  .doc .kv span { color: var(--ink2); font-weight: 600; }
+  .badge { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 999px; font-size: 10.5px;
+           font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
+  .badge.paid { color: var(--green); background: var(--green-bg); }
+  .badge.part { color: var(--amber); background: var(--amber-bg); }
+  .badge.due  { color: var(--red);   background: var(--red-bg); }
+
+  /* Parties */
+  .cards { display: grid; grid-template-columns: 1.15fr 1.15fr 1fr; gap: 12px; margin-top: 22px; }
+  .card { background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .card .lbl { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--faint); margin-bottom: 6px; }
+  .card .big { font-size: 14px; font-weight: 700; }
+  .card .ln { color: var(--ink2); font-size: 11.5px; margin-top: 2px; }
+  .card .ln i { font-style: normal; color: var(--muted); }
+
+  /* Items */
   table { width: 100%; border-collapse: collapse; }
-  thead th { background: #eef3f8; color: #1e3a5f; font-size: 11px; text-transform: uppercase; text-align: left; padding: 10px 12px; border-bottom: 2px solid #c79a3a; }
-  thead th.num, tbody td.num { text-align: right; }
-  thead th.ctr, tbody td.ctr { text-align: center; }
-  tbody td { padding: 12px; font-size: 13px; border-bottom: 1px solid #f1f1f1; }
-  .subtotal td { background: #faf6ec; font-weight: 700; font-size: 13px; padding: 10px 12px; }
-  .lower { display: flex; gap: 24px; }
-  .lower .left { flex: 1; }
-  .lower .right { width: 300px; }
-  .bank .label { font-size: 11px; font-weight: 700; color: #1e3a5f; margin-bottom: 6px; }
-  .bank table td { border: 0; padding: 3px 0; font-size: 12px; }
-  .bank table td:first-child { color: #6b7280; width: 90px; }
-  .payments { margin-top: 16px; }
-  .payments .paytable td:first-child { color: inherit; width: auto; }
-  .payments .paytable th { font-size: 10px; text-transform: uppercase; color: #6b7280; text-align: left; padding: 0 8px 4px 0; border: 0; background: none; }
-  .payments .paytable td { padding: 3px 8px 3px 0; font-size: 12px; }
-  .payments .paytable .num { text-align: right; padding-right: 0; }
-  .totals td { padding: 6px 0; font-size: 13px; }
-  .totals td:last-child { text-align: right; }
-  .totals .grand td { border-top: 2px solid #c79a3a; border-bottom: 2px solid #c79a3a; font-size: 16px; font-weight: 800; color: #1e3a5f; padding: 10px 0; }
-  .totals .sub td { color: #6b7280; }
-  .totals .bal td { font-weight: 700; }
-  .words { font-size: 13px; margin-top: 18px; }
-  .words .label { font-size: 11px; font-weight: 700; color: #1e3a5f; }
-  .sign { margin-top: 28px; border: 1px solid #d1d5db; border-radius: 6px; min-height: 110px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 10px 12px 12px; }
-  .sign img { max-height: 96px; max-width: 240px; object-fit: contain; margin-bottom: 6px; }
-  .sign .s { font-size: 12px; font-weight: 700; }
-  .sign .h { font-size: 11px; color: #6b7280; }
-  .terms { margin-top: 16px; font-size: 10px; color: #9ca3af; line-height: 1.5; }
+  .items { margin-top: 24px; }
+  .items th { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
+              text-align: left; padding: 9px 10px; border-bottom: 1.5px solid var(--ink); }
+  .items td { padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .items .n { width: 28px; color: var(--faint); }
+  .items .r { text-align: right; white-space: nowrap; }
+  .items .desc b { font-weight: 600; }
+  .items .desc div { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .items tfoot td { border-bottom: 0; padding-top: 10px; font-weight: 700; }
+
+  /* Lower */
+  .lower { display: grid; grid-template-columns: 1fr 270px; gap: 28px; margin-top: 22px; }
+  .sec + .sec { margin-top: 16px; }
+  .sec .lbl { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--faint); margin-bottom: 6px; }
+  .words { font-weight: 600; color: var(--ink2); }
+  .mini td, .mini th { padding: 4px 0; font-size: 11.5px; text-align: left; }
+  .mini th { color: var(--muted); font-weight: 600; font-size: 10.5px; }
+  .mini .r { text-align: right; }
+  .kvt td { padding: 2px 0; font-size: 11.5px; }
+  .kvt td:first-child { color: var(--muted); width: 92px; }
+  .totals { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; align-self: start; }
+  .totals .row { display: flex; justify-content: space-between; padding: 7px 14px; font-size: 12px; color: var(--ink2); }
+  .totals .row span:last-child { font-variant-numeric: tabular-nums; }
+  .totals .grand { background: var(--ink); color: #fff; font-size: 15px; font-weight: 800; padding: 11px 14px; }
+  .totals .bal { font-weight: 700; color: var(--ink); border-top: 1px solid var(--line); }
+  .totals .bal.owe { color: var(--red); background: var(--red-bg); }
+
+  /* Footer */
+  .foot { display: grid; grid-template-columns: 1fr 220px; gap: 28px; margin-top: auto; padding-top: 28px; align-items: end; }
+  .terms { font-size: 10.5px; color: var(--muted); }
+  .terms b { color: var(--ink2); }
+  .sign { text-align: center; }
+  .sign .box { height: 74px; display: flex; align-items: flex-end; justify-content: center; border-bottom: 1px solid var(--ink2); padding-bottom: 4px; }
+  .sign img { max-height: 70px; max-width: 200px; object-fit: contain; }
+  .sign .who { font-size: 11px; font-weight: 700; margin-top: 6px; }
+  .sign .for { font-size: 10.5px; color: var(--muted); }
+  .end { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--line); text-align: center; font-size: 10px; color: var(--faint); }
+
+  @media (max-width: 760px) {
+    .wrap { padding: 22px 18px; } .head, .lower, .foot { display: block; } .doc { text-align: left; margin-top: 14px; }
+    .cards { grid-template-columns: 1fr; } .totals { margin-top: 16px; } .sign { margin-top: 18px; }
+  }
   @media print {
     body { background: #fff; padding: 0; }
-    .sheet { width: 100%; border: 0; }
-    @page { size: A4; margin: 12mm; }
+    .sheet { box-shadow: none; width: 100%; min-height: auto; }
+    @page { size: A4; margin: 0; }
   }
 </style>
 </head>
 <body>
 <div class="sheet">
+  <div class="bar"></div>
+  <div class="wrap">
 
-  <!-- Header -->
-  <div class="pad header row between">
-    <div class="brand">
-      ${h.logoUrl ? `<img src="${esc(h.logoUrl)}" alt="logo" />` : ''}
-      <div>
-        <div class="hotel-name">${esc(h.name)}</div>
-        <div class="muted">
-          ${h.pan ? `<b>PAN</b> ${esc(h.pan)}&nbsp;&nbsp;` : ''}${h.gstin ? `<b>GSTIN</b> ${esc(h.gstin)}` : ''}<br/>
-          ${h.phone ? `${esc(h.phone)}&nbsp;&nbsp;` : ''}${h.email ? esc(h.email) : ''}${h.address ? `<br/>${esc(h.address)}` : ''}
+    <div class="head">
+      <div class="brand">
+        ${h.logoUrl ? `<img src="${esc(h.logoUrl)}" alt="" />` : ''}
+        <div>
+          <div class="name">${esc(h.name)}</div>
+          <div class="info">
+            ${h.address ? `${esc(h.address)}<br/>` : ''}
+            ${[h.phone && esc(h.phone), h.email && esc(h.email)].filter(Boolean).join(' · ')}
+            ${h.gstin || h.pan ? `<br/>${h.gstin ? `<b>GSTIN</b> ${esc(h.gstin)}` : ''}${h.gstin && h.pan ? ' · ' : ''}${h.pan ? `<b>PAN</b> ${esc(h.pan)}` : ''}` : ''}
+          </div>
         </div>
       </div>
+      <div class="doc">
+        <div class="title">Tax Invoice</div>
+        <div class="no">${esc(d.invoiceNo)}</div>
+        <div class="kv">Date <span>${esc(d.invoiceDate)}</span> · Booking <span>${esc(d.stay.bookingNo)}</span></div>
+        <div class="badge ${status.cls}">${status.label}</div>
+      </div>
     </div>
-    <div class="tax-tag">
-      <div class="t">TAX INVOICE</div>
-      <div class="o">Original for Recipient</div>
-    </div>
-  </div>
 
-  <!-- Invoice meta -->
-  <div class="pad meta row" style="gap:60px;">
-    <div>
-      <div class="label">Invoice No.</div>
-      <div class="val">${esc(d.invoiceNo)}</div>
+    <div class="cards">
+      <div class="card">
+        <div class="lbl">Billed to</div>
+        <div class="big">${esc(String(d.guest.name || '').split(',')[0])}</div>
+        ${d.guest.phone ? `<div class="ln">${esc(d.guest.phone)}</div>` : ''}
+        ${d.guest.email ? `<div class="ln">${esc(d.guest.email)}</div>` : ''}
+        ${d.guest.address ? `<div class="ln">${esc(d.guest.address)}</div>` : ''}
+      </div>
+      <div class="card">
+        <div class="lbl">Stay</div>
+        <div class="big">${esc(roomLine || '—')}</div>
+        <div class="ln"><i>${d.tenancy ? 'Move-in' : 'Check-in'}</i> ${esc(d.stay.from)} · <i>${d.tenancy ? 'Move-out' : 'Check-out'}</i> ${esc(d.stay.to)}</div>
+        <div class="ln">${esc(d.stay.length)} · ${esc(d.stay.guests)} guest${d.stay.guests === 1 ? '' : 's'}</div>
+      </div>
+      <div class="card">
+        <div class="lbl">Tax details</div>
+        <div class="ln"><i>Place of supply</i> ${esc(h.placeOfSupply || '—')}</div>
+        <div class="ln"><i>SAC</i> ${esc(d.lines[0]?.sac || '—')}</div>
+        <div class="ln"><i>GST</i> CGST ${halfRate}% + SGST ${halfRate}%</div>
+      </div>
     </div>
-    <div>
-      <div class="label">Invoice Date</div>
-      <div class="val">${esc(d.invoiceDate)}</div>
-    </div>
-  </div>
 
-  <!-- Bill To -->
-  <div class="pad billto">
-    <div class="label">Bill To</div>
-    <div class="name">${esc(d.guest.name)}</div>
-    ${d.guest.phone ? `<div class="muted"><b>Mobile</b> ${esc(d.guest.phone)}</div>` : ''}
-    ${d.guest.address ? `<div class="muted">${esc(d.guest.address)}</div>` : ''}
-    ${h.placeOfSupply ? `<div class="muted"><b>Place of Supply</b> ${esc(h.placeOfSupply)}</div>` : ''}
-  </div>
-
-  <!-- Line items -->
-  <div class="pad">
-    <table>
+    <table class="items">
       <thead>
         <tr>
-          <th>No</th>
-          <th>Services</th>
-          <th>SAC</th>
-          <th class="ctr">Check In</th>
-          <th class="ctr">Check Out</th>
-          <th class="ctr">No. of Nights</th>
-          <th class="num">Tax</th>
-          <th class="num">Total</th>
+          <th class="n">#</th>
+          <th>Description</th>
+          <th>${d.tenancy ? 'Period' : 'Nights'}</th>
+          <th class="r">Taxable</th>
+          <th class="r">GST</th>
+          <th class="r">Amount</th>
         </tr>
       </thead>
       <tbody>
+        ${d.lines.map((l, i) => `
         <tr>
-          <td>1</td>
-          <td>${esc(d.line.service)}</td>
-          <td>${esc(d.line.sac)}</td>
-          <td class="ctr">${esc(d.line.checkIn)}</td>
-          <td class="ctr">${esc(d.line.checkOut)}</td>
-          <td class="ctr">${esc(d.line.nights)}</td>
-          <td class="num">${money(d.line.taxAmount)}<br/><span class="muted">(${esc(d.line.taxRate)}%)</span></td>
-          <td class="num">${money(d.line.total)}</td>
-        </tr>
-        <tr class="subtotal">
-          <td colspan="6">Subtotal</td>
-          <td class="num">${money(d.line.taxAmount)}</td>
-          <td class="num">${money(d.line.total)}</td>
-        </tr>
+          <td class="n">${i + 1}</td>
+          <td class="desc"><b>${esc(l.service)}</b>
+            <div>SAC ${esc(l.sac)}${l.checkIn !== '—' ? ` · ${esc(l.checkIn)} → ${esc(l.checkOut)}` : ''}</div></td>
+          <td>${esc(l.nights)}</td>
+          <td class="r">${money(l.total - l.taxAmount)}</td>
+          <td class="r">${money(l.taxAmount)}<div style="color:var(--faint);font-size:10.5px">${esc(l.taxRate)}%</div></td>
+          <td class="r"><b>${money(l.total)}</b></td>
+        </tr>`).join('')}
       </tbody>
+      <tfoot>
+        <tr>
+          <td></td><td>Subtotal</td><td></td>
+          <td class="r">${money(t.taxable)}</td>
+          <td class="r">${money(lineTax)}</td>
+          <td class="r">${money(t.total)}</td>
+        </tr>
+      </tfoot>
     </table>
-  </div>
 
-  <!-- Lower: bank + totals -->
-  <div class="pad lower">
-    <div class="left">
-      ${h.bank ? `
-      <div class="bank">
-        <div class="label">Bank Details</div>
-        <table>
-          <tr><td>Name</td><td>${esc(h.bank.name)}</td></tr>
-          <tr><td>IFSC</td><td>${esc(h.bank.ifsc)}</td></tr>
-          <tr><td>Account No</td><td>${esc(h.bank.accountNo)}</td></tr>
-          <tr><td>Bank Name</td><td>${esc(h.bank.bankName)}</td></tr>
-        </table>
-      </div>` : ''}
-      ${d.payments.length ? `
-      <div class="bank payments">
-        <div class="label">Payment Details</div>
-        <table class="paytable">
-          <thead>
-            <tr><th>Date</th><th>Method</th><th>Reference</th><th class="num">Amount</th></tr>
-          </thead>
-          <tbody>
+    <div class="lower">
+      <div>
+        <div class="sec">
+          <div class="lbl">Amount in words</div>
+          <div class="words">${esc(d.amountInWords)}</div>
+        </div>
+        ${d.payments.length ? `
+        <div class="sec">
+          <div class="lbl">Payments received</div>
+          <table class="mini">
+            <tr><th>Date</th><th>Method</th><th>Reference</th><th class="r">Amount</th></tr>
             ${d.payments.map((p) => `
-            <tr>
-              <td>${esc(p.date)}</td>
-              <td>${esc(p.method)}</td>
-              <td>${esc(p.reference || '—')}</td>
-              <td class="num">${money(p.amount)}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>` : ''}
+            <tr><td>${esc(p.date)}</td><td>${esc(p.method)}</td><td>${esc(p.reference || '—')}</td><td class="r">${money(p.amount)}</td></tr>`).join('')}
+          </table>
+        </div>` : ''}
+        ${h.bank ? `
+        <div class="sec">
+          <div class="lbl">Bank details</div>
+          <table class="kvt">
+            <tr><td>Account name</td><td>${esc(h.bank.name)}</td></tr>
+            <tr><td>Bank</td><td>${esc(h.bank.bankName)}</td></tr>
+            <tr><td>Account no.</td><td>${esc(h.bank.accountNo)}</td></tr>
+            <tr><td>IFSC</td><td>${esc(h.bank.ifsc)}</td></tr>
+          </table>
+        </div>` : ''}
+      </div>
+      <div class="totals">
+        <div class="row"><span>Taxable value</span><span>${money(t.taxable)}</span></div>
+        <div class="row"><span>CGST @ ${halfRate}%</span><span>${money(t.cgst)}</span></div>
+        <div class="row"><span>SGST @ ${halfRate}%</span><span>${money(t.sgst)}</span></div>
+        <div class="row grand"><span>Total</span><span>${money(t.total)}</span></div>
+        <div class="row"><span>Received</span><span>${money(t.received)}</span></div>
+        <div class="row bal ${t.balance > 0 ? 'owe' : ''}"><span>${t.balance > 0 ? 'Balance due' : 'Balance'}</span><span>${money(Math.max(0, t.balance))}</span></div>
+      </div>
     </div>
-    <div class="right">
-      <table class="totals">
-        <tr class="sub"><td>Taxable Amount</td><td>${money(d.totals.taxable)}</td></tr>
-        <tr class="sub"><td>CGST @${halfRate}%</td><td>${money(d.totals.cgst)}</td></tr>
-        <tr class="sub"><td>SGST @${halfRate}%</td><td>${money(d.totals.sgst)}</td></tr>
-        <tr class="grand"><td>Total Amount</td><td>${money(d.totals.total)}</td></tr>
-        <tr class="sub"><td>Received Amount</td><td>${money(d.totals.received)}</td></tr>
-        <tr class="bal"><td>Balance</td><td>${money(d.totals.balance)}</td></tr>
-      </table>
-    </div>
-  </div>
 
-  <!-- Amount in words + signature -->
-  <div class="pad">
-    <div class="words">
-      <div class="label">Total Amount (in words)</div>
-      ${esc(d.amountInWords)}
+    <div class="foot">
+      <div class="terms">
+        ${h.terms ? `<b>Terms &amp; conditions</b><br/>${esc(h.terms)}` : 'Thank you for staying with us.'}
+      </div>
+      <div class="sign">
+        <div class="box">${h.stampUrl ? `<img src="${esc(h.stampUrl)}" alt="Stamp and signature" />` : ''}</div>
+        <div class="who">Authorised Signatory</div>
+        <div class="for">for ${esc(h.name)}</div>
+      </div>
     </div>
-    <div class="sign">
-      ${h.stampUrl ? `<img src="${esc(h.stampUrl)}" alt="Stamp and authorised signature" />` : ''}
-      <div class="s">${h.stampUrl ? 'Authorised Signatory' : 'Signature'}</div>
-      <div class="h">${esc(h.name)}</div>
-    </div>
-    ${h.terms ? `<div class="terms"><b>Terms &amp; Conditions:</b> ${esc(h.terms)}</div>` : ''}
-  </div>
+    <div class="end">This is a computer-generated invoice.</div>
 
+  </div>
 </div>
 ${opts.autoPrint ? '<script>window.onload=function(){window.print()}</script>' : ''}
 </body>

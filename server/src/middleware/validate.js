@@ -231,6 +231,39 @@ export const schemas = {
     source:          z.enum(['walk_in', 'phone', 'website', 'ota', 'referral', 'corporate']).default('walk_in'),
     // Tax-invoice serial — optional; auto-assigned when blank, editable here.
     invoiceNo:       z.string().max(60).trim().optional().nullable(),
+    // PG: one bed of a room let by bed (1-based), and its refundable deposit.
+    bedNo:           z.coerce.number().int().min(1).max(50).optional().nullable(),
+    securityDeposit: z.coerce.number().min(0).max(1000000).default(0),
+  }),
+
+  // Booking — several occupants into one room let by bed (PG). Stay fields are
+  // shared; each occupant becomes their own booking on their own bed.
+  createBookingGroup: z.object({
+    roomId:       z.string().cuid('Select a valid room'),
+    stayType:     z.enum(['daily', 'monthly']),
+    fromDate:     z.string().datetime(),
+    toDate:       z.string().datetime().optional().nullable(),
+    months:       z.coerce.number().int().min(1).max(36).optional().nullable(),
+    taxRate:      z.coerce.number().min(0).max(30).optional(),
+    nationality:  z.string().max(50).optional().nullable(),
+    notes:           z.string().max(1000).optional().nullable(),
+    specialRequests: z.string().max(1000).optional().nullable(),
+    source:       z.enum(['walk_in', 'phone', 'website', 'ota', 'referral', 'corporate']).default('walk_in'),
+    occupants: z.array(z.object({
+      bedNo:        z.coerce.number().int().min(1).max(50),
+      guestName:    z.string().min(2, 'Occupant name is required').max(200).trim(),
+      guestPhone:   z.string({ error: 'A phone number is required' }).min(10, 'A phone number is required').max(200).trim(),
+      guestEmail:   z.preprocess(v => (v === '' ? undefined : v),
+                      z.string().email('Invalid email').max(120).optional().nullable()),
+      guestAddress: z.string().max(300).optional().nullable(),
+      idType:       z.string().max(200).optional().nullable(),
+      idNumber:     z.string().max(50).optional().nullable(),
+      roomRate:     z.coerce.number().min(0).max(1000000).optional(),
+      discount:     z.coerce.number().min(0).max(1000000).default(0),
+      extraCharges: z.coerce.number().min(0).max(1000000).default(0),
+      advance:      z.coerce.number().min(0).max(1000000).default(0),
+      securityDeposit: z.coerce.number().min(0).max(1000000).default(0),
+    })).min(1, 'Add at least one occupant').max(50),
   }),
 
   // Booking — general edit (all optional)
@@ -256,6 +289,8 @@ export const schemas = {
     notes:           z.string().max(1000).optional().nullable(),
     specialRequests: z.string().max(1000).optional().nullable(),
     source:          z.enum(['walk_in', 'phone', 'website', 'ota', 'referral', 'corporate']).optional(),
+    bedNo:           z.coerce.number().int().min(1).max(50).optional().nullable(),
+    securityDeposit: z.coerce.number().min(0).max(1000000).optional(),
   }),
 
   // Booking — cancel

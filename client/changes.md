@@ -6,6 +6,35 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-10-31 · Organization logo on invoices
+
+- `components/modules/billing/Billing.jsx` — the Billing invoice header showed hardcoded "Quantum Vorvex",
+  address and GSTIN. It now shows the active property's logo and details from `GET /billing/letterhead`.
+- `api/client.js` — `billingApi.getLetterhead`.
+
+---
+
+# Session — 2026-10-31 · PG / per-bed booking
+
+- `components/modules/bookings/BookingForm.jsx` — picking a room let by bed switches the form to
+  **PG mode**: "By bed / Whole room" toggle (whole room only while every bed is free), monthly by
+  default, live bed picker for the chosen dates, one card per occupant, per-bed summary rail (rent,
+  advance, due, deposit; totals incl. deposits held). Saves via `POST /bookings/group`, then uploads
+  each occupant's ID scans to their own booking. Hotel rooms keep the original form.
+- `bookings/PgOccupants.jsx` *(new)*, `bookings/occupants.js` *(new)* — bed picker + occupant cards
+  (name, phone, email, rent, advance, refundable deposit, ID type/no., front/back scan) and their
+  validation; "Copy rent & deposit to all beds".
+- `bookings/UploadZone.jsx` *(new)* — the ID upload/scan tile, moved out of BookingForm for reuse.
+- `bookings/BookingsTable.jsx`, `Bookings.jsx` — bed shown next to the room ("Bed B"); clash and
+  check-out texts name the bed; check-out reminds the desk to refund a held deposit; group toast.
+- `modules/rooms/Rooms.jsx` — "Let this room: Whole room / By bed (PG)" with bed count and per-bed
+  rents on Add room and in the room detail; PG cards show one dot per bed and "1/3 free"; the room
+  detail lists each bed with its occupant, dates and dues; header shows PG bed occupancy.
+- `utils/beds.js` *(new)* — `bedLabel`, `isBedRoom`, `bedOccupancy`. `utils/normalizeBooking.js`
+  adds `bed`. `api/client.js` adds `bookingsApi.createGroup` / `bedAvailability`.
+
+---
+
 # Session — 2026-10-25 · Assign staff from the property (Team & access)
 
 - `components/modules/properties/PropertyTeam.jsx` *(new)* — per-property team panel in Settings →

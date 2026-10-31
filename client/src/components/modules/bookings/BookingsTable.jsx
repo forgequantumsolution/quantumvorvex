@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  LuTrash2, LuPencil, LuEllipsisVertical, LuDownload, LuCalendarPlus, LuX, LuCheck,
+  LuTrash2, LuPencil, LuEllipsisVertical, LuDownload, LuCalendarPlus, LuX, LuCheck, LuReceipt, LuLogOut,
 } from 'react-icons/lu'
 import { StatusBadge, Button, EmptyState } from '../../ui-tw'
 import { formatCurrency, formatDate } from '../../../utils/format'
@@ -141,9 +141,16 @@ function Room({ b }) {
                        px-2 py-0.5 font-mono text-[12.5px] text-ink">
         {b.roomNumber}
       </span>
-      <span className="text-xs text-ink3 truncate">
-        {b.roomType}{(b.adults || b.children) ? ` · ${b.adults || 1}A${b.children ? ` ${b.children}C` : ''}` : ''}
-      </span>
+      {b.bed ? (
+        // PG bed stay: the bed is what was let, so it replaces the head count.
+        <span className="text-xs text-ink3 truncate">
+          <span className="font-medium text-gold">Bed {b.bed}</span> · {b.roomType}
+        </span>
+      ) : (
+        <span className="text-xs text-ink3 truncate">
+          {b.roomType}{(b.adults || b.children) ? ` · ${b.adults || 1}A${b.children ? ` ${b.children}C` : ''}` : ''}
+        </span>
+      )}
     </div>
   )
 }
@@ -154,13 +161,33 @@ function Stay({ b, nowrap = true }) {
   return (
     <div className="min-w-0">
       <div className={`text-ink ${nowrap ? 'whitespace-nowrap' : ''}`}>{dateRangeLabel(b)}</div>
-      <div className="text-xs text-ink3 mt-0.5 capitalize">{b.stayType} · {stayLabel(b)}</div>
+      <div className={`text-xs text-ink3 mt-0.5 ${b.tenancy ? '' : 'capitalize'}`}>
+        {b.tenancy ? stayLabel(b) : `${b.stayType} · ${stayLabel(b)}`}
+      </div>
     </div>
   )
 }
 
 function Amount({ b, align = 'right' }) {
   const due = Number(b.balanceDue) > 0
+  if (b.tenancy) {
+    // A tenancy has no stay total: show the monthly rent and the running dues.
+    return (
+      <div className={`flex flex-col gap-1 ${align === 'right' ? 'items-end' : 'items-start'}`}>
+        <span className="text-ink font-medium tabular-nums">
+          {formatCurrency(b.roomRate)}<span className="text-xs font-normal text-ink3">/month</span>
+        </span>
+        <div className={`text-xs ${b.rentOverdue > 0 ? 'text-danger-text font-medium' : due ? 'text-warning-text' : 'text-ink3'}`}>
+          {b.rentOverdue > 0
+            ? `${formatCurrency(b.rentOverdue)} overdue · ${b.overdueDays}d`
+            : due ? `${formatCurrency(b.balanceDue)} rent due`
+            : b.status === 'CheckedIn' ? 'Rent up to date'
+              : b.status === 'CheckedOut' ? 'Settled'
+              : b.advance > 0 ? `${formatCurrency(b.advance)} advance` : 'Billed from move-in'}
+        </div>
+      </div>
+    )
+  }
   return (
     <div className={`flex flex-col gap-1 ${align === 'right' ? 'items-end' : 'items-start'}`}>
       <div className="flex items-center gap-2">
@@ -196,21 +223,32 @@ function Status({ b }) {
  * feel cramped and impossible to fit on a laptop.
  */
 function Actions({ b, busy, h }) {
+  // A monthly tenancy with rent owing: collecting it is the everyday action.
+  const rentDue = b.tenancy && b.status === 'CheckedIn' && Number(b.balanceDue) > 0 && h.onRent
   const primary =
-    b.status === 'CheckedIn'
+    rentDue
+      ? { label: 'Collect rent', onClick: () => h.onRent(b) }
+      : b.status === 'CheckedIn'
       ? { label: 'Check-out', onClick: () => h.onCheckOut(b) }
       : ['Pending', 'Confirmed'].includes(b.status)
         ? { label: 'Check-in', onClick: () => h.onCheckIn(b) }
         : null
 
   const menu = [
+    // Rent is collected while the tenant lives here; after move-out the invoice says it all.
+    b.tenancy && h.onRent && b.status === 'CheckedIn' && !rentDue &&
+      { label: 'Rent & payments', icon: <LuReceipt size={14} />, onClick: () => h.onRent(b) },
+    rentDue &&
+      { label: 'Check-out', icon: <LuLogOut size={14} />, onClick: () => h.onCheckOut(b) },
     b.status === 'Pending' && h.onConfirm &&
       { label: 'Confirm booking', icon: <LuCheck size={14} />, onClick: () => h.onConfirm(b) },
     h.onEdit && EDITABLE.includes(b.status) &&
       { label: 'Edit details', icon: <LuPencil size={14} />, onClick: () => h.onEdit(b) },
-    h.onExtend && ['Confirmed', 'CheckedIn'].includes(b.status) &&
+    // A tenancy has no end date to extend — it runs until move-out.
+    h.onExtend && !b.tenancy && ['Confirmed', 'CheckedIn'].includes(b.status) &&
       { label: 'Extend stay', icon: <LuCalendarPlus size={14} />, onClick: () => h.onExtend(b) },
-    h.onInvoice && ['Confirmed', 'CheckedIn', 'CheckedOut'].includes(b.status) &&
+    // A tenancy's invoice lists each rent month billed (once it has been billed).
+    h.onInvoice && (b.tenancy ? ['CheckedIn', 'CheckedOut'] : ['Confirmed', 'CheckedIn', 'CheckedOut']).includes(b.status) &&
       { label: 'Download invoice', icon: <LuDownload size={14} />, onClick: () => h.onInvoice(b) },
     h.onCancel && ['Pending', 'Confirmed'].includes(b.status) &&
       { label: 'Cancel booking', icon: <LuX size={14} />, onClick: () => h.onCancel(b), danger: true },
@@ -296,9 +334,9 @@ function CardSkeletons({ count, boxed }) {
  */
 export default function BookingsTable({
   bookings, loading, busyId, view = 'table',
-  onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, emptyMessage,
+  onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent, emptyMessage,
 }) {
-  const h = { onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete }
+  const h = { onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent }
   const asCards = view === 'cards'
 
   if (!loading && !bookings.length) {

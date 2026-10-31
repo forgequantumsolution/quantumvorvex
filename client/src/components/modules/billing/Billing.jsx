@@ -45,6 +45,18 @@ function cashTypeBadge(type) {
 
 // ─── Invoice Print Modal ──────────────────────────────────────────────────────
 function InvoiceModal({ invoice, onClose }) {
+  // Header details and logo of the active property, as set in Settings.
+  const [hotel, setHotel] = useState(null)
+  const isOpen = !!invoice
+  useEffect(() => {
+    if (!isOpen) return
+    let cancelled = false
+    billingApi.getLetterhead()
+      .then(({ data }) => { if (!cancelled) setHotel(data.hotel) })
+      .catch(() => { if (!cancelled) setHotel(null) })
+    return () => { cancelled = true }
+  }, [isOpen])
+
   if (!invoice) return null
   // Rent is GST-inclusive, so its taxable (base) value is rent ÷ (1 + GST%); food &
   // amenities are exclusive, so they're already net. Taxable + CGST + SGST = total.
@@ -67,14 +79,14 @@ function InvoiceModal({ invoice, onClose }) {
       <div>
         {/* Hotel header */}
         <div className="text-center border-b-2 border-line pb-4 mb-5">
+          {hotel?.logoUrl && (
+            <img src={hotel.logoUrl} alt="" className="h-14 max-w-[140px] object-contain mx-auto mb-2" />
+          )}
           <p className="t-h1 m-0 text-gold tracking-[-0.02em]">
-            Quantum Vorvex
-          </p>
-          <p className="t-xs mt-[3px] mb-0 text-ink3">
-            Hotel Management System
+            {hotel?.name}
           </p>
           <p className="mt-0.5 mb-0 text-[11px] text-ink3">
-            123 Quantum Nagar, Bengaluru — 560001 · GSTIN: 22AAAAA0000A1Z5
+            {[hotel?.address, hotel?.phone, hotel?.email, hotel?.gstin && `GSTIN: ${hotel.gstin}`].filter(Boolean).join(' · ')}
           </p>
           <p className="t-title mt-3 mb-0 tracking-[0.12em] uppercase">
             Tax Invoice
@@ -898,6 +910,22 @@ export default function Billing() {
     }
   }
 
+  const [billingRent, setBillingRent] = useState(false)
+  const handleBillPgRent = async () => {
+    setBillingRent(true)
+    try {
+      const { data } = await billingApi.billPgRent()
+      addToast(data.created
+        ? `${data.created} PG rent invoice${data.created === 1 ? '' : 's'} created`
+        : 'PG rent is already billed up to today', 'success')
+      if (data.created) reload()
+    } catch (err) {
+      addToast(err.response?.data?.message || 'Could not bill PG rent', 'danger')
+    } finally {
+      setBillingRent(false)
+    }
+  }
+
   const handleGenerate = async (payload) => {
     try {
       const { data } = await billingApi.generate(payload)
@@ -951,6 +979,10 @@ export default function Billing() {
           <div className="flex gap-2">
             <button className="btn btn-outline btn-sm" onClick={reload} disabled={loading}>↻ Refresh</button>
             <button className="btn btn-outline btn-sm" onClick={handleExportCSV}>↓ Export CSV</button>
+            <button className="btn btn-outline btn-sm" onClick={handleBillPgRent} disabled={billingRent}
+              title="PG rent is billed automatically each day; this runs it now">
+              {billingRent ? 'Billing…' : '⟳ Bill PG rent'}
+            </button>
             <button className="btn btn-primary" onClick={() => setShowGenerate(true)}>+ Generate Invoice</button>
           </div>
         )}
