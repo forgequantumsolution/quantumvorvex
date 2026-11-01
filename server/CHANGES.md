@@ -12,6 +12,12 @@ Paths below are relative to `server/`.
   already raised are unchanged. No migration.
 - `src/controllers/bookingsController.js` — check-in bills from the booking's move-in date (or today if
   arriving early) instead of always today, catching up months already passed.
+- Rent always starts on the booking's move-in date, even if check-in is clicked earlier; the first period is
+  billed at check-in. `src/utils/invoiceTemplate.js` shows a part month's days and the real move-in date.
+- Refund after move-out: migration `20261101000000_pg_refund` (`Booking.depositUsed`, `refundAmount`, `refundedAt`; new
+  columns only). `POST /bookings/:id/refund` raises any deduction, takes dues from the deposit, and logs the money
+  handed back as a `refund` Payment (Cash Register + ledger). Check-in now logs the deposit as received. The invoice
+  shows the deposit and refund. The app records refunds; it doesn't send money.
 - Move-out: `settleMoveOutRent` cuts the current month's invoice to the days stayed (10 Nov = 10/30), first
   billing any period not yet raised. Overpaid rent stays on the booking as credit to refund; the refund
   itself isn't recorded. `GET /bookings/:id/rent` adds `moveOut` (`amount`, `due`, `credit`) for the check-out screen.

@@ -44,6 +44,7 @@ export default function CheckOutModal({
   lineItems = [],
   advance = 0,
   balanceDue = 0,
+  defaultPayment,
   paymentMethods = DEFAULT_METHODS,
   allowExtraCharges = false,
   allowPartialPayment = false,
@@ -54,7 +55,7 @@ export default function CheckOutModal({
   // the full balance without needing a reset effect.
   const [step, setStep] = useState(1)
   const [extra, setExtra] = useState(0)
-  const [payment, setPayment] = useState(() => (balanceDue > 0 ? balanceDue : 0))
+  const [payment, setPayment] = useState(() => defaultPayment ?? (balanceDue > 0 ? balanceDue : 0))
   const [payMethod, setPayMethod] = useState(() => paymentMethods[0]?.value)
   const [reference, setReference] = useState('')
   const [notes, setNotes] = useState('')

@@ -8,7 +8,7 @@ import { renderInvoiceHtml, buildInvoiceData, hotelLogo, inlineUploadAsset } fro
 import { htmlToPdf } from '../utils/pdf.js'
 import {
   isTenancy, OPEN_END, tenancyTotals, billDueRent, invoiceTenancy, payTenancyInvoices, rentStartDay,
-  settleMoveOutRent, moveOutPreview,
+  settleMoveOutRent, moveOutPreview, canRefund, settleRefund,
 } from '../utils/pgRent.js'
 
 const DAY_MS = 86400000
@@ -847,11 +847,19 @@ export const checkInBooking = async (req, res) => {
         },
       })
 
+      // The deposit is real money received: log it so its refund balances out.
+      if (booking.securityDeposit > 0) {
+        await tx.payment.create({
+          data: { guestId: guest.id, amount: booking.securityDeposit, method: 'cash', reference: 'Security deposit', type: 'advance' },
+        })
+      }
+
       const now = new Date()
       const tenancy = isTenancy(booking)
-      // Rent starts on the move-in date: bill up to today now, including any months
-      // already passed (the advance is credited against them). The daily job does the rest.
-      const moveIn = rentStartDay(booking.fromDate, now)
+      // Rent starts on the move-in date: bill the first period now even if that date
+      // is ahead, plus any months already passed (the advance is credited against
+      // them). The daily job does the rest.
+      const moveIn = rentStartDay(booking.fromDate)
       const updated = await tx.booking.update({
         where: { id },
         data: {
@@ -867,7 +875,7 @@ export const checkInBooking = async (req, res) => {
               }),
         },
       })
-      if (tenancy) await billDueRent(tx, updated, now)
+      if (tenancy) await billDueRent(tx, updated, moveIn > now ? moveIn : now)
 
       await syncRoomStatus(tx, booking.roomId, 'occupied')
       return tx.booking.findUnique({ where: { id }, include: bookingInclude })
@@ -909,6 +917,8 @@ export const checkOutBooking = async (req, res) => {
           checkedOutAt: new Date(),
           extraCharges, amount, advance, balance,
           paymentStatus: advance <= 0 ? 'unpaid' : advance >= amount ? 'paid' : 'partial',
+          // Dues still open come out of a held deposit, as for a tenancy.
+          ...(booking.securityDeposit > 0 && await settleRefund(tx, { ...booking, amount, advance }, {})),
         },
         include: bookingInclude,
       })
@@ -935,6 +945,38 @@ export const checkOutBooking = async (req, res) => {
     return res.status(200).json({ booking: result })
   } catch (err) {
     logger.error('checkOutBooking error', { error: err.message })
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// POST /bookings/:id/refund — settle after move-out: { amount, deduction, reason, method, reference }.
+// Records the refund; the money itself is paid out at the desk or by transfer.
+export const refundBooking = async (req, res) => {
+  try {
+    const amount = +(Number(req.body.amount) || 0).toFixed(2)
+    const deduction = +(Number(req.body.deduction) || 0).toFixed(2)
+    if (amount < 0 || deduction < 0) return res.status(400).json({ message: 'Amounts can\'t be negative.' })
+    if (!amount && !deduction) return res.status(400).json({ message: 'Enter the amount to refund.' })
+    const booking = await prisma.booking.findUnique({ where: { id: req.params.id } })
+    if (!booking) return res.status(404).json({ message: 'Booking not found.' })
+    if (booking.status !== 'CheckedOut') return res.status(400).json({ message: 'Refund after the tenant has checked out.' })
+    if (!canRefund(booking) || !booking.guestId) return res.status(400).json({ message: 'This booking has nothing to refund.' })
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const data = await settleRefund(tx, booking, {
+        amount,
+        deduction,
+        reason: String(req.body.reason || '').trim().slice(0, 80),
+        method: req.body.method || 'cash',
+        reference: req.body.reference || null,
+      })
+      return tx.booking.update({ where: { id: booking.id }, data, include: bookingInclude })
+    })
+    logger.info('Refund recorded', { event: 'BOOKING', bookingNo: booking.bookingNo, amount, deduction })
+    return res.status(200).json({ booking: updated })
+  } catch (err) {
+    if (err.refundError) return res.status(400).json({ message: err.refundError })
+    logger.error('refundBooking error', { error: err.message })
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }
@@ -1031,15 +1073,19 @@ const checkOutTenancy = async (req, res, booking) => {
           })
         }
       }
-      const advance = b.advance + finalPayment
+      // Dues still open come out of the deposit, leaving only real money to refund.
+      const settled = await settleRefund(tx, {
+        ...b,
+        advance: +(b.advance + finalPayment).toFixed(2),
+        advanceApplied: +(b.advanceApplied + applied).toFixed(2),
+      }, {})
       const updated = await tx.booking.update({
         where: { id: b.id },
         data: {
           status: 'CheckedOut',
           checkedOutAt: new Date(),
           extraCharges: b.extraCharges + extra,
-          advanceApplied: +(b.advanceApplied + applied).toFixed(2),
-          ...tenancyTotals({ amount: b.amount, advance }),
+          ...settled,
         },
         include: bookingInclude,
       })

@@ -15,7 +15,8 @@
  * (7/31 of the rent), then every month from the 1st in full. A tenancy whose
  * rentBilledUntil is mid-month (billed before this rule) lines up the same way.
  * Moving out mid-month cuts that month's invoice to the days stayed; anything
- * already paid above that stays on the booking as credit to refund.
+ * already paid above that stays on the booking as credit to refund. After
+ * move-out, dues come out of the security deposit and the rest is refunded.
  */
 import prisma from './prisma.js'
 
@@ -26,9 +27,9 @@ export const isTenancy = (b) => b?.stayType === 'monthly' && !b?.months
 // Far end used as the "until" of an open-ended tenancy in overlap checks.
 export const OPEN_END = new Date('9999-12-31T00:00:00.000Z')
 
-// The day rent starts: the booking's move-in date, or today if they arrive early.
-export const rentStartDay = (fromDate, now = new Date()) => {
-  const start = new Date(Math.min(new Date(fromDate).getTime(), now.getTime()))
+// The day rent starts: always the booking's move-in date, whenever check-in is clicked.
+export const rentStartDay = (fromDate) => {
+  const start = new Date(fromDate)
   return new Date(start.getFullYear(), start.getMonth(), start.getDate())
 }
 
@@ -149,13 +150,15 @@ const moveOutCut = (booking, now) => {
   const end = new Date(booking.rentBilledUntil)
   if (!booking.rentBilledUntil || end <= now || end.getDate() !== 1) return null
   const first = new Date(end.getFullYear(), end.getMonth() - 1, 1)
-  const moveIn = rentStartDay(booking.fromDate, booking.checkedInAt ? new Date(booking.checkedInAt) : now)
+  const moveIn = rentStartDay(booking.fromDate)
   const start = moveIn > first ? moveIn : first
   const inMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate()
   const days = inMonth - start.getDate() + 1
-  const used = now.getDate() - start.getDate() + 1
+  // Days from the start of rent to today, at least one if they leave before it starts.
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const used = Math.max(1, Math.round((today - start) / 86400000) + 1)
   if (used >= days) return null
-  const lastDayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  const lastDayEnd = new Date(start.getFullYear(), start.getMonth(), start.getDate() + used)
   return {
     used,
     days,
@@ -223,7 +226,7 @@ export const moveOutPreview = (booking, invoices, now = new Date()) => {
  * Payment per invoice. Anything left over stays on the booking as credit for
  * the next month. Returns the amount applied to invoices.
  */
-export const payTenancyInvoices = async (tx, booking, amount, method = 'cash', reference = null) => {
+export const payTenancyInvoices = async (tx, booking, amount, method = 'cash', reference = null, logPayment = true) => {
   let left = round2(amount)
   const open = await tx.invoice.findMany({
     where: { bookingId: booking.id, status: { not: 'Paid' }, deletedAt: null },
@@ -238,12 +241,73 @@ export const payTenancyInvoices = async (tx, booking, amount, method = 'cash', r
       where: { id: inv.id },
       data: { amountPaid: paid, ...(paid >= inv.total && { status: 'Paid', paidAt: new Date() }) },
     })
-    await tx.payment.create({
-      data: { guestId: booking.guestId, invoiceId: inv.id, amount: pay, method, reference, type: 'collection' },
-    })
+    if (logPayment) {
+      await tx.payment.create({
+        data: { guestId: booking.guestId, invoiceId: inv.id, amount: pay, method, reference, type: 'collection' },
+      })
+    }
     left = round2(left - pay)
   }
   return round2(amount - left)
+}
+
+// Bookings settled with a refund: tenancies, and any stay holding a deposit.
+export const canRefund = (b) => isTenancy(b) || b.securityDeposit > 0
+
+// A checked-out booking's settlement (mirrored in client utils/beds.js): dues come
+// out of the deposit first, and what's left plus any rent credit can be refunded.
+export const refundAccount = (b) => {
+  const depositLeft = round2(b.securityDeposit - b.depositUsed)
+  const credit = Math.max(0, round2(b.advance - b.amount))
+  const due = Math.max(0, round2(b.amount - b.advance))
+  const fromDeposit = Math.min(depositLeft, due)
+  return {
+    depositLeft,
+    credit,
+    due,
+    fromDeposit,
+    owed: round2(due - fromDeposit),
+    refundable: Math.max(0, round2(depositLeft + credit - fromDeposit - b.refundAmount)),
+  }
+}
+
+/**
+ * Settle a checked-out booking: raise any deduction (damage, cleaning…) as a bill,
+ * take dues from the deposit, and record the money handed back as a refund Payment.
+ * The deposit was logged as received at check-in, so using it moves no cash and
+ * logs no Payment. Throws { refundError } when `amount` is more than is left.
+ * Runs inside `tx`; returns the updated booking fields.
+ */
+export const settleRefund = async (tx, booking, { amount = 0, deduction = 0, reason, method = 'cash', reference = null }) => {
+  const b = { ...booking }
+  const tenancy = isTenancy(b)
+  if (deduction > 0) {
+    if (tenancy) await invoiceTenancy(tx, b, { period: reason ? `Deduction — ${reason}` : 'Deduction', rent: deduction })
+    else b.amount = round2(b.amount + deduction)
+  }
+  const { fromDeposit } = refundAccount(b)
+  if (fromDeposit > 0) {
+    const applied = tenancy ? await payTenancyInvoices(tx, b, fromDeposit, 'deposit', null, false) : 0
+    b.advance = round2(b.advance + fromDeposit)
+    b.advanceApplied = round2(b.advanceApplied + applied)
+    b.depositUsed = round2(b.depositUsed + fromDeposit)
+  }
+  const { refundable } = refundAccount(b)
+  if (amount > refundable) throw Object.assign(new Error('refund too high'), { refundError: `Only ₹${refundable} can be refunded.` })
+  if (amount > 0) {
+    await tx.payment.create({ data: { guestId: b.guestId, amount, method, reference, type: 'refund' } })
+    b.refundAmount = round2(b.refundAmount + amount)
+    b.refundedAt = new Date()
+  }
+  return {
+    amount: b.amount,
+    advance: b.advance,
+    advanceApplied: b.advanceApplied,
+    depositUsed: b.depositUsed,
+    refundAmount: b.refundAmount,
+    refundedAt: b.refundedAt,
+    ...tenancyTotals({ amount: b.amount, advance: b.advance }),
+  }
 }
 
 /**

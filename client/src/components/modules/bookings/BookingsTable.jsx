@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
-  LuTrash2, LuPencil, LuEllipsisVertical, LuDownload, LuCalendarPlus, LuX, LuCheck, LuReceipt, LuLogOut,
+  LuTrash2, LuPencil, LuEllipsisVertical, LuDownload, LuCalendarPlus, LuX, LuCheck, LuReceipt, LuLogOut, LuUndo2,
 } from 'react-icons/lu'
 import { StatusBadge, Button, EmptyState } from '../../ui-tw'
 import { formatCurrency, formatDate } from '../../../utils/format'
@@ -168,6 +168,13 @@ function Stay({ b, nowrap = true }) {
   )
 }
 
+// After move-out: money still to hand back, or what was handed back.
+function RefundNote({ b }) {
+  if (b.refundable > 0) return <div className="text-xs text-warning-text font-medium">{formatCurrency(b.refundable)} refund pending</div>
+  if (b.refundAmount > 0) return <div className="text-xs text-ink3">{formatCurrency(b.refundAmount)} refunded</div>
+  return null
+}
+
 function Amount({ b, align = 'right' }) {
   const due = Number(b.balanceDue) > 0
   if (b.tenancy) {
@@ -185,6 +192,7 @@ function Amount({ b, align = 'right' }) {
               : b.status === 'CheckedOut' ? 'Settled'
               : b.advance > 0 ? `${formatCurrency(b.advance)} advance` : 'Billed from move-in'}
         </div>
+        <RefundNote b={b} />
       </div>
     )
   }
@@ -197,6 +205,7 @@ function Amount({ b, align = 'right' }) {
       <div className={`text-xs ${due ? 'text-warning-text' : 'text-ink3'}`}>
         {due ? `${formatCurrency(b.balanceDue)} due` : 'Fully paid'}
       </div>
+      <RefundNote b={b} />
     </div>
   )
 }
@@ -232,7 +241,9 @@ function Actions({ b, busy, h }) {
       ? { label: 'Check-out', onClick: () => h.onCheckOut(b) }
       : ['Pending', 'Confirmed'].includes(b.status)
         ? { label: 'Check-in', onClick: () => h.onCheckIn(b) }
-        : null
+        : b.refundable > 0 && h.onRefund
+          ? { label: 'Refund', icon: <LuUndo2 size={14} />, onClick: () => h.onRefund(b) }
+          : null
 
   const menu = [
     // Rent is collected while the tenant lives here; after move-out the invoice says it all.
@@ -334,9 +345,9 @@ function CardSkeletons({ count, boxed }) {
  */
 export default function BookingsTable({
   bookings, loading, busyId, view = 'table',
-  onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent, emptyMessage,
+  onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent, onRefund, emptyMessage,
 }) {
-  const h = { onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent }
+  const h = { onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent, onRefund }
   const asCards = view === 'cards'
 
   if (!loading && !bookings.length) {

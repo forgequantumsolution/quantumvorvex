@@ -118,6 +118,13 @@ export const amountInWords = (amount) => {
 const panFromGstin = (gstin) =>
   gstin && gstin.length >= 12 ? gstin.slice(2, 12) : null
 
+// "1 month(s) + 21 day(s)" for a tenancy's rent periods.
+const rentLength = (periods, rentDays) => {
+  const days = periods.reduce((n, i) => n + rentDays(i), 0)
+  const months = periods.filter((i) => !rentDays(i)).length
+  return [months && `${months} month(s)`, days && `${days} day(s)`].filter(Boolean).join(' + ') || '0 month(s)'
+}
+
 /**
  * Build the structured invoice payload from a booking + hotel.
  * Splits the booking's tax into CGST + SGST (intra-state default).
@@ -153,17 +160,19 @@ export const buildInvoiceData = (booking, hotel = {}) => {
   const service = ((booking.room?.type?.name || 'ROOM')
     + (booking.bedNo ? ` · Bed ${booking.bedNo <= 26 ? String.fromCharCode(64 + booking.bedNo) : booking.bedNo}` : '')).toUpperCase()
   const sac = booking.hsnCode || DEFAULT_SAC
-  // One line per rent month ("31 Oct – 29 Nov 2026" → from / to), else the stay.
+  // One line per rent period ("10 Nov – 30 Nov 2026 (21 of 30 days)" → from / to /
+  // days; no day count means a full month), else the stay.
+  const rentDays = (i) => Number(String(i.period).match(/\((\d+) of \d+ days\)$/)?.[1]) || 0
   const lines = rent.length
     ? rent.map((i) => {
-        const [from, to] = String(i.period).split(' – ')
+        const [from, to] = String(i.period).replace(/ \(\d+ of \d+ days\)$/, '').split(' – ')
         const isRent = !!to
         return {
           service: isRent ? `${service} — RENT` : String(i.period).toUpperCase(),
           sac,
           checkIn: isRent ? from : '—',
           checkOut: isRent ? to : '—',
-          nights: isRent ? '1 month' : '—',
+          nights: !isRent ? '—' : rentDays(i) ? `${rentDays(i)} day${rentDays(i) === 1 ? '' : 's'}` : '1 month',
           taxAmount: +(i.gstAmount || 0).toFixed(2),
           taxRate: i.gstRate ?? taxRate,
           total: +(i.total || 0).toFixed(2),
@@ -206,9 +215,9 @@ export const buildInvoiceData = (booking, hotel = {}) => {
       room: booking.room?.number || null,
       roomType: booking.room?.type?.name || null,
       bed: booking.bedNo ? (booking.bedNo <= 26 ? String.fromCharCode(64 + booking.bedNo) : String(booking.bedNo)) : null,
-      from: fmtDate(booking.checkedInAt || booking.fromDate),
+      from: fmtDate(rent.length ? booking.fromDate : booking.checkedInAt || booking.fromDate),
       to: rent.length ? (booking.checkedOutAt ? fmtDate(booking.checkedOutAt) : 'Ongoing') : fmtDate(booking.toDate || booking.checkedOutAt),
-      length: rent.length ? `${rent.filter((i) => String(i.period).includes(' – ')).length} month(s) · monthly rent`
+      length: rent.length ? `${rentLength(rent.filter((i) => String(i.period).includes(' – ')), rentDays)} · monthly rent`
         : booking.stayType === 'monthly' ? `${booking.months || 1} month(s)` : `${booking.nights || 1} night(s)`,
       guests: (booking.adults || 0) + (booking.children || 0) || 1,
     },
@@ -224,6 +233,9 @@ export const buildInvoiceData = (booking, hotel = {}) => {
       total,
     }],
     totals: {
+      deposit: booking.securityDeposit || 0,
+      depositUsed: booking.depositUsed || 0,
+      refunded: booking.refundAmount || 0,
       taxable,
       cgst: halfTax,
       sgst: halfTax,
@@ -464,6 +476,9 @@ export const renderInvoiceHtml = (booking, hotel = {}, opts = {}) => {
         <div class="row"><span>SGST @ ${halfRate}%</span><span>${money(t.sgst)}</span></div>
         <div class="row grand"><span>Total</span><span>${money(t.total)}</span></div>
         <div class="row"><span>Received</span><span>${money(t.received)}</span></div>
+        ${t.depositUsed > 0 ? `<div class="row"><span>Includes from deposit</span><span>${money(t.depositUsed)}</span></div>` : ''}
+        ${t.deposit > 0 ? `<div class="row"><span>Security deposit held</span><span>${money(t.deposit)}</span></div>` : ''}
+        ${t.refunded > 0 ? `<div class="row"><span>Refunded to tenant</span><span>${money(t.refunded)}</span></div>` : ''}
         <div class="row bal ${t.balance > 0 ? 'owe' : ''}"><span>${t.balance > 0 ? 'Balance due' : 'Balance'}</span><span>${money(Math.max(0, t.balance))}</span></div>
       </div>
     </div>

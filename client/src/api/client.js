@@ -127,6 +127,8 @@ export const bookingsApi = {
   // Monthly tenancy: rent account (months billed, due, credit) and collect rent.
   rentAccount: (id)    => api.get(`/bookings/${id}/rent`),
   collectRent: (id, data) => api.post(`/bookings/${id}/collect-rent`, data),
+  // After move-out: dues from the deposit, the rest recorded as refunded.
+  refund:      (id, data) => api.post(`/bookings/${id}/refund`, data),
   update:   (id, data) => api.put(`/bookings/${id}`, data),
   confirm:  (id)       => api.post(`/bookings/${id}/confirm`),
   checkIn:  (id, data) => api.post(`/bookings/${id}/check-in`, data || {}),

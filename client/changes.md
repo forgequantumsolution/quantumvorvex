@@ -10,6 +10,9 @@ Folder: `quantumvorvex-main/client/`
 
 - `utils/beds.js`, `bookings/BookingForm.jsx` — the summary shows the rent billed at move-in (first month by
   the day, plus any months already passed) and explains the part-month charge.
+- `bookings/RefundModal.jsx` *(new)*, `BookingsTable.jsx`, `utils/beds.js`, `utils/normalizeBooking.js` — after move-out the
+  refund screen opens (deposit left + rent credit, less dues and deductions). A pending refund shows on the booking
+  with a Refund button. `checkout/CheckOutModal.jsx` — `defaultPayment` leaves dues the deposit covers uncollected.
 - `bookings/Bookings.jsx` — check-out of a tenancy shows rent up to today and any rent credit to refund.
 
 ---

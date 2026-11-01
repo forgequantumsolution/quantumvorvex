@@ -9,6 +9,7 @@ import ExtendStayModal from './ExtendStayModal'
 import EditBookingModal from './EditBookingModal'
 import InvoiceModal from './InvoiceModal'
 import CollectRentModal from './CollectRentModal'
+import RefundModal from './RefundModal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import { useToast } from '../../../hooks/useToast'
 import { useAppSelector, usePrimaryAction } from '../../../store/hooks'
@@ -75,6 +76,7 @@ export default function Bookings() {
   const [cancelTarget, setCancelTarget] = useState(null)
   const [checkOutTarget, setCheckOutTarget] = useState(null)
   const [rentTarget, setRentTarget] = useState(null)
+  const [refundTarget, setRefundTarget] = useState(null)
   const [extendTarget, setExtendTarget] = useState(null)
   const [editTarget, setEditTarget] = useState(null)
   const [invoiceTarget, setInvoiceTarget] = useState(null)
@@ -219,9 +221,12 @@ export default function Bookings() {
         await bookingsApi.uploadDocuments(id, form)
       }
       const extraCharges = (Number(b.extraCharges) || 0) + (Number(extra) || 0)
-      await bookingsApi.checkOut(id, { finalPayment, extraCharges, paymentMethod, paymentReference })
+      const { data } = await bookingsApi.checkOut(id, { finalPayment, extraCharges, paymentMethod, paymentReference })
       toast(`${b.guestName || 'Guest'} checked out`)
       setCheckOutTarget(null)
+      // Money to hand back: go straight to the refund (it can also wait).
+      const left = normalize(data.booking)
+      if (left?.refundable > 0) setRefundTarget(left)
       reload()
     } catch (err) {
       toast(err.response?.data?.message || 'Check-out failed', 'error')
@@ -340,6 +345,7 @@ export default function Bookings() {
             onCancel={setCancelTarget}
             onExtend={setExtendTarget}
             onRent={setRentTarget}
+            onRefund={setRefundTarget}
             onInvoice={setInvoiceTarget}
             onEdit={setEditTarget}
             onDelete={setDeleteTarget}
@@ -367,12 +373,13 @@ export default function Bookings() {
           lineItems={[[checkOutTarget.tenancy ? 'Rent up to today' : 'Total amount', checkOutTarget.amount]]}
           advance={checkOutTarget.advance}
           balanceDue={checkOutTarget.balanceDue}
+          defaultPayment={Math.max(0, checkOutTarget.balanceDue - (checkOutTarget.securityDeposit || 0))}
           allowExtraCharges
           allowPartialPayment
           footnote={`Confirming releases ${checkOutTarget.bed ? `Bed ${checkOutTarget.bed} of ` : ''}Room ${checkOutTarget.roomNumber} and moves the guest to checked-out history.${
             // A PG deposit is held, not billed — remind the desk to settle it.
-            checkOutTarget.securityDeposit > 0 ? ` Security deposit of ${formatCurrency(checkOutTarget.securityDeposit)} is held — refund it, less any dues.` : ''}${
-            checkOutTarget.rentCredit > 0 ? ` Rent paid in advance of ${formatCurrency(checkOutTarget.rentCredit)} is to be refunded.` : ''}`}
+            checkOutTarget.securityDeposit > 0 ? ` Security deposit of ${formatCurrency(checkOutTarget.securityDeposit)} is held: dues not collected now come out of it, and the refund is next.` : ''}${
+            checkOutTarget.rentCredit > 0 ? ` Rent paid in advance of ${formatCurrency(checkOutTarget.rentCredit)} is refunded next.` : ''}`}
           submitting={busyId === checkOutTarget.id}
           onClose={() => setCheckOutTarget(null)}
           onConfirm={handleCheckOut}
@@ -394,6 +401,17 @@ export default function Bookings() {
           submitting={busyId === extendTarget.id}
           onClose={() => setExtendTarget(null)}
           onConfirm={handleExtend}
+        />
+      )}
+      {refundTarget && (
+        <RefundModal
+          booking={refundTarget}
+          onClose={() => { setRefundTarget(null); reload() }}
+          onRefunded={(amount) => {
+            toast(amount > 0 ? `${formatCurrency(amount)} refund recorded for ${refundTarget.guestName.split(',')[0]}` : 'Deduction saved')
+            setRefundTarget(null)
+            reload()
+          }}
         />
       )}
       {rentTarget && (

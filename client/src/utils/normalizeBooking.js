@@ -1,4 +1,4 @@
-import { bedLabel, isTenancy } from './beds'
+import { bedLabel, isTenancy, refundAccount } from './beds'
 
 /**
  * Flatten an API booking (where `room` is a nested object) into the flat shape
@@ -14,6 +14,8 @@ export function normalizeBooking(b) {
     // "B" for a PG bed booking, '' for a whole-room stay.
     bed: b.bedNo ? bedLabel(b.bedNo) : '',
     tenancy: isTenancy(b),
+    // Money still to hand back after move-out (deposit left + rent credit).
+    refundable: b.status === 'CheckedOut' && (isTenancy(b) || b.securityDeposit > 0) ? refundAccount(b).refundable : 0,
     // Rent months unpaid past the grace period (server marks them Overdue).
     rentOverdue: (b.invoices || []).reduce((n, i) => n + (i.total - i.amountPaid), 0),
     // Days since the oldest overdue month was billed (computed at load time).

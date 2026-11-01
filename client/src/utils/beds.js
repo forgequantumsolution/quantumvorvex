@@ -17,6 +17,25 @@ export const hasBedStays = (room) => (room?.bookings || []).some((b) => b.bedNo 
 // booking. Older monthly bookings with a fixed `months` term are not.
 export const isTenancy = (b) => b?.stayType === 'monthly' && !b?.months
 
+const round2 = (n) => +Number(n).toFixed(2)
+
+// A checked-out booking's settlement (mirrors refundAccount in server pgRent.js):
+// dues come out of the deposit first; what's left plus any rent credit is refundable.
+export function refundAccount(b) {
+  const depositLeft = round2((b.securityDeposit || 0) - (b.depositUsed || 0))
+  const credit = Math.max(0, round2((b.advance || 0) - (b.amount || 0)))
+  const due = Math.max(0, round2((b.amount || 0) - (b.advance || 0)))
+  const fromDeposit = Math.min(depositLeft, due)
+  return {
+    depositLeft,
+    credit,
+    due,
+    fromDeposit,
+    owed: round2(due - fromDeposit),
+    refundable: Math.max(0, round2(depositLeft + credit - fromDeposit - (b.refundAmount || 0))),
+  }
+}
+
 const parseDay = (s) => new Date(String(s).includes('T') ? s : `${s}T00:00:00`)
 
 // Months of rent billed when a tenancy moves in on `fromDate`: the first calendar

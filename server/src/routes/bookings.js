@@ -8,6 +8,7 @@ import {
   getBedAvailability,
   getRentAccount,
   collectRent,
+  refundBooking,
   updateBooking,
   confirmBooking,
   checkInBooking,
@@ -61,6 +62,8 @@ router.post('/:id/no-show',   noShowBooking)
 // Monthly tenancy: rent account + collect a month's rent on the booking
 router.get('/:id/rent',           getRentAccount)
 router.post('/:id/collect-rent',  collectRent)
+// After move-out: dues from the deposit, the rest recorded as refunded
+router.post('/:id/refund',        refundBooking)
 
 // Hard delete — requires manage on bookings (RBAC-enforced at the router)
 router.delete('/:id', deleteBooking)

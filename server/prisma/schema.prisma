@@ -345,6 +345,11 @@ model Booking {
   paymentStatus String @default("unpaid") // unpaid | partial | paid
   // Refundable security deposit (PG). Held, not revenue: kept out of amount/balance.
   securityDeposit Float @default(0)
+  // Settlement after move-out: the part of the deposit set against dues, and the
+  // money handed back (deposit left + rent credit). Each refund is also a Payment.
+  depositUsed  Float     @default(0)
+  refundAmount Float     @default(0)
+  refundedAt   DateTime?
   // PG tenancy (bed + monthly): rent is billed as one Invoice per month. amount is
   // the rent billed so far, advance all money received; rentBilledUntil is the end
   // of the last billed month (NULL until move-in) and advanceApplied the part of
