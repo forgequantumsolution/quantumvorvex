@@ -5,6 +5,19 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-11-01 · PG rent on calendar months
+
+- `src/utils/pgRent.js` — rent follows calendar months: a part month is charged by the day (25 Oct → 7/31
+  of the rent), then full rent from each 1st. Mid-month tenancies line up at their next period; invoices
+  already raised are unchanged. No migration.
+- `src/controllers/bookingsController.js` — check-in bills from the booking's move-in date (or today if
+  arriving early) instead of always today, catching up months already passed.
+- Move-out: `settleMoveOutRent` cuts the current month's invoice to the days stayed (10 Nov = 10/30), first
+  billing any period not yet raised. Overpaid rent stays on the booking as credit to refund; the refund
+  itself isn't recorded. `GET /bookings/:id/rent` adds `moveOut` (`amount`, `due`, `credit`) for the check-out screen.
+
+---
+
 # Session — 2026-10-31 · Organization logo on invoices
 
 - `src/utils/invoiceTemplate.js` — new `hotelLogo(hotel)`: uses `Hotel.logoUrl` (Hotel Profile), else the

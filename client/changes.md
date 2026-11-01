@@ -6,6 +6,14 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-11-01 · PG rent on calendar months
+
+- `utils/beds.js`, `bookings/BookingForm.jsx` — the summary shows the rent billed at move-in (first month by
+  the day, plus any months already passed) and explains the part-month charge.
+- `bookings/Bookings.jsx` — check-out of a tenancy shows rent up to today and any rent credit to refund.
+
+---
+
 # Session — 2026-10-31 · Room prices for PGs
 
 - `components/modules/rooms/Rooms.jsx` — Add/Edit room no longer requires a daily price; any one price is

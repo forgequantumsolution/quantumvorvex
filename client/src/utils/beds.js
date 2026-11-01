@@ -17,6 +17,28 @@ export const hasBedStays = (room) => (room?.bookings || []).some((b) => b.bedNo 
 // booking. Older monthly bookings with a fixed `months` term are not.
 export const isTenancy = (b) => b?.stayType === 'monthly' && !b?.months
 
+const parseDay = (s) => new Date(String(s).includes('T') ? s : `${s}T00:00:00`)
+
+// Months of rent billed when a tenancy moves in on `fromDate`: the first calendar
+// month by the day, plus any full months already started (mirrors server pgRent.js).
+export function rentMonthsAtMoveIn(fromDate, today = new Date()) {
+  const start = parseDay(fromDate)
+  if (Number.isNaN(start.getTime())) return 1
+  const inMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate()
+  let months = (inMonth - start.getDate() + 1) / inMonth
+  for (let d = new Date(start.getFullYear(), start.getMonth() + 1, 1); d <= today; d.setMonth(d.getMonth() + 1)) months += 1
+  return months
+}
+
+// "25–31 Oct is charged for 7 of 31 days" — null when moving in on the 1st.
+export function rentFirstMonthNote(fromDate) {
+  const start = parseDay(fromDate)
+  if (Number.isNaN(start.getTime()) || start.getDate() === 1) return null
+  const inMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate()
+  const month = start.toLocaleDateString('en-IN', { month: 'short' })
+  return `${start.getDate()}–${inMonth} ${month} is charged for ${inMonth - start.getDate() + 1} of ${inMonth} days. Full rent from the 1st of each month after.`
+}
+
 // One wording for a PG room's fill level everywhere: "2/3 beds free" / "Full · 3/3 beds".
 export const bedFillLabel = (free, total) =>
   free > 0 ? `${free}/${total} beds free` : `Full · ${total}/${total} beds`

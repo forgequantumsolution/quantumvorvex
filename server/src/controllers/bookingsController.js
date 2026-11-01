@@ -7,7 +7,8 @@ import logger from '../utils/logger.js'
 import { renderInvoiceHtml, buildInvoiceData, hotelLogo, inlineUploadAsset } from '../utils/invoiceTemplate.js'
 import { htmlToPdf } from '../utils/pdf.js'
 import {
-  isTenancy, OPEN_END, tenancyTotals, billDueRent, invoiceTenancy, payTenancyInvoices,
+  isTenancy, OPEN_END, tenancyTotals, billDueRent, invoiceTenancy, payTenancyInvoices, rentStartDay,
+  settleMoveOutRent, moveOutPreview,
 } from '../utils/pgRent.js'
 
 const DAY_MS = 86400000
@@ -848,9 +849,9 @@ export const checkInBooking = async (req, res) => {
 
       const now = new Date()
       const tenancy = isTenancy(booking)
-      // Move-in starts a tenancy's first rent month: bill it now (the advance
-      // is credited against it), later months come from the daily job.
-      const moveIn = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      // Rent starts on the move-in date: bill up to today now, including any months
+      // already passed (the advance is credited against them). The daily job does the rest.
+      const moveIn = rentStartDay(booking.fromDate, now)
       const updated = await tx.booking.update({
         where: { id },
         data: {
@@ -956,6 +957,7 @@ export const getRentAccount = async (req, res) => {
       due: booking.balance,
       credit: Math.max(0, +(booking.advance - booking.advanceApplied).toFixed(2)),
       nextBillOn: booking.status === 'CheckedIn' ? booking.rentBilledUntil : null,
+      moveOut: booking.status === 'CheckedIn' ? moveOutPreview(booking, invoices) : null,
     })
   } catch (err) {
     logger.error('getRentAccount error', { error: err.message })
@@ -1001,9 +1003,10 @@ export const collectRent = async (req, res) => {
   }
 }
 
-// Move-out of a PG tenancy. Extra charges become a final invoice; the payment
-// collected settles open rent invoices oldest first, and anything over is kept
-// as a recorded collection. The security deposit is refunded at the desk.
+// Move-out of a PG tenancy. This month's rent is cut to the days stayed, extra
+// charges become a final invoice, and the payment collected settles open rent
+// invoices oldest first; anything over is kept as a recorded collection. Rent
+// credit and the security deposit are refunded at the desk.
 const checkOutTenancy = async (req, res, booking) => {
   try {
     const extra         = Number(req.body.extraCharges) > booking.extraCharges ? req.body.extraCharges - booking.extraCharges : 0
@@ -1013,6 +1016,9 @@ const checkOutTenancy = async (req, res, booking) => {
 
     const result = await prisma.$transaction(async (tx) => {
       const b = { ...booking }
+      const now = new Date()
+      await billDueRent(tx, b, now)
+      await settleMoveOutRent(tx, b, now)
       if (extra > 0 && b.guestId) {
         await invoiceTenancy(tx, b, { period: 'Move-out charges', rent: extra })
       }

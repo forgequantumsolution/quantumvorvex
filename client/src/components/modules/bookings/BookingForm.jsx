@@ -9,7 +9,7 @@ import NameFields from './NameFields'
 import UploadZone from './UploadZone'
 import PgOccupants from './PgOccupants'
 import { occupantErrors, occField } from './occupants'
-import { bedFillLabel, bedLabel, bedOccupancy, hasBedStays, isBedRoom } from '../../../utils/beds'
+import { bedFillLabel, bedLabel, bedOccupancy, hasBedStays, isBedRoom, rentFirstMonthNote, rentMonthsAtMoveIn } from '../../../utils/beds'
 import {
   TODAY, joinPhones, phoneErrors, phoneFieldName, splitPhones, MAX_PHONES,
   joinNames, nameErrors, nameFieldName, splitNames, MAX_NAMES,
@@ -345,8 +345,8 @@ export default function BookingForm({ onSaved, onCancel }) {
   // ── Live pricing preview (mirrors the server formula) ──
   // The room rate is GST-inclusive, so GST is extracted from (subtotal − discount)
   // rather than added on top; the total stays equal to what's entered (+ extras).
-  // A tenancy is shown as its first month — the bill raised at move-in.
-  const units = tenancyMode ? 1
+  // A tenancy is shown as the rent billed at move-in, with its first month by the day.
+  const units = tenancyMode ? rentMonthsAtMoveIn(values.fromDate)
     : values.stayType === 'daily' ? nights(values.fromDate, values.toDate) : Number(values.months) || 0
   const pricing = useMemo(() => priceStay({
     rate: values.roomRate, units, discount: values.discount, taxRate: values.taxRate,
@@ -362,7 +362,7 @@ export default function BookingForm({ onSaved, onCancel }) {
     taxAmount: t.taxAmount + p.taxAmount,
     total: t.total + p.total,
     advance: t.advance + (Number(p.o.advance) || 0),
-    // Advance beyond the first month is credit for the next, not a negative due.
+    // Advance beyond the first bill is credit for the next, not a negative due.
     balance: t.balance + Math.max(0, p.balance),
     deposit: t.deposit + (Number(p.o.deposit) || 0),
   }), { subtotal: 0, taxAmount: 0, total: 0, advance: 0, balance: 0, deposit: 0 })
@@ -968,7 +968,7 @@ export default function BookingForm({ onSaved, onCancel }) {
                 <SumRow label={`GST (${values.taxRate || 0}%) incl.`} value={inr(pgTotals.taxAmount)} />
 
                 <div className="flex items-baseline justify-between pt-2 mt-2 border-t border-gold-border">
-                  <span className="font-display font-bold text-ink">{tenancyMode ? 'Rent / month' : 'Total rent'}</span>
+                  <span className="font-display font-bold text-ink">{tenancyMode ? 'Billed at move-in' : 'Total rent'}</span>
                   <span className="font-display font-bold text-lg text-gold">{inr(pgTotals.total)}</span>
                 </div>
                 <SumRow label={tenancyMode ? 'Advance (set against rent)' : 'Advance collected'} value={inr(pgTotals.advance)} />
@@ -980,8 +980,8 @@ export default function BookingForm({ onSaved, onCancel }) {
                 )}
                 {tenancyMode && (
                   <p className="text-[11px] text-ink3 m-0 pt-1.5">
-                    Book once. The first month is billed at move-in, then each person's rent invoice is
-                    raised automatically every month — collect it from the booking with "Collect rent".
+                    {rentFirstMonthNote(values.fromDate)} Book once. Each person's rent invoice is raised
+                    automatically on the 1st of every month — collect it from the booking with "Collect rent".
                   </p>
                 )}
               </div>
@@ -989,7 +989,7 @@ export default function BookingForm({ onSaved, onCancel }) {
               <div className="px-4 py-3 text-[13px] space-y-1.5">
                 <SumRow
                   label={tenancyMode
-                    ? 'Rent / month (incl. GST)'
+                    ? 'Rent at move-in (incl. GST)'
                     : `Room charge (incl. GST)${pricing.units ? ` · ${pricing.units} × ${inr(values.roomRate)}` : ''}`}
                   value={inr(pricing.subtotal)}
                 />
@@ -999,7 +999,7 @@ export default function BookingForm({ onSaved, onCancel }) {
                 {Number(values.extraCharges) > 0 && <SumRow label="Extra charges" value={inr(values.extraCharges)} />}
 
                 <div className="flex items-baseline justify-between pt-2 mt-2 border-t border-gold-border">
-                  <span className="font-display font-bold text-ink">{tenancyMode ? 'First month' : 'Total'}</span>
+                  <span className="font-display font-bold text-ink">{tenancyMode ? 'Billed at move-in' : 'Total'}</span>
                   <span className="font-display font-bold text-lg text-gold">{inr(pricing.total)}</span>
                 </div>
 
@@ -1009,8 +1009,8 @@ export default function BookingForm({ onSaved, onCancel }) {
                 </div>
                 {tenancyMode && (
                   <p className="text-[11px] text-ink3 m-0 pt-1.5">
-                    Book once. Each month's rent invoice is raised automatically — collect it from the
-                    booking with "Collect rent". No details to re-enter.
+                    {rentFirstMonthNote(values.fromDate)} Book once. Rent invoices are raised automatically on
+                    the 1st of every month — collect them from the booking with "Collect rent".
                   </p>
                 )}
               </div>

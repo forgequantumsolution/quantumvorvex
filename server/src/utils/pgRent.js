@@ -11,8 +11,11 @@
  *                   credit that pays the next invoice
  *   rentBilledUntil end of the last billed month; the next cycle starts here
  *
- * Cycles run from the move-in day: moving in on the 31st bills 31 Oct–30 Nov,
- * then 30 Nov–30 Dec (day clamped to the month's length), and so on.
+ * Rent follows calendar months. Moving in on 25 Oct bills 25–31 Oct by the day
+ * (7/31 of the rent), then every month from the 1st in full. A tenancy whose
+ * rentBilledUntil is mid-month (billed before this rule) lines up the same way.
+ * Moving out mid-month cuts that month's invoice to the days stayed; anything
+ * already paid above that stays on the booking as credit to refund.
  */
 import prisma from './prisma.js'
 
@@ -23,14 +26,27 @@ export const isTenancy = (b) => b?.stayType === 'monthly' && !b?.months
 // Far end used as the "until" of an open-ended tenancy in overlap checks.
 export const OPEN_END = new Date('9999-12-31T00:00:00.000Z')
 
-// Same day-of-month `n` months on, clamped to the target month's last day.
-export const addMonths = (date, n, day = new Date(date).getDate()) => {
-  const d = new Date(date)
-  const target = new Date(d.getFullYear(), d.getMonth() + n, 1, d.getHours(), d.getMinutes())
-  const last = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate()
-  target.setDate(Math.min(day, last))
-  return target
+// The day rent starts: the booking's move-in date, or today if they arrive early.
+export const rentStartDay = (fromDate, now = new Date()) => {
+  const start = new Date(Math.min(new Date(fromDate).getTime(), now.getTime()))
+  return new Date(start.getFullYear(), start.getMonth(), start.getDate())
 }
+
+// One rent period: from `from` to the end of its calendar month. A period
+// starting on the 1st is a full month; any other is charged by the day.
+export const rentPeriod = (from, monthlyRent) => {
+  const start = new Date(from.getFullYear(), from.getMonth(), from.getDate())
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, 1)
+  const inMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate()
+  const days = inMonth - start.getDate() + 1
+  return {
+    end,
+    rent: days === inMonth ? monthlyRent : round2((monthlyRent * days) / inMonth),
+    period: days === inMonth ? periodLabel(start, end) : `${periodLabel(start, end)} (${days} of ${inMonth} days)`,
+  }
+}
+
+const round2 = (n) => +Number(n).toFixed(2)
 
 const fmt = (d, withYear) =>
   d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', ...(withYear && { year: 'numeric' }) })
@@ -38,8 +54,6 @@ const fmt = (d, withYear) =>
 // "31 Oct – 29 Nov 2026" — the last day of the cycle is the day before the next starts.
 export const periodLabel = (start, end) =>
   `${fmt(start)} – ${fmt(new Date(end.getTime() - 86400000), true)}`
-
-const round2 = (n) => +Number(n).toFixed(2)
 
 // Running-account fields for a tenancy after its totals change.
 export const tenancyTotals = ({ amount, advance }) => {
@@ -115,24 +129,93 @@ export const invoiceTenancy = async (tx, booking, { period, rent, cycleEnd }) =>
 }
 
 /**
- * Bill every rent cycle of a checked-in tenancy that has started by `now`
+ * Bill every rent period of a checked-in tenancy that has started by `now`
  * (catching up missed months). Idempotent: rentBilledUntil only moves forward.
  * Returns the invoices created.
  */
 export const billDueRent = async (tx, booking, now = new Date()) => {
   if (!isTenancy(booking) || booking.status !== 'CheckedIn' || !booking.rentBilledUntil || !booking.guestId) return []
-  const anchorDay = new Date(booking.checkedInAt || booking.fromDate).getDate()
   const created = []
   while (booking.rentBilledUntil <= now && created.length < 24) {
-    const start = new Date(booking.rentBilledUntil)
-    const end = addMonths(start, 1, anchorDay)
-    created.push(await invoiceTenancy(tx, booking, {
-      period: periodLabel(start, end),
-      rent: booking.roomRate,
-      cycleEnd: end,
-    }))
+    const { period, rent, end } = rentPeriod(new Date(booking.rentBilledUntil), booking.roomRate)
+    created.push(await invoiceTenancy(tx, booking, { period, rent, cycleEnd: end }))
   }
   return created
+}
+
+// The part of the current rent period used by a tenant leaving on `now`, or null
+// when the whole period is used (or it's an old mid-month cycle, left as billed).
+const moveOutCut = (booking, now) => {
+  const end = new Date(booking.rentBilledUntil)
+  if (!booking.rentBilledUntil || end <= now || end.getDate() !== 1) return null
+  const first = new Date(end.getFullYear(), end.getMonth() - 1, 1)
+  const moveIn = rentStartDay(booking.fromDate, booking.checkedInAt ? new Date(booking.checkedInAt) : now)
+  const start = moveIn > first ? moveIn : first
+  const inMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate()
+  const days = inMonth - start.getDate() + 1
+  const used = now.getDate() - start.getDate() + 1
+  if (used >= days) return null
+  const lastDayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+  return {
+    used,
+    days,
+    billedAs: periodLabel(start, end),
+    period: `${periodLabel(start, lastDayEnd)} (${used} of ${inMonth} days)`,
+  }
+}
+
+/**
+ * Cut the current month's invoice to the days stayed when a tenant moves out.
+ * Updates `booking` in memory (amount, advanceApplied); the caller saves it.
+ * Runs inside `tx`, after billDueRent.
+ */
+export const settleMoveOutRent = async (tx, booking, now = new Date()) => {
+  const cut = moveOutCut(booking, now)
+  if (!cut) return null
+  const inv = await tx.invoice.findFirst({
+    where: { bookingId: booking.id, deletedAt: null, period: { startsWith: cut.billedAs } },
+    orderBy: { createdAt: 'desc' },
+  })
+  if (!inv) return null
+  const total = round2((inv.total * cut.used) / cut.days)
+  const base = round2(total / (1 + (inv.gstRate || 0) / 100))
+  const paid = Math.min(inv.amountPaid, total)
+  const updated = await tx.invoice.update({
+    where: { id: inv.id },
+    data: {
+      period: cut.period,
+      rent: total,
+      gstAmount: round2(total - base),
+      total,
+      amountPaid: paid,
+      ...(paid >= total && { status: 'Paid', paidAt: inv.paidAt ?? now }),
+    },
+  })
+  booking.amount = round2(booking.amount - (inv.total - total))
+  booking.advanceApplied = round2(booking.advanceApplied - (inv.amountPaid - paid))
+  return updated
+}
+
+// What a move-out on `now` would leave on the account, without writing anything:
+// rent to date, what is still due, and any credit to refund.
+export const moveOutPreview = (booking, invoices, now = new Date()) => {
+  let amount = booking.amount
+  let rentBilledUntil = booking.rentBilledUntil
+  let lastTotal = null
+  while (rentBilledUntil && new Date(rentBilledUntil) <= now) {
+    const { rent, end } = rentPeriod(new Date(rentBilledUntil), booking.roomRate)
+    amount = round2(amount + rent)
+    lastTotal = rent
+    rentBilledUntil = end
+  }
+  const cut = moveOutCut({ ...booking, rentBilledUntil }, now)
+  const billed = cut && (lastTotal ?? invoices.find((i) => i.period.startsWith(cut.billedAs))?.total)
+  if (billed) amount = round2(amount - (billed - round2((billed * cut.used) / cut.days)))
+  return {
+    amount,
+    due: tenancyTotals({ amount, advance: booking.advance }).balance,
+    credit: Math.max(0, round2(booking.advance - amount)),
+  }
 }
 
 /**

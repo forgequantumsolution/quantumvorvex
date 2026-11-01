@@ -185,6 +185,20 @@ export default function Bookings() {
   const handleCheckIn  = (b) => runAction(b.id, () => bookingsApi.checkIn(b.id), `${b.guestName} checked in`)
   const handleConfirm  = (b) => runAction(b.id, () => bookingsApi.confirm(b.id), `Booking ${b.bookingNo} confirmed`)
 
+  // A tenancy's rent is cut to the days stayed at move-out, so show that bill.
+  const openCheckOut = async (b) => {
+    if (!b.tenancy) { setCheckOutTarget(b); return }
+    setBusyId(b.id)
+    try {
+      const { data } = await bookingsApi.rentAccount(b.id)
+      setCheckOutTarget({ ...b, amount: data.moveOut.amount, balanceDue: data.moveOut.due, rentCredit: data.moveOut.credit })
+    } catch (err) {
+      toast(err.response?.data?.message || 'Could not load the rent account', 'error')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   // Settle the bill + (optional) payment proof, then check out — via the modal.
   // The modal returns raw inputs; map `extra` onto the booking's existing charges.
   const handleCheckOut = async ({ extra, finalPayment, paymentMethod, paymentReference, proofFile, photoFile }) => {
@@ -321,7 +335,7 @@ export default function Bookings() {
             loading={loading}
             busyId={busyId}
             onCheckIn={handleCheckIn}
-            onCheckOut={setCheckOutTarget}
+            onCheckOut={openCheckOut}
             onConfirm={handleConfirm}
             onCancel={setCancelTarget}
             onExtend={setExtendTarget}
@@ -350,14 +364,15 @@ export default function Bookings() {
           folio={checkOutTarget.bookingNo}
           room={`${checkOutTarget.roomNumber}${checkOutTarget.bed ? ` · Bed ${checkOutTarget.bed}` : ''} · ${checkOutTarget.roomType}`}
           stayPeriod={`${formatDate(checkOutTarget.checkedInAt || checkOutTarget.fromDate)} · ${stayLabel(checkOutTarget)}`}
-          lineItems={[[checkOutTarget.tenancy ? 'Rent billed so far' : 'Total amount', checkOutTarget.amount]]}
+          lineItems={[[checkOutTarget.tenancy ? 'Rent up to today' : 'Total amount', checkOutTarget.amount]]}
           advance={checkOutTarget.advance}
           balanceDue={checkOutTarget.balanceDue}
           allowExtraCharges
           allowPartialPayment
           footnote={`Confirming releases ${checkOutTarget.bed ? `Bed ${checkOutTarget.bed} of ` : ''}Room ${checkOutTarget.roomNumber} and moves the guest to checked-out history.${
             // A PG deposit is held, not billed — remind the desk to settle it.
-            checkOutTarget.securityDeposit > 0 ? ` Security deposit of ${formatCurrency(checkOutTarget.securityDeposit)} is held — refund it, less any dues.` : ''}`}
+            checkOutTarget.securityDeposit > 0 ? ` Security deposit of ${formatCurrency(checkOutTarget.securityDeposit)} is held — refund it, less any dues.` : ''}${
+            checkOutTarget.rentCredit > 0 ? ` Rent paid in advance of ${formatCurrency(checkOutTarget.rentCredit)} is to be refunded.` : ''}`}
           submitting={busyId === checkOutTarget.id}
           onClose={() => setCheckOutTarget(null)}
           onConfirm={handleCheckOut}
