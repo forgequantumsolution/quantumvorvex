@@ -1,0 +1,118 @@
+{
+  "selfCheckIn": "Self Check-In",
+  "progress": "Check-in progress",
+  "stepOf": "Step {{current}} of {{total}}",
+  "goBack": "Go Back",
+  "poweredBy": "Secure self check-in powered by ",
+  "poweredByAfter": "",
+  "steps": {
+    "welcome": "Welcome",
+    "verify": "Verify Details",
+    "documents": "Documents",
+    "terms": "Sign Terms",
+    "confirmation": "Confirmation"
+  },
+  "labels": {
+    "room": "Room",
+    "guest": "Guest",
+    "checkIn": "Check-In",
+    "checkOut": "Check-Out",
+    "bookingNo": "Booking No"
+  },
+  "welcome": {
+    "hello": "Welcome, {{name}}!",
+    "intro": "Complete your self check-in in just a few steps.",
+    "begin": "Begin Self Check-In"
+  },
+  "verify": {
+    "intro": "Please verify and complete your personal details below.",
+    "fullName": "Full Name",
+    "asPerId": "As per ID",
+    "phone": "Phone Number",
+    "phonePlaceholder": "10-digit mobile",
+    "email": "Email Address",
+    "dob": "Date of Birth",
+    "nationality": "Nationality",
+    "nationalityPlaceholder": "Indian",
+    "address": "Permanent Address",
+    "addressPlaceholder": "Full permanent address...",
+    "emergencyName": "Emergency Contact Name",
+    "emergencyPhone": "Emergency Phone",
+    "namePlaceholder": "Name",
+    "phoneShort": "Phone",
+    "confirm": "Confirm Details"
+  },
+  "upload": {
+    "preview": "preview",
+    "done": "Uploaded successfully",
+    "change": "Change",
+    "tap": "Tap to upload",
+    "orDrag": "or drag & drop"
+  },
+  "docs": {
+    "intro": "Upload your government ID and a clear photo of yourself.",
+    "idType": "ID Type",
+    "idNumber": "ID Number",
+    "idNumberPlaceholder": "Enter ID number",
+    "idFront": "ID Front",
+    "idFrontHint": "Use your device camera for best results",
+    "photo": "Guest Photo",
+    "photoHint": "Take a clear selfie — no caps or sunglasses",
+    "cameraHint": "On mobile? Tap the upload zones above to use your device camera directly.",
+    "idFrontRequired": "ID Front photo is required",
+    "photoRequired": "Guest photo is required",
+    "continue": "Continue"
+  },
+  "idTypes": {
+    "Aadhaar Card": "Aadhaar Card",
+    "Passport": "Passport",
+    "Driving Licence": "Driving Licence",
+    "Voter ID": "Voter ID",
+    "PAN Card": "PAN Card"
+  },
+  "terms": {
+    "name": "Terms and Conditions",
+    "intro": "Please read and accept our terms and conditions to complete your pre check-in.",
+    "signature": "Digital Signature",
+    "typeName": "TYPE YOUR FULL NAME AS SIGNATURE",
+    "signHere": "Sign here...",
+    "binding": "This constitutes a legally binding digital signature.",
+    "agreeBefore": "I agree to the ",
+    "agreeAfter": " of {{hotel}} and confirm that all information provided is accurate.",
+    "submit": "Confirm & Submit",
+    "signatureRequired": "Please enter your signature",
+    "agreeRequired": "Please agree to the terms and conditions",
+    "sections": {
+      "1": {
+        "title": "Check-In & Check-Out Policy",
+        "body": "Guests are required to check in between 12:00 PM and 11:00 PM on the scheduled date. Standard checkout time is 11:00 AM. Late checkout is subject to availability and may incur additional charges at the hotel's discretion. Early check-in requests are accommodated based on room availability."
+      },
+      "2": {
+        "title": "Identification & Verification",
+        "body": "All guests must present a valid government-issued photo ID at the time of check-in. This includes Aadhaar Card, Passport, Driving Licence, or Voter ID. Foreign nationals must present a valid passport with applicable visa. The hotel reserves the right to decline check-in if valid identification is not provided."
+      },
+      "3": {
+        "title": "Room & Property Conduct",
+        "body": "Guests are expected to maintain decorum and respect fellow guests and staff at all times. Smoking is strictly prohibited in all indoor areas. Loud music or disruptive behavior between 10:00 PM and 7:00 AM is not permitted. Any damage to hotel property caused by the guest will be charged to the registered payment method."
+      },
+      "4": {
+        "title": "Food, Amenities & Extra Services",
+        "body": "Meals and amenities purchased during your stay are governed by the rates and plans agreed at booking. Outside food delivery is permitted in guest rooms. In-room dining services may be available based on hotel configuration. Any additional service requests must be made through the front desk."
+      },
+      "5": {
+        "title": "Liability & Privacy",
+        "body": "The hotel is not liable for loss of personal belongings. Guests are advised to use the in-room safe for valuables. All personal data collected during this check-in process is processed solely for hotel management purposes and will not be shared with third parties without consent, in compliance with applicable data protection laws."
+      }
+    }
+  },
+  "done": {
+    "title": "Pre-Check-In Complete!",
+    "message": "Your details have been submitted successfully. Our team will verify everything before your arrival.",
+    "summary": "Booking Summary",
+    "seeYou": "See you on {{date}}!",
+    "download": "Download Confirmation",
+    "share": "Share via WhatsApp",
+    "pdfLater": "PDF download will be ready at check-in",
+    "whatsapp": "Hi! I've completed my pre check-in for {{hotel}}.\n\nBooking: {{bookingNo}}\nRoom: {{room}} ({{type}})\nCheck-In: {{checkIn}}\nCheck-Out: {{checkOut}}\n\nGuest: {{guest}}"
+  }
+}

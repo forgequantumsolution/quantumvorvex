@@ -1,0 +1,77 @@
+{
+  "title": "బుకింగ్ ఛానెల్‌లు",
+  "subtitle": "OTA మరియు నేరుగా వచ్చే బుకింగ్‌లను నిర్వహించండి",
+  "tabs": {
+    "overview": "అవలోకనం",
+    "parity": "రేట్ పారిటీ",
+    "import": "దిగుమతి",
+    "revenue": "మూలం వారీగా ఆదాయం"
+  },
+  "stats": {
+    "totalBookings": "మొత్తం బుకింగ్‌లు",
+    "totalRevenue": "మొత్తం ఆదాయం",
+    "connected": "కనెక్ట్ అయిన ఛానెల్‌లు",
+    "thisMonth": "ఈ నెల",
+    "ofChannels_one": "{{count}} ఛానెల్‌లో",
+    "ofChannels_other": "{{count}} ఛానెల్‌లలో"
+  },
+  "status": {
+    "connected": "కనెక్ట్ అయింది",
+    "manual": "మాన్యువల్",
+    "disconnected": "డిస్‌కనెక్ట్ అయింది"
+  },
+  "card": {
+    "bookings": "బుకింగ్‌లు",
+    "revenue": "ఆదాయం",
+    "avgRate": "సగటు రేటు",
+    "configureApi": "API కాన్ఫిగర్ చేయండి",
+    "markManual": "మాన్యువల్‌గా గుర్తించండి"
+  },
+  "parity": {
+    "intro": "మీ రేట్లను OTA ప్లాట్‌ఫామ్‌లతో పోల్చండి. సవరించడానికి పోటీదారుల సెల్‌లపై క్లిక్ చేయండి.",
+    "cheapest": "✓ మీ ధరే తక్కువ",
+    "issue": "⚠ పారిటీ సమస్య",
+    "ok": "✓ పారిటీ సరిగా ఉంది",
+    "yourRate": "మీ రేటు",
+    "roomType": "గది రకం",
+    "status": "పారిటీ స్థితి",
+    "chartTitle": "రేట్ పోలిక చార్ట్"
+  },
+  "importTab": {
+    "drop": "మీ CSV ఫైల్‌ను ఇక్కడ వదలండి, లేదా ఎంచుకోవడానికి క్లిక్ చేయండి",
+    "fileReady": "✓ ఫైల్ లోడ్ అయింది — కాలమ్‌లను మ్యాప్ చేయడానికి సిద్ధం",
+    "supports": ".csv ఫైల్‌లు మాత్రమే · గరిష్టంగా 5 MB",
+    "downloadTemplate": "టెంప్లేట్ CSV డౌన్‌లోడ్ చేయండి",
+    "templateHint": "దిగుమతి చేసే ముందు మీ బుకింగ్ డేటాను సరిగ్గా ఫార్మాట్ చేయడానికి ఈ టెంప్లేట్‌ను వాడండి.",
+    "columnMapping": "కాలమ్ మ్యాపింగ్",
+    "systemField": "సిస్టమ్ ఫీల్డ్",
+    "csvColumn": "మీ CSV కాలమ్",
+    "preview_one": "CSV ప్రివ్యూ ({{count}} వరుస)",
+    "preview_other": "CSV ప్రివ్యూ ({{count}} వరుసలు)",
+    "importBtn": "బుకింగ్‌లను దిగుమతి చేయండి",
+    "fields": {
+      "guestName": "అతిథి పేరు",
+      "roomNumber": "గది నంబర్",
+      "checkIn": "చెక్-ఇన్ తేదీ",
+      "checkOut": "చెక్-అవుట్ తేదీ",
+      "amount": "మొత్తం",
+      "channel": "ఛానెల్"
+    }
+  },
+  "revenue": {
+    "byChannel": "ఛానెల్ వారీగా ఆదాయం",
+    "source": "మూలం",
+    "avgStay": "సగటు బస",
+    "share": "మొత్తంలో %",
+    "bookingsCount_one": "{{count}} బుకింగ్",
+    "bookingsCount_other": "{{count}} బుకింగ్‌లు"
+  },
+  "toast": {
+    "apiSoon": "{{name}} కోసం API కాన్ఫిగరేషన్ త్వరలో వస్తుంది.",
+    "markedManual": "{{name}} మాన్యువల్‌గా గుర్తించబడింది.",
+    "fileLoaded": "ఫైల్ \"{{name}}\" లోడ్ అయింది.",
+    "imported_one": "{{count}} బుకింగ్ విజయవంతంగా దిగుమతి అయింది.",
+    "imported_other": "{{count}} బుకింగ్‌లు విజయవంతంగా దిగుమతి అయ్యాయి.",
+    "templateStarted": "టెంప్లేట్ CSV డౌన్‌లోడ్ ప్రారంభమైంది."
+  }
+}

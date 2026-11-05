@@ -1,0 +1,108 @@
+{
+  "title": "दस्तावेज़",
+  "subtitle": "KYC सत्यापन और ID प्रबंधन",
+  "searchPlaceholder": "अतिथि या DOC ID खोजें",
+  "roomNo": "कमरा {{room}}",
+  "clearFilters": "फ़िल्टर हटाएँ",
+  "filesCount_one": "{{count}} फ़ाइल",
+  "filesCount_other": "{{count}} फ़ाइलें",
+  "kind": { "booking": "बुकिंग", "guest": "अतिथि" },
+  "verification": { "verified": "सत्यापित", "pending": "बाकी", "incomplete": "कोई फ़ाइल नहीं" },
+  "docType": {
+    "idFront": "ID आगे",
+    "idBack": "ID पीछे",
+    "guestPhoto": "अतिथि फ़ोटो",
+    "checkoutPhoto": "Check-out फ़ोटो",
+    "paymentProof": "भुगतान प्रमाण",
+    "additional": "अतिरिक्त दस्तावेज़",
+    "document": "दस्तावेज़"
+  },
+  "stats": {
+    "total": "अतिथि और बुकिंग",
+    "verifiedHint": "हर फ़ाइल स्वीकृत",
+    "pendingHint": "समीक्षा बाकी",
+    "incompleteHint": "अभी कुछ अपलोड नहीं"
+  },
+  "card": {
+    "title": "KYC रिकॉर्ड",
+    "records_one": "{{count}} रिकॉर्ड",
+    "records_other": "{{count}} रिकॉर्ड",
+    "matching_one": "{{count}} रिकॉर्ड मेल खाता है",
+    "matching_other": "{{count}} रिकॉर्ड मेल खाते हैं"
+  },
+  "filter": {
+    "typeLabel": "रिकॉर्ड प्रकार से फ़िल्टर करें",
+    "allTypes": "सभी प्रकार",
+    "bookings": "नई बुकिंग",
+    "guests": "Check-in हुए अतिथि",
+    "statusLabel": "सत्यापन स्थिति से फ़िल्टर करें",
+    "allStatuses": "सभी स्थितियाँ"
+  },
+  "empty": {
+    "loading": "दस्तावेज़ लोड हो रहे हैं…",
+    "filteredTitle": "कोई मेल खाता रिकॉर्ड नहीं",
+    "title": "अभी कोई दस्तावेज़ नहीं",
+    "filteredMessage": "दूसरी खोज आज़माएँ या फ़िल्टर हटाएँ।",
+    "message": "बुकिंग पर ली गई ID स्कैन यहाँ अपने-आप दिखेंगी।"
+  },
+  "col": {
+    "docId": "Doc ID",
+    "viewDocuments": "दस्तावेज़ देखें",
+    "noPhoto": "अतिथि की फ़ोटो नहीं है",
+    "identification": "पहचान",
+    "files": "फ़ाइलें",
+    "verification": "सत्यापन",
+    "filesOf": "{{n}} / {{max}} फ़ाइलें"
+  },
+  "actions": {
+    "verify": "सत्यापित करें",
+    "alreadyVerified": "पहले से सत्यापित",
+    "verifyTitle": "सभी फ़ाइलें सत्यापित करें",
+    "deleteAll": "इस अतिथि के सभी दस्तावेज़ हटाएँ"
+  },
+  "upload": {
+    "title": "दस्तावेज़ अपलोड करें",
+    "save": "दस्तावेज़ सहेजें",
+    "uploaded": "अपलोड",
+    "alreadyUploaded": "पहले से अपलोड",
+    "limitReached": "सीमा पूरी",
+    "clickOrDrop": "क्लिक करें या फ़ाइल छोड़ें",
+    "tapToAdd": "फ़ाइल जोड़ने के लिए टैप करें",
+    "allFilled": "इस अतिथि के सभी {{max}} दस्तावेज़ स्लॉट भरे हैं।",
+    "ready_one": "{{count}} नई फ़ाइल अपलोड के लिए तैयार",
+    "ready_other": "{{count}} नई फ़ाइलें अपलोड के लिए तैयार",
+    "slotsLeft_one": "{{count}} स्लॉट बाकी",
+    "slotsLeft_other": "{{count}} स्लॉट बाकी"
+  },
+  "view": {
+    "title": "दस्तावेज़",
+    "verifyAll": "सभी सत्यापित करें",
+    "empty": "अभी कोई दस्तावेज़ अपलोड नहीं",
+    "openFull": "पूरे आकार में खोलें",
+    "previewUnavailable": "पूर्वावलोकन उपलब्ध नहीं",
+    "openDocument": "दस्तावेज़ खोलें",
+    "uploadedOn": "{{date}} को अपलोड",
+    "deleteDocument": "दस्तावेज़ हटाएँ"
+  },
+  "errors": { "load": "दस्तावेज़ लोड नहीं हो सके। जाँचें कि बैकएंड चल रहा है।" },
+  "toast": {
+    "uploaded": "{{name}} के दस्तावेज़ अपलोड हुए",
+    "uploadFailed": "अपलोड विफल",
+    "nothingToVerify": "सत्यापन के लिए कोई दस्तावेज़ नहीं",
+    "verified": "{{name}} का KYC सत्यापित",
+    "verifyFailed": "दस्तावेज़ सत्यापित नहीं हो सके",
+    "docDeleted": "दस्तावेज़ हटाया गया",
+    "docDeleteFailed": "दस्तावेज़ हटाया नहीं जा सका",
+    "allDeleted": "{{name}} के दस्तावेज़ हटाए गए",
+    "allDeleteFailed": "दस्तावेज़ हटाए नहीं जा सके"
+  },
+  "deleteDoc": {
+    "title": "दस्तावेज़ हटाएँ",
+    "message": "<b>{{name}}</b> का <b>{{label}}</b> हटाएँ? फ़ाइल हमेशा के लिए हट जाएगी।"
+  },
+  "deleteAll": {
+    "title": "दस्तावेज़ हटाएँ",
+    "message_one": "<b>{{name}}</b> का <b>{{count}}</b> दस्तावेज़ हटाएँ? फ़ाइल हमेशा के लिए हट जाएगी।",
+    "message_other": "<b>{{name}}</b> के सभी <b>{{count}}</b> दस्तावेज़ हटाएँ? फ़ाइलें हमेशा के लिए हट जाएँगी।"
+  }
+}

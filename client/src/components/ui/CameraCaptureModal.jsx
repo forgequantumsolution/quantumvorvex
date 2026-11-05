@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Modal from './Modal'
 import CameraCapture from './CameraCapture'
 
@@ -18,14 +19,15 @@ export default function CameraCaptureModal({
   isOpen,
   onCapture,
   onSkip,
-  title = 'Capture photo',
+  title,
   hint = '',
   facingMode = 'user',
   namePrefix = 'photo',
   busy = false,
-  confirmLabel = 'Save photo',
-  skipLabel = 'Skip',
+  confirmLabel,
+  skipLabel,
 }) {
+  const { t } = useTranslation('shell')
   const [file, setFile] = useState(null)
 
   if (!isOpen) return null
@@ -35,19 +37,19 @@ export default function CameraCaptureModal({
       isOpen={isOpen}
       // Dismissing without a photo is the same outcome as skipping.
       onClose={busy ? () => {} : onSkip}
-      title={title}
+      title={title ?? t('camera.title')}
       maxWidth="560px"
       footer={
         <>
           <button className="btn btn-outline btn-sm" disabled={busy} onClick={onSkip}>
-            {skipLabel}
+            {skipLabel ?? t('camera.skip')}
           </button>
           <button
             className="btn btn-primary btn-sm"
             disabled={busy || !file}
             onClick={() => onCapture(file)}
           >
-            {busy ? 'Saving…' : confirmLabel}
+            {busy ? t('common:saving') : (confirmLabel ?? t('camera.save'))}
           </button>
         </>
       }

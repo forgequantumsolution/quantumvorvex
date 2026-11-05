@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import Modal from './Modal'
 
 /**
@@ -13,30 +14,31 @@ export default function ConfirmModal({
   isOpen,
   onClose,
   onConfirm,
-  title = 'Are you sure?',
+  title,
   message,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  cancelLabel,
   danger = false,
   busy = false,
 }) {
+  const { t } = useTranslation()
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={title}
+      title={title ?? t('areYouSure')}
       maxWidth="440px"
       footer={
         <>
           <button className="btn btn-outline" onClick={onClose} disabled={busy}>
-            {cancelLabel}
+            {cancelLabel ?? t('cancel')}
           </button>
           <button
             className={`btn ${danger ? 'btn-danger' : 'btn-primary'}`}
             onClick={onConfirm}
             disabled={busy}
           >
-            {busy ? 'Working…' : confirmLabel}
+            {busy ? t('working') : (confirmLabel ?? t('confirm'))}
           </button>
         </>
       }

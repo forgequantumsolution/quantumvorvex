@@ -1,0 +1,98 @@
+{
+  "title": "रखरखाव",
+  "subtitle": "कमरों की समस्याएँ, मरम्मत और उनकी स्थिति",
+  "searchPlaceholder": "कमरा, शीर्षक, श्रेणी खोजें",
+  "newTicket": "नया टिकट",
+  "tickets": "टिकट",
+  "shown": "{{total}} में से {{count}} दिख रहे हैं",
+  "loadFailed": "टिकट लोड नहीं हो सके। जाँचें कि सर्वर चल रहा है।",
+  "roomNo": "कमरा {{number}}",
+  "floorNo": "फ़्लोर {{floor}}",
+  "unassigned": "असाइन नहीं",
+  "deleteTicket": "टिकट हटाएँ",
+  "stats": {
+    "total": "कुल टिकट",
+    "urgent": "अर्जेंट, अनसुलझे"
+  },
+  "status": {
+    "Open": "खुला",
+    "In Progress": "काम जारी",
+    "Resolved": "हल हुआ"
+  },
+  "priority": {
+    "Low": "कम",
+    "Medium": "मध्यम",
+    "High": "ज़्यादा",
+    "Urgent": "अर्जेंट"
+  },
+  "category": {
+    "Plumbing": "प्लंबिंग",
+    "Electrical": "बिजली",
+    "HVAC": "AC / वेंटिलेशन",
+    "Furniture": "फ़र्नीचर",
+    "Housekeeping": "हाउसकीपिंग",
+    "Other": "अन्य"
+  },
+  "reporter": {
+    "Front Desk": "फ्रंट डेस्क",
+    "Housekeeping": "हाउसकीपिंग",
+    "Guest": "अतिथि",
+    "Manager": "मैनेजर"
+  },
+  "empty": {
+    "noMatch": "कोई मिलता टिकट नहीं",
+    "none": "यहाँ कोई टिकट नहीं",
+    "fetching": "टिकट लाए जा रहे हैं।",
+    "tryDifferent": "कुछ और खोजकर देखें।",
+    "createHint": "किसी समस्या पर नज़र रखने के लिए टिकट बनाएँ।"
+  },
+  "toast": {
+    "created": "कमरा {{room}} के लिए टिकट {{ticketNo}} बनाया गया",
+    "createFailed": "टिकट नहीं बन सका",
+    "marked": "टिकट की स्थिति: {{status}}",
+    "updateFailed": "अपडेट नहीं हो सका",
+    "deleted": "टिकट {{ticketNo}} हटाया गया",
+    "deleteFailed": "टिकट नहीं हटाया जा सका"
+  },
+  "delete": {
+    "title": "टिकट हटाएँ",
+    "before": "टिकट",
+    "after": " हमेशा के लिए हटाएँ? इसे वापस नहीं लाया जा सकता।"
+  },
+  "form": {
+    "title": "नया रखरखाव टिकट",
+    "subtitle": "रखरखाव टीम के लिए समस्या दर्ज करें",
+    "create": "टिकट बनाएँ",
+    "selectRoom": "कमरा चुनें",
+    "titleRequired": "छोटा शीर्षक ज़रूरी है",
+    "loadingRooms": "कमरे लोड हो रहे हैं…",
+    "noRooms": "कोई कमरा नहीं मिला",
+    "category": "श्रेणी",
+    "titleLabel": "शीर्षक",
+    "titlePlaceholder": "छोटा सारांश",
+    "description": "विवरण",
+    "descriptionPlaceholder": "समस्या का विवरण…",
+    "priority": "प्राथमिकता",
+    "assignTo": "किसे सौंपें",
+    "assignPlaceholder": "टेक्नीशियन (वैकल्पिक)",
+    "reportedBy": "किसने बताया"
+  },
+  "guest": {
+    "title": "समस्या बताएँ",
+    "missingCode": "इस लिंक में कमरा कोड नहीं है।",
+    "unknownCode": "यह QR कोड पहचाना नहीं गया।",
+    "askFrontDesk": "कृपया मदद के लिए फ्रंट डेस्क से संपर्क करें।",
+    "thanks": "धन्यवाद!",
+    "sent": "आपका अनुरोध हमारी टीम को भेज दिया गया है।",
+    "whatNeedsAttention": "किस चीज़ में समस्या है?",
+    "issue": "समस्या",
+    "issuePlaceholder": "जैसे: AC ठंडा नहीं कर रहा",
+    "details": "विवरण",
+    "detailsPlaceholder": "कोई भी जानकारी जिससे हम इसे जल्दी ठीक कर सकें",
+    "describeIssue": "कृपया समस्या बताएँ।",
+    "submitFailed": "भेजा नहीं जा सका। कृपया फिर से कोशिश करें।",
+    "sending": "भेजा जा रहा है…",
+    "submit": "अनुरोध भेजें",
+    "footer": "लॉगिन की ज़रूरत नहीं · स्टाफ़ को सूचना मिल जाएगी"
+  }
+}

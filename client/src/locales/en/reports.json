@@ -1,0 +1,74 @@
+{
+  "title": "Reports & Analytics",
+  "subtitle": "Financial insights, occupancy data, and GST summaries",
+  "loadError": "Could not load reports. Make sure the backend is running.",
+  "tabs": {
+    "overview": "Overview",
+    "revenue": "Revenue",
+    "occupancy": "Occupancy",
+    "gst": "GST",
+    "export": "Export"
+  },
+  "overview": {
+    "revenuePaid": "Revenue (paid invoices)",
+    "occupancyRate": "Occupancy rate",
+    "activeGuests": "Active guests",
+    "revenueByDayPaid": "Revenue by Day (paid invoices)",
+    "noPaidInvoices": "No paid invoices yet"
+  },
+  "revenue": {
+    "total": "Total revenue",
+    "paidInvoices": "Paid invoices",
+    "byDay": "Revenue by Day",
+    "empty": "No revenue recorded yet",
+    "series": "Revenue"
+  },
+  "occupancy": {
+    "other": "Other",
+    "avg": "Avg occupancy (period)",
+    "totalRooms": "Total rooms",
+    "trend": "Occupancy Trend (% by day)",
+    "trendEmpty": "No occupancy data for this period",
+    "series": "Occupancy %",
+    "byType": "Current Occupancy by Room Type",
+    "noRooms": "No rooms found",
+    "col": {
+      "type": "Room Type",
+      "total": "Total Rooms",
+      "occupied": "Occupied",
+      "rate": "Rate",
+      "occupancy": "Occupancy"
+    }
+  },
+  "gst": {
+    "totalTaxable": "Total taxable",
+    "totalGst": "Total GST",
+    "totalAmount": "Total amount",
+    "invoices": "GST Invoices",
+    "split": "GST split as CGST + SGST (half each).",
+    "empty": "No invoices in this period",
+    "col": {
+      "invoice": "Invoice #",
+      "period": "Period",
+      "taxable": "Taxable"
+    }
+  },
+  "export": {
+    "done": "{{report}} report exported ({{format}})",
+    "failed": "Export failed",
+    "exporting": "Exporting…",
+    "pdf": "Export PDF",
+    "guests": {
+      "label": "Guests",
+      "desc": "Guest registry with all details"
+    },
+    "billing": {
+      "label": "Billing",
+      "desc": "All invoices and payments"
+    },
+    "gst": {
+      "label": "GST Report",
+      "desc": "GST breakdown for CA filing"
+    }
+  }
+}

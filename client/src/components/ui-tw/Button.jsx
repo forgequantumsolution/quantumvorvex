@@ -1,6 +1,7 @@
 /**
  * Tailwind button. Variants: primary (gold) · ghost · danger · success.
  * Sizes: sm · md. Pass `icon` for a leading glyph.
+ * On touch screens both sizes are at least 44px tall (pointer-coarse:).
  */
 const VARIANTS = {
   primary: 'bg-gold text-black hover:bg-gold-light shadow-soft',
@@ -10,8 +11,8 @@ const VARIANTS = {
 }
 
 const SIZES = {
-  sm: 'px-3 py-1.5 text-xs',
-  md: 'px-4 py-2 text-sm',
+  sm: 'px-3 py-1.5 text-xs pointer-coarse:min-h-11',
+  md: 'px-4 py-2 text-sm pointer-coarse:min-h-11',
 }
 
 export default function Button({

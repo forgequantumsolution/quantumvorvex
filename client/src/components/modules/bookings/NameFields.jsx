@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Field } from '../../ui-tw'
 import { MAX_NAMES, nameFieldName } from '../../../utils/booking'
 
@@ -11,6 +12,7 @@ import { MAX_NAMES, nameFieldName } from '../../../utils/booking'
  * `errors` is keyed by nameFieldName(i) — see nameErrors() in utils/booking.
  */
 export default function NameFields({ names, errors = {}, onChange, className = '' }) {
+  const { t } = useTranslation('bookings')
   const setAt = (i) => (e) =>
     onChange(names.map((n, idx) => (idx === i ? e.target.value : n)))
 
@@ -27,11 +29,11 @@ export default function NameFields({ names, errors = {}, onChange, className = '
         <div key={i} className={i ? 'flex items-start gap-2 mt-2' : ''}>
           <Field
             className={i ? 'flex-1 min-w-0' : ''}
-            label={i === 0 ? 'Guest name' : undefined}
+            label={i === 0 ? t('form.guestName') : undefined}
             name={nameFieldName(i)}
             value={n}
             onChange={setAt(i)}
-            placeholder={i === 0 ? 'Full name' : `Additional guest (${i + 1})`}
+            placeholder={i === 0 ? t('form.fullName') : t('form.additionalGuest', { n: i + 1 })}
             error={errors[nameFieldName(i)]}
             required={i === 0}
           />
@@ -39,8 +41,8 @@ export default function NameFields({ names, errors = {}, onChange, className = '
             <button
               type="button"
               onClick={() => remove(i)}
-              aria-label="Remove this guest"
-              className="shrink-0 h-[38px] w-9 rounded-lg border border-line2 text-ink3 text-lg leading-none
+              aria-label={t('form.removeGuest')}
+              className="shrink-0 h-11 w-11 sm:h-[38px] sm:w-9 rounded-lg border border-line2 text-ink3 text-lg leading-none
                          hover:border-danger/40 hover:text-danger transition-colors"
             >
               ×
@@ -52,9 +54,9 @@ export default function NameFields({ names, errors = {}, onChange, className = '
         <button
           type="button"
           onClick={add}
-          className="mt-1.5 text-[11.5px] font-medium text-ink3 hover:text-gold transition-colors"
+          className="mt-1.5 text-xs font-medium text-ink3 hover:text-gold transition-colors pointer-coarse:min-h-10"
         >
-          + Add another guest
+          + {t('form.addGuest')}
         </button>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import Modal from '../../ui/Modal'
 import { bookingsApi } from '../../../api/client'
 import { formatCurrency, formatDate } from '../../../utils/format'
@@ -34,6 +35,7 @@ const nights = (from, to) => {
  *   monthly → { months: <new total months> }
  */
 export default function ExtendStayModal({ isOpen, onClose, onConfirm, submitting = false, booking }) {
+  const { t } = useTranslation('bookings')
   const isMonthly = booking?.stayType === 'monthly'
 
   // Minimum valid new check-out = day after the current one; default to +1 night.
@@ -105,15 +107,15 @@ export default function ExtendStayModal({ isOpen, onClose, onConfirm, submitting
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Extend Stay — ${booking.guestName}`}
+      title={t('extend.title', { name: booking.guestName })}
       maxWidth="460px"
       footer={
         <>
           <button className="btn btn-outline btn-sm" disabled={submitting} onClick={onClose}>
-            Cancel
+            {t('common:cancel')}
           </button>
           <button className="btn btn-primary btn-sm" disabled={submitting || !valid} onClick={handleConfirm}>
-            {submitting ? 'Extending…' : 'Confirm Extension'}
+            {submitting ? t('extend.extending') : t('extend.confirm')}
           </button>
         </>
       }
@@ -121,23 +123,23 @@ export default function ExtendStayModal({ isOpen, onClose, onConfirm, submitting
       {/* Current stay */}
       <div className="bg-surface2 rounded-lg px-3.5 py-3 mb-4 border border-line">
         <div className="flex justify-between mb-1.5">
-          <span className="t-xs text-ink3">Booking</span>
+          <span className="t-xs text-ink3">{t('table.columns.booking')}</span>
           <span className="t-xs text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>{booking.bookingNo}</span>
         </div>
-        <div className="flex justify-between mb-1.5">
-          <span className="t-xs text-ink3">Room</span>
-          <span className="t-xs text-ink2">Room {booking.roomNumber} · {booking.roomType}</span>
+        <div className="flex justify-between gap-3 mb-1.5">
+          <span className="t-xs text-ink3 shrink-0">{t('common:room')}</span>
+          <span className="t-xs text-ink2 text-right min-w-0 truncate">{t('roomN', { room: booking.roomNumber })} · {booking.roomType}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="t-xs text-ink3">Current stay</span>
-          <span className="text-[12.5px] font-medium">{dateRangeLabel(booking)} · {stayLabel(booking)}</span>
+        <div className="flex justify-between gap-3">
+          <span className="t-xs text-ink3 shrink-0">{t('extend.currentStay')}</span>
+          <span className="text-[13px] font-medium text-right min-w-0">{dateRangeLabel(booking)} · {stayLabel(booking)}</span>
         </div>
       </div>
 
       {/* New end of stay */}
       {isMonthly ? (
         <div className="mb-4">
-          <label className="form-label block mb-[5px]">Add months</label>
+          <label className="form-label block mb-[5px]">{t('extend.addMonths')}</label>
           <input
             className="form-input"
             type="number"
@@ -148,7 +150,7 @@ export default function ExtendStayModal({ isOpen, onClose, onConfirm, submitting
         </div>
       ) : (
         <div className="mb-4">
-          <label className="form-label block mb-[5px]">New check-out date</label>
+          <label className="form-label block mb-[5px]">{t('extend.newCheckOut')}</label>
           <input
             className="form-input"
             type="date"
@@ -160,10 +162,10 @@ export default function ExtendStayModal({ isOpen, onClose, onConfirm, submitting
           {/* Availability hint (A): how far this room is actually free. */}
           <p className={`t-xs mt-1.5 ${nextBooking ? 'text-warning-text' : 'text-ink3'}`}>
             {nextBooking === undefined
-              ? 'Checking room availability…'
+              ? t('extend.checking')
               : nextBooking
-                ? `Room is booked again from ${formatDate(nextBooking.fromDate)} (${nextBooking.bookingNo}) — extend up to then.`
-                : 'No upcoming bookings on this room.'}
+                ? t('extend.bookedAgain', { date: formatDate(nextBooking.fromDate), no: nextBooking.bookingNo })
+                : t('extend.noUpcoming')}
           </p>
         </div>
       )}
@@ -172,22 +174,22 @@ export default function ExtendStayModal({ isOpen, onClose, onConfirm, submitting
       {preview && valid && (
         <div className="rounded-lg bg-gold-bg border border-gold-border px-4 py-3 text-sm">
           <div className="flex justify-between text-ink2">
-            <span>New {isMonthly ? 'duration' : 'length'}</span>
-            <span>{preview.units} {isMonthly ? 'month(s)' : 'night(s)'}</span>
+            <span>{isMonthly ? t('extend.newDuration') : t('extend.newLength')}</span>
+            <span>{t(isMonthly ? 'form.months' : 'form.nights', { count: preview.units })}</span>
           </div>
           <div className="flex justify-between text-ink2 mt-1">
-            <span>New total</span>
+            <span>{t('edit.newTotal')}</span>
             <span>{formatCurrency(preview.total)}</span>
           </div>
           <div className="flex justify-between font-medium text-gold mt-2 pt-2 border-t border-gold-border">
-            <span>Additional due</span>
+            <span>{t('extend.additionalDue')}</span>
             <span>{formatCurrency(Math.max(0, preview.additional))}</span>
           </div>
         </div>
       )}
 
       <p className="t-xs text-ink3 mt-3">
-        The room is re-checked for availability. Payment is collected at check-out.
+        {t('extend.footnote')}
       </p>
     </Modal>
   )

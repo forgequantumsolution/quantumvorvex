@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { Field } from '../../ui-tw'
 import UploadZone from './UploadZone'
 import { bedLabel } from '../../../utils/beds'
@@ -12,6 +13,11 @@ import { formatDate } from '../../../utils/format'
 export default function PgOccupants({
   beds, loading, occupants, onChange, errors, unit, defaultRate, idTypes, onScan,
 }) {
+  const { t } = useTranslation('bookings')
+  const idTypeOptions = (idTypes || []).map((value) => ({ value, label: t(`idTypes.${value}`, { defaultValue: value }) }))
+  const sideLabel = (o, side) => t('form.scanSideLabel', {
+    doc: t(`idTypes.${o.idType}`, { defaultValue: o.idType }), side: side === 'front' ? t('form.front') : t('form.back'),
+  })
   const update = (key, patch) => onChange(occupants.map((o) => (o.key === key ? { ...o, ...patch } : o)))
   const remove = (key) => onChange(occupants.filter((o) => o.key !== key))
   const toggleBed = (bed) => {
@@ -33,10 +39,10 @@ export default function PgOccupants({
     <div className="space-y-4">
       {/* ── Bed picker ── */}
       <div>
-        <div className="flex items-baseline justify-between gap-3 mb-2">
-          <span className="text-xs font-medium text-ink2">Select beds</span>
-          <span className="text-[11px] text-ink3">
-            {loading ? 'Checking beds…' : beds ? `${freeCount} of ${beds.length} free for these dates` : 'Set the dates to see free beds'}
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 mb-2">
+          <span className="text-xs font-medium text-ink2">{t('pg.selectBeds')}</span>
+          <span className="text-xs text-ink3">
+            {loading ? t('pg.checking') : beds ? t('pg.freeOf', { free: freeCount, total: beds.length }) : t('pg.setDates')}
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -50,7 +56,7 @@ export default function PgOccupants({
                 onClick={() => toggleBed(bed)}
                 disabled={taken && !picked}
                 aria-pressed={picked}
-                className={`text-left rounded-lg border px-3 py-2 transition-colors ${
+                className={`text-left rounded-lg border px-3 py-2 min-w-0 transition-colors ${
                   picked
                     ? taken ? 'border-danger bg-danger-bg' : 'border-gold bg-gold-bg'
                     : taken
@@ -59,15 +65,15 @@ export default function PgOccupants({
                 }`}
               >
                 <span className="flex items-center justify-between gap-2">
-                  <span className="text-[13px] font-semibold text-ink">Bed {bed.label}</span>
-                  <span className={`text-[10.5px] font-medium ${picked ? 'text-gold' : taken ? 'text-ink3' : 'text-success-text'}`}>
-                    {picked ? '✓ Selected' : taken ? 'Taken' : 'Free'}
+                  <span className="text-[13px] font-semibold text-ink">{t('bedN', { bed: bed.label })}</span>
+                  <span className={`text-xs font-medium shrink-0 ${picked ? 'text-gold' : taken ? 'text-ink3' : 'text-success-text'}`}>
+                    {picked ? `✓ ${t('pg.selected')}` : taken ? t('pg.taken') : t('pg.free')}
                   </span>
                 </span>
-                <span className="block text-[11px] text-ink3 mt-0.5 truncate">
+                <span className="block text-xs text-ink3 mt-0.5 truncate">
                   {taken
-                    ? `${bed.heldBy.name}${bed.heldBy.until ? ` · till ${formatDate(bed.heldBy.until)}` : ''}`
-                    : picked ? 'Fill details below' : 'Tap to add an occupant'}
+                    ? `${bed.heldBy.name}${bed.heldBy.until ? ` · ${t('form.till', { date: formatDate(bed.heldBy.until) })}` : ''}`
+                    : picked ? t('pg.fillBelow') : t('pg.tapToAdd')}
                 </span>
               </button>
             )
@@ -77,67 +83,69 @@ export default function PgOccupants({
 
       {occupants.length === 0 && (
         <p className="text-xs text-ink3 rounded-lg border border-dashed border-line2 px-3 py-4 text-center">
-          {freeCount ? 'Pick one or more free beds above — each becomes its own booking.' : 'No free beds in this room for these dates.'}
+          {freeCount ? t('pg.pickHint') : t('pg.noFree')}
         </p>
       )}
 
       {/* ── One card per occupant ── */}
       {occupants.map((o, i) => (
         <div key={o.key} className={`rounded-xl border bg-surface2 ${errors[occField(o, 'bed')] ? 'border-danger' : 'border-line'}`}>
-          <div className="flex items-center gap-2 px-3.5 py-2 border-b border-line">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-3 sm:px-3.5 py-2 border-b border-line">
             <span className="w-7 h-7 rounded-md bg-gold-bg border border-gold-border text-gold text-[12px] font-bold flex items-center justify-center">
               {bedLabel(o.bedNo)}
             </span>
-            <span className="text-[12.5px] font-semibold text-ink">Bed {bedLabel(o.bedNo)}</span>
+            <span className="text-[12.5px] font-semibold text-ink">{t('bedN', { bed: bedLabel(o.bedNo) })}</span>
             {errors[occField(o, 'bed')] && (
-              <span className="text-[11px] text-danger">{errors[occField(o, 'bed')]}</span>
+              <span className="text-xs text-danger">{errors[occField(o, 'bed')]}</span>
             )}
             {i === 0 && occupants.length > 1 && (
               <button type="button" onClick={copyTermsToAll}
-                      className="ml-auto text-[11px] font-medium text-ink3 hover:text-gold transition-colors">
-                Copy rent & deposit to all beds
+                      className="ml-auto text-xs font-medium text-ink3 hover:text-gold transition-colors pointer-coarse:min-h-11">
+                {t('pg.copyTerms')}
               </button>
             )}
-            <button type="button" onClick={() => remove(o.key)} aria-label={`Remove Bed ${bedLabel(o.bedNo)}`}
-                    className={`${i === 0 && occupants.length > 1 ? '' : 'ml-auto'} text-[11px] text-ink3 hover:text-danger transition-colors`}>
-              Remove
+            <button type="button" onClick={() => remove(o.key)} aria-label={t('pg.removeBed', { bed: bedLabel(o.bedNo) })}
+                    className={`${i === 0 && occupants.length > 1 ? '' : 'ml-auto'} text-xs text-ink3 hover:text-danger transition-colors pointer-coarse:min-h-11 pointer-coarse:px-1`}>
+              {t('common:remove')}
             </button>
           </div>
 
-          <div className="p-3.5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-x-3 gap-y-3">
-            <Field className="lg:col-span-4" label="Name" name={occField(o, 'name')} value={o.name} required
-                   onChange={(e) => update(o.key, { name: e.target.value })} placeholder="Full name"
+          {/* Two columns on phones too: contact fields span the row, the money
+              fields (rent, advance, deposit, ID type) pair up. */}
+          <div className="p-3 sm:p-3.5 grid grid-cols-2 lg:grid-cols-12 gap-x-3 gap-y-3">
+            <Field className="col-span-2 sm:col-span-1 lg:col-span-4" label={t('common:name')} name={occField(o, 'name')} value={o.name} required
+                   onChange={(e) => update(o.key, { name: e.target.value })} placeholder={t('form.fullName')}
                    error={errors[occField(o, 'name')]} />
-            <Field className="lg:col-span-4" label="Phone" name={occField(o, 'phone')} value={o.phone} required
-                   inputMode="numeric" maxLength={10} placeholder="10-digit number"
+            <Field className="col-span-2 sm:col-span-1 lg:col-span-4" label={t('common:phone')} name={occField(o, 'phone')} value={o.phone} required
+                   inputMode="numeric" maxLength={10} placeholder={t('form.phonePlaceholder')}
                    onChange={(e) => update(o.key, { phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
                    error={errors[occField(o, 'phone')]} />
-            <Field className="lg:col-span-4" label="Email" name={occField(o, 'email')} type="email" value={o.email}
-                   onChange={(e) => update(o.key, { email: e.target.value })} placeholder="Optional"
+            <Field className="col-span-2 sm:col-span-1 lg:col-span-4" label={t('common:email')} name={occField(o, 'email')} type="email" value={o.email}
+                   onChange={(e) => update(o.key, { email: e.target.value })} placeholder={t('common:optional')}
                    error={errors[occField(o, 'email')]} />
 
-            <Field className="lg:col-span-3" label={`Rent (₹/${unit})`} name={occField(o, 'rate')} type="number" min="0"
+            <Field className="lg:col-span-3" label={t('pg.rentLabel', { unit })} name={occField(o, 'rate')} type="number" min="0"
                    value={o.rate} required error={errors[occField(o, 'rate')]}
                    onChange={(e) => update(o.key, { rate: e.target.value, rateAuto: false })} />
-            <Field className="lg:col-span-3" label="Advance paid (₹)" type="number" min="0" value={o.advance}
+            <Field className="lg:col-span-3" label={t('form.advanceInr')} type="number" min="0" value={o.advance}
                    onChange={(e) => update(o.key, { advance: e.target.value })} placeholder="0" />
-            <Field className="lg:col-span-3" label="Security deposit (₹)" type="number" min="0" value={o.deposit}
+            <Field className="lg:col-span-3" label={t('pg.depositInr')} type="number" min="0" value={o.deposit}
                    onChange={(e) => update(o.key, { deposit: e.target.value })} placeholder="0"
-                   hint="Refundable" />
-            <Field className="lg:col-span-3" label="ID type" value={o.idType} options={idTypes}
+                   hint={t('pg.refundable')} />
+            <Field className="lg:col-span-3" label={t('pg.idType')} value={o.idType} options={idTypeOptions}
                    onChange={(e) => update(o.key, { idType: e.target.value })} />
 
-            <Field className="sm:col-span-2 lg:col-span-4" label="ID number" value={o.idNumber}
-                   onChange={(e) => update(o.key, { idNumber: e.target.value })} placeholder="ID / document no." />
-            <div className="sm:col-span-2 lg:col-span-8 grid grid-cols-2 gap-3">
+            <Field className="col-span-2 lg:col-span-4" label={t('form.idNumber')} value={o.idNumber}
+                   onChange={(e) => update(o.key, { idNumber: e.target.value })} placeholder={t('form.idNumberPlaceholder')} />
+            <div className="col-span-2 lg:col-span-8 grid grid-cols-2 gap-3">
               {['front', 'back'].map((side) => (
                 <UploadZone
                   key={side}
-                  label={`${o.idType} — ${side === 'front' ? 'Front' : 'Back'}`}
+                  label={sideLabel(o, side)}
                   file={o[side]}
                   onPick={(f) => update(o.key, { [side]: f })}
                   onScan={() => onScan({
-                    title: `Scan ${o.idType} — ${side === 'front' ? 'Front' : 'Back'} (Bed ${bedLabel(o.bedNo)})`,
+                    title: `${t('form.scanDoc', { doc: sideLabel(o, side) })} (${t('bedN', { bed: bedLabel(o.bedNo) })})`,
                     namePrefix: `bed-${bedLabel(o.bedNo).toLowerCase()}-${side}`,
                     onPick: (f) => update(o.key, { [side]: f }),
                   })}

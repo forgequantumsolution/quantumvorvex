@@ -1,0 +1,200 @@
+{
+  "title": "Portfolio",
+  "dashboard": "Dashboard",
+  "subtitle": "How every property is doing tonight",
+  "loadError": "We couldn't load your properties. Check your connection and try again.",
+  "loading": "Loading portfolio",
+  "thisProperty": "this property",
+  "tonight": "Tonight",
+  "searchProperties": "Search properties",
+  "addProperty": "Add property",
+  "keyFigures": "Key figures",
+  "liveUpdated": "live, updated {{time}}",
+  "activeProperties_one": "{{count}} active property",
+  "activeProperties_other": "{{count}} active properties",
+  "activePropertiesOf_one": "{{count}} of {{total}} active property",
+  "activePropertiesOf_other": "{{count}} of {{total}} active properties",
+  "roomsCount_one": "{{count}} room",
+  "roomsCount_other": "{{count}} rooms",
+  "noRoomsYet": "No rooms yet",
+  "outOfOrder_one": "{{count}} out of order",
+  "outOfOrder_other": "{{count}} out of order",
+  "propertiesCount_one": "{{count}} property",
+  "propertiesCount_other": "{{count}} properties",
+  "openProperty": "Open {{name}}",
+  "addRoomsToStart": "Add rooms to start",
+  "occupiedOfSellable": "{{occupied}} of {{sellable}} sellable rooms occupied",
+  "arrivalsToday": "Arrivals today",
+  "departuresToday": "Departures today",
+  "scope": {
+    "selected_one": "{{count}} selected property",
+    "selected_other": "{{count}} selected properties",
+    "allActive": "all active properties"
+  },
+  "period": {
+    "nights": "{{n}}N",
+    "days": "{{n}}D",
+    "month": "Month"
+  },
+  "mini": {
+    "aria": "Next 7 nights: {{list}}",
+    "booked": "{{booked}} of {{sellable}} rooms"
+  },
+  "hero": {
+    "title": "Occupancy tonight",
+    "occupied": "<b>{{occupied}}</b> of {{sellable}} sellable rooms"
+  },
+  "kpi": {
+    "adrSub": "Avg. rate per room sold",
+    "revparSub": "Revenue per available room",
+    "inHouse": "In-house",
+    "inHouseSub_one": "{{count}} room occupied",
+    "inHouseSub_other": "{{count}} rooms occupied",
+    "arrivals": "Arrivals",
+    "arrivalsSub_one": "{{count}} departure today",
+    "arrivalsSub_other": "{{count}} departures today",
+    "collected": "Collected",
+    "collectedSub": "This month · {{amount}} today",
+    "outstandingSub": "Unpaid invoices & stays",
+    "nothingDue": "Nothing due"
+  },
+  "forecast": {
+    "title_one": "On the books · next {{count}} night",
+    "title_other": "On the books · next {{count}} nights",
+    "periodLabel": "Forecast nights",
+    "sub": "Share of sellable rooms booked, {{scope}}",
+    "peak": "peak",
+    "tipOccupied": "{{pct}}% occupied",
+    "tipBooked": "{{booked}} of {{sellable}} rooms on the books",
+    "noRoomsTitle": "No rooms set up yet",
+    "noBookingsTitle": "No bookings yet",
+    "noRoomsText": "Add rooms to a property to start tracking occupancy and revenue here.",
+    "noBookingsText": "Occupancy, revenue and the {{count}}-night forecast will appear here as soon as bookings come in.",
+    "setUpRooms": "Set up rooms",
+    "newBooking": "New booking",
+    "newBookingAt": "New booking at {{name}}"
+  },
+  "roomState": {
+    "occupied": "Occupied",
+    "reserved": "Reserved",
+    "available": "Available",
+    "outOfOrder": "Out of order"
+  },
+  "roomStatus": {
+    "title": "Room status",
+    "sub_one": "{{count}} room right now",
+    "sub_other": "{{count}} rooms right now",
+    "emptyText": "Add rooms to see how they are being used.",
+    "segment": "{{label}}: {{count}} of {{total}}",
+    "stays": "In-house stays",
+    "stayMix": "<b>{{daily}}</b> daily · <b>{{monthly}}</b> monthly"
+  },
+  "collections": {
+    "collected": "collected",
+    "titleMonth": "Collections · this month",
+    "titleDays_one": "Collections · last {{count}} day",
+    "titleDays_other": "Collections · last {{count}} days",
+    "subTotal": "Received less refunds · total",
+    "sub": "Received less refunds, per day",
+    "periodLabel": "Collections period",
+    "emptyTitle": "No payments yet",
+    "emptyMonth": "Nothing collected this month. Payments recorded on bookings show up here.",
+    "emptyDays_one": "Nothing collected in the last {{count}} day. Payments recorded on bookings show up here.",
+    "emptyDays_other": "Nothing collected in the last {{count}} days. Payments recorded on bookings show up here.",
+    "avgDay": "Avg / day",
+    "daysWithPayments": "Days with payments",
+    "bestDay": "Best day"
+  },
+  "method": {
+    "cash": "Cash",
+    "upi": "UPI",
+    "card": "Card",
+    "bank": "Bank transfer",
+    "bank_transfer": "Bank transfer",
+    "cheque": "Cheque",
+    "online": "Online",
+    "other": "Other"
+  },
+  "methods": {
+    "title": "Payment methods",
+    "sub": "Collected this month",
+    "emptyTitle": "No payments this month",
+    "emptyText": "The split between cash, UPI, card and others appears here."
+  },
+  "roomTypes": {
+    "title": "Occupancy by room type",
+    "sub": "Occupied rooms of each type tonight",
+    "emptyTitle": "No room types yet",
+    "emptyText": "Once rooms are added, see which types fill up first."
+  },
+  "severity": {
+    "critical": "Critical",
+    "warning": "Warning",
+    "info": "Info"
+  },
+  "attention": {
+    "title": "Needs attention",
+    "allClear": "All clear",
+    "allClearText": "No dues, out-of-order rooms or overbooking risks.",
+    "overbooked": "{{arrivals}} arrivals today but only {{available}} rooms available",
+    "outOfOrder_one": "{{count}} room out of order",
+    "outOfOrder_other": "{{count}} rooms out of order",
+    "outstanding": "{{amount}} outstanding",
+    "soldOut": "Fully booked on {{date}}"
+  },
+  "col": {
+    "name": "Property",
+    "occupancy": "Occupancy",
+    "adr": "ADR",
+    "adrHint": "Average daily rate — room revenue ÷ rooms sold tonight",
+    "revpar": "RevPAR",
+    "revparHint": "Revenue per available room — room revenue ÷ sellable rooms",
+    "movements": "Arr / Dep",
+    "movementsHint": "Arrivals and departures today",
+    "collected": "Collected MTD",
+    "outstanding": "Outstanding",
+    "forecast": "Next 7 nights"
+  },
+  "band": {
+    "all": "Any",
+    "low": "Below 50%",
+    "mid": "50–80%",
+    "high": "Above 80%"
+  },
+  "filters": {
+    "aria": "Dashboard filters",
+    "nOfM": "{{n}} of {{m}}",
+    "propertiesNote": "Every figure on the dashboard covers the selected properties.",
+    "propertyList": "Property list",
+    "attentionOnly": "Needs attention only",
+    "attentionSub": "Overbooked, rooms out of order, dues, sold-out nights",
+    "showArchived": "Show archived properties",
+    "archivedSub": "Listed for reference; not in the totals",
+    "active": "Active filters",
+    "remove": "Remove filter: {{label}}"
+  },
+  "chips": {
+    "properties": "{{n}} of {{m}} properties",
+    "occupancy": "Occupancy {{band}}",
+    "attention": "Needs attention",
+    "archived": "Archived shown"
+  },
+  "noAccess": {
+    "title": "No dashboard for this property",
+    "text": "You need report access at {{name}} to see its figures.",
+    "viewAll": "View all properties"
+  },
+  "comparison": {
+    "aria": "Property comparison",
+    "sub": "Tonight's figures · select a property to open it",
+    "sortLabel": "Sort properties",
+    "sortBy": "Sort: {{label}}",
+    "asc": "Ascending",
+    "desc": "Descending",
+    "ascSwitch": "Ascending — switch to descending",
+    "descSwitch": "Descending — switch to ascending",
+    "noMatchQuery": "No properties match “{{query}}”.",
+    "noMatchFilters": "No properties match these filters.",
+    "clearFilters": "Clear filters"
+  }
+}

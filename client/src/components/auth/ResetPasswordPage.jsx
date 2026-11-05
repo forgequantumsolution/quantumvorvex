@@ -1,52 +1,33 @@
 import { useState } from 'react'
+import { useTranslation, Trans } from 'react-i18next'
 import { Formik, Form, Field, ErrorMessage } from 'formik'
 import { authApi } from '../../api/client'
 import { resetPasswordSchema, resetPasswordInitialValues } from '../../validation/authSchema'
 import { LockIcon, EyeIcon, EyeOffIcon, AlertIcon, CheckIcon } from './authIcons'
 import goldenLogo from '../../assets/golden_blue_logo.png'
+import LanguageSwitcher from '../layout/LanguageSwitcher'
 import './LoginPage.css'
 
 const BANNER_BG = '/Banner.webp'
 
-/**
- * Standalone page reached from the password-reset email link:
- *   /reset-password?token=<raw token>
- * Reads the token from the URL, posts the new password, then sends the user
- * back to the login screen. `onDone` clears the reset URL and re-renders login.
- */
-export default function ResetPasswordPage({ onDone }) {
-  const token = new URLSearchParams(window.location.search).get('token') || ''
-
-  const [showPw, setShowPw] = useState(false)
-  const [error, setError]   = useState('')
-  const [done, setDone]     = useState(false)
-
-  const handleSubmit = async (values, { setSubmitting }) => {
-    setError('')
-    try {
-      await authApi.resetPassword({ token, password: values.password })
-      setDone(true)
-    } catch (err) {
-      const data = err.response?.data
-      setError(data?.error || data?.message || 'Cannot reach server. Make sure the backend is running.')
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
-  const Shell = ({ children }) => (
+// Shared page frame (brand panel + card). Module-level so the form inside keeps
+// its state when the page re-renders (e.g. toggling password visibility).
+function Shell({ children }) {
+  const { t } = useTranslation('auth')
+  return (
     <div className="login-page" style={{ backgroundImage: `url(${BANNER_BG})` }}>
       <div className="login-overlay" />
+      <div className="login-lang"><LanguageSwitcher /></div>
       <div className="login-brand">
         <div className="login-brand-eyebrow">
           <span className="login-brand-dot" />
-          <span className="login-brand-eyebrow-text">Hotel Management System</span>
+          <span className="login-brand-eyebrow-text">{t('brand.eyebrow')}</span>
         </div>
         <h1 className="login-brand-headline">
-          Seamless Operations.<br /><em>Intelligent Control.</em>
+          {t('brand.headline1')}<br /><em>{t('brand.headline2')}</em>
         </h1>
         <p className="login-brand-desc">
-          Choose a new password to get back into your hotel's command centre.
+          {t('reset.desc')}
         </p>
       </div>
 
@@ -58,17 +39,45 @@ export default function ResetPasswordPage({ onDone }) {
           </div>
           <div className="login-card-body">
             <div className="login-card-title-row">
-              <h2 className="login-card-title">New Password</h2>
+              <h2 className="login-card-title">{t('reset.title')}</h2>
             </div>
             {children}
           </div>
           <div className="login-card-footer">
-            Powered by Quantum Vorvex · Forge Quantum Solutions
+            {t('poweredBy')}
           </div>
         </div>
       </div>
     </div>
   )
+}
+
+/**
+ * Standalone page reached from the password-reset email link:
+ *   /reset-password?token=<raw token>
+ * Reads the token from the URL, posts the new password, then sends the user
+ * back to the login screen. `onDone` clears the reset URL and re-renders login.
+ */
+export default function ResetPasswordPage({ onDone }) {
+  const token = new URLSearchParams(window.location.search).get('token') || ''
+
+  const { t } = useTranslation('auth')
+  const [showPw, setShowPw] = useState(false)
+  const [error, setError]   = useState('')
+  const [done, setDone]     = useState(false)
+
+  const handleSubmit = async (values, { setSubmitting }) => {
+    setError('')
+    try {
+      await authApi.resetPassword({ token, password: values.password })
+      setDone(true)
+    } catch (err) {
+      const data = err.response?.data
+      setError(data?.error || data?.message || t('errors.unreachable'))
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   // Missing/blank token → can't proceed
   if (!token) {
@@ -76,9 +85,9 @@ export default function ResetPasswordPage({ onDone }) {
       <Shell>
         <div className="login-error">
           <span className="shrink-0 mt-px inline-flex"><AlertIcon /></span>
-          This reset link is missing its token. Please request a new link from the login page.
+          {t('reset.noToken')}
         </div>
-        <button type="button" className="login-submit" onClick={onDone}>Back to Sign In</button>
+        <button type="button" className="login-submit" onClick={onDone}>{t('backToSignIn')}</button>
       </Shell>
     )
   }
@@ -88,9 +97,9 @@ export default function ResetPasswordPage({ onDone }) {
       <Shell>
         <div className="login-success">
           <span className="shrink-0 mt-px inline-flex"><CheckIcon /></span>
-          Your password has been updated. You can now sign in with your new password.
+          {t('reset.done')}
         </div>
-        <button type="button" className="login-submit" onClick={onDone}>Go to Sign In</button>
+        <button type="button" className="login-submit" onClick={onDone}>{t('reset.goToSignIn')}</button>
       </Shell>
     )
   }
@@ -108,16 +117,17 @@ export default function ResetPasswordPage({ onDone }) {
         {({ isSubmitting }) => (
           <Form>
             <p className="login-hint">
-              Pick a strong password — at least <strong>8 characters</strong>, with an uppercase letter and a number.
+              <Trans t={t} i18nKey="reset.hint" components={{ b: <strong /> }} />
             </p>
 
             <div className="login-field">
-              <label className="login-field-label">New password</label>
+              <label className="login-field-label">{t('reset.newPassword')}</label>
               <div className="login-field-wrap">
                 <span className="login-field-icon"><LockIcon /></span>
                 <Field type={showPw ? 'text' : 'password'} name="password" placeholder="••••••••"
-                       className="login-input pr-10" autoComplete="new-password" autoFocus />
-                <button type="button" className="login-pw-toggle" onClick={() => setShowPw(!showPw)} tabIndex={-1}>
+                       className="login-input pr-12" autoComplete="new-password" autoFocus />
+                <button type="button" className="login-pw-toggle" onClick={() => setShowPw(!showPw)} tabIndex={-1}
+                          aria-label={showPw ? t('hidePassword') : t('showPassword')}>
                   {showPw ? <EyeOffIcon /> : <EyeIcon />}
                 </button>
               </div>
@@ -125,7 +135,7 @@ export default function ResetPasswordPage({ onDone }) {
             </div>
 
             <div className="login-field">
-              <label className="login-field-label">Confirm password</label>
+              <label className="login-field-label">{t('reset.confirmPassword')}</label>
               <div className="login-field-wrap">
                 <span className="login-field-icon"><LockIcon /></span>
                 <Field type={showPw ? 'text' : 'password'} name="confirmPassword" placeholder="••••••••"
@@ -136,11 +146,11 @@ export default function ResetPasswordPage({ onDone }) {
 
             <button type="submit" disabled={isSubmitting} className="login-submit">
               {isSubmitting && <span className="login-spinner" />}
-              {isSubmitting ? 'Updating…' : 'Update Password'}
+              {isSubmitting ? t('reset.updating') : t('reset.update')}
             </button>
 
-            <div className="login-meta-row mt-[14px] justify-center">
-              <button type="button" className="login-link" onClick={onDone}>← Back to Sign In</button>
+            <div className="login-meta-row after center">
+              <button type="button" className="login-link" onClick={onDone}>← {t('backToSignIn')}</button>
             </div>
           </Form>
         )}

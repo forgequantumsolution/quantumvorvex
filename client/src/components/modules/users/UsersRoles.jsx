@@ -1,11 +1,14 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation, Trans } from 'react-i18next'
 import { Formik, Form } from 'formik'
+import { LuPlus, LuUserPlus } from 'react-icons/lu'
 import * as Yup from 'yup'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import FormikField from '../../ui/FormikField'
+import { PageWrapper, Card, DataTable } from '../../ui-tw'
 import { useToast } from '../../../hooks/useToast'
 import { useAppSelector, useAppDispatch } from '../../../store/hooks'
 import { setCredentials, selectActiveProperty, selectProperties } from '../../../store/slices/authSlice'
@@ -14,17 +17,11 @@ import { usersApi, rolesApi, authApi } from '../../../api/client'
 import { userSchema } from '../../../validation/userSchema'
 import { timeAgo } from '../../../utils/format'
 
-// Friendly labels for backend module keys (server/src/config/modules.js).
-const MODULE_LABELS = {
-  bookings: 'Bookings', maintenance: 'Maintenance', guests: 'Guests', rooms: 'Rooms',
-  documents: 'Documents', food: 'Food', housekeeping: 'Housekeeping', billing: 'Billing',
-  reports: 'Reports', settings: 'Settings', users: 'Users & Roles',
-}
-const LEVELS = [
-  { value: 'NONE', label: 'None' },
-  { value: 'VIEW', label: 'View' },
-  { value: 'MANAGE', label: 'Manage' },
-]
+// Friendly labels for backend module keys (server/src/config/modules.js) live in
+// users.json under modules.<key>; an unknown key shows as-is.
+const moduleLabel = (t, m) => t(`modules.${m}`, { defaultValue: m })
+// Permission levels (values sent to the server); labels from users.json levels.<value>.
+const LEVELS = ['NONE', 'VIEW', 'MANAGE']
 const LEVEL_BADGE = { MANAGE: 'green', VIEW: 'blue', NONE: 'grey' }
 
 function getInitials(name = '') {
@@ -44,6 +41,13 @@ function Avatar({ name, color = '#6b7280', size = 34 }) {
 
 // ─── Add / Edit User Modal ──────────────────────────────────────────────────────
 function UserModal({ isOpen, onClose, user, roles, propertyName, onSave }) {
+  const { t } = useTranslation('users')
+  // Same rules as userSchema, with the messages in the current language.
+  const schema = useMemo(() => userSchema.shape({
+    name:  Yup.string().trim().min(2, t('validation.nameShort')).max(100).required(t('validation.nameRequired')),
+    email: Yup.string().trim().email(t('validation.emailInvalid')).required(t('validation.emailRequired')),
+    roleId: Yup.string().required(t('validation.roleRequired')),
+  }), [t])
   const isEdit = !!user
   const isSuper = !!user?.isSuperAdmin
   const defaultRoleId = roles.find((r) => r.name === 'Staff')?.id || roles[0]?.id || ''
@@ -55,7 +59,7 @@ function UserModal({ isOpen, onClose, user, roles, propertyName, onSave }) {
   return (
     <Formik
       initialValues={initialValues}
-      validationSchema={userSchema}
+      validationSchema={schema}
       enableReinitialize
       onSubmit={(values) => {
         const payload = { ...values }
@@ -67,58 +71,66 @@ function UserModal({ isOpen, onClose, user, roles, propertyName, onSave }) {
         <Modal
           isOpen={isOpen}
           onClose={onClose}
-          title={isEdit ? `Edit User — ${user.name}` : '+ Add User'}
+          title={isEdit ? t('userModal.editTitle', { name: user.name }) : t('userModal.addTitle')}
           footer={
             <>
-              <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+              <button className="btn btn-outline" onClick={onClose}>{t('common:cancel')}</button>
               <button className="btn btn-primary" onClick={submitForm} disabled={isSubmitting}>
-                {isEdit ? 'Save Changes' : 'Create User'}
+                {isEdit ? t('userModal.save') : t('userModal.create')}
               </button>
             </>
           }
         >
           <Form className="flex flex-col gap-3.5" autoComplete="off">
-            <FormikField name="name" label="Full Name" required placeholder="e.g. Ramesh Gupta" autoComplete="off" />
+            <FormikField name="name" label={t('userModal.fullName')} required placeholder={t('userModal.namePlaceholder')} autoComplete="off" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <FormikField name="email" label="Email" type="email" required placeholder="user@hotel.com" autoComplete="off" />
-              <FormikField name="phone" label="Phone" placeholder="10-digit mobile" autoComplete="off" />
+              <FormikField name="email" label={t('userModal.email')} type="email" required placeholder="user@hotel.com" autoComplete="off" />
+              <FormikField name="phone" label={t('userModal.phone')} placeholder={t('userModal.phonePlaceholder')} autoComplete="off" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <FormikField name="roleId" label="Role" required as="select" disabled={isSuper}>
+              <FormikField name="roleId" label={t('userModal.role')} required as="select" disabled={isSuper}>
                 {roles.map((r) => (
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
               </FormikField>
-              <FormikField name="status" label="Status" as="select" disabled={isSuper}>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
+              <FormikField name="status" label={t('userModal.status')} as="select" disabled={isSuper}>
+                <option value="active">{t('common:active')}</option>
+                <option value="inactive">{t('common:inactive')}</option>
               </FormikField>
             </div>
             {isSuper && (
-              <p className="mt-[-6px] mb-0 text-[11px] text-ink3">
-                This is the protected super-admin — role and status are locked. You can still update the name and password.
+              <p className="mt-[-6px] mb-0 text-xs text-ink3">
+                {t('userModal.superAdminNote')}
               </p>
             )}
             {!isSuper && propertyName && (
-              <p className="mt-[-6px] mb-0 text-[11px] text-ink3">
-                {isEdit ? 'The role applies at ' : 'The user gets access to '}
-                <strong className="text-ink2">{propertyName}</strong>
-                {isEdit ? '. Owner gives access to every property.' : ' with this role. Owner gives access to every property.'}
+              <p className="mt-[-6px] mb-0 text-xs text-ink3">
+                <Trans
+                  t={t}
+                  i18nKey={isEdit ? 'userModal.roleAppliesAt' : 'userModal.accessTo'}
+                  values={{ property: propertyName }}
+                  components={{ b: <strong className="text-ink2" /> }}
+                />
               </p>
             )}
             {isEdit ? (
               <FormikField
                 name="password"
-                label="Reset Password (optional)"
+                label={t('userModal.resetPassword')}
                 type="password"
                 autoComplete="new-password"
-                placeholder="Leave blank to keep current"
+                placeholder={t('userModal.resetPlaceholder')}
               />
             ) : (
               <div className="text-[12px] text-ink3 bg-surface2 rounded-lg px-3 py-2.5 leading-[1.5]">
-                The user is created with the default password{' '}
-                <strong className="text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>Welcome@123</strong>.
-                They can change it from <strong className="text-ink2">Change Password</strong> after signing in.
+                <Trans
+                  t={t}
+                  i18nKey="userModal.defaultPassword"
+                  components={{
+                    code: <strong className="text-ink2" style={{ fontFamily: 'var(--font-mono)' }} />,
+                    b: <strong className="text-ink2" />,
+                  }}
+                />
               </div>
             )}
           </Form>
@@ -131,15 +143,16 @@ function UserModal({ isOpen, onClose, user, roles, propertyName, onSave }) {
 // ─── Users Tab ──────────────────────────────────────────────────────────────────
 // Where a user works: owners everywhere, everyone else per property with a role.
 function AccessChips({ user }) {
-  if (user.isOwner) return <Badge type="gold">All properties</Badge>
-  if (!user.access?.length) return <span className="t-xs text-ink3">None</span>
+  const { t } = useTranslation('users')
+  if (user.isOwner) return <Badge type="gold">{t('table.allProperties')}</Badge>
+  if (!user.access?.length) return <span className="t-xs text-ink3">{t('table.none')}</span>
   return (
     <div className="flex flex-wrap gap-1">
       {user.access.map((a) => (
         <span
           key={a.propertyId}
           title={`${a.propertyName} — ${a.roleName}`}
-          className="inline-flex items-center gap-1 text-[10.5px] px-1.5 py-[2px] rounded-[4px] bg-surface2 border border-line text-ink2 whitespace-nowrap"
+          className="inline-flex items-center gap-1 text-xs px-1.5 py-[2px] rounded-[4px] bg-surface2 border border-line text-ink2 whitespace-nowrap"
         >
           <strong style={{ fontFamily: 'var(--font-mono)' }}>{a.propertyCode}</strong> {a.roleName}
         </span>
@@ -148,84 +161,90 @@ function AccessChips({ user }) {
   )
 }
 
-function UsersTab({ users, roles, canManage, isOwner, multiProperty, onAdd, onEdit, onAccess, onToggleStatus, onDelete }) {
+function UsersTab({ users, canManage, isOwner, multiProperty, onEdit, onAccess, onToggleStatus, onDelete }) {
+  const { t } = useTranslation('users')
+  const columns = [
+    {
+      key: 'user', header: t('table.user'), primary: true,
+      render: (u) => (
+        <div className="flex items-center gap-2.5 min-w-0 md:max-w-[280px]">
+          <Avatar name={u.name} color={u.roleRef?.isOwner ? '#c9a84c' : '#2563eb'} />
+          <div className="min-w-0">
+            <div className="t-title truncate">
+              {u.name}
+              {u.isSuperAdmin && (
+                <span className="ml-1.5 text-[9px] font-bold tracking-[0.06em] uppercase text-[#c9a84c] align-middle">{t('table.superAdmin')}</span>
+              )}
+            </div>
+            <div className="text-xs text-ink3 mt-px truncate">{u.email}</div>
+            {/* Phone + created move under the email until the table has room for their columns */}
+            <div className="hidden lg:block 2xl:hidden text-xs text-ink3 truncate">
+              {u.phone && <span style={{ fontFamily: 'var(--font-mono)' }}>{u.phone} · </span>}
+              {t('table.added', { when: timeAgo(u.createdAt) })}
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'status', header: t('table.status'), primary: true,
+      render: (u) => (
+        <Badge type={u.status === 'active' ? 'green' : 'grey'}>
+          {u.status === 'active' ? t('common:active') : t('common:inactive')}
+        </Badge>
+      ),
+    },
+    {
+      key: 'role', header: multiProperty ? t('table.roleHere') : t('table.role'),
+      render: (u) => (u.roleRef
+        ? <Badge type={u.roleRef.isOwner ? 'gold' : 'purple'}>{u.roleRef.name}</Badge>
+        : <span className="t-xs text-ink3">{multiProperty ? t('table.noAccessHere') : '—'}</span>),
+    },
+    {
+      key: 'phone', header: t('table.phone'), hideBelow: '2xl', className: 'text-[12px]',
+      render: (u) => <span style={{ fontFamily: 'var(--font-mono)' }}>{u.phone || '—'}</span>,
+    },
+    ...(multiProperty ? [{
+      key: 'access', header: t('table.properties'), className: 'whitespace-normal min-w-[180px] max-w-[260px]',
+      render: (u) => <AccessChips user={u} />,
+    }] : []),
+    { key: 'created', header: t('table.created'), hideBelow: '2xl', render: (u) => <span className="t-xs">{timeAgo(u.createdAt)}</span> },
+    ...(canManage ? [{
+      // Buttons wrap into two rows until the table is wide enough (2xl) for one.
+      key: 'actions', header: '', align: 'right', className: 'whitespace-normal min-w-[170px] 2xl:min-w-0',
+      render: (u) => (
+        <div className="flex gap-[5px] flex-wrap justify-end 2xl:flex-nowrap">
+          <button className="btn btn-xs btn-outline" onClick={() => onEdit(u)}>{t('table.edit')}</button>
+          {isOwner && !u.isOwner && (
+            <button className="btn btn-xs btn-outline" onClick={() => onAccess(u)}>{t('table.access')}</button>
+          )}
+          {!u.isSuperAdmin && (
+            <>
+              <button
+                className={`btn btn-xs ${u.status === 'active' ? 'btn-outline' : 'btn-success'}`}
+                onClick={() => onToggleStatus(u)}
+              >
+                {u.status === 'active' ? t('table.deactivate') : t('table.reactivate')}
+              </button>
+              <button className="btn btn-xs btn-danger" onClick={() => onDelete(u)}>{isOwner ? t('table.delete') : t('table.remove')}</button>
+            </>
+          )}
+        </div>
+      ),
+    }] : []),
+  ]
+
   return (
     <div>
-      {canManage && (
-        <div className="flex justify-end mb-3">
-          <button className="btn btn-primary" onClick={onAdd}>+ Add User</button>
-        </div>
-      )}
-      <div className="overflow-x-auto">
-        <table>
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Phone</th>
-              <th>{multiProperty ? 'Role here' : 'Role'}</th>
-              {multiProperty && <th>Properties</th>}
-              <th>Status</th>
-              <th>Created</th>
-              {canManage && <th>Actions</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id}>
-                <td>
-                  <div className="flex items-center gap-2.5">
-                    <Avatar name={u.name} color={u.roleRef?.isOwner ? '#c9a84c' : '#2563eb'} />
-                    <div>
-                      <div className="t-title">
-                        {u.name}
-                        {u.isSuperAdmin && (
-                          <span className="ml-1.5 text-[9px] font-bold tracking-[0.06em] uppercase text-[#c9a84c] align-middle">★ Super Admin</span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-ink3 mt-px">{u.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="text-[12px]" style={{ fontFamily: 'var(--font-mono)' }}>{u.phone || '—'}</td>
-                <td>
-                  {u.roleRef
-                    ? <Badge type={u.roleRef.isOwner ? 'gold' : 'purple'}>{u.roleRef.name}</Badge>
-                    : <span className="t-xs text-ink3">{multiProperty ? 'No access here' : '—'}</span>}
-                </td>
-                {multiProperty && <td className="max-w-[260px]"><AccessChips user={u} /></td>}
-                <td>
-                  <Badge type={u.status === 'active' ? 'green' : 'grey'}>
-                    {u.status === 'active' ? 'Active' : 'Inactive'}
-                  </Badge>
-                </td>
-                <td className="t-xs">{timeAgo(u.createdAt)}</td>
-                {canManage && (
-                  <td>
-                    <div className="flex gap-[5px] flex-nowrap">
-                      <button className="btn btn-xs btn-outline" onClick={() => onEdit(u)}>Edit</button>
-                      {isOwner && !u.isOwner && (
-                        <button className="btn btn-xs btn-outline" onClick={() => onAccess(u)}>Access</button>
-                      )}
-                      {!u.isSuperAdmin && (
-                        <>
-                          <button
-                            className={`btn btn-xs ${u.status === 'active' ? 'btn-outline' : 'btn-success'}`}
-                            onClick={() => onToggleStatus(u)}
-                          >
-                            {u.status === 'active' ? 'Deactivate' : 'Reactivate'}
-                          </button>
-                          <button className="btn btn-xs btn-danger" onClick={() => onDelete(u)}>{isOwner ? 'Delete' : 'Remove'}</button>
-                        </>
-                      )}
-                    </div>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {users.length === 0 && <div className="empty-state">No users yet.</div>}
+      <div className="t-sm text-ink3 mb-3">{t('usersCount', { count: users.length })}</div>
+      <Card>
+        <DataTable
+          columns={columns}
+          rows={users}
+          tableFrom="lg"
+          empty={<div className="empty-state">{t('table.empty')}</div>}
+        />
+      </Card>
     </div>
   )
 }
@@ -233,6 +252,7 @@ function UsersTab({ users, roles, canManage, isOwner, multiProperty, onAdd, onEd
 // ─── Property Access Modal (owner) ──────────────────────────────────────────────
 // Pick every property a non-owner can open and the role they hold at each one.
 function AccessModal({ user, properties, roles, onClose, onSave }) {
+  const { t } = useTranslation('users')
   const assignable = roles.filter((r) => !r.isOwner)
   const fallbackRole = assignable.find((r) => r.name === 'Staff')?.id || assignable[0]?.id || ''
   const [access, setAccess] = useState(() =>
@@ -259,63 +279,55 @@ function AccessModal({ user, properties, roles, onClose, onSave }) {
     <Modal
       isOpen
       onClose={onClose}
-      title={`Property Access — ${user.name}`}
+      title={t('accessModal.title', { name: user.name })}
       footer={
         <>
-          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+          <button className="btn btn-outline" onClick={onClose}>{t('common:cancel')}</button>
           <button className="btn btn-primary" onClick={save} disabled={saving}>
-            {saving ? 'Saving…' : 'Save Access'}
+            {saving ? t('common:saving') : t('accessModal.save')}
           </button>
         </>
       }
     >
       <p className="t-sm text-ink3 mt-0 mb-3.5">
-        Choose the properties {user.name} can open and the role they have at each one.
+        {t('accessModal.intro', { name: user.name })}
       </p>
-      <div className="overflow-x-auto">
-        <table>
-          <thead>
-            <tr><th className="w-[44px]">Access</th><th>Property</th><th className="min-w-[160px]">Role there</th></tr>
-          </thead>
-          <tbody>
-            {properties.map((p) => {
-              const on = !!access[p.id]
-              return (
-                <tr key={p.id} className={on ? '' : 'opacity-60'}>
-                  <td className="text-center">
-                    <input
-                      type="checkbox"
-                      checked={on}
-                      onChange={() => toggle(p.id)}
-                      aria-label={`Access to ${p.name}`}
-                      className="w-4 h-4 cursor-pointer accent-[var(--gold)]"
-                    />
-                  </td>
-                  <td>
-                    <div className="t-title">{p.name}</div>
-                    <div className="t-xs text-ink3" style={{ fontFamily: 'var(--font-mono)' }}>
-                      {p.code}{p.status === 'archived' ? ' · archived' : ''}
-                    </div>
-                  </td>
-                  <td>
-                    <select
-                      className="form-select t-xs px-1.5 py-1 min-w-[140px]"
-                      value={access[p.id] || ''}
-                      disabled={!on}
-                      onChange={(e) => setRole(p.id, e.target.value)}
-                    >
-                      {!on && <option value="">—</option>}
-                      {assignable.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                    </select>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      <ul className="list-none m-0 p-0 border border-line rounded-lg divide-y divide-[var(--border)]">
+        {properties.map((p) => {
+          const on = !!access[p.id]
+          return (
+            <li key={p.id} className="flex flex-wrap sm:flex-nowrap items-center gap-x-3 gap-y-2 px-3 py-2.5">
+              <label className={`flex items-center gap-3 flex-1 min-w-0 cursor-pointer pointer-coarse:min-h-11 ${on ? '' : 'opacity-60'}`}>
+                <input
+                  type="checkbox"
+                  checked={on}
+                  onChange={() => toggle(p.id)}
+                  aria-label={t('accessModal.accessAria', { name: p.name })}
+                  className="w-4 h-4 pointer-coarse:w-5 pointer-coarse:h-5 shrink-0 cursor-pointer rounded text-gold focus:ring-gold/30 accent-[var(--gold)]"
+                />
+                <span className="min-w-0">
+                  <span className="t-title block truncate">{p.name}</span>
+                  <span className="t-xs text-ink3 block" style={{ fontFamily: 'var(--font-mono)' }}>
+                    {p.code}{p.status === 'archived' ? t('accessModal.archived') : ''}
+                  </span>
+                </span>
+              </label>
+              <select
+                className={`form-select t-xs px-2 py-1.5 w-full sm:w-[160px] shrink-0 ${on ? '' : 'opacity-60'}`}
+                value={access[p.id] || ''}
+                disabled={!on}
+                onChange={(e) => setRole(p.id, e.target.value)}
+                aria-label={t('accessModal.roleAria', { name: p.name })}
+              >
+                {!on && <option value="">—</option>}
+                {assignable.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+            </li>
+          )
+        })}
+      </ul>
       {count === 0 && (
-        <p className="t-xs text-danger mt-3 mb-0">With no properties selected, {user.name} won't be able to use the app.</p>
+        <p className="t-xs text-danger mt-3 mb-0">{t('accessModal.noneWarning', { name: user.name })}</p>
       )}
     </Modal>
   )
@@ -323,6 +335,7 @@ function AccessModal({ user, properties, roles, onClose, onSave }) {
 
 // ─── Role Editor Modal ────────────────────────────────────────────────────────
 function RoleModal({ isOpen, onClose, role, modules, onSave }) {
+  const { t } = useTranslation('users')
   const isEdit = !!role
   const [name, setName] = useState(role?.name || '')
   const [description, setDescription] = useState(role?.description || '')
@@ -332,24 +345,17 @@ function RoleModal({ isOpen, onClose, role, modules, onSave }) {
     return base
   })
 
-  useEffect(() => {
-    setName(role?.name || '')
-    setDescription(role?.description || '')
-    const base = {}
-    modules.forEach((m) => { base[m] = role?.permissions?.[m] || 'NONE' })
-    setPerms(base)
-  }, [role, modules])
-
+// Mounted fresh (keyed by role) each time it opens, so the initial state is enough.
   const setLevel = (mod, level) => setPerms((p) => ({ ...p, [mod]: level }))
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEdit ? `Edit Role — ${role.name}` : '+ Create Role'}
+      title={isEdit ? t('roleModal.editTitle', { name: role.name }) : t('roleModal.createTitle')}
       footer={
         <>
-          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+          <button className="btn btn-outline" onClick={onClose}>{t('common:cancel')}</button>
           <button
             className="btn btn-primary"
             onClick={() => onSave({
@@ -358,46 +364,38 @@ function RoleModal({ isOpen, onClose, role, modules, onSave }) {
               permissions: modules.map((m) => ({ module: m, level: perms[m] })),
             })}
           >
-            {isEdit ? 'Save Role' : 'Create Role'}
+            {isEdit ? t('roleModal.save') : t('roleModal.create')}
           </button>
         </>
       }
     >
       <div className="flex flex-col gap-3.5">
         <div>
-          <label className="form-label">Role Name</label>
-          <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Accountant" />
+          <label className="form-label">{t('roleModal.name')}</label>
+          <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} placeholder={t('roleModal.namePlaceholder')} />
         </div>
         <div>
-          <label className="form-label">Description</label>
-          <input className="form-input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What this role is for" />
+          <label className="form-label">{t('roleModal.description')}</label>
+          <input className="form-input" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={t('roleModal.descriptionPlaceholder')} />
         </div>
 
         <div>
-          <label className="form-label">Module Access</label>
-          <div className="overflow-x-auto">
-            <table>
-              <thead>
-                <tr><th className="min-w-[150px]">Module</th><th className="text-center min-w-[150px]">Access Level</th></tr>
-              </thead>
-              <tbody>
-                {modules.map((m) => (
-                  <tr key={m}>
-                    <td className="t-title">{MODULE_LABELS[m] || m}</td>
-                    <td className="text-center">
-                      <select
-                        className="form-select t-xs px-1.5 py-1 min-w-[110px] text-center"
-                        value={perms[m]}
-                        onChange={(e) => setLevel(m, e.target.value)}
-                      >
-                        {LEVELS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <label className="form-label">{t('roleModal.moduleAccess')}</label>
+          <ul className="list-none m-0 p-0 border border-line rounded-lg divide-y divide-[var(--border)]">
+            {modules.map((m) => (
+              <li key={m} className="flex items-center justify-between gap-3 px-3 py-2">
+                <label htmlFor={`perm-${m}`} className="t-title min-w-0 truncate">{moduleLabel(t, m)}</label>
+                <select
+                  id={`perm-${m}`}
+                  className="form-select t-xs px-2 py-1.5 w-[120px] sm:w-[140px] shrink-0"
+                  value={perms[m]}
+                  onChange={(e) => setLevel(m, e.target.value)}
+                >
+                  {LEVELS.map((l) => <option key={l} value={l}>{t(`levels.${l}`)}</option>)}
+                </select>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </Modal>
@@ -405,31 +403,28 @@ function RoleModal({ isOpen, onClose, role, modules, onSave }) {
 }
 
 // ─── Roles Tab ──────────────────────────────────────────────────────────────────
-function RolesTab({ roles, modules, canManage, onAdd, onEdit, onDelete }) {
+function RolesTab({ roles, modules, canManage, onEdit, onDelete }) {
+  const { t } = useTranslation('users')
   return (
     <div>
-      {canManage && (
-        <div className="flex justify-end mb-3">
-          <button className="btn btn-primary" onClick={onAdd}>+ Create Role</button>
-        </div>
-      )}
-      <div className="flex flex-col gap-3">
+      <div className="t-sm text-ink3 mb-3">{t('rolesCount', { count: roles.length })}</div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
         {roles.map((r) => (
-          <div key={r.id} className="rounded-[10px] border border-line p-4 bg-surface">
-            <div className="flex items-start justify-between gap-3 flex-wrap mb-2.5">
-              <div>
-                <div className="flex items-center gap-2">
+          <div key={r.id} className="rounded-[10px] border border-line p-4 bg-surface min-w-0">
+            <div className="flex items-start justify-between gap-3 mb-2.5">
+              <div className="min-w-0">
+                <div className="flex items-center gap-x-2 gap-y-1 flex-wrap">
                   <span className="t-title text-[14px]">{r.name}</span>
-                  {r.isOwner && <Badge type="gold">Owner</Badge>}
-                  {r.isSystem && !r.isOwner && <Badge type="grey">System</Badge>}
-                  <span className="t-xs text-ink3">{r.userCount ?? 0} user{(r.userCount ?? 0) === 1 ? '' : 's'}</span>
+                  {r.isOwner && <Badge type="gold">{t('roles.owner')}</Badge>}
+                  {r.isSystem && !r.isOwner && <Badge type="grey">{t('roles.system')}</Badge>}
+                  <span className="t-xs text-ink3">{t('roleUsers', { count: r.userCount ?? 0 })}</span>
                 </div>
                 {r.description && <div className="t-xs text-ink3 mt-1">{r.description}</div>}
               </div>
               {canManage && (
-                <div className="flex gap-[5px]">
-                  {!r.isOwner && <button className="btn btn-xs btn-outline" onClick={() => onEdit(r)}>Edit</button>}
-                  {!r.isSystem && <button className="btn btn-xs btn-danger" onClick={() => onDelete(r)}>Delete</button>}
+                <div className="flex gap-[5px] shrink-0">
+                  {!r.isOwner && <button className="btn btn-xs btn-outline" onClick={() => onEdit(r)}>{t('table.edit')}</button>}
+                  {!r.isSystem && <button className="btn btn-xs btn-danger" onClick={() => onDelete(r)}>{t('table.delete')}</button>}
                 </div>
               )}
             </div>
@@ -439,12 +434,12 @@ function RolesTab({ roles, modules, canManage, onAdd, onEdit, onDelete }) {
                 if (lvl === 'NONE') return null
                 return (
                   <Badge key={m} type={LEVEL_BADGE[lvl]}>
-                    {MODULE_LABELS[m] || m}: {LEVELS.find((l) => l.value === lvl)?.label}
+                    {moduleLabel(t, m)}: {t(`levels.${lvl}`)}
                   </Badge>
                 )
               })}
               {!r.isOwner && modules.every((m) => (r.permissions?.[m] || 'NONE') === 'NONE') && (
-                <span className="t-xs text-ink3">No module access</span>
+                <span className="t-xs text-ink3">{t('roles.noModuleAccess')}</span>
               )}
             </div>
           </div>
@@ -456,26 +451,28 @@ function RolesTab({ roles, modules, canManage, onAdd, onEdit, onDelete }) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 // ─── Security tab: self-service password change ───────────────────────────────
-const passwordSchema = Yup.object({
-  currentPassword: Yup.string().required('Enter your current password'),
-  newPassword: Yup.string().max(128).required('Enter a new password'),
+const passwordSchema = (t) => Yup.object({
+  currentPassword: Yup.string().required(t('validation.currentRequired')),
+  newPassword: Yup.string().max(128).required(t('validation.newRequired')),
   confirmPassword: Yup.string()
-    .oneOf([Yup.ref('newPassword')], 'Passwords do not match')
-    .required('Confirm your new password'),
+    .oneOf([Yup.ref('newPassword')], t('validation.mismatch'))
+    .required(t('validation.confirmRequired')),
 })
 
 function SecurityTab() {
+  const { t } = useTranslation('users')
+  const schema = useMemo(() => passwordSchema(t), [t])
   const addToast = useToast()
   const dispatch = useAppDispatch()
   const currentUser = useAppSelector((s) => s.auth.currentUser)
 
   return (
-    <div className="card max-w-[460px]">
-      <div className="card-header"><span className="card-title">Change Password</span></div>
+    <div className="card w-full max-w-[460px]">
+      <div className="card-header"><span className="card-title">{t('security.title')}</span></div>
       <div className="card-body">
         <Formik
           initialValues={{ currentPassword: '', newPassword: '', confirmPassword: '' }}
-          validationSchema={passwordSchema}
+          validationSchema={schema}
           onSubmit={async (values, { setSubmitting, resetForm }) => {
             try {
               const { data } = await authApi.changePassword({
@@ -488,10 +485,10 @@ function SecurityTab() {
                 localStorage.setItem('qv_token', data.token)
                 dispatch(setCredentials({ token: data.token, user: currentUser }))
               }
-              addToast('Password updated.', 'success')
+              addToast(t('security.updated'), 'success')
               resetForm()
             } catch (err) {
-              addToast(err.response?.data?.error || 'Could not change password.', 'error')
+              addToast(err.response?.data?.error || t('security.failed'), 'error')
             } finally {
               setSubmitting(false)
             }
@@ -499,12 +496,12 @@ function SecurityTab() {
         >
           {({ isSubmitting }) => (
             <Form className="flex flex-col gap-3.5">
-              <FormikField name="currentPassword" label="Current Password" type="password" required placeholder="Current password" />
-              <FormikField name="newPassword" label="New Password" type="password" required placeholder="Enter a new password" />
-              <FormikField name="confirmPassword" label="Confirm New Password" type="password" required placeholder="Re-enter new password" />
+              <FormikField name="currentPassword" label={t('security.current')} type="password" required placeholder={t('security.currentPlaceholder')} />
+              <FormikField name="newPassword" label={t('security.new')} type="password" required placeholder={t('security.newPlaceholder')} />
+              <FormikField name="confirmPassword" label={t('security.confirm')} type="password" required placeholder={t('security.confirmPlaceholder')} />
               <div className="pt-2">
-                <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-                  {isSubmitting ? 'Updating…' : 'Update Password'}
+                <button type="submit" className="btn btn-primary w-full sm:w-auto justify-center" disabled={isSubmitting}>
+                  {isSubmitting ? t('security.updating') : t('security.update')}
                 </button>
               </div>
             </Form>
@@ -516,6 +513,7 @@ function SecurityTab() {
 }
 
 export default function UsersRoles() {
+  const { t } = useTranslation('users')
   const currentUser = useAppSelector((s) => s.auth.currentUser)
   const canManageUsers = useCan('users', 'MANAGE')                 // user CRUD needs users:manage
   const canManageRoles = !!currentUser?.isOwner // role management is owner-only
@@ -546,11 +544,11 @@ export default function UsersRoles() {
       setRoles(Array.isArray(r.data) ? r.data : (r.data.roles || []))
       setModules(m.data.modules || [])
     } catch {
-      setError('Could not load users & roles. Make sure the backend is running.')
+      setError(t('loadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => { loadAll() }, [loadAll])
 
@@ -559,31 +557,31 @@ export default function UsersRoles() {
     try {
       if (userModal?.user) {
         await usersApi.update(userModal.user.id, form)
-        addToast('User updated.', 'success')
+        addToast(t('toast.userUpdated'), 'success')
       } else {
         const { data } = await usersApi.create(form)
         addToast(
           data?.defaultPassword
-            ? `User created. Default password: ${data.defaultPassword}`
-            : 'User created.',
+            ? t('toast.userCreatedWithPassword', { password: data.defaultPassword })
+            : t('toast.userCreated'),
           'success',
         )
       }
       setUserModal(null)
       loadAll()
     } catch (err) {
-      addToast(err.response?.data?.error || 'Could not save user.', 'error')
+      addToast(err.response?.data?.error || t('toast.userSaveFailed'), 'error')
     }
   }
 
   async function saveAccess(access) {
     try {
       await usersApi.setAccess(accessModal.id, access)
-      addToast(`Property access updated for ${accessModal.name}.`, 'success')
+      addToast(t('toast.accessUpdated', { name: accessModal.name }), 'success')
       setAccessModal(null)
       loadAll()
     } catch (err) {
-      addToast(err.response?.data?.error || 'Could not update property access.', 'error')
+      addToast(err.response?.data?.error || t('toast.accessFailed'), 'error')
     }
   }
 
@@ -591,10 +589,10 @@ export default function UsersRoles() {
     const status = u.status === 'active' ? 'inactive' : 'active'
     try {
       await usersApi.update(u.id, { status })
-      addToast(`${u.name} ${status === 'active' ? 'reactivated' : 'deactivated'}.`, 'success')
+      addToast(status === 'active' ? t('toast.reactivated', { name: u.name }) : t('toast.deactivated', { name: u.name }), 'success')
       loadAll()
     } catch (err) {
-      addToast(err.response?.data?.error || 'Could not update status.', 'error')
+      addToast(err.response?.data?.error || t('toast.statusFailed'), 'error')
     }
   }
 
@@ -604,10 +602,10 @@ export default function UsersRoles() {
     const { kind, item } = confirm
     setDeleting(true)
     try {
-      let message = 'Role deleted.'
+      let message = t('toast.roleDeleted')
       if (kind === 'user') {
         const { data } = await usersApi.remove(item.id)
-        message = data?.removedFromProperty ? `${item.name} removed from ${activeProperty?.name || 'this property'}.` : 'User deleted.'
+        message = data?.removedFromProperty ? t('toast.removedFrom', { name: item.name, property: activeProperty?.name || t('thisProperty') }) : t('toast.userDeleted')
       } else {
         await rolesApi.remove(item.id)
       }
@@ -615,7 +613,7 @@ export default function UsersRoles() {
       setConfirm(null)
       loadAll()
     } catch (err) {
-      addToast(err.response?.data?.error || `Could not delete ${kind}.`, 'error')
+      addToast(err.response?.data?.error || (kind === 'user' ? t('toast.deleteUserFailed') : t('toast.deleteRoleFailed')), 'error')
     } finally {
       setDeleting(false)
     }
@@ -626,54 +624,56 @@ export default function UsersRoles() {
     try {
       if (roleModal?.role) {
         await rolesApi.update(roleModal.role.id, form)
-        addToast('Role updated.', 'success')
+        addToast(t('toast.roleUpdated'), 'success')
       } else {
         await rolesApi.create(form)
-        addToast('Role created.', 'success')
+        addToast(t('toast.roleCreated'), 'success')
       }
       setRoleModal(null)
       loadAll()
     } catch (err) {
-      addToast(err.response?.data?.error || 'Could not save role.', 'error')
+      addToast(err.response?.data?.error || t('toast.roleSaveFailed'), 'error')
     }
   }
 
 
   const tabs = [
-    { id: 'users', label: 'Users' },
-    { id: 'roles', label: 'Roles' },
-    { id: 'security', label: 'Security' },
+    { id: 'users', label: t('tabs.users') },
+    { id: 'roles', label: t('tabs.roles') },
+    { id: 'security', label: t('tabs.security') },
   ]
 
   return (
-    <div>
-      <div className="flex items-start justify-between mb-5 gap-3 flex-wrap">
-        <div>
-          <h1 className="t-h1 m-0 tracking-[-0.02em]">Users &amp; Roles</h1>
-          <p className="t-sm mt-[3px] mb-0 text-ink3">
-            {!multiProperty
-              ? 'Accounts and what each role can access'
-              : isOwner
-                ? <>Everyone in your organisation · roles shown for <strong className="text-ink2">{activeProperty?.name}</strong></>
-                : <>The team at <strong className="text-ink2">{activeProperty?.name}</strong></>}
-          </p>
-        </div>
-      </div>
+    <PageWrapper
+      title={t('title')}
+      subtitle={!multiProperty
+        ? t('subtitleSingle')
+        : isOwner
+          ? t('subtitleOwner', { property: activeProperty?.name || t('thisProperty') })
+          : t('subtitleTeam', { property: activeProperty?.name || t('thisProperty') })}
+      // The add button follows the open tab, as it did when it sat inside each tab.
+      headerActions={[
+        activeTab === 'users' && canManageUsers && {
+          id: 'add-user', label: t('addUser'), icon: <LuUserPlus />, variant: 'primary', onClick: () => setUserModal({ user: null }),
+        },
+        activeTab === 'roles' && canManageRoles && {
+          id: 'add-role', label: t('createRole'), icon: <LuPlus />, variant: 'primary', onClick: () => setRoleModal({ role: null }),
+        },
+      ]}
+    >
 
       {error && (
         <div className="t-sm mb-4 px-[14px] py-2.5 rounded-lg bg-danger-bg text-danger-text">{error}</div>
       )}
-      {loading && <p className="t-sm text-ink3 mb-3">Loading…</p>}
+      {loading && <p className="t-sm text-ink3 mb-3">{t('common:loading')}</p>}
 
       <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab}>
         <div data-tab-id="users">
           <UsersTab
             users={users}
-            roles={roles}
             canManage={canManageUsers}
             isOwner={isOwner}
             multiProperty={multiProperty}
-            onAdd={() => setUserModal({ user: null })}
             onEdit={(u) => setUserModal({ user: u })}
             onAccess={(u) => setAccessModal(u)}
             onToggleStatus={toggleUserStatus}
@@ -685,7 +685,6 @@ export default function UsersRoles() {
             roles={roles}
             modules={modules}
             canManage={canManageRoles}
-            onAdd={() => setRoleModal({ role: null })}
             onEdit={(r) => setRoleModal({ role: r })}
             onDelete={(r) => setConfirm({ kind: 'role', item: r })}
           />
@@ -717,6 +716,7 @@ export default function UsersRoles() {
       )}
       {roleModal && (
         <RoleModal
+          key={roleModal.role?.id || 'new'}
           isOpen
           onClose={() => setRoleModal(null)}
           role={roleModal.role}
@@ -731,16 +731,17 @@ export default function UsersRoles() {
         onConfirm={runDelete}
         busy={deleting}
         danger
-        title={confirm?.kind === 'role' ? 'Delete role' : isOwner ? 'Delete user' : 'Remove from property'}
-        confirmLabel={confirm?.kind === 'user' && !isOwner ? 'Remove' : 'Delete'}
+        title={confirm?.kind === 'role' ? t('confirm.deleteRole') : isOwner ? t('confirm.deleteUser') : t('confirm.removeFromProperty')}
+        confirmLabel={confirm?.kind === 'user' && !isOwner ? t('common:remove') : t('common:delete')}
         message={
-          confirm?.kind === 'role'
-            ? <>Delete the <strong className="text-ink">{confirm?.item?.name}</strong> role? This cannot be undone.</>
-            : isOwner
-              ? <>Delete <strong className="text-ink">{confirm?.item?.name}</strong>? This removes their account from every property and cannot be undone.</>
-              : <>Remove <strong className="text-ink">{confirm?.item?.name}</strong> from <strong className="text-ink">{activeProperty?.name}</strong>? Their access to other properties is not affected.</>
+          <Trans
+            t={t}
+            i18nKey={confirm?.kind === 'role' ? 'confirm.deleteRoleMessage' : isOwner ? 'confirm.deleteUserMessage' : 'confirm.removeUserMessage'}
+            values={{ name: confirm?.item?.name, property: activeProperty?.name }}
+            components={{ b: <strong className="text-ink" /> }}
+          />
         }
       />
-    </div>
+    </PageWrapper>
   )
 }

@@ -7,10 +7,10 @@
  */
 export default function Card({ title, subtitle, actions, children, className = '', bodyClassName = '', clip = true }) {
   return (
-    <div className={`bg-surface border border-line rounded-xl shadow-soft ${clip ? 'overflow-hidden' : ''} ${className}`}>
+    <div className={`min-w-0 bg-surface border border-line rounded-xl shadow-soft ${clip ? 'overflow-hidden' : ''} ${className}`}>
       {(title || actions) && (
-        <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-line">
-          <div>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 sm:px-5 py-3 sm:py-3.5 border-b border-line">
+          <div className="min-w-0">
             {title && <h3 className="font-display font-semibold text-ink text-[15px] leading-tight">{title}</h3>}
             {subtitle && <p className="text-xs text-ink3 mt-0.5">{subtitle}</p>}
           </div>

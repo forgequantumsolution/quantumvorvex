@@ -222,7 +222,8 @@ export const usersApi = {
 
 export const propertiesApi = {
   getAll:     ()         => api.get('/properties'),           // properties the caller can open
-  summary:    ()         => api.get('/properties/summary'),   // portfolio stats per property + totals
+  // portfolio stats per property + totals; params { forecast: 7|14|30, trend: '7'|'30'|'90'|'month' }
+  summary:    (params)   => api.get('/properties/summary', { params }),
   create:     (data)     => api.post('/properties', data),    // { name, code?, address?, phone?, email?, gstin?, copyFromPropertyId? }
   update:     (id, data) => api.put(`/properties/${id}`, data), // { name?, code?, status: 'active'|'archived' }
   getMembers: (id)       => api.get(`/properties/${id}/members`),

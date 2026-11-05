@@ -1,0 +1,164 @@
+{
+  "title": "सभी अतिथि",
+  "subtitle": "अतिथि रजिस्टर, ठहराव इतिहास और बिलिंग",
+  "searchPlaceholder": "नाम, कमरा, DOC ID, फ़ोन खोजें…",
+  "status": {
+    "Active": "सक्रिय",
+    "Due": "देय",
+    "Checked Out": "Check-out हो चुका",
+    "CheckedIn": "Check-in हो चुका",
+    "Overdue": "अतिदेय"
+  },
+  "invoiceStatus": {
+    "Paid": "भुगतान हुआ",
+    "Pending": "बाकी",
+    "Overdue": "अतिदेय"
+  },
+  "foodPlan": {
+    "Breakfast Only": "केवल नाश्ता",
+    "All Meals": "सभी भोजन",
+    "Dinner Only": "केवल रात का खाना",
+    "No Meals": "भोजन नहीं"
+  },
+  "tag": {
+    "VIP": "VIP",
+    "Corporate": "कॉर्पोरेट",
+    "Long-term": "लंबी अवधि"
+  },
+  "stayType": {
+    "daily": "दैनिक",
+    "monthly": "मासिक"
+  },
+  "stats": {
+    "active": "सक्रिय",
+    "due": "देय / अतिदेय",
+    "checkedOut": "Check-out हो चुके",
+    "total": "कुल अतिथि"
+  },
+  "filter": {
+    "allStays": "सभी ठहराव",
+    "allStatuses": "सभी स्थितियाँ"
+  },
+  "col": {
+    "typeStays": "प्रकार · ठहराव",
+    "staysWord_one": "ठहराव",
+    "staysWord_other": "ठहराव",
+    "checkInDue": "Check-in → देय"
+  },
+  "fields": {
+    "stayType": "ठहराव प्रकार",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "checkInDate": "Check-in तारीख",
+    "checkOutDate": "Check-out तारीख",
+    "months": "महीने",
+    "foodPlan": "भोजन प्लान",
+    "tags": "टैग"
+  },
+  "actions": {
+    "checkIn": "Check-in",
+    "checkout": "Check-out",
+    "renew": "नवीनीकरण",
+    "viewProfile": "प्रोफ़ाइल देखें",
+    "editGuest": "अतिथि संपादित करें",
+    "editGuestBtn": "अतिथि संपादित करें",
+    "deleteGuest": "अतिथि हटाएँ"
+  },
+  "empty": {
+    "loading": "अतिथि लोड हो रहे हैं…",
+    "title": "कोई अतिथि नहीं मिला"
+  },
+  "errors": {
+    "load": "अतिथि लोड नहीं हो सके। जाँचें कि बैकएंड चल रहा है।"
+  },
+  "profile": {
+    "tabs": {
+      "info": "प्रोफ़ाइल",
+      "billing": "बिलिंग",
+      "comms": "संवाद",
+      "history": "ठहराव इतिहास"
+    },
+    "totalStays": "कुल ठहराव",
+    "lifetimeSpend": "कुल खर्च",
+    "nationality": "राष्ट्रीयता",
+    "address": "पता",
+    "idType": "ID प्रकार",
+    "idNumber": "ID नंबर",
+    "duration": "अवधि",
+    "months_one": "{{count}} महीना",
+    "months_other": "{{count}} महीने",
+    "advancePaid": "अग्रिम भुगतान",
+    "facilities": "सुविधाएँ",
+    "extraAmenities": "अतिरिक्त सुविधाएँ",
+    "documents": "दस्तावेज़",
+    "docsUploaded": "{{count}} / {{total}} अपलोड"
+  },
+  "billing": {
+    "invoice": "Invoice",
+    "period": "अवधि",
+    "paidOn": "भुगतान तारीख",
+    "method": "तरीका",
+    "empty": "कोई बिलिंग रिकॉर्ड नहीं",
+    "totalLifetimeSpend": "कुल आजीवन खर्च"
+  },
+  "comms": {
+    "logged": "संवाद दर्ज किया गया।",
+    "logFailed": "संवाद दर्ज नहीं हो सका।",
+    "empty": "कोई संवाद रिकॉर्ड नहीं",
+    "received": "प्राप्त",
+    "channel": {
+      "note": "नोट",
+      "call": "कॉल",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS",
+      "email": "ईमेल"
+    },
+    "placeholder": "क्या बातचीत हुई?",
+    "log": "संवाद दर्ज करें"
+  },
+  "history": {
+    "stayNo": "ठहराव #{{n}}",
+    "current": "वर्तमान",
+    "checkIn": "Check-in: {{date}}",
+    "monthsAgo_one": "~{{count}} महीना पहले",
+    "monthsAgo_other": "~{{count}} महीने पहले",
+    "returning": "दोबारा आने वाले अतिथि",
+    "visits_one": "{{count}} बार आए",
+    "visits_other": "{{count}} बार आए",
+    "gold": "गोल्ड लॉयल्टी",
+    "silver": "सिल्वर लॉयल्टी",
+    "bronze": "ब्रॉन्ज़ लॉयल्टी"
+  },
+  "edit": {
+    "title": "संपादित करें — {{name}}"
+  },
+  "checkout": {
+    "roomRent": "कमरे का किराया",
+    "amenities": "सुविधाएँ"
+  },
+  "toast": {
+    "exportFailed": "अतिथि निर्यात नहीं हो सके",
+    "checkedOut": "{{name}} का Check-out हो गया। कमरा हाउसकीपिंग के लिए चिह्नित।",
+    "checkoutFailed": "Check-out विफल रहा",
+    "renewed": "{{name}} का ठहराव नवीनीकृत हुआ।",
+    "renewFailed": "ठहराव नवीनीकृत नहीं हो सका।",
+    "deleted": "{{name}} हटाया गया",
+    "deleteFailed": "अतिथि हटाया नहीं जा सका",
+    "updated": "अतिथि विवरण अपडेट हुआ",
+    "updateFailed": "अतिथि अपडेट नहीं हो सका",
+    "billFailed": "Check-out बिल लोड नहीं हो सका"
+  },
+  "delete": {
+    "title": "अतिथि हटाएँ",
+    "message": "<b>{{name}}</b> ({{docId}}) को हटाएँ? उनका बिलिंग इतिहास रहेगा, पर वे रजिस्टर से हट जाएँगे। उनका कमरा खाली हो जाएगा।"
+  },
+  "validation": {
+    "nameRequired": "नाम आवश्यक है",
+    "roomRequired": "कमरा आवश्यक है",
+    "checkInRequired": "चेक-इन तारीख आवश्यक है",
+    "checkOutRequired": "चेक-आउट तारीख आवश्यक है",
+    "enterNumber": "संख्या डालें",
+    "minOneMonth": "कम से कम 1 महीना",
+    "monthsRequired": "महीने आवश्यक हैं"
+  }
+}

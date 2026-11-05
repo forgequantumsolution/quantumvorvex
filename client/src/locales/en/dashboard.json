@@ -1,0 +1,82 @@
+{
+  "title": "Dashboard",
+  "subtitle": "{{hotel}} — Overview",
+  "shortcutsBtn": "Shortcuts",
+  "stats": {
+    "totalRooms": "Total rooms",
+    "allInventory": "All room inventory",
+    "available": "Available",
+    "occupied": "Occupied",
+    "pctOfTotal": "{{pct}}% of total",
+    "maintenance": "Maintenance",
+    "underService": "Under service",
+    "monthlyRevenue": "Monthly revenue",
+    "occupancyRate": "Occupancy rate",
+    "thisMonth": "This month"
+  },
+  "charts": {
+    "monthlyRevenue": "Monthly Revenue",
+    "occupancyTrend": "Occupancy Trend",
+    "last6Months": "Last 6 months"
+  },
+  "newCount_one": "{{count}} new",
+  "newCount_other": "{{count}} new",
+  "hoursAgo_one": "{{count}} hr ago",
+  "hoursAgo_other": "{{count}} hrs ago",
+  "notif": {
+    "paymentDue_one": "Room {{room}} payment due in {{count}} day",
+    "paymentDue_other": "Room {{room}} payment due in {{count}} days",
+    "maintTomorrow": "Room {{room}} maintenance scheduled tomorrow",
+    "newCheckIn": "New check-in: Room {{room}} — {{name}}",
+    "idPending": "ID verification pending for Room {{room}}"
+  },
+  "occupancyByType": "Occupancy by Room Type",
+  "recentCheckIns": "Recent Check-Ins",
+  "upcomingCheckouts": "Upcoming Checkouts",
+  "since": "Since {{date}}",
+  "checkout": "Checkout",
+  "extend": "Extend",
+  "table": {
+    "type": "Type",
+    "tags": "Tags"
+  },
+  "type": {
+    "monthly": "Monthly",
+    "daily": "Daily"
+  },
+  "status": {
+    "active": "Active",
+    "due": "Due"
+  },
+  "toast": {
+    "checkout": "Checkout initiated for {{name}} — Room {{room}}",
+    "extended": "Stay extended for {{name}} — Room {{room}}"
+  },
+  "timeline": {
+    "title": "Today's Timeline",
+    "doneCount": "{{done}}/{{total}} events done",
+    "urgent": "URGENT",
+    "hkShift": "Housekeeping shift started",
+    "checkedIn": "{{name}} checked in — Room {{room}}",
+    "paid": "{{invoice}} — {{name}} paid {{amount}}",
+    "checkoutDue": "{{name}} checkout due — Room {{room}}",
+    "arriving": "{{name}} arriving — Room {{room}}",
+    "acCheck": "Maintenance: Room {{room}} AC check",
+    "nightAudit": "Night Audit due"
+  },
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "hint": "Shortcuts only fire when not focused on an input field.",
+    "dashboard": "Dashboard",
+    "rooms": "Rooms",
+    "floorPlan": "Floor Plan",
+    "reports": "Reports",
+    "checkIn": "Check-In",
+    "guests": "Guests",
+    "billing": "Billing",
+    "settings": "Settings",
+    "darkMode": "Toggle Dark Mode",
+    "closeModal": "Close modal",
+    "openShortcuts": "Open shortcuts"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "title": "Food Options",
+  "subtitle": "Meal plans, active orders, and food revenue",
+  "addPlan": "Add meal plan",
+  "loadFailed": "Could not load food data. Make sure the backend is running.",
+  "tabs": {
+    "catalog": "Meal Catalog",
+    "orders": "Active Orders",
+    "revenue": "Revenue"
+  },
+  "planCount_one": "{{count}} meal plan",
+  "planCount_other": "{{count}} meal plans",
+  "guestsOnPlan_one": "{{count}} guest on a meal plan",
+  "guestsOnPlan_other": "{{count}} guests on a meal plan",
+  "clickActivate": "Click to activate",
+  "clickDeactivate": "Click to deactivate",
+  "billing": {
+    "one-time": "One-time",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "daily": "Daily",
+    "none": "None"
+  },
+  "empty": {
+    "noPlans": "No meal plans yet",
+    "noPlansHint": "Add a plan to offer meals to guests.",
+    "noOrders": "No active orders"
+  },
+  "form": {
+    "title": "Add Meal Plan",
+    "add": "Add Plan",
+    "name": "Plan Name",
+    "namePlaceholder": "e.g. Breakfast Only",
+    "description": "Description",
+    "descriptionPlaceholder": "Brief description of meals included"
+  },
+  "orders": {
+    "plan": "Meal Plan",
+    "billing": "Billing",
+    "action": "Action",
+    "remind": "Remind"
+  },
+  "revenue": {
+    "total": "Food revenue",
+    "thisMonth": "This month",
+    "subscribers": "Active subscribers",
+    "subscribersHint": "Guests on meal plan",
+    "avg": "Avg per guest",
+    "avgHint": "Per active subscriber",
+    "byPlan": "Revenue by Meal Plan",
+    "noData": "No revenue data available"
+  },
+  "toast": {
+    "added": "Meal plan \"{{name}}\" added",
+    "addFailed": "Could not add meal plan",
+    "updateFailed": "Could not update plan",
+    "removed": "\"{{name}}\" removed",
+    "deleteFailed": "Could not delete plan",
+    "reminderSent": "Reminder sent to {{guest}}"
+  }
+}

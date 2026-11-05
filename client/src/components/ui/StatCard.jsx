@@ -1,62 +1,7 @@
-// Props: label, value, sub, trend (number), color ('gold'|'green'|'red'|'amber'|'blue'|'purple'), children
-export default function StatCard({
-  label,
-  value,
-  sub,
-  trend,
-  color = 'gold',
-  children,
-}) {
-  const renderFooter = () => {
-    if (trend !== undefined) {
-      const isPositive = trend > 0
-      const isNegative = trend < 0
-      if (isPositive) {
-        return (
-          <span className="t-xs text-success">
-            ↑ {trend}%
-          </span>
-        )
-      }
-      if (isNegative) {
-        return (
-          <span className="t-xs text-danger">
-            ↓ {Math.abs(trend)}%
-          </span>
-        )
-      }
-      return (
-        <span className="t-xs text-ink3">
-          → {trend}%
-        </span>
-      )
-    }
-    if (sub) {
-      return (
-        <span className="t-xs text-ink3">{sub}</span>
-      )
-    }
-    return null
-  }
+import TwStatCard from '../ui-tw/StatCard'
 
-  return (
-    <div className={`stat-card stat-bar-${color}`}>
-      <div className="t-label text-ink3 mb-2">
-        {label}
-      </div>
-      <div
-        className="text-[26px] font-bold text-ink mb-1.5"
-        style={{
-          letterSpacing: '-0.03em',
-          lineHeight: 1.1,
-        }}
-      >
-        {value}
-      </div>
-      {renderFooter()}
-      {children && (
-        <div className="mt-2.5">{children}</div>
-      )}
-    </div>
-  )
+// Legacy props (label, value, sub, trend, color, children) on top of the shared
+// KPI card in ui-tw/StatCard, so every figure tile has one design.
+export default function StatCard({ label, value, sub, trend, color = 'gold', children, ...rest }) {
+  return <TwStatCard label={label} value={value} hint={sub} trend={trend} tone={color} {...rest}>{children}</TwStatCard>
 }

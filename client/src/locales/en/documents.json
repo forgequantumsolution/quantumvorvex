@@ -1,0 +1,108 @@
+{
+  "title": "Documents",
+  "subtitle": "KYC verification & ID management",
+  "searchPlaceholder": "Search guest or DOC ID",
+  "roomNo": "Room {{room}}",
+  "clearFilters": "Clear filters",
+  "filesCount_one": "{{count}} file",
+  "filesCount_other": "{{count}} files",
+  "kind": { "booking": "Booking", "guest": "Guest" },
+  "verification": { "verified": "Verified", "pending": "Pending", "incomplete": "No files" },
+  "docType": {
+    "idFront": "ID Front",
+    "idBack": "ID Back",
+    "guestPhoto": "Guest Photo",
+    "checkoutPhoto": "Check-out Photo",
+    "paymentProof": "Payment Proof",
+    "additional": "Additional Doc",
+    "document": "Document"
+  },
+  "stats": {
+    "total": "Guests & bookings",
+    "verifiedHint": "every file signed off",
+    "pendingHint": "awaiting review",
+    "incompleteHint": "nothing uploaded yet"
+  },
+  "card": {
+    "title": "KYC records",
+    "records_one": "{{count}} record",
+    "records_other": "{{count}} records",
+    "matching_one": "{{count}} record match",
+    "matching_other": "{{count}} records match"
+  },
+  "filter": {
+    "typeLabel": "Filter by record type",
+    "allTypes": "All types",
+    "bookings": "New bookings",
+    "guests": "Checked-in guests",
+    "statusLabel": "Filter by verification status",
+    "allStatuses": "All statuses"
+  },
+  "empty": {
+    "loading": "Loading documents…",
+    "filteredTitle": "No matching records",
+    "title": "No documents yet",
+    "filteredMessage": "Try a different search or clear the filters.",
+    "message": "ID scans captured on a booking show up here automatically."
+  },
+  "col": {
+    "docId": "Doc ID",
+    "viewDocuments": "View documents",
+    "noPhoto": "No guest photo on file",
+    "identification": "Identification",
+    "files": "Files",
+    "verification": "Verification",
+    "filesOf": "{{n}} / {{max}} files"
+  },
+  "actions": {
+    "verify": "Verify",
+    "alreadyVerified": "Already verified",
+    "verifyTitle": "Mark every file verified",
+    "deleteAll": "Delete all documents for this guest"
+  },
+  "upload": {
+    "title": "Upload Documents",
+    "save": "Save Documents",
+    "uploaded": "Uploaded",
+    "alreadyUploaded": "Already uploaded",
+    "limitReached": "Limit reached",
+    "clickOrDrop": "Click or drop file",
+    "tapToAdd": "Tap to add file",
+    "allFilled": "All {{max}} document slots are filled for this guest.",
+    "ready_one": "{{count}} new file ready to upload",
+    "ready_other": "{{count}} new files ready to upload",
+    "slotsLeft_one": "{{count}} slot left",
+    "slotsLeft_other": "{{count}} slots left"
+  },
+  "view": {
+    "title": "Documents",
+    "verifyAll": "Verify All",
+    "empty": "No documents uploaded yet",
+    "openFull": "Open full size",
+    "previewUnavailable": "Preview unavailable",
+    "openDocument": "Open document",
+    "uploadedOn": "Uploaded {{date}}",
+    "deleteDocument": "Delete document"
+  },
+  "errors": { "load": "Could not load documents. Make sure the backend is running." },
+  "toast": {
+    "uploaded": "Documents uploaded for {{name}}",
+    "uploadFailed": "Upload failed",
+    "nothingToVerify": "No documents to verify",
+    "verified": "{{name}} KYC verified",
+    "verifyFailed": "Could not verify documents",
+    "docDeleted": "Document deleted",
+    "docDeleteFailed": "Could not delete document",
+    "allDeleted": "Documents deleted for {{name}}",
+    "allDeleteFailed": "Could not delete documents"
+  },
+  "deleteDoc": {
+    "title": "Delete Document",
+    "message": "Delete <b>{{label}}</b> for <b>{{name}}</b>? The file is permanently removed."
+  },
+  "deleteAll": {
+    "title": "Delete Documents",
+    "message_one": "Delete all <b>{{count}}</b> document for <b>{{name}}</b>? The files are permanently removed.",
+    "message_other": "Delete all <b>{{count}}</b> documents for <b>{{name}}</b>? The files are permanently removed."
+  }
+}

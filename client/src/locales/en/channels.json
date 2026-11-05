@@ -1,0 +1,77 @@
+{
+  "title": "Booking Channels",
+  "subtitle": "Manage OTA and direct bookings",
+  "tabs": {
+    "overview": "Overview",
+    "parity": "Rate Parity",
+    "import": "Import",
+    "revenue": "Revenue by Source"
+  },
+  "stats": {
+    "totalBookings": "Total bookings",
+    "totalRevenue": "Total revenue",
+    "connected": "Channels connected",
+    "thisMonth": "This month",
+    "ofChannels_one": "of {{count}} channel",
+    "ofChannels_other": "of {{count}} channels"
+  },
+  "status": {
+    "connected": "Connected",
+    "manual": "Manual",
+    "disconnected": "Disconnected"
+  },
+  "card": {
+    "bookings": "Bookings",
+    "revenue": "Revenue",
+    "avgRate": "Avg Rate",
+    "configureApi": "Configure API",
+    "markManual": "Mark as Manual"
+  },
+  "parity": {
+    "intro": "Compare your rates vs OTA platforms. Click competitor cells to edit inline.",
+    "cheapest": "✓ You're cheapest",
+    "issue": "⚠ Parity Issue",
+    "ok": "✓ Parity",
+    "yourRate": "Your Rate",
+    "roomType": "Room Type",
+    "status": "Parity Status",
+    "chartTitle": "Rate Comparison Chart"
+  },
+  "importTab": {
+    "drop": "Drop your CSV file here, or click to browse",
+    "fileReady": "✓ File loaded — ready to map columns",
+    "supports": "Supports .csv files · Max 5 MB",
+    "downloadTemplate": "Download Template CSV",
+    "templateHint": "Use this template to format your booking data correctly before importing.",
+    "columnMapping": "Column Mapping",
+    "systemField": "System Field",
+    "csvColumn": "Your CSV Column",
+    "preview_one": "CSV Preview ({{count}} row)",
+    "preview_other": "CSV Preview ({{count}} rows)",
+    "importBtn": "Import Bookings",
+    "fields": {
+      "guestName": "Guest Name",
+      "roomNumber": "Room Number",
+      "checkIn": "Check-in Date",
+      "checkOut": "Check-out Date",
+      "amount": "Amount",
+      "channel": "Channel"
+    }
+  },
+  "revenue": {
+    "byChannel": "Revenue by Channel",
+    "source": "Source",
+    "avgStay": "Avg Stay",
+    "share": "% of Total",
+    "bookingsCount_one": "{{count}} booking",
+    "bookingsCount_other": "{{count}} bookings"
+  },
+  "toast": {
+    "apiSoon": "API configuration for {{name}} coming soon.",
+    "markedManual": "{{name}} marked as Manual.",
+    "fileLoaded": "File \"{{name}}\" loaded.",
+    "imported_one": "{{count}} booking imported successfully.",
+    "imported_other": "{{count}} bookings imported successfully.",
+    "templateStarted": "Template CSV download started."
+  }
+}

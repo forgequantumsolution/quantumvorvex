@@ -60,7 +60,9 @@ export const { setCredentials, clearCredentials, setCurrentUser, setActiveProper
 export default authSlice.reducer
 
 // ── Selectors ────────────────────────────────────────────────────────────────
-export const selectProperties = (s) => s.auth.currentUser?.properties || []
+// Stable empty list so selectors don't hand useSelector a new [] every call.
+const NO_PROPERTIES = []
+export const selectProperties = (s) => s.auth.currentUser?.properties || NO_PROPERTIES
 export const selectActiveProperty = (s) =>
   selectProperties(s).find((p) => p.id === s.auth.activePropertyId) || null
 

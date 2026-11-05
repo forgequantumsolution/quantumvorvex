@@ -1,0 +1,164 @@
+{
+  "title": "అందరు అతిథులు",
+  "subtitle": "అతిథుల రిజిస్టర్, బస చరిత్ర & బిల్లింగ్",
+  "searchPlaceholder": "పేరు, గది, DOC ID, ఫోన్ వెతకండి…",
+  "status": {
+    "Active": "సక్రియం",
+    "Due": "బాకీ",
+    "Checked Out": "చెక్-అవుట్ అయింది",
+    "CheckedIn": "చెక్-ఇన్ అయింది",
+    "Overdue": "బకాయి"
+  },
+  "invoiceStatus": {
+    "Paid": "చెల్లించబడింది",
+    "Pending": "పెండింగ్",
+    "Overdue": "బకాయి"
+  },
+  "foodPlan": {
+    "Breakfast Only": "అల్పాహారం మాత్రమే",
+    "All Meals": "అన్ని భోజనాలు",
+    "Dinner Only": "రాత్రి భోజనం మాత్రమే",
+    "No Meals": "భోజనం లేదు"
+  },
+  "tag": {
+    "VIP": "VIP",
+    "Corporate": "కార్పొరేట్",
+    "Long-term": "దీర్ఘకాలిక"
+  },
+  "stayType": {
+    "daily": "రోజువారీ",
+    "monthly": "నెలవారీ"
+  },
+  "stats": {
+    "active": "సక్రియం",
+    "due": "బాకీ / బకాయి",
+    "checkedOut": "చెక్-అవుట్ అయినవారు",
+    "total": "మొత్తం అతిథులు"
+  },
+  "filter": {
+    "allStays": "అన్ని బసలు",
+    "allStatuses": "అన్ని స్థితులు"
+  },
+  "col": {
+    "typeStays": "రకం · బసలు",
+    "staysWord_one": "బస",
+    "staysWord_other": "బసలు",
+    "checkInDue": "చెక్-ఇన్ → బాకీ"
+  },
+  "fields": {
+    "stayType": "బస రకం",
+    "checkIn": "చెక్-ఇన్",
+    "checkOut": "చెక్-అవుట్",
+    "checkInDate": "చెక్-ఇన్ తేదీ",
+    "checkOutDate": "చెక్-అవుట్ తేదీ",
+    "months": "నెలలు",
+    "foodPlan": "ఆహార ప్లాన్",
+    "tags": "ట్యాగ్‌లు"
+  },
+  "actions": {
+    "checkIn": "చెక్-ఇన్",
+    "checkout": "చెక్-అవుట్",
+    "renew": "పునరుద్ధరించండి",
+    "viewProfile": "ప్రొఫైల్ చూడండి",
+    "editGuest": "అతిథిని సవరించండి",
+    "editGuestBtn": "అతిథిని సవరించండి",
+    "deleteGuest": "అతిథిని తొలగించండి"
+  },
+  "empty": {
+    "loading": "అతిథులు లోడ్ అవుతున్నారు…",
+    "title": "అతిథులు కనుగొనబడలేదు"
+  },
+  "errors": {
+    "load": "అతిథులను లోడ్ చేయలేకపోయాము. బ్యాకెండ్ నడుస్తోందో లేదో తనిఖీ చేయండి."
+  },
+  "profile": {
+    "tabs": {
+      "info": "ప్రొఫైల్",
+      "billing": "బిల్లింగ్",
+      "comms": "సంప్రదింపులు",
+      "history": "బస చరిత్ర"
+    },
+    "totalStays": "మొత్తం బసలు",
+    "lifetimeSpend": "మొత్తం ఖర్చు",
+    "nationality": "జాతీయత",
+    "address": "చిరునామా",
+    "idType": "ID రకం",
+    "idNumber": "ID నంబర్",
+    "duration": "వ్యవధి",
+    "months_one": "{{count}} నెల",
+    "months_other": "{{count}} నెలలు",
+    "advancePaid": "చెల్లించిన అడ్వాన్స్",
+    "facilities": "సౌకర్యాలు",
+    "extraAmenities": "అదనపు సౌకర్యాలు",
+    "documents": "పత్రాలు",
+    "docsUploaded": "{{count}} / {{total}} అప్‌లోడ్ అయ్యాయి"
+  },
+  "billing": {
+    "invoice": "ఇన్‌వాయిస్",
+    "period": "వ్యవధి",
+    "paidOn": "చెల్లించిన తేదీ",
+    "method": "విధానం",
+    "empty": "బిల్లింగ్ రికార్డ్‌లు లేవు",
+    "totalLifetimeSpend": "మొత్తం జీవితకాల ఖర్చు"
+  },
+  "comms": {
+    "logged": "సంప్రదింపు నమోదు చేయబడింది.",
+    "logFailed": "సంప్రదింపును నమోదు చేయలేకపోయాము.",
+    "empty": "సంప్రదింపుల రికార్డ్ లేదు",
+    "received": "అందింది",
+    "channel": {
+      "note": "నోట్",
+      "call": "కాల్",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS",
+      "email": "ఇమెయిల్"
+    },
+    "placeholder": "ఏమి మాట్లాడారు?",
+    "log": "సంప్రదింపు నమోదు చేయండి"
+  },
+  "history": {
+    "stayNo": "బస #{{n}}",
+    "current": "ప్రస్తుతం",
+    "checkIn": "చెక్-ఇన్: {{date}}",
+    "monthsAgo_one": "~{{count}} నెల క్రితం",
+    "monthsAgo_other": "~{{count}} నెలల క్రితం",
+    "returning": "మళ్లీ వచ్చిన అతిథి",
+    "visits_one": "{{count}} సందర్శన",
+    "visits_other": "{{count}} సందర్శనలు",
+    "gold": "గోల్డ్ లాయల్టీ",
+    "silver": "సిల్వర్ లాయల్టీ",
+    "bronze": "బ్రాంజ్ లాయల్టీ"
+  },
+  "edit": {
+    "title": "సవరించండి — {{name}}"
+  },
+  "checkout": {
+    "roomRent": "గది అద్దె",
+    "amenities": "సౌకర్యాలు"
+  },
+  "toast": {
+    "exportFailed": "అతిథులను ఎగుమతి చేయలేకపోయాము",
+    "checkedOut": "{{name}} చెక్-అవుట్ అయింది. గది హౌస్‌కీపింగ్‌కు గుర్తించబడింది.",
+    "checkoutFailed": "చెక్-అవుట్ విఫలమైంది",
+    "renewed": "{{name}} బస పునరుద్ధరించబడింది.",
+    "renewFailed": "బసను పునరుద్ధరించలేకపోయాము.",
+    "deleted": "{{name}} తొలగించబడింది",
+    "deleteFailed": "అతిథిని తొలగించలేకపోయాము",
+    "updated": "అతిథి వివరాలు అప్‌డేట్ అయ్యాయి",
+    "updateFailed": "అతిథిని అప్‌డేట్ చేయలేకపోయాము",
+    "billFailed": "చెక్-అవుట్ బిల్లు లోడ్ కాలేదు"
+  },
+  "delete": {
+    "title": "అతిథిని తొలగించండి",
+    "message": "<b>{{name}}</b> ({{docId}})ను తొలగించాలా? వారి బిల్లింగ్ చరిత్ర అలాగే ఉంటుంది, కానీ వారు రిజిస్టర్ నుండి తీసివేయబడతారు. దీంతో వారి గది ఖాళీ అవుతుంది."
+  },
+  "validation": {
+    "nameRequired": "పేరు అవసరం",
+    "roomRequired": "గది అవసరం",
+    "checkInRequired": "చెక్-ఇన్ తేదీ అవసరం",
+    "checkOutRequired": "చెక్-అవుట్ తేదీ అవసరం",
+    "enterNumber": "సంఖ్యను నమోదు చేయండి",
+    "minOneMonth": "కనీసం 1 నెల",
+    "monthsRequired": "నెలలు అవసరం"
+  }
+}

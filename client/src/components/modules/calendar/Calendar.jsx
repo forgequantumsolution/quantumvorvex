@@ -1,8 +1,12 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import { LuBedDouble, LuUserCheck, LuCalendarClock, LuCircleCheck, LuPlus } from 'react-icons/lu'
 import Modal from '../../ui/Modal'
-import Badge from '../../ui/Badge'
+import { PageWrapper, StatCard } from '../../ui-tw'
+import { useMinWidth } from '../../../hooks/useMediaQuery'
 import { useToast } from '../../../hooks/useToast'
-import { formatDate, formatCurrency } from '../../../utils/format'
+import { formatDate } from '../../../utils/format'
+import { appLocale } from '../../../i18n'
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────────
 
@@ -35,14 +39,16 @@ const MOCK_BOOKINGS = [
   { id: 'b10', roomId: 'r11', guestName: 'Vijay Kumar',     checkIn: '2026-04-03', checkOut: '2026-04-05', status: 'checkout',  color: '#6b7280' },
 ]
 
+// Filter values (compared in code); 'All' is labelled at render time.
 const ROOM_TYPES = ['All', 'Standard', 'Deluxe', 'Suite', 'Executive']
-const FLOORS     = ['All Floors', 'Floor 1', 'Floor 2', 'Floor 3', 'Floor 4']
+const FLOORS     = ['all', 1, 2, 3, 4]
 
+// Theme tokens (index.css) so the bars follow light / dark mode.
 const STATUS_COLORS = {
-  occupied:    { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
-  confirmed:   { bg: '#fef3c7', text: '#92400e', border: '#fcd34d' },
-  maintenance: { bg: '#fef9c3', text: '#854d0e', border: '#fde047' },
-  checkout:    { bg: '#f3f4f6', text: '#4b5563', border: '#d1d5db' },
+  occupied:    { bg: 'var(--blue-bg)',  text: 'var(--blue-text)',  border: 'var(--blue)' },
+  confirmed:   { bg: 'var(--gold-bg)',  text: 'var(--gold)',       border: 'var(--gold-border)' },
+  maintenance: { bg: 'var(--amber-bg)', text: 'var(--amber-text)', border: 'var(--amber)' },
+  checkout:    { bg: 'var(--grey-bg)',  text: 'var(--grey-text)',  border: 'var(--border2)' },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -68,6 +74,7 @@ function isSameDay(a, b) {
 // ─── New Booking Modal ────────────────────────────────────────────────────────
 
 function NewBookingModal({ isOpen, onClose, onSave, preRoom, preDate }) {
+  const { t } = useTranslation('calendar')
   const [form, setForm] = useState({
     roomId: preRoom || '',
     guestName: '',
@@ -85,37 +92,37 @@ function NewBookingModal({ isOpen, onClose, onSave, preRoom, preDate }) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="New Booking" maxWidth="440px"
+    <Modal isOpen={isOpen} onClose={onClose} title={t('newBooking.title')} maxWidth="440px"
       footer={
         <>
-          <button className="btn btn-outline btn-sm" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary btn-sm" onClick={handleSave}>Create Booking</button>
+          <button className="btn btn-outline btn-sm" onClick={onClose}>{t('common:cancel')}</button>
+          <button className="btn btn-primary btn-sm" onClick={handleSave}>{t('newBooking.create')}</button>
         </>
       }
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <div className="col-span-full">
-          <label className="form-label block mb-[5px]">Guest Name</label>
-          <input className="form-input" placeholder="Full name" value={form.guestName} onChange={e => set('guestName', e.target.value)} />
+          <label className="form-label block mb-[5px]">{t('newBooking.guestName')}</label>
+          <input className="form-input" placeholder={t('newBooking.fullName')} value={form.guestName} onChange={e => set('guestName', e.target.value)} />
         </div>
         <div className="col-span-full">
-          <label className="form-label block mb-[5px]">Room</label>
+          <label className="form-label block mb-[5px]">{t('field.room')}</label>
           <select className="form-select" value={form.roomId} onChange={e => set('roomId', e.target.value)}>
-            <option value="">Select room</option>
+            <option value="">{t('newBooking.selectRoom')}</option>
             {ROOMS.map(r => <option key={r.id} value={r.id}>{r.number} — {r.type}</option>)}
           </select>
         </div>
-        <div>
-          <label className="form-label block mb-[5px]">Check-In</label>
-          <input type="date" className="form-input" value={form.checkIn} onChange={e => set('checkIn', e.target.value)} />
+        <div className="min-w-0">
+          <label className="form-label block mb-[5px]">{t('field.checkIn')}</label>
+          <input type="date" className="form-input w-full" value={form.checkIn} onChange={e => set('checkIn', e.target.value)} />
         </div>
-        <div>
-          <label className="form-label block mb-[5px]">Check-Out</label>
-          <input type="date" className="form-input" value={form.checkOut} onChange={e => set('checkOut', e.target.value)} />
+        <div className="min-w-0">
+          <label className="form-label block mb-[5px]">{t('field.checkOut')}</label>
+          <input type="date" className="form-input w-full" value={form.checkOut} onChange={e => set('checkOut', e.target.value)} />
         </div>
         <div className="col-span-full">
-          <label className="form-label block mb-[5px]">Notes</label>
-          <input className="form-input" placeholder="Special requests..." value={form.notes} onChange={e => set('notes', e.target.value)} />
+          <label className="form-label block mb-[5px]">{t('newBooking.notes')}</label>
+          <input className="form-input" placeholder={t('newBooking.notesPlaceholder')} value={form.notes} onChange={e => set('notes', e.target.value)} />
         </div>
       </div>
     </Modal>
@@ -125,17 +132,18 @@ function NewBookingModal({ isOpen, onClose, onSave, preRoom, preDate }) {
 // ─── Booking Detail Modal ─────────────────────────────────────────────────────
 
 function BookingDetailModal({ booking, room, onClose, onDelete }) {
+  const { t } = useTranslation('calendar')
   if (!booking) return null
   const nights = daysBetween(booking.checkIn, booking.checkOut)
   const colors = STATUS_COLORS[booking.status] || STATUS_COLORS.confirmed
 
   return (
-    <Modal isOpen={!!booking} onClose={onClose} title="Booking Details" maxWidth="380px"
+    <Modal isOpen={!!booking} onClose={onClose} title={t('detail.title')} maxWidth="380px"
       footer={
         <>
-          <button className="btn btn-outline btn-sm" onClick={onClose}>Close</button>
+          <button className="btn btn-outline btn-sm" onClick={onClose}>{t('common:close')}</button>
           {booking.status !== 'occupied' && (
-            <button className="btn btn-danger btn-sm" onClick={() => onDelete(booking)}>Remove</button>
+            <button className="btn btn-danger btn-sm" onClick={() => onDelete(booking)}>{t('common:remove')}</button>
           )}
         </>
       }
@@ -144,20 +152,20 @@ function BookingDetailModal({ booking, room, onClose, onDelete }) {
         background: colors.bg, borderColor: colors.border,
         color: colors.text,
       }}>
-        {booking.status}
+        {t(`status.${booking.status}`, { defaultValue: booking.status })}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-3">
+      <div className="grid grid-cols-2 gap-x-5 gap-y-3">
         {[
-          ['Guest', booking.guestName],
-          ['Room', room?.number || '—'],
-          ['Room Type', room?.type || '—'],
-          ['Check-In', formatDate(booking.checkIn)],
-          ['Check-Out', formatDate(booking.checkOut)],
-          ['Duration', `${nights} night${nights !== 1 ? 's' : ''}`],
+          [t('field.guest'), booking.guestName],
+          [t('field.room'), room?.number || '—'],
+          [t('field.roomType'), room?.type || '—'],
+          [t('field.checkIn'), formatDate(booking.checkIn)],
+          [t('field.checkOut'), formatDate(booking.checkOut)],
+          [t('field.duration'), t('nights', { count: nights })],
         ].map(([label, val]) => (
-          <div key={label}>
-            <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.06em] mb-[3px]">{label}</div>
-            <div className="t-title">{val}</div>
+          <div key={label} className="min-w-0">
+            <div className="text-xs font-semibold text-ink3 uppercase tracking-[0.06em] mb-[3px]">{label}</div>
+            <div className="t-title break-words">{val}</div>
           </div>
         ))}
       </div>
@@ -168,6 +176,7 @@ function BookingDetailModal({ booking, room, onClose, onDelete }) {
 // ─── Main Calendar Component ──────────────────────────────────────────────────
 
 export default function Calendar() {
+  const { t } = useTranslation('calendar')
   const addToast = useToast()
 
   // View: start date (Monday of current week)
@@ -179,7 +188,7 @@ export default function Calendar() {
   })
   const [viewDays, setViewDays] = useState(14)
   const [typeFilter, setTypeFilter] = useState('All')
-  const [floorFilter, setFloorFilter] = useState('All Floors')
+  const [floorFilter, setFloorFilter] = useState('all')
 
   const [bookings, setBookings] = useState(MOCK_BOOKINGS)
   const [showNew, setShowNew] = useState(false)
@@ -196,7 +205,7 @@ export default function Calendar() {
   // Filtered rooms
   const filteredRooms = useMemo(() => ROOMS.filter(r => {
     const matchType  = typeFilter  === 'All'        || r.type  === typeFilter
-    const matchFloor = floorFilter === 'All Floors' || r.floor === parseInt(floorFilter.split(' ')[1])
+    const matchFloor = floorFilter === 'all' || r.floor === Number(floorFilter)
     return matchType && matchFloor
   }), [typeFilter, floorFilter])
 
@@ -245,13 +254,13 @@ export default function Calendar() {
   const handleNewBooking = (booking) => {
     setBookings(bs => [...bs, booking])
     setShowNew(false)
-    addToast('Booking added to calendar', 'success')
+    addToast(t('toast.added'), 'success')
   }
 
   const handleDeleteBooking = (booking) => {
     setBookings(bs => bs.filter(b => b.id !== booking.id))
     setDetailBooking(null)
-    addToast('Booking removed', 'info')
+    addToast(t('toast.removed'), 'info')
   }
 
   const COL_W = 44
@@ -263,163 +272,159 @@ export default function Calendar() {
 
   // Legend data
   const legend = [
-    { label: 'Occupied',    ...STATUS_COLORS.occupied },
-    { label: 'Confirmed',   ...STATUS_COLORS.confirmed },
-    { label: 'Maintenance', ...STATUS_COLORS.maintenance },
-    { label: 'Available',   bg: 'var(--surface2)', text: 'var(--text3)', border: 'var(--border)' },
+    { label: t('status.occupied'),    ...STATUS_COLORS.occupied },
+    { label: t('status.confirmed'),   ...STATUS_COLORS.confirmed },
+    { label: t('status.maintenance'), ...STATUS_COLORS.maintenance },
+    { label: t('status.available'),   bg: 'var(--surface2)', text: 'var(--text3)', border: 'var(--border)' },
   ]
 
-  return (
-    <div className="p-6 max-w-[1400px]">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-5 flex-wrap gap-3">
-        <div>
-          <h1 className="t-h1 m-0 tracking-[-0.03em]">Room Calendar</h1>
-          <p className="t-sm mt-1 mx-0 mb-0 text-ink3">Visual booking timeline — click a cell to book or view details</p>
-        </div>
-        <button className="btn btn-primary" onClick={() => { setNewPreRoom(''); setNewPreDate(todayYMD); setShowNew(true) }}>
-          + New Booking
-        </button>
-      </div>
+  const openNew = (roomId, ymd) => { setNewPreRoom(roomId); setNewPreDate(ymd); setShowNew(true) }
 
-      {/* Controls */}
-      <div className="flex gap-2.5 mb-4 flex-wrap items-center">
-        {/* Navigation */}
-        <div className="flex items-center gap-1.5">
-          <button className="btn btn-outline btn-sm" onClick={prev}>‹ Prev</button>
-          <button className="btn btn-outline btn-sm" onClick={goToday}>Today</button>
-          <button className="btn btn-outline btn-sm" onClick={next}>Next ›</button>
-          <span className="t-sm text-ink2 font-medium ml-1">{rangeLabel}</span>
+  // Phones and portrait tablets get a day-by-day list; the room × date grid
+  // needs the width of a laptop to read.
+  const showGrid = useMinWidth('lg')
+
+  return (
+    <PageWrapper
+      title={t('title')}
+      subtitle={showGrid ? t('subtitleGrid') : t('subtitleList')}
+      headerActions={[
+        { id: 'new', label: t('newBookingAction'), icon: <LuPlus />, variant: 'primary', onClick: () => openNew('', todayYMD) },
+      ]}
+      stats={[
+        { id: 'total', label: t('stats.totalRooms'), value: filteredRooms.length, icon: <LuBedDouble />, tone: 'grey' },
+        { id: 'occupied', label: t('stats.occupiedToday'), value: bookings.filter(b => b.checkIn <= todayYMD && b.checkOut > todayYMD && b.status === 'occupied').length, icon: <LuUserCheck />, tone: 'blue' },
+        { id: 'upcoming', label: t('stats.confirmedUpcoming'), value: bookings.filter(b => b.checkIn > todayYMD && b.status === 'confirmed').length, icon: <LuCalendarClock />, tone: 'amber' },
+        { id: 'available', label: t('stats.availableToday'), value: filteredRooms.length - bookings.filter(b => b.checkIn <= todayYMD && b.checkOut > todayYMD).length, icon: <LuCircleCheck />, tone: 'green' },
+      ].map(({ id, ...st }) => <StatCard key={id} {...st} />)}
+    >
+      {/* Controls: range navigation, then span + filters (three across on phones) */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-2.5 mb-4">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <button className="btn btn-outline btn-sm" onClick={prev} aria-label={t('nav.prevRange')}>‹<span className="hidden sm:inline"> {t('nav.prev')}</span></button>
+            <button className="btn btn-outline btn-sm" onClick={goToday}>{t('common:today')}</button>
+            <button className="btn btn-outline btn-sm" onClick={next} aria-label={t('nav.nextRange')}><span className="hidden sm:inline">{t('common:next')} </span>›</button>
+          </div>
+          <span className="t-sm text-ink2 font-medium ml-1 min-w-0">{rangeLabel}</span>
         </div>
-        <div className="flex-1" />
-        {/* View span */}
-        <select className="form-select w-[100px]" value={viewDays} onChange={e => setViewDays(Number(e.target.value))}>
-          <option value={7}>7 days</option>
-          <option value={14}>14 days</option>
-          <option value={21}>21 days</option>
-          <option value={30}>30 days</option>
-        </select>
-        {/* Filters */}
-        <select className="form-select w-[130px]" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-          {ROOM_TYPES.map(t => <option key={t}>{t}</option>)}
-        </select>
-        <select className="form-select w-[120px]" value={floorFilter} onChange={e => setFloorFilter(e.target.value)}>
-          {FLOORS.map(f => <option key={f}>{f}</option>)}
-        </select>
+        <div className="grid grid-cols-3 sm:flex gap-2 lg:ml-auto">
+          {/* View span */}
+          <select aria-label={t('filter.daysShown')} className="form-select w-full sm:w-[110px]" value={viewDays} onChange={e => setViewDays(Number(e.target.value))}>
+            {[7, 14, 21, 30].map(n => <option key={n} value={n}>{t('filter.days', { count: n })}</option>)}
+          </select>
+          {/* Filters */}
+          <select aria-label={t('field.roomType')} className="form-select w-full sm:w-[130px]" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+            {ROOM_TYPES.map(rt => <option key={rt} value={rt}>{rt === 'All' ? t('filter.allTypes') : rt}</option>)}
+          </select>
+          <select aria-label={t('filter.floor')} className="form-select w-full sm:w-[120px]" value={floorFilter} onChange={e => setFloorFilter(e.target.value)}>
+            {FLOORS.map(f => <option key={f} value={f}>{f === 'all' ? t('filter.allFloors') : t('filter.floorN', { n: f })}</option>)}
+          </select>
+        </div>
       </div>
 
       {/* Legend */}
-      <div className="flex gap-3 mb-[14px] flex-wrap">
+      <div className="flex gap-x-3 gap-y-1.5 mb-[14px] flex-wrap items-center">
         {legend.map(l => (
           <div key={l.label} className="flex items-center gap-1.5">
             <div className="w-[14px] h-[14px] rounded-[3px] border" style={{ background: l.bg, borderColor: l.border }} />
-            <span className="text-[11.5px] text-ink3">{l.label}</span>
+            <span className="text-xs text-ink3">{l.label}</span>
           </div>
         ))}
-        <span className="text-[11.5px] text-ink3 ml-2">· Click empty cell to book · Click booking to view details</span>
+        {showGrid && <span className="text-xs text-ink3 ml-2">· {t('gridHint')}</span>}
       </div>
 
-      {/* Grid */}
-      <div className="card overflow-x-auto p-0">
-        <div style={{ minWidth: LABEL_W + COL_W * viewDays + 2 }}>
-          {/* Date header row */}
-          <div className="flex border-b border-line sticky top-0 bg-surface z-10">
-            <div className="py-2.5 px-3 text-[10.5px] font-bold text-ink3 uppercase tracking-[0.06em] border-r border-line" style={{ width: LABEL_W, minWidth: LABEL_W }}>
-              Room
-            </div>
-            {dates.map(date => {
-              const ymd = toYMD(date)
-              const isToday = ymd === todayYMD
-              const isWeekend = date.getDay() === 0 || date.getDay() === 6
-              return (
-                <div
-                  key={ymd}
-                  className={`text-center py-1.5 px-0.5 text-[10.5px] border-r border-line ${isToday ? 'font-bold text-gold bg-[var(--gold-bg)] border-b-2 border-b-gold' : `font-medium ${isWeekend ? 'text-warning-text' : 'text-ink3'} bg-transparent`}`}
-                  style={{ width: COL_W, minWidth: COL_W }}
-                >
-                  <div>{date.toLocaleDateString('en-IN', { weekday: 'short' })}</div>
-                  <div className="text-[12px] font-bold">{date.getDate()}</div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Room rows */}
-          {filteredRooms.map(room => (
-            <div key={room.id} className="flex border-b border-line relative" style={{ height: ROW_H }}>
-              {/* Room label */}
-              <div
-                className="flex flex-col justify-center px-3 border-r border-line sticky left-0 bg-surface z-[5]"
-                style={{ width: LABEL_W, minWidth: LABEL_W }}
-              >
-                <div className="text-[12px] font-bold text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{room.number}</div>
-                <div className="text-[9.5px] text-ink3 mt-px">{room.type}</div>
+      {showGrid ? (
+        /* Grid — scrolls sideways inside its own box when the span is wide */
+        <div className="card overflow-x-auto overscroll-x-contain p-0">
+          <div style={{ minWidth: LABEL_W + COL_W * viewDays + 2 }}>
+            {/* Date header row */}
+            <div className="flex border-b border-line sticky top-0 bg-surface z-10">
+              <div className="py-2.5 px-3 text-xs font-bold text-ink3 uppercase tracking-[0.06em] border-r border-line sticky left-0 bg-surface z-[6]" style={{ width: LABEL_W, minWidth: LABEL_W }}>
+                {t('field.room')}
               </div>
-
-              {/* Day cells */}
-              {dates.map((date, dIdx) => {
+              {dates.map(date => {
                 const ymd = toYMD(date)
-                const booking = getCell(room.id, date)
                 const isToday = ymd === todayYMD
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6
-                const showBar = booking && isBookingStart(booking, date)
-                const span = showBar ? getBookingSpan(booking, viewStart) : 0
-                const colors = booking ? (STATUS_COLORS[booking.status] || STATUS_COLORS.confirmed) : null
-
                 return (
                   <div
                     key={ymd}
-                    onClick={() => handleCellClick(room.id, date)}
-                    className={`border-r border-line relative transition-[background] duration-100 ${booking ? 'cursor-pointer' : 'cursor-cell'}`}
-                    style={{
-                      width: COL_W, minWidth: COL_W, height: ROW_H,
-                      background: isToday ? 'var(--gold-bg)' : isWeekend ? 'rgba(0,0,0,0.02)' : 'transparent',
-                    }}
-                    onMouseEnter={e => { if (!booking) e.currentTarget.style.background = 'var(--surface2)' }}
-                    onMouseLeave={e => { if (!booking) e.currentTarget.style.background = isToday ? 'var(--gold-bg)' : isWeekend ? 'rgba(0,0,0,0.02)' : 'transparent' }}
+                    className={`text-center py-1.5 px-0.5 text-xs border-r border-line ${isToday ? 'font-bold text-gold bg-[var(--gold-bg)] border-b-2 border-b-gold' : `font-medium ${isWeekend ? 'text-warning-text' : 'text-ink3'} bg-transparent`}`}
+                    style={{ width: COL_W, minWidth: COL_W }}
                   >
-                    {/* Booking bar */}
-                    {showBar && (
-                      <div
-                        onClick={e => { e.stopPropagation(); setDetailBooking(booking) }}
-                        className="absolute left-0.5 top-1.5 rounded z-[3] flex items-center pl-1.5 overflow-hidden cursor-pointer transition-[opacity] duration-100 border"
-                        style={{
-                          width: span * COL_W - 4, height: ROW_H - 12,
-                          background: colors.bg, borderColor: colors.border,
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-                      >
-                        <span className="text-[10.5px] font-semibold whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: colors.text }}>
-                          {booking.guestName}
-                        </span>
-                      </div>
-                    )}
+                    <div>{date.toLocaleDateString(appLocale(), { weekday: 'short' })}</div>
+                    <div className="text-[12px] font-bold">{date.getDate()}</div>
                   </div>
                 )
               })}
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Summary stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
-        {[
-          { label: 'Total Rooms', value: filteredRooms.length, color: 'var(--text)' },
-          { label: 'Occupied Today', value: bookings.filter(b => b.checkIn <= todayYMD && b.checkOut > todayYMD && b.status === 'occupied').length, color: 'var(--blue-text)' },
-          { label: 'Confirmed Upcoming', value: bookings.filter(b => b.checkIn > todayYMD && b.status === 'confirmed').length, color: 'var(--amber-text)' },
-          { label: 'Available Today', value: filteredRooms.length - bookings.filter(b => b.checkIn <= todayYMD && b.checkOut > todayYMD).length, color: 'var(--green-text)' },
-        ].map(s => (
-          <div key={s.label} className="stat-card">
-            <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.05em] mb-1.5">{s.label}</div>
-            <div className="text-[24px] font-bold" style={{ fontFamily: 'var(--font-mono)', color: s.color }}>{s.value}</div>
+            {/* Room rows */}
+            {filteredRooms.map(room => (
+              <div key={room.id} className="flex border-b border-line relative" style={{ height: ROW_H }}>
+                {/* Room label */}
+                <div
+                  className="flex flex-col justify-center px-3 border-r border-line sticky left-0 bg-surface z-[5]"
+                  style={{ width: LABEL_W, minWidth: LABEL_W }}
+                >
+                  <div className="text-[12px] font-bold text-gold font-mono">{room.number}</div>
+                  <div className="text-xs text-ink3 mt-px truncate">{room.type}</div>
+                </div>
+
+                {/* Day cells */}
+                {dates.map((date) => {
+                  const ymd = toYMD(date)
+                  const booking = getCell(room.id, date)
+                  const isToday = ymd === todayYMD
+                  const isWeekend = date.getDay() === 0 || date.getDay() === 6
+                  const showBar = booking && isBookingStart(booking, date)
+                  const span = showBar ? getBookingSpan(booking, viewStart) : 0
+                  const colors = booking ? (STATUS_COLORS[booking.status] || STATUS_COLORS.confirmed) : null
+
+                  return (
+                    <div
+                      key={ymd}
+                      onClick={() => handleCellClick(room.id, date)}
+                      className={`border-r border-line relative transition-[background] duration-100 ${booking ? 'cursor-pointer' : 'cursor-cell hover:bg-surface2'} ${isToday ? 'bg-[var(--gold-bg)]' : isWeekend ? 'bg-[rgba(0,0,0,0.02)]' : 'bg-transparent'}`}
+                      style={{ width: COL_W, minWidth: COL_W, height: ROW_H }}
+                    >
+                      {/* Booking bar */}
+                      {showBar && (
+                        <div
+                          onClick={e => { e.stopPropagation(); setDetailBooking(booking) }}
+                          className="absolute left-0.5 top-1.5 rounded z-[3] flex items-center pl-1.5 overflow-hidden cursor-pointer transition-[opacity] duration-100 border hover:opacity-85"
+                          style={{
+                            width: span * COL_W - 4, height: ROW_H - 12,
+                            background: colors.bg, borderColor: colors.border,
+                          }}
+                        >
+                          <span className="text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: colors.text }}>
+                            {booking.guestName}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <DayList
+          dates={dates}
+          rooms={filteredRooms}
+          bookings={bookings}
+          todayYMD={todayYMD}
+          onOpen={setDetailBooking}
+          onBook={(ymd) => openNew('', ymd)}
+        />
+      )}
 
       {/* Modals */}
       <NewBookingModal
+        key={`${newPreRoom}-${newPreDate}-${showNew}`}
         isOpen={showNew}
         onClose={() => setShowNew(false)}
         onSave={handleNewBooking}
@@ -432,6 +437,110 @@ export default function Calendar() {
         onClose={() => setDetailBooking(null)}
         onDelete={handleDeleteBooking}
       />
+    </PageWrapper>
+  )
+}
+
+// ─── Day List (phones / tablets) ──────────────────────────────────────────────
+// The grid read row-wise: one section per day with that day's arrivals and
+// departures as full rows, everyone else in house as compact chips, and a
+// free-room count with a "Book" shortcut for the day.
+
+function DayList({ dates, rooms, bookings, todayYMD, onOpen, onBook }) {
+  const { t } = useTranslation('calendar')
+  const roomIds = new Set(rooms.map(r => r.id))
+  const roomOf = (id) => rooms.find(r => r.id === id)
+
+  return (
+    <div className="flex flex-col gap-3">
+      {dates.map(date => {
+        const ymd = toYMD(date)
+        const isToday = ymd === todayYMD
+        const inRooms = bookings.filter(b => roomIds.has(b.roomId))
+        const arrivals   = inRooms.filter(b => b.checkIn === ymd)
+        const departures = inRooms.filter(b => b.checkOut === ymd)
+        const staying    = inRooms.filter(b => b.checkIn < ymd && b.checkOut > ymd)
+        const free = rooms.length - arrivals.length - staying.length
+
+        return (
+          <section key={ymd} className={`card overflow-hidden ${isToday ? 'border-gold' : ''}`}>
+            <header className={`flex items-center justify-between gap-3 px-4 py-2.5 [&:not(:last-child)]:border-b border-line ${isToday ? 'bg-[var(--gold-bg)]' : 'bg-surface2'}`}>
+              <div className="min-w-0">
+                <div className={`t-title ${isToday ? 'text-gold' : ''}`}>
+                  {date.toLocaleDateString(appLocale(), { weekday: 'short', day: 'numeric', month: 'short' })}
+                  {isToday && <span className="ml-1.5 text-xs font-bold uppercase tracking-[0.06em]">{t('common:today')}</span>}
+                </div>
+                <div className="text-xs text-ink3 mt-0.5">
+                  {arrivals.length + departures.length + staying.length === 0
+                    ? t('day.allFree', { count: rooms.length })
+                    : t('day.summary', { inHouse: arrivals.length + staying.length, free: Math.max(0, free) })}
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm shrink-0"
+                onClick={() => onBook(ymd)}
+                disabled={free <= 0}
+              >
+                + {t('day.book')}
+              </button>
+            </header>
+
+            {arrivals.length + departures.length + staying.length > 0 && (
+              <div>
+                {[...arrivals.map(b => ['arrives', b]), ...departures.map(b => ['departs', b])].map(([kind, b]) => {
+                  const colors = STATUS_COLORS[b.status] || STATUS_COLORS.confirmed
+                  const room = roomOf(b.roomId)
+                  const nights = daysBetween(b.checkIn, b.checkOut)
+                  return (
+                    <button
+                      key={`${kind}-${b.id}`}
+                      type="button"
+                      onClick={() => onOpen(b)}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 min-h-[52px] text-left border-b border-line last:border-b-0 active:bg-surface2 hover:bg-surface2"
+                    >
+                      <span className="w-1 self-stretch rounded-full shrink-0" style={{ background: colors.border }} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[14px] font-medium text-ink truncate">{b.guestName}</span>
+                        <span className="block text-xs text-ink3 mt-0.5">
+                          <span className="font-mono text-gold">{room?.number}</span> · {room?.type} · {t('nights', { count: nights })}
+                        </span>
+                      </span>
+                      <span
+                        className="shrink-0 text-xs font-semibold rounded-md px-2 py-0.5 border"
+                        style={{ background: colors.bg, color: colors.text, borderColor: colors.border }}
+                      >
+                        {t(`day.${kind}`)}
+                      </span>
+                    </button>
+                  )
+                })}
+
+                {staying.length > 0 && (
+                  <div className="px-4 py-2.5 flex flex-wrap gap-1.5 items-center">
+                    <span className="text-xs text-ink3 mr-0.5">{t('day.inHouse')}</span>
+                    {staying.map(b => {
+                      const colors = STATUS_COLORS[b.status] || STATUS_COLORS.confirmed
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          onClick={() => onOpen(b)}
+                          className="inline-flex items-center gap-1.5 max-w-full min-h-9 pointer-coarse:min-h-11 rounded-lg border px-2.5 text-xs font-medium"
+                          style={{ background: colors.bg, color: colors.text, borderColor: colors.border }}
+                        >
+                          <span className="font-mono font-bold">{roomOf(b.roomId)?.number}</span>
+                          <span className="truncate">{b.guestName}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
+        )
+      })}
     </div>
   )
 }

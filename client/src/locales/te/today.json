@@ -1,0 +1,32 @@
+{
+  "title": "ఈరోజు",
+  "kpi": {
+    "arrivals": "రాకలు",
+    "arrivalsHint": "ఈరోజు రావలసినవారు",
+    "departures": "నిష్క్రమణలు",
+    "departuresHint": "చెక్-అవుట్ చేయవలసినవారు",
+    "inHouse": "బసలో ఉన్నవారు",
+    "inHouseHint": "ఈ రాత్రి బస చేస్తున్నవారు",
+    "openMaintenance": "తెరిచి ఉన్న నిర్వహణ",
+    "openMaintenanceHint": "పరిష్కరించవలసిన టికెట్‌లు"
+  },
+  "expectedArrivals": "రావలసిన అతిథులు",
+  "departures": "నిష్క్రమణలు",
+  "needsAttention": "శ్రద్ధ అవసరం",
+  "viewBookings": "బుకింగ్‌లు చూడండి",
+  "noArrivals": "రాకలు ఏవీ షెడ్యూల్ కాలేదు",
+  "noCheckouts": "బాకీ చెక్-అవుట్‌లు లేవు",
+  "roomNo": "గది {{number}}",
+  "checkIn": "చెక్-ఇన్ చేయండి",
+  "checkOut": "చెక్-అవుట్ చేయండి",
+  "overdueCheckouts": "ఆలస్యమైన చెక్-అవుట్‌లు",
+  "cancellationsToday": "ఈరోజు రద్దులు",
+  "openMaintenanceCount": "తెరిచి ఉన్న నిర్వహణ ({{count}})",
+  "noOpenTickets": "తెరిచి ఉన్న టికెట్‌లు లేవు",
+  "priority": {
+    "urgent": "అత్యవసరం",
+    "high": "అధికం",
+    "medium": "మధ్యస్థం",
+    "low": "తక్కువ"
+  }
+}

@@ -6,6 +6,31 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-11-05 · Responsive redesign, page header, Settings redesign, 4 languages
+
+Same colours and font throughout; phone, tablet and desktop layouts for every page.
+
+- **Responsive redesign** — Tailwind breakpoints replace the old !important media patches (`index.css`). Phone
+  bottom nav (`layout/BottomNav.jsx`), tablet icon rail, popups as bottom sheets on phones, tables as cards on
+  phones (`ui-tw/DataTable`), every module page reworked. Playwright phone/tablet projects + `tests/responsive.spec.js`.
+- **KPI cards** — one compact design (`ui-tw/StatCard.jsx`) used by every page; `ui/StatCard` wraps it.
+- **Page header (Redux)** — `store/slices/pageHeaderSlice.js` + `usePageHeader` (`store/hooks.js`) +
+  `utils/headerRegistry.js` (handlers/icons outside the store) + `layout/PageHeader.jsx`: title, search and every
+  page-level button in one sticky bar. Top-bar slots and hard-coded top-bar buttons removed (`TopbarSlot.jsx` deleted).
+- **Top bar** — property switcher redesigned (no code chip, no border; initials list; archived grouped; phone sheet),
+  date chip, Ctrl K search bar. All popovers/dropdowns on one layer (z-1600).
+- **Portfolio** — auto-refresh every minute and on tab focus; forecast (7/14/30 nights) and collections
+  (7/30/90 days, month) pickers; Filters popover (properties, occupancy band, needs attention, archived) with chips.
+  `canSeePortfolio` now requires reports access at 2+ properties (matches the server).
+- **Settings** — shared `settings/settingsUi.jsx` (Section, RowDelete, TablePager) + `usePaged.js`; every section's
+  actions and its single Save live in the page header; paginated tables; full-width layout.
+- **Languages** — English, Hindi, Marathi, Telugu via i18next (`src/i18n`, `src/locales/<lang>/<ns>.json`, 26
+  namespaces). Switcher in the top bar, user menu, Settings → Preferences, login and guest pages. Dates via
+  `appLocale()` (0–9 digits); money always Indian grouping. Noto Sans Devanagari / Telugu as fallback fonts.
+- Demo data (`api/mockData.js`) matches real API shapes; the demo owner has properties.
+
+---
+
 # Session — 2026-11-01 · PG rent on calendar months
 
 - `utils/beds.js`, `bookings/BookingForm.jsx` — the summary shows the rent billed at move-in (first month by

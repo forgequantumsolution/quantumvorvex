@@ -1,0 +1,61 @@
+{
+  "title": "भोजन विकल्प",
+  "subtitle": "मील प्लान, चालू ऑर्डर और भोजन से आय",
+  "addPlan": "मील प्लान जोड़ें",
+  "loadFailed": "भोजन का डेटा लोड नहीं हो सका। जाँचें कि सर्वर चल रहा है।",
+  "tabs": {
+    "catalog": "मील कैटलॉग",
+    "orders": "चालू ऑर्डर",
+    "revenue": "आय"
+  },
+  "planCount_one": "{{count}} मील प्लान",
+  "planCount_other": "{{count}} मील प्लान",
+  "guestsOnPlan_one": "मील प्लान पर {{count}} अतिथि",
+  "guestsOnPlan_other": "मील प्लान पर {{count}} अतिथि",
+  "clickActivate": "चालू करने के लिए क्लिक करें",
+  "clickDeactivate": "बंद करने के लिए क्लिक करें",
+  "billing": {
+    "one-time": "एक बार",
+    "weekly": "साप्ताहिक",
+    "monthly": "मासिक",
+    "daily": "दैनिक",
+    "none": "कोई नहीं"
+  },
+  "empty": {
+    "noPlans": "अभी कोई मील प्लान नहीं",
+    "noPlansHint": "अतिथि को भोजन देने के लिए प्लान जोड़ें।",
+    "noOrders": "कोई चालू ऑर्डर नहीं"
+  },
+  "form": {
+    "title": "मील प्लान जोड़ें",
+    "add": "प्लान जोड़ें",
+    "name": "प्लान का नाम",
+    "namePlaceholder": "जैसे: सिर्फ़ नाश्ता",
+    "description": "विवरण",
+    "descriptionPlaceholder": "शामिल भोजन का छोटा विवरण"
+  },
+  "orders": {
+    "plan": "मील प्लान",
+    "billing": "बिलिंग",
+    "action": "कार्रवाई",
+    "remind": "याद दिलाएँ"
+  },
+  "revenue": {
+    "total": "भोजन से आय",
+    "thisMonth": "इस महीने",
+    "subscribers": "चालू सब्सक्राइबर",
+    "subscribersHint": "मील प्लान वाले अतिथि",
+    "avg": "प्रति अतिथि औसत",
+    "avgHint": "प्रति चालू सब्सक्राइबर",
+    "byPlan": "मील प्लान के हिसाब से आय",
+    "noData": "आय का कोई डेटा नहीं"
+  },
+  "toast": {
+    "added": "मील प्लान \"{{name}}\" जोड़ा गया",
+    "addFailed": "मील प्लान नहीं जोड़ा जा सका",
+    "updateFailed": "प्लान अपडेट नहीं हो सका",
+    "removed": "\"{{name}}\" हटाया गया",
+    "deleteFailed": "प्लान नहीं हटाया जा सका",
+    "reminderSent": "{{guest}} को रिमाइंडर भेजा गया"
+  }
+}

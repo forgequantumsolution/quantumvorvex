@@ -1,0 +1,32 @@
+{
+  "title": "Today",
+  "kpi": {
+    "arrivals": "Arrivals",
+    "arrivalsHint": "Expected today",
+    "departures": "Departures",
+    "departuresHint": "Due to check out",
+    "inHouse": "In-house",
+    "inHouseHint": "Staying tonight",
+    "openMaintenance": "Open maintenance",
+    "openMaintenanceHint": "Tickets to resolve"
+  },
+  "expectedArrivals": "Expected Arrivals",
+  "departures": "Departures",
+  "needsAttention": "Needs Attention",
+  "viewBookings": "View bookings",
+  "noArrivals": "No arrivals scheduled",
+  "noCheckouts": "No checkouts due",
+  "roomNo": "Room {{number}}",
+  "checkIn": "Check in",
+  "checkOut": "Check out",
+  "overdueCheckouts": "Overdue checkouts",
+  "cancellationsToday": "Cancellations today",
+  "openMaintenanceCount": "Open maintenance ({{count}})",
+  "noOpenTickets": "No open tickets",
+  "priority": {
+    "urgent": "urgent",
+    "high": "high",
+    "medium": "medium",
+    "low": "low"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "title": "फ्लोअर प्लॅन",
+  "subtitle": "मजल्यानुसार रूम लेआउट",
+  "legend": "संकेत",
+  "occupiedOf": "{{occupied}}/{{total}} भरलेल्या",
+  "noRooms": "एकही रूम सापडली नाही",
+  "floorN": "मजला {{n}}",
+  "roomN": "रूम {{number}}",
+  "roomCount_one": "{{count}} रूम",
+  "roomCount_other": "{{count}} रूम",
+  "status": {
+    "available": "उपलब्ध",
+    "occupied": "भरलेली",
+    "maintenance": "मेंटेनन्स",
+    "reserved": "आरक्षित"
+  },
+  "detail": {
+    "roomNumber": "रूम नंबर",
+    "floor": "मजला",
+    "type": "प्रकार",
+    "dailyRate": "दैनिक दर",
+    "currentOccupant": "सध्याचे रहिवासी"
+  }
+}

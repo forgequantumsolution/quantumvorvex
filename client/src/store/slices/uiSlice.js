@@ -11,7 +11,7 @@ export function panelFromUrl(fallback = 'today') {
 
 const initialState = {
   darkMode: false,
-  sidebarOpen: false,       // mobile drawer open/closed
+  sidebarOpen: false,       // phone drawer / tablet rail expanded
   sidebarCollapsed: false,  // desktop icon-rail collapse
   // Deep links / refreshes land on the panel in the URL, not always 'today'.
   activePanel: panelFromUrl('today'),
@@ -35,6 +35,7 @@ const uiSlice = createSlice({
     setDarkMode: (state, { payload }) => { state.darkMode = payload },
     toggleDarkMode: (state) => { state.darkMode = !state.darkMode },
     toggleSidebar: (state) => { state.sidebarOpen = !state.sidebarOpen },
+    openSidebar: (state) => { state.sidebarOpen = true },
     closeSidebar: (state) => { state.sidebarOpen = false },
     toggleSidebarCollapsed: (state) => { state.sidebarCollapsed = !state.sidebarCollapsed },
     setSidebarCollapsed: (state, { payload }) => { state.sidebarCollapsed = payload },
@@ -59,6 +60,7 @@ export const {
   setDarkMode,
   toggleDarkMode,
   toggleSidebar,
+  openSidebar,
   closeSidebar,
   toggleSidebarCollapsed,
   setSidebarCollapsed,

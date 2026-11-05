@@ -1,0 +1,82 @@
+{
+  "title": "डॅशबोर्ड",
+  "subtitle": "{{hotel}} — आढावा",
+  "shortcutsBtn": "शॉर्टकट",
+  "stats": {
+    "totalRooms": "एकूण रूम",
+    "allInventory": "सर्व रूम",
+    "available": "उपलब्ध",
+    "occupied": "भरलेल्या",
+    "pctOfTotal": "एकूणच्या {{pct}}%",
+    "maintenance": "देखभाल",
+    "underService": "सर्व्हिसमध्ये",
+    "monthlyRevenue": "मासिक उत्पन्न",
+    "occupancyRate": "ऑक्युपन्सी दर",
+    "thisMonth": "या महिन्यात"
+  },
+  "charts": {
+    "monthlyRevenue": "मासिक उत्पन्न",
+    "occupancyTrend": "ऑक्युपन्सी ट्रेंड",
+    "last6Months": "मागील 6 महिने"
+  },
+  "newCount_one": "{{count}} नवीन",
+  "newCount_other": "{{count}} नवीन",
+  "hoursAgo_one": "{{count}} तासापूर्वी",
+  "hoursAgo_other": "{{count}} तासांपूर्वी",
+  "notif": {
+    "paymentDue_one": "रूम {{room}} चे पेमेंट {{count}} दिवसात देय",
+    "paymentDue_other": "रूम {{room}} चे पेमेंट {{count}} दिवसांत देय",
+    "maintTomorrow": "रूम {{room}} ची देखभाल उद्या नियोजित",
+    "newCheckIn": "नवीन Check-in: रूम {{room}} — {{name}}",
+    "idPending": "रूम {{room}} चे ID पडताळणी बाकी"
+  },
+  "occupancyByType": "रूम प्रकारानुसार ऑक्युपन्सी",
+  "recentCheckIns": "अलीकडील Check-in",
+  "upcomingCheckouts": "आगामी Check-out",
+  "since": "{{date}} पासून",
+  "checkout": "Check-out",
+  "extend": "वाढवा",
+  "table": {
+    "type": "प्रकार",
+    "tags": "टॅग"
+  },
+  "type": {
+    "monthly": "मासिक",
+    "daily": "दैनिक"
+  },
+  "status": {
+    "active": "सक्रिय",
+    "due": "देय"
+  },
+  "toast": {
+    "checkout": "{{name}} चे Check-out सुरू केले — रूम {{room}}",
+    "extended": "{{name}} चा मुक्काम वाढवला — रूम {{room}}"
+  },
+  "timeline": {
+    "title": "आजची टाइमलाइन",
+    "doneCount": "{{total}} पैकी {{done}} कामे पूर्ण",
+    "urgent": "तातडीचे",
+    "hkShift": "हाउसकीपिंग शिफ्ट सुरू झाली",
+    "checkedIn": "{{name}} यांनी Check-in केले — रूम {{room}}",
+    "paid": "{{invoice}} — {{name}} यांनी {{amount}} भरले",
+    "checkoutDue": "{{name}} यांचे Check-out बाकी — रूम {{room}}",
+    "arriving": "{{name}} येत आहेत — रूम {{room}}",
+    "acCheck": "देखभाल: रूम {{room}} AC तपासणी",
+    "nightAudit": "नाइट ऑडिट बाकी"
+  },
+  "shortcuts": {
+    "title": "कीबोर्ड शॉर्टकट",
+    "hint": "कर्सर इनपुट फील्डमध्ये नसतानाच शॉर्टकट चालतात.",
+    "dashboard": "डॅशबोर्ड",
+    "rooms": "रूम",
+    "floorPlan": "फ्लोअर प्लॅन",
+    "reports": "अहवाल",
+    "checkIn": "Check-in",
+    "guests": "पाहुणे",
+    "billing": "बिलिंग",
+    "settings": "सेटिंग्ज",
+    "darkMode": "डार्क मोड बदला",
+    "closeModal": "विंडो बंद करा",
+    "openShortcuts": "शॉर्टकट उघडा"
+  }
+}

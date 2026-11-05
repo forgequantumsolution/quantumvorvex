@@ -1,4 +1,6 @@
 // Props: label, error, children, required, className
+// Full width of its grid cell; the control inside should be .form-input /
+// .form-select / .form-textarea (16px text on phones, see index.css).
 export default function FormField({
   label,
   error,
@@ -7,7 +9,7 @@ export default function FormField({
   className = '',
 }) {
   return (
-    <div className={`flex flex-col gap-[5px] ${className}`}>
+    <div className={`flex flex-col gap-[5px] min-w-0 ${className}`}>
       {label && (
         <label className="form-label">
           {label}
@@ -18,7 +20,7 @@ export default function FormField({
       )}
       {children}
       {error && (
-        <span className="text-[11.5px] text-danger-text font-medium">
+        <span className="text-[12px] text-danger-text font-medium">
           {error}
         </span>
       )}

@@ -2,9 +2,12 @@
  * Labelled form control. Renders an <input>, <select> (when `options` given),
  * or <textarea> (when `textarea`). Shows an optional `error` line, or a muted
  * `hint` line when there's no error.
+ *
+ * Always full width of its grid cell. Phones get 16px text (smaller makes iOS
+ * zoom on focus) and a 44px-tall control; from sm up it's the compact size.
  */
 const baseControl =
-  'w-full bg-surface border border-line2 rounded-lg px-3 py-2 text-sm text-ink ' +
+  'w-full bg-surface border border-line2 rounded-lg px-3 py-2.5 sm:py-2 text-base sm:text-sm text-ink min-h-11 sm:min-h-0 ' +
   'placeholder:text-ink3 focus:outline-none focus:border-gold focus:ring-2 focus:ring-gold/20 ' +
   'disabled:opacity-60'
 
@@ -22,7 +25,7 @@ export default function Field({
   ...props
 }) {
   return (
-    <label className={`block ${className}`}>
+    <label className={`block min-w-0 ${className}`}>
       {label && (
         <span className="block text-xs font-medium text-ink2 mb-1.5">
           {label} {required && <span className="text-danger">*</span>}
@@ -48,8 +51,8 @@ export default function Field({
       )}
 
       {error
-        ? <span className="block text-[11.5px] text-danger mt-1">{error}</span>
-        : hint && <span className="block text-[11.5px] text-ink3 mt-1">{hint}</span>}
+        ? <span className="block text-[12px] text-danger mt-1">{error}</span>
+        : hint && <span className="block text-[12px] text-ink3 mt-1">{hint}</span>}
     </label>
   )
 }

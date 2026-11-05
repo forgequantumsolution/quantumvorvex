@@ -1,0 +1,98 @@
+{
+  "title": "Maintenance",
+  "subtitle": "Room issues, repairs and their status",
+  "searchPlaceholder": "Search room, title, category",
+  "newTicket": "New ticket",
+  "tickets": "Tickets",
+  "shown": "{{count}} of {{total}} shown",
+  "loadFailed": "Could not load tickets. Make sure the backend is running.",
+  "roomNo": "Room {{number}}",
+  "floorNo": "Floor {{floor}}",
+  "unassigned": "Unassigned",
+  "deleteTicket": "Delete ticket",
+  "stats": {
+    "total": "Total tickets",
+    "urgent": "Urgent unresolved"
+  },
+  "status": {
+    "Open": "Open",
+    "In Progress": "In Progress",
+    "Resolved": "Resolved"
+  },
+  "priority": {
+    "Low": "Low",
+    "Medium": "Medium",
+    "High": "High",
+    "Urgent": "Urgent"
+  },
+  "category": {
+    "Plumbing": "Plumbing",
+    "Electrical": "Electrical",
+    "HVAC": "HVAC",
+    "Furniture": "Furniture",
+    "Housekeeping": "Housekeeping",
+    "Other": "Other"
+  },
+  "reporter": {
+    "Front Desk": "Front Desk",
+    "Housekeeping": "Housekeeping",
+    "Guest": "Guest",
+    "Manager": "Manager"
+  },
+  "empty": {
+    "noMatch": "No matching tickets",
+    "none": "No tickets here",
+    "fetching": "Fetching tickets.",
+    "tryDifferent": "Try a different search.",
+    "createHint": "Create a ticket to track an issue."
+  },
+  "toast": {
+    "created": "Ticket {{ticketNo}} created for Room {{room}}",
+    "createFailed": "Could not create ticket",
+    "marked": "Ticket marked {{status}}",
+    "updateFailed": "Update failed",
+    "deleted": "Ticket {{ticketNo}} deleted",
+    "deleteFailed": "Could not delete ticket"
+  },
+  "delete": {
+    "title": "Delete Ticket",
+    "before": "Permanently delete ticket",
+    "after": "? This cannot be undone."
+  },
+  "form": {
+    "title": "New Maintenance Ticket",
+    "subtitle": "Log an issue for the maintenance team",
+    "create": "Create Ticket",
+    "selectRoom": "Select a room",
+    "titleRequired": "A short title is required",
+    "loadingRooms": "Loading rooms…",
+    "noRooms": "No rooms found",
+    "category": "Category",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Short summary",
+    "description": "Description",
+    "descriptionPlaceholder": "Details of the issue…",
+    "priority": "Priority",
+    "assignTo": "Assign to",
+    "assignPlaceholder": "Technician (optional)",
+    "reportedBy": "Reported by"
+  },
+  "guest": {
+    "title": "Report an Issue",
+    "missingCode": "This link is missing its room code.",
+    "unknownCode": "This QR code is not recognised.",
+    "askFrontDesk": "Please ask the front desk for help.",
+    "thanks": "Thank you!",
+    "sent": "Your request has been sent to our team.",
+    "whatNeedsAttention": "What needs attention?",
+    "issue": "Issue",
+    "issuePlaceholder": "e.g. AC not cooling",
+    "details": "Details",
+    "detailsPlaceholder": "Anything that helps us fix it faster",
+    "describeIssue": "Please describe the issue.",
+    "submitFailed": "Could not submit. Please try again.",
+    "sending": "Sending…",
+    "submit": "Submit Request",
+    "footer": "No login needed · Your room staff will be notified"
+  }
+}

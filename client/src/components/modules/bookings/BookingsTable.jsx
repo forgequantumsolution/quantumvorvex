@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
-  LuTrash2, LuPencil, LuEllipsisVertical, LuDownload, LuCalendarPlus, LuX, LuCheck, LuReceipt, LuLogOut, LuUndo2,
+  LuTrash2, LuPencil, LuDownload, LuCalendarPlus, LuX, LuCheck, LuReceipt, LuLogOut, LuUndo2,
 } from 'react-icons/lu'
-import { StatusBadge, Button, EmptyState } from '../../ui-tw'
+import { StatusBadge, Button, EmptyState, ActionMenu } from '../../ui-tw'
 import { formatCurrency, formatDate } from '../../../utils/format'
 import { dateRangeLabel, splitNames, splitPhones, stayLabel } from '../../../utils/booking'
 
@@ -11,96 +11,6 @@ const initials = (name) =>
 
 // Statuses the server still accepts a general edit for (see updateBooking).
 const EDITABLE = ['Pending', 'Confirmed', 'CheckedIn']
-
-/**
- * Overflow ("⋮") menu for a row's secondary actions. The list is rendered
- * `position: fixed` and anchored to the button so it escapes the table's
- * horizontal scroll container, which would otherwise clip it; that also means it
- * can't follow the row, so any scroll or resize closes it.
- */
-function RowMenu({ items, disabled }) {
-  const visible = items.filter(Boolean)
-  const [open, setOpen] = useState(false)
-  const [pos, setPos] = useState({ top: 0, right: 0 })
-  const btnRef = useRef(null)
-  const menuRef = useRef(null)
-
-  useEffect(() => {
-    if (!open) return
-    const close = () => setOpen(false)
-    const onDown = (e) => {
-      if (menuRef.current?.contains(e.target) || btnRef.current?.contains(e.target)) return
-      close()
-    }
-    const onKey = (e) => e.key === 'Escape' && close()
-    document.addEventListener('mousedown', onDown)
-    document.addEventListener('keydown', onKey)
-    window.addEventListener('scroll', close, true)
-    window.addEventListener('resize', close)
-    return () => {
-      document.removeEventListener('mousedown', onDown)
-      document.removeEventListener('keydown', onKey)
-      window.removeEventListener('scroll', close, true)
-      window.removeEventListener('resize', close)
-    }
-  }, [open])
-
-  if (!visible.length) return null
-
-  const toggle = () => {
-    const r = btnRef.current.getBoundingClientRect()
-    const h = visible.length * 34 + 10
-    const room = window.innerHeight - r.bottom
-    setPos({
-      top: room < h + 12 ? Math.max(8, r.top - h - 6) : r.bottom + 6,
-      right: Math.max(8, window.innerWidth - r.right),
-    })
-    setOpen((o) => !o)
-  }
-
-  return (
-    <>
-      <button
-        ref={btnRef}
-        type="button"
-        disabled={disabled}
-        onClick={toggle}
-        aria-label="More actions"
-        aria-expanded={open}
-        className={`shrink-0 w-8 h-8 rounded-lg border flex items-center justify-center transition-colors
-                    disabled:opacity-50 disabled:cursor-not-allowed ${
-                      open ? 'border-gold text-gold bg-gold-bg' : 'border-line2 text-ink3 hover:text-ink hover:border-line2'
-                    }`}
-      >
-        <LuEllipsisVertical size={15} />
-      </button>
-
-      {open && (
-        <div
-          ref={menuRef}
-          style={{ top: pos.top, right: pos.right }}
-          className="fixed z-[300] min-w-[180px] py-1 rounded-xl border border-line bg-surface shadow-lift
-                     animate-[menuIn_.12s_ease-out]"
-        >
-          {visible.map((it) => (
-            <button
-              key={it.label}
-              type="button"
-              onClick={() => { setOpen(false); it.onClick() }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-[13px] text-left transition-colors ${
-                it.danger ? 'text-danger-text hover:bg-danger-bg' : 'text-ink2 hover:bg-surface2 hover:text-ink'
-              }`}
-            >
-              <span className="text-ink3 shrink-0">{it.icon}</span>
-              {it.label}
-            </button>
-          ))}
-          <style>{`@keyframes menuIn { from { opacity: 0; transform: translateY(-4px) } to { opacity: 1; transform: none } }`}</style>
-        </div>
-      )}
-    </>
-  )
-}
 
 // ── Cell pieces, shared by the desktop table and the mobile cards ──
 
@@ -118,11 +28,11 @@ function Guest({ b }) {
         <div className="font-medium text-ink truncate" title={names.join(', ')}>
           {names[0] || b.guestName}
           {names.length > 1 && (
-            <span className="ml-1 text-[11px] font-normal text-ink3">+{names.length - 1}</span>
+            <span className="ml-1 text-xs font-normal text-ink3">+{names.length - 1}</span>
           )}
         </div>
-        <div className="flex items-center gap-2 mt-0.5 text-xs text-ink3 whitespace-nowrap">
-          <span className="font-mono">{b.bookingNo}</span>
+        <div className="flex items-center gap-2 mt-0.5 text-xs text-ink3 whitespace-nowrap min-w-0">
+          <span className="font-mono shrink-0">{b.bookingNo}</span>
           {phones[0] && (
             <span className="truncate" title={phones.join(', ')}>
               · {phones[0]}{phones.length > 1 ? ` +${phones.length - 1}` : ''}
@@ -135,8 +45,9 @@ function Guest({ b }) {
 }
 
 function Room({ b }) {
+  const { t } = useTranslation('bookings')
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 min-w-0">
       <span className="shrink-0 inline-flex items-center rounded-md border border-line bg-surface2
                        px-2 py-0.5 font-mono text-[12.5px] text-ink">
         {b.roomNumber}
@@ -144,11 +55,13 @@ function Room({ b }) {
       {b.bed ? (
         // PG bed stay: the bed is what was let, so it replaces the head count.
         <span className="text-xs text-ink3 truncate">
-          <span className="font-medium text-gold">Bed {b.bed}</span> · {b.roomType}
+          <span className="font-medium text-gold">{t('bedN', { bed: b.bed })}</span> · {b.roomType}
         </span>
       ) : (
         <span className="text-xs text-ink3 truncate">
-          {b.roomType}{(b.adults || b.children) ? ` · ${b.adults || 1}A${b.children ? ` ${b.children}C` : ''}` : ''}
+          {b.roomType}{(b.adults || b.children)
+            ? ` · ${t('table.adultsShort', { count: b.adults || 1 })}${b.children ? ` ${t('table.childrenShort', { count: b.children })}` : ''}`
+            : ''}
         </span>
       )}
     </div>
@@ -158,11 +71,12 @@ function Room({ b }) {
 // `nowrap` keeps the range on one line in the table; cards are narrower, so there
 // the dates are allowed to break rather than run past the card's edge.
 function Stay({ b, nowrap = true }) {
+  const { t } = useTranslation('bookings')
   return (
     <div className="min-w-0">
       <div className={`text-ink ${nowrap ? 'whitespace-nowrap' : ''}`}>{dateRangeLabel(b)}</div>
       <div className={`text-xs text-ink3 mt-0.5 ${b.tenancy ? '' : 'capitalize'}`}>
-        {b.tenancy ? stayLabel(b) : `${b.stayType} · ${stayLabel(b)}`}
+        {b.tenancy ? stayLabel(b) : `${t(`stayType.${b.stayType}`, { defaultValue: b.stayType })} · ${stayLabel(b)}`}
       </div>
     </div>
   )
@@ -170,27 +84,29 @@ function Stay({ b, nowrap = true }) {
 
 // After move-out: money still to hand back, or what was handed back.
 function RefundNote({ b }) {
-  if (b.refundable > 0) return <div className="text-xs text-warning-text font-medium">{formatCurrency(b.refundable)} refund pending</div>
-  if (b.refundAmount > 0) return <div className="text-xs text-ink3">{formatCurrency(b.refundAmount)} refunded</div>
+  const { t } = useTranslation('bookings')
+  if (b.refundable > 0) return <div className="text-xs text-warning-text font-medium">{t('table.refundPending', { amount: formatCurrency(b.refundable) })}</div>
+  if (b.refundAmount > 0) return <div className="text-xs text-ink3">{t('table.refunded', { amount: formatCurrency(b.refundAmount) })}</div>
   return null
 }
 
 function Amount({ b, align = 'right' }) {
+  const { t } = useTranslation('bookings')
   const due = Number(b.balanceDue) > 0
   if (b.tenancy) {
     // A tenancy has no stay total: show the monthly rent and the running dues.
     return (
       <div className={`flex flex-col gap-1 ${align === 'right' ? 'items-end' : 'items-start'}`}>
         <span className="text-ink font-medium tabular-nums">
-          {formatCurrency(b.roomRate)}<span className="text-xs font-normal text-ink3">/month</span>
+          {formatCurrency(b.roomRate)}<span className="text-xs font-normal text-ink3">{t('table.perMonth')}</span>
         </span>
         <div className={`text-xs ${b.rentOverdue > 0 ? 'text-danger-text font-medium' : due ? 'text-warning-text' : 'text-ink3'}`}>
           {b.rentOverdue > 0
-            ? `${formatCurrency(b.rentOverdue)} overdue · ${b.overdueDays}d`
-            : due ? `${formatCurrency(b.balanceDue)} rent due`
-            : b.status === 'CheckedIn' ? 'Rent up to date'
-              : b.status === 'CheckedOut' ? 'Settled'
-              : b.advance > 0 ? `${formatCurrency(b.advance)} advance` : 'Billed from move-in'}
+            ? t('table.overdue', { amount: formatCurrency(b.rentOverdue), days: b.overdueDays })
+            : due ? t('table.rentDue', { amount: formatCurrency(b.balanceDue) })
+            : b.status === 'CheckedIn' ? t('table.rentUpToDate')
+              : b.status === 'CheckedOut' ? t('table.settled')
+              : b.advance > 0 ? t('table.advance', { amount: formatCurrency(b.advance) }) : t('table.billedFromMoveIn')}
         </div>
         <RefundNote b={b} />
       </div>
@@ -203,25 +119,30 @@ function Amount({ b, align = 'right' }) {
         <StatusBadge status={b.paymentStatus} dot={false} />
       </div>
       <div className={`text-xs ${due ? 'text-warning-text' : 'text-ink3'}`}>
-        {due ? `${formatCurrency(b.balanceDue)} due` : 'Fully paid'}
+        {due ? t('table.due', { amount: formatCurrency(b.balanceDue) }) : t('table.fullyPaid')}
       </div>
       <RefundNote b={b} />
     </div>
   )
 }
 
+// Why/when a booking ended — under the badge in the table, on its own line in cards.
+function StatusNote({ b, className = '' }) {
+  const { t } = useTranslation('bookings')
+  if (b.status === 'Cancelled' && b.cancelReason) {
+    return <div className={`text-xs text-ink3 truncate ${className}`} title={b.cancelReason}>{b.cancelReason}</div>
+  }
+  if (b.status === 'CheckedOut' && b.checkedOutAt) {
+    return <div className={`text-xs text-ink3 ${className}`}>{t('table.outOn', { date: formatDate(b.checkedOutAt) })}</div>
+  }
+  return null
+}
+
 function Status({ b }) {
   return (
     <div>
       <StatusBadge status={b.status} />
-      {b.status === 'Cancelled' && b.cancelReason && (
-        <div className="text-[11px] text-ink3 mt-1 max-w-[160px] truncate" title={b.cancelReason}>
-          {b.cancelReason}
-        </div>
-      )}
-      {b.status === 'CheckedOut' && b.checkedOutAt && (
-        <div className="text-[11px] text-ink3 mt-1">Out · {formatDate(b.checkedOutAt)}</div>
-      )}
+      <StatusNote b={b} className="mt-1 max-w-[160px]" />
     </div>
   )
 }
@@ -232,39 +153,40 @@ function Status({ b }) {
  * feel cramped and impossible to fit on a laptop.
  */
 function Actions({ b, busy, h }) {
+  const { t } = useTranslation('bookings')
   // A monthly tenancy with rent owing: collecting it is the everyday action.
   const rentDue = b.tenancy && b.status === 'CheckedIn' && Number(b.balanceDue) > 0 && h.onRent
   const primary =
     rentDue
-      ? { label: 'Collect rent', onClick: () => h.onRent(b) }
+      ? { label: t('actions.collectRent'), onClick: () => h.onRent(b) }
       : b.status === 'CheckedIn'
-      ? { label: 'Check-out', onClick: () => h.onCheckOut(b) }
+      ? { label: t('actions.checkOut'), onClick: () => h.onCheckOut(b) }
       : ['Pending', 'Confirmed'].includes(b.status)
-        ? { label: 'Check-in', onClick: () => h.onCheckIn(b) }
+        ? { label: t('actions.checkIn'), onClick: () => h.onCheckIn(b) }
         : b.refundable > 0 && h.onRefund
-          ? { label: 'Refund', icon: <LuUndo2 size={14} />, onClick: () => h.onRefund(b) }
+          ? { label: t('actions.refund'), icon: <LuUndo2 size={14} />, onClick: () => h.onRefund(b) }
           : null
 
   const menu = [
     // Rent is collected while the tenant lives here; after move-out the invoice says it all.
     b.tenancy && h.onRent && b.status === 'CheckedIn' && !rentDue &&
-      { label: 'Rent & payments', icon: <LuReceipt size={14} />, onClick: () => h.onRent(b) },
+      { label: t('actions.rentPayments'), icon: <LuReceipt size={14} />, onClick: () => h.onRent(b) },
     rentDue &&
-      { label: 'Check-out', icon: <LuLogOut size={14} />, onClick: () => h.onCheckOut(b) },
+      { label: t('actions.checkOut'), icon: <LuLogOut size={14} />, onClick: () => h.onCheckOut(b) },
     b.status === 'Pending' && h.onConfirm &&
-      { label: 'Confirm booking', icon: <LuCheck size={14} />, onClick: () => h.onConfirm(b) },
+      { label: t('actions.confirm'), icon: <LuCheck size={14} />, onClick: () => h.onConfirm(b) },
     h.onEdit && EDITABLE.includes(b.status) &&
-      { label: 'Edit details', icon: <LuPencil size={14} />, onClick: () => h.onEdit(b) },
+      { label: t('actions.edit'), icon: <LuPencil size={14} />, onClick: () => h.onEdit(b) },
     // A tenancy has no end date to extend — it runs until move-out.
     h.onExtend && !b.tenancy && ['Confirmed', 'CheckedIn'].includes(b.status) &&
-      { label: 'Extend stay', icon: <LuCalendarPlus size={14} />, onClick: () => h.onExtend(b) },
+      { label: t('actions.extend'), icon: <LuCalendarPlus size={14} />, onClick: () => h.onExtend(b) },
     // A tenancy's invoice lists each rent month billed (once it has been billed).
     h.onInvoice && (b.tenancy ? ['CheckedIn', 'CheckedOut'] : ['Confirmed', 'CheckedIn', 'CheckedOut']).includes(b.status) &&
-      { label: 'Download invoice', icon: <LuDownload size={14} />, onClick: () => h.onInvoice(b) },
+      { label: t('actions.invoice'), icon: <LuDownload size={14} />, onClick: () => h.onInvoice(b) },
     h.onCancel && ['Pending', 'Confirmed'].includes(b.status) &&
-      { label: 'Cancel booking', icon: <LuX size={14} />, onClick: () => h.onCancel(b), danger: true },
+      { label: t('actions.cancel'), icon: <LuX size={14} />, onClick: () => h.onCancel(b), danger: true },
     h.onDelete &&
-      { label: 'Delete booking', icon: <LuTrash2 size={14} />, onClick: () => h.onDelete(b), danger: true },
+      { label: t('actions.delete'), icon: <LuTrash2 size={14} />, onClick: () => h.onDelete(b), danger: true },
   ]
 
   return (
@@ -274,12 +196,13 @@ function Actions({ b, busy, h }) {
           {busy ? '…' : primary.label}
         </Button>
       )}
-      <RowMenu items={menu} disabled={busy} />
+      <ActionMenu items={menu} disabled={busy} />
     </div>
   )
 }
 
-const COLUMNS = ['Booking', 'Room', 'Stay', 'Amount', 'Status', '']
+// Header keys in bookings:table.columns; the last column (actions) has no header.
+const COLUMNS = ['booking', 'room', 'stay', 'amount', 'status', '']
 
 function SkeletonRows({ rows = 5 }) {
   return Array.from({ length: rows }, (_, i) => (
@@ -295,32 +218,59 @@ function SkeletonRows({ rows = 5 }) {
 
 /**
  * One booking as a card. `boxed` gives it its own border for the grid layout;
- * without it the cards sit in a divided list (the narrow-screen fallback).
+ * without it the cards sit in a divided list (the phone fallback). Guest and
+ * status lead, room + stay sit side by side, and the money shares the footer
+ * with the actions so the primary button is always on the card's last line.
  */
 function BookingCard({ b, busy, h, boxed }) {
+  const { t } = useTranslation('bookings')
   return (
-    <article className={boxed ? 'rounded-xl border border-line bg-surface p-4 transition-colors hover:border-line2' : 'p-4'}>
+    <article className={boxed ? 'rounded-xl border border-line bg-surface p-4 transition-colors hover:border-line2 min-w-0' : 'px-4 py-4 min-w-0'}>
       <div className="flex items-start justify-between gap-3">
-        <Guest b={b} />
-        <div className="shrink-0"><Status b={b} /></div>
+        <div className="flex-1 min-w-0"><Guest b={b} /></div>
+        <div className="shrink-0"><StatusBadge status={b.status} /></div>
       </div>
+      <StatusNote b={b} className="mt-1.5 pl-12" />
 
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 mt-3.5 pt-3.5 border-t border-line">
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 mt-3">
         <div className="min-w-0">
-          <dt className="text-[10.5px] uppercase tracking-wider text-ink3 mb-1">Room</dt>
-          <dd><Room b={b} /></dd>
+          <dt className="text-xs uppercase tracking-wider text-ink3 mb-1">{t('table.columns.room')}</dt>
+          <dd className="min-w-0"><Room b={b} /></dd>
         </div>
         <div className="min-w-0">
-          <dt className="text-[10.5px] uppercase tracking-wider text-ink3 mb-1">Stay</dt>
+          <dt className="text-xs uppercase tracking-wider text-ink3 mb-1">{t('table.columns.stay')}</dt>
           <dd className="text-[13px]"><Stay b={b} nowrap={false} /></dd>
-        </div>
-        <div className="col-span-2">
-          <dt className="text-[10.5px] uppercase tracking-wider text-ink3 mb-1">Amount</dt>
-          <dd><Amount b={b} align="left" /></dd>
         </div>
       </dl>
 
-      <div className="mt-3.5"><Actions b={b} busy={busy} h={h} /></div>
+      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2 mt-3.5 pt-3 border-t border-line">
+        <div className="min-w-0"><Amount b={b} align="left" /></div>
+        <div className="ml-auto"><Actions b={b} busy={busy} h={h} /></div>
+      </div>
+    </article>
+  )
+}
+
+/**
+ * Tablet/laptop layout of the list view (sm → 2xl): one row per booking in three
+ * columns, so a portrait tablet reads like the table without its sixth column.
+ */
+function BookingRow({ b, busy, h }) {
+  return (
+    <article className="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_auto] gap-x-5 items-center px-5 py-3.5 text-sm
+                        transition-colors hover:bg-surface2/70">
+      <div className="min-w-0">
+        <Guest b={b} />
+        <div className="mt-1.5 pl-12"><Status b={b} /></div>
+      </div>
+      <div className="min-w-0 space-y-1.5">
+        <Room b={b} />
+        <div className="text-[13px]"><Stay b={b} nowrap={false} /></div>
+      </div>
+      <div className="flex flex-col items-end gap-2">
+        <Amount b={b} />
+        <Actions b={b} busy={busy} h={h} />
+      </div>
     </article>
   )
 }
@@ -340,36 +290,39 @@ function CardSkeletons({ count, boxed }) {
  * and the lifecycle actions valid for each row's status.
  *
  * One set of cell components feeds both layouts. `view` picks between them, but
- * the table is only ever used from `lg` up — a six-column table on a phone is a
- * horizontal-scroll trap, so narrow screens always fall back to the cards.
+ * the table is only ever used from 2xl (1536px) up — its six columns need ~1100px,
+ * which a 1280–1440 laptop with the full sidebar doesn't have, and a sideways-
+ * scrolling table hides the actions. Narrower screens fall back to cards
+ * (phones) or three-column rows (tablets and laptops).
  */
 export default function BookingsTable({
   bookings, loading, busyId, view = 'table',
   onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent, onRefund, emptyMessage,
 }) {
+  const { t } = useTranslation('bookings')
   const h = { onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent, onRefund }
   const asCards = view === 'cards'
 
   if (!loading && !bookings.length) {
-    return <EmptyState icon="◷" title="No bookings here" message={emptyMessage} />
+    return <EmptyState icon="◷" title={t('page.emptyTitle')} message={emptyMessage} />
   }
 
   return (
     <>
-      {/* ── Table (lg and up, when it's the chosen view) ── */}
+      {/* ── Table (2xl and up, when it's the chosen view) ── */}
       {!asCards && (
-        <div className="hidden lg:block overflow-x-auto">
+        <div className="hidden 2xl:block overflow-x-auto">
           <table className="w-full text-sm min-w-[920px]">
             <thead>
               <tr className="border-b border-line bg-surface2/60">
                 {COLUMNS.map((c, i) => (
                   <th
                     key={c || i}
-                    className={`px-5 py-2.5 font-medium text-[11px] uppercase tracking-wider text-ink3 whitespace-nowrap ${
+                    className={`px-4 py-2.5 font-medium text-xs uppercase tracking-wider text-ink3 whitespace-nowrap ${
                       i === 3 ? 'text-right' : 'text-left'
                     }`}
                   >
-                    {c}
+                    {c && t(`table.columns.${c}`)}
                   </th>
                 ))}
               </tr>
@@ -377,12 +330,12 @@ export default function BookingsTable({
             <tbody>
               {loading ? <SkeletonRows /> : bookings.map((b) => (
                 <tr key={b.id} className="border-b border-line last:border-0 transition-colors hover:bg-surface2/70">
-                  <td className="px-5 py-3.5 max-w-[280px]"><Guest b={b} /></td>
-                  <td className="px-5 py-3.5"><Room b={b} /></td>
-                  <td className="px-5 py-3.5"><Stay b={b} /></td>
-                  <td className="px-5 py-3.5 text-right"><Amount b={b} /></td>
-                  <td className="px-5 py-3.5"><Status b={b} /></td>
-                  <td className="px-5 py-3.5 text-right"><Actions b={b} busy={busyId === b.id} h={h} /></td>
+                  <td className="px-4 py-3.5 max-w-[260px]"><Guest b={b} /></td>
+                  <td className="px-4 py-3.5"><Room b={b} /></td>
+                  <td className="px-4 py-3.5"><Stay b={b} /></td>
+                  <td className="px-4 py-3.5 text-right"><Amount b={b} /></td>
+                  <td className="px-4 py-3.5"><Status b={b} /></td>
+                  <td className="px-4 py-3.5 text-right"><Actions b={b} busy={busyId === b.id} h={h} /></td>
                 </tr>
               ))}
             </tbody>
@@ -390,20 +343,30 @@ export default function BookingsTable({
         </div>
       )}
 
-      {/* ── Cards: the chosen view at any width, or the fallback below lg ── */}
-      <div
-        className={
-          asCards
-            ? 'grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3'
-            : 'lg:hidden divide-y divide-line'
-        }
-      >
-        {loading
-          ? <CardSkeletons count={asCards ? 6 : 4} boxed={asCards} />
-          : bookings.map((b) => (
-              <BookingCard key={b.id} b={b} busy={busyId === b.id} h={h} boxed={asCards} />
-            ))}
-      </div>
+      {/* ── Cards: the chosen view at any width ── */}
+      {asCards && (
+        <div className="grid gap-3 p-3 sm:p-4 sm:grid-cols-2 xl:grid-cols-3">
+          {loading
+            ? <CardSkeletons count={6} boxed />
+            : bookings.map((b) => (
+                <BookingCard key={b.id} b={b} busy={busyId === b.id} h={h} boxed />
+              ))}
+        </div>
+      )}
+
+      {/* ── Table view below 2xl: cards on phones, three-column rows from sm ── */}
+      {!asCards && (
+        <div className="2xl:hidden divide-y divide-line">
+          {loading
+            ? <CardSkeletons count={4} />
+            : bookings.map((b) => (
+                <div key={b.id}>
+                  <div className="sm:hidden"><BookingCard b={b} busy={busyId === b.id} h={h} /></div>
+                  <div className="hidden sm:block"><BookingRow b={b} busy={busyId === b.id} h={h} /></div>
+                </div>
+              ))}
+        </div>
+      )}
     </>
   )
 }

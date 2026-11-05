@@ -48,11 +48,15 @@ export function hasModule(user, module, level = 'VIEW') {
 }
 
 /**
- * The "All Properties" overview: owners, and anyone who works at more than one
- * property (they see the properties where they can view reports).
+ * The "All Properties" overview: owners, and anyone who can view reports at more
+ * than one property. Matches GET /properties/summary, which lists only the
+ * properties where the caller has report access.
  */
 export function canSeePortfolio(user) {
-  return isOwnerUser(user) || (user?.properties?.length || 0) > 1
+  if (isOwnerUser(user)) return true
+  const withReports = (user?.properties || []).filter((p) =>
+    p.isOwner || (LEVEL_RANK[p.permissions?.reports] || 0) >= LEVEL_RANK.VIEW)
+  return withReports.length > 1
 }
 
 /** Can the user open a sidebar panel (needs at least VIEW on its module). */
