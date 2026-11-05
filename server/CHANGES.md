@@ -5,6 +5,19 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-11-05 · Portfolio summary: correct figures, periods, property filter
+
+## `src/controllers/propertiesController.js`
+- Collected / collections trend are money received **less refunds**; payments on deleted invoices are left out
+  (as in the cash register). Payment methods count money received only.
+- Outstanding adds what hotel stays still owe (billed on the booking, no invoice row) to unpaid invoices;
+  tenancies stay invoice-only.
+- A room with anyone checked in counts as occupied (a PG room with some beds let).
+- `GET /properties/summary` accepts `forecast=7|14|30`, `trend=7|30|90|month` and `properties=id,id` (narrows to
+  properties the caller can already open; others are ignored). Response includes `period`.
+
+---
+
 # Session — 2026-11-01 · PG rent on calendar months
 
 - `src/utils/pgRent.js` — rent follows calendar months: a part month is charged by the day (25 Oct → 7/31
