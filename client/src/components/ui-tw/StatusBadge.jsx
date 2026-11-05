@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 /**
  * Pill that maps a booking/ticket status or priority to a colour + readable label.
  * Pass `tone` to override the inferred colour.
@@ -12,37 +13,43 @@ const TONE_CLASSES = {
   purple: 'bg-violet-bg text-violet-text',
 }
 
-// status / priority value → { tone, label }
+// status / priority value → { tone, key } — key is the display label in common.json
 const STATUS_MAP = {
   // bookings
-  Confirmed: { tone: 'blue', label: 'Confirmed' },
-  Pending: { tone: 'amber', label: 'Pending' },
-  CheckedIn: { tone: 'green', label: 'Checked In' },
-  CheckedOut: { tone: 'grey', label: 'Checked Out' },
-  Cancelled: { tone: 'red', label: 'Cancelled' },
-  NoShow: { tone: 'red', label: 'No-show' },
+  Confirmed: { tone: 'blue', key: 'confirmed' },
+  Pending: { tone: 'amber', key: 'pending' },
+  CheckedIn: { tone: 'green', key: 'checkedIn' },
+  CheckedOut: { tone: 'grey', key: 'checkedOut' },
+  Cancelled: { tone: 'red', key: 'cancelled' },
+  NoShow: { tone: 'red', key: 'noShow' },
   // payment status
-  paid: { tone: 'green', label: 'Paid' },
-  partial: { tone: 'amber', label: 'Partial' },
-  unpaid: { tone: 'grey', label: 'Unpaid' },
+  paid: { tone: 'green', key: 'paid' },
+  partial: { tone: 'amber', key: 'partial' },
+  unpaid: { tone: 'grey', key: 'unpaid' },
+  // …and as invoices (and the demo data) spell them
+  Paid: { tone: 'green', key: 'paid' },
+  Partial: { tone: 'amber', key: 'partial' },
+  Unpaid: { tone: 'grey', key: 'unpaid' },
+  Overdue: { tone: 'red', key: 'overdue' },
   // maintenance tickets
-  Open: { tone: 'amber', label: 'Open' },
-  'In Progress': { tone: 'blue', label: 'In Progress' },
-  Resolved: { tone: 'green', label: 'Resolved' },
+  Open: { tone: 'amber', key: 'open' },
+  'In Progress': { tone: 'blue', key: 'inProgress' },
+  Resolved: { tone: 'green', key: 'resolved' },
   // priorities
-  Low: { tone: 'grey', label: 'Low' },
-  Medium: { tone: 'blue', label: 'Medium' },
-  High: { tone: 'amber', label: 'High' },
-  Urgent: { tone: 'red', label: 'Urgent' },
+  Low: { tone: 'grey', key: 'low' },
+  Medium: { tone: 'blue', key: 'medium' },
+  High: { tone: 'amber', key: 'high' },
+  Urgent: { tone: 'red', key: 'urgent' },
 }
 
 export default function StatusBadge({ status, tone, label, dot = true }) {
-  const meta = STATUS_MAP[status] || { tone: 'grey', label: status }
+  const { t } = useTranslation()
+  const meta = STATUS_MAP[status] || { tone: 'grey' }
   const resolvedTone = tone || meta.tone
-  const text = label || meta.label
+  const text = label || (meta.key ? t(meta.key) : status)
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-medium whitespace-nowrap ${
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium whitespace-nowrap ${
         TONE_CLASSES[resolvedTone] || TONE_CLASSES.grey
       }`}
     >

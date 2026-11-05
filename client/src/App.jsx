@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, lazy, Suspense } from 'react'
+import { useTranslation, Trans } from 'react-i18next'
 import { useAppSelector, useAuthActions, useUiActions, useHotelActions } from './store/hooks'
 import { panelFromUrl } from './store/slices/uiSlice'
 import Layout from './components/layout/Layout'
@@ -15,6 +16,7 @@ import LoginPage from './components/auth/LoginPage'
 import ResetPasswordPage from './components/auth/ResetPasswordPage'
 // import LandingPage from './components/auth/LandingPage'
 import { canAccess } from './utils/permissions'
+import { navLabel } from './utils/navigation'
 import { selectActiveProperty } from './store/slices/authSlice'
 import { authApi, settingsApi } from './api/client'
 import { MOCK_USER, MOCK_TOKEN } from './api/mockData.js'
@@ -39,12 +41,12 @@ const Portfolio     = lazy(() => import('./components/modules/portfolio/Portfoli
 
 function PanelSkeleton() {
   return (
-    <div className="p-6">
+    <div>
       <div
-        className="h-[28px] w-[180px] rounded-md bg-line mb-5"
+        className="h-[28px] w-[180px] max-w-full rounded-md bg-line mb-5"
         style={{ animation: 'pulse 1.5s ease-in-out infinite' }}
       />
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(165px,1fr))] gap-[13px] mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(165px,1fr))] gap-3 sm:gap-[13px] mb-5">
         {[...Array(6)].map((_, i) => (
           <div key={i}
             className="h-[90px] rounded-[10px] bg-line"
@@ -54,7 +56,7 @@ function PanelSkeleton() {
             }} />
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-[15px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-[15px]">
         {[0, 1].map(i => (
           <div key={i}
             className="h-[200px] rounded-[10px] bg-line"
@@ -69,14 +71,15 @@ function PanelSkeleton() {
 }
 
 function AccessDenied({ panel }) {
+  const { t } = useTranslation('shell')
   return (
-    <div className="p-12 text-center">
+    <div className="py-12 px-4 sm:p-12 text-center">
       <div className="t-display mb-4">🔒</div>
       <h2 className="m-0 mb-2 text-ink">
-        Access Restricted
+        {t('accessDenied.title')}
       </h2>
       <p className="t-body text-ink3">
-        Your role doesn't have permission to access <strong>{panel}</strong>.
+        <Trans t={t} i18nKey="accessDenied.message" values={{ panel: navLabel(t, panel) }} components={{ b: <strong /> }} />
       </p>
     </div>
   )
@@ -85,16 +88,17 @@ function AccessDenied({ panel }) {
 // Signed in, but not assigned to any (active) property yet — nothing to show
 // until an owner grants access.
 function NoPropertyAssigned({ onSignOut }) {
+  const { t } = useTranslation('shell')
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-canvas">
       <div className="card max-w-[420px] w-full text-center">
         <div className="card-body py-10 px-7">
           <div className="t-display mb-3">🏨</div>
-          <h2 className="m-0 mb-2 text-ink t-h2">No property assigned</h2>
+          <h2 className="m-0 mb-2 text-ink t-h2">{t('noProperty.title')}</h2>
           <p className="t-body text-ink3 m-0 mb-6">
-            Your account isn't linked to any property yet. Ask the owner to give you access, then sign in again.
+            {t('noProperty.message')}
           </p>
-          <button className="btn btn-outline" onClick={onSignOut}>Sign out</button>
+          <button className="btn btn-outline" onClick={onSignOut}>{t('common:signOut')}</button>
         </div>
       </div>
     </div>

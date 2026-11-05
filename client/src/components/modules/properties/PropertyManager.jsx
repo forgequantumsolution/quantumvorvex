@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback } from 'react'
-import Modal from '../../ui/Modal'
+import { useState, useEffect, useCallback, useImperativeHandle } from 'react'
+import { useTranslation, Trans } from 'react-i18next'
+import { Modal, Button, EmptyState } from '../../ui-tw'
 import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
 import { useToast } from '../../../hooks/useToast'
 import { useAppSelector, useAuthActions } from '../../../store/hooks'
 import { propertiesApi, authApi } from '../../../api/client'
 import PropertyTeam from './PropertyTeam'
-import { LuPlus, LuUsers, LuChevronDown, LuPencil, LuArchive, LuArchiveRestore } from 'react-icons/lu'
+import { Section, AddButton, TablePager } from '../settings/settingsUi'
+import { usePaged } from '../settings/usePaged'
+import { LuUsers, LuChevronDown, LuPencil, LuArchive, LuArchiveRestore, LuBuilding2 } from 'react-icons/lu'
 
 const CODE_RE = /^[A-Z0-9-]{2,10}$/
 const EMPTY_FORM = { name: '', code: '', address: '', phone: '', email: '', gstin: '', copyFromPropertyId: '' }
@@ -16,13 +19,14 @@ function Field({ label, hint, children, fullWidth }) {
     <div className={`flex flex-col gap-[5px] ${fullWidth ? 'md:col-span-2' : ''}`}>
       <label className="form-label text-[12px] font-semibold">{label}</label>
       {children}
-      {hint && <span className="text-[11px] text-ink3">{hint}</span>}
+      {hint && <span className="text-xs text-ink3">{hint}</span>}
     </div>
   )
 }
 
 // Add a property (with optional copy of another property's setup) or rename one.
 function PropertyModal({ property, properties, defaultCopyFrom, onClose, onSaved }) {
+  const { t } = useTranslation('settings')
   const isEdit = !!property
   const addToast = useToast()
   const [form, setForm] = useState(() =>
@@ -31,8 +35,8 @@ function PropertyModal({ property, properties, defaultCopyFrom, onClose, onSaved
   const [saving, setSaving] = useState(false)
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: key === 'code' ? e.target.value.toUpperCase() : e.target.value }))
 
-  const nameError = form.name.trim().length < 2 ? 'Enter a name (at least 2 characters).' : ''
-  const codeError = form.code && !CODE_RE.test(form.code) ? '2–10 letters, digits or dashes.' : ''
+  const nameError = form.name.trim().length < 2 ? t('propertyManager.nameError') : ''
+  const codeError = form.code && !CODE_RE.test(form.code) ? t('propertyManager.codeError') : ''
 
   async function save() {
     if (nameError || codeError) return
@@ -40,16 +44,16 @@ function PropertyModal({ property, properties, defaultCopyFrom, onClose, onSaved
     try {
       if (isEdit) {
         await propertiesApi.update(property.id, { name: form.name.trim(), ...(form.code ? { code: form.code } : {}) })
-        addToast('Property updated.', 'success')
+        addToast(t('propertyManager.updated'), 'success')
       } else {
         const payload = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, v.trim()]).filter(([, v]) => v))
         const { data } = await propertiesApi.create(payload)
-        addToast(`${data.name} created — now add the people who will work there.`, 'success')
+        addToast(t('propertyManager.created', { name: data.name }), 'success')
         return onSaved(data)
       }
       onSaved()
     } catch (err) {
-      addToast(err.response?.data?.error || err.response?.data?.errors?.[0]?.message || 'Could not save the property.', 'error')
+      addToast(err.response?.data?.error || err.response?.data?.errors?.[0]?.message || t('propertyManager.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
@@ -59,45 +63,45 @@ function PropertyModal({ property, properties, defaultCopyFrom, onClose, onSaved
     <Modal
       isOpen
       onClose={onClose}
-      title={isEdit ? `Edit Property — ${property.name}` : '+ Add Property'}
+      title={isEdit ? t('propertyManager.editTitle', { name: property.name }) : t('propertyManager.addTitle')}
       footer={
         <>
-          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
-          <button className="btn btn-primary" onClick={save} disabled={saving || !!nameError || !!codeError}>
-            {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create Property'}
-          </button>
+          <Button variant="ghost" onClick={onClose}>{t('common:cancel')}</Button>
+          <Button onClick={save} disabled={saving || !!nameError || !!codeError}>
+            {saving ? t('common:saving') : isEdit ? t('common:saveChanges') : t('propertyManager.create')}
+          </Button>
         </>
       }
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-        <Field label="Property Name" fullWidth>
-          <input className="form-input" value={form.name} onChange={set('name')} placeholder="e.g. Sea View Residency" autoFocus />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label={t('propertyManager.name')} fullWidth>
+          <input className="form-input" value={form.name} onChange={set('name')} placeholder={t('propertyManager.namePlaceholder')} autoFocus />
         </Field>
-        <Field label="Short Code" hint={isEdit ? 'Shown in the property switcher.' : 'Optional — generated from the name if left blank.'}>
-          <input className="form-input" value={form.code} onChange={set('code')} placeholder="e.g. SEAV" maxLength={10} style={{ fontFamily: 'var(--font-mono)' }} />
-          {codeError && <span className="text-[11px] text-danger">{codeError}</span>}
+        <Field label={t('propertyManager.code')} hint={isEdit ? t('propertyManager.codeHintEdit') : t('propertyManager.codeHintNew')}>
+          <input className="form-input" value={form.code} onChange={set('code')} placeholder={t('propertyManager.codePlaceholder')} maxLength={10} style={{ fontFamily: 'var(--font-mono)' }} />
+          {codeError && <span className="text-xs text-danger">{codeError}</span>}
         </Field>
 
         {!isEdit && (
           <>
-            <Field label="Copy setup from" hint="Room types, food plans, amenities, tax and invoice settings.">
+            <Field label={t('propertyManager.copyFrom')} hint={t('propertyManager.copyFromHint')}>
               <select className="form-select" value={form.copyFromPropertyId} onChange={set('copyFromPropertyId')}>
-                <option value="">Start empty</option>
+                <option value="">{t('propertyManager.startEmpty')}</option>
                 {properties.filter((p) => p.status === 'active').map((p) => (
                   <option key={p.id} value={p.id}>{p.code} — {p.name}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Phone">
-              <input className="form-input" value={form.phone} onChange={set('phone')} placeholder="Front desk number" />
+            <Field label={t('fields.phone')}>
+              <input className="form-input" value={form.phone} onChange={set('phone')} placeholder={t('propertyManager.phonePlaceholder')} />
             </Field>
-            <Field label="Email">
+            <Field label={t('fields.email')}>
               <input className="form-input" type="email" value={form.email} onChange={set('email')} placeholder="branch@hotel.com" />
             </Field>
-            <Field label="GSTIN">
-              <input className="form-input" value={form.gstin} onChange={set('gstin')} placeholder="Each branch has its own GSTIN" />
+            <Field label={t('fields.gstin')}>
+              <input className="form-input" value={form.gstin} onChange={set('gstin')} placeholder={t('propertyManager.gstinPlaceholder')} />
             </Field>
-            <Field label="Address" fullWidth>
+            <Field label={t('fields.address')} fullWidth>
               <textarea className="form-textarea resize-y" rows={2} value={form.address} onChange={set('address')} />
             </Field>
           </>
@@ -110,8 +114,11 @@ function PropertyModal({ property, properties, defaultCopyFrom, onClose, onSaved
 /**
  * Settings → Properties (owner only): add properties, rename them, archive /
  * restore, and manage each property's team (who can open it, with what role).
+ * The "Add property" button lives in the page header (Settings → Properties
+ * owns it) and opens the dialog here through `ref.current.add()`.
  */
-export default function PropertyManager() {
+export default function PropertyManager({ ref }) {
+  const { t } = useTranslation('settings')
   const addToast = useToast()
   const activePropertyId = useAppSelector((s) => s.auth.activePropertyId)
   const { setCurrentUser } = useAuthActions()
@@ -121,6 +128,8 @@ export default function PropertyManager() {
   const [confirm, setConfirm] = useState(null)  // property to archive / restore
   const [busy, setBusy] = useState(false)
   const [expanded, setExpanded] = useState(null)
+  const pager = usePaged(properties)
+  useImperativeHandle(ref, () => ({ add: () => setModal({ property: null }) }), [])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -128,11 +137,11 @@ export default function PropertyManager() {
       const { data } = await propertiesApi.getAll()
       setProperties(data)
     } catch {
-      addToast('Could not load properties.', 'error')
+      addToast(t('propertyManager.loadFailed'), 'error')
     } finally {
       setLoading(false)
     }
-  }, [addToast])
+  }, [addToast, t])
 
   useEffect(() => { load() }, [load])
 
@@ -150,11 +159,11 @@ export default function PropertyManager() {
     setBusy(true)
     try {
       await propertiesApi.update(p.id, { status: p.status === 'archived' ? 'active' : 'archived' })
-      addToast(p.status === 'archived' ? `${p.name} restored.` : `${p.name} archived.`, 'success')
+      addToast(p.status === 'archived' ? t('propertyManager.restored', { name: p.name }) : t('propertyManager.archivedToast', { name: p.name }), 'success')
       setConfirm(null)
       refresh()
     } catch (err) {
-      addToast(err.response?.data?.error || 'Could not update the property.', 'error')
+      addToast(err.response?.data?.error || t('propertyManager.updateFailed'), 'error')
     } finally {
       setBusy(false)
     }
@@ -164,72 +173,90 @@ export default function PropertyManager() {
   const archiving = confirm?.status !== 'archived'
 
   return (
-    <div className="card">
-      <div className="flex items-center justify-between gap-3 flex-wrap px-5 sm:px-6 py-4 border-b border-line">
-        <div>
-          <h3 className="t-h3 m-0">All properties</h3>
-          <div className="t-xs text-ink3 mt-0.5">
-            {activeCount} active{properties.length > activeCount ? ` · ${properties.length - activeCount} archived` : ''}
-          </div>
-        </div>
-        <button className="btn btn-primary btn-sm" onClick={() => setModal({ property: null })}>
-          <LuPlus size={14} aria-hidden /> Add property
-        </button>
-      </div>
-
-      {loading && properties.length === 0 && <p className="t-sm text-ink3 m-0 px-5 sm:px-6 py-5">Loading…</p>}
-      <ul className="list-none m-0 p-0 divide-y divide-[var(--border)]">
-        {properties.map((p) => {
-          const archived = p.status === 'archived'
-          const isCurrent = p.id === activePropertyId
-          const isOpen = expanded === p.id
-          return (
-            <li key={p.id} className={`relative ${archived ? 'bg-surface2' : ''}`}>
-              {isCurrent && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-gold" aria-hidden />}
-              <div className="flex items-center gap-4 px-5 sm:px-6 py-4 flex-wrap">
-                <span
-                  className={`w-[68px] h-10 px-1.5 rounded-lg border flex items-center justify-center text-[11px] font-bold tracking-[0.04em] shrink-0 ${
-                    isCurrent ? 'bg-[var(--gold-bg)] border-[var(--gold-border)] text-gold' : 'bg-surface2 border-line text-ink2'
-                  }`}
-                  style={{ fontFamily: 'var(--font-mono)' }}
-                >
-                  {p.code}
-                </span>
-                <div className="flex-1 min-w-[160px]">
-                  <div className={`text-[14px] font-semibold ${archived ? 'text-ink3' : 'text-ink'}`}>{p.name}</div>
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <Badge type={archived ? 'grey' : 'green'}>{archived ? 'Archived' : 'Active'}</Badge>
-                    {isCurrent && <Badge type="blue">Current</Badge>}
+    <Section
+      title={t('propertyManager.allTitle')}
+      subtitle={
+        loading && properties.length === 0
+          ? t('common:loading')
+          : t('propertyManager.activeCount', { count: activeCount }) +
+            (properties.length > activeCount ? t('propertyManager.archivedCount', { count: properties.length - activeCount }) : '')
+      }
+      bodyClassName="p-0"
+    >
+      {!loading && properties.length === 0 ? (
+        <EmptyState
+          icon={<LuBuilding2 />}
+          title={t('propertyManager.emptyTitle')}
+          message={t('propertyManager.emptyMessage')}
+          action={<AddButton onClick={() => setModal({ property: null })}>{t('propertyManager.addTitle')}</AddButton>}
+        />
+      ) : (
+        <ul className="list-none m-0 p-0 divide-y divide-[var(--border)] [&>li:last-child]:rounded-b-xl">
+          {pager.rows.map((p) => {
+            const archived = p.status === 'archived'
+            const isCurrent = p.id === activePropertyId
+            const isOpen = expanded === p.id
+            const lastActive = !archived && activeCount <= 1
+            return (
+              <li key={p.id} className={`relative ${archived ? 'bg-surface2' : ''}`}>
+                {isCurrent && <span className="absolute left-0 top-0 bottom-0 w-[3px] bg-gold" aria-hidden />}
+                <div className="flex items-center gap-x-3 sm:gap-x-4 gap-y-3 px-4 sm:px-5 py-4 flex-wrap">
+                  <span
+                    className={`min-w-14 sm:w-[68px] h-10 px-1.5 whitespace-nowrap rounded-lg border flex items-center justify-center text-xs font-bold tracking-[0.04em] shrink-0 ${
+                      isCurrent ? 'bg-gold-bg border-gold-border text-gold' : 'bg-surface2 border-line text-ink2'
+                    }`}
+                    style={{ fontFamily: 'var(--font-mono)' }}
+                  >
+                    {p.code}
+                  </span>
+                  <div className="flex-1 min-w-0 basis-[160px]">
+                    <div className={`text-[14px] font-semibold break-words ${archived ? 'text-ink3' : 'text-ink'}`}>{p.name}</div>
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <Badge type={archived ? 'grey' : 'green'}>{archived ? t('propertyManager.archived') : t('propertyManager.active')}</Badge>
+                      {isCurrent && <Badge type="blue">{t('propertyManager.current')}</Badge>}
+                    </div>
+                  </div>
+                  {/* Phones: the actions take their own row, Team & access filling it */}
+                  <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                    <Button
+                      size="sm"
+                      variant={isOpen ? 'primary' : 'ghost'}
+                      icon={<LuUsers />}
+                      className="flex-1 sm:flex-none"
+                      onClick={() => setExpanded(isOpen ? null : p.id)}
+                      aria-expanded={isOpen}
+                    >
+                      {t('propertyManager.team')}
+                      <LuChevronDown size={14} aria-hidden className={`transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      icon={<LuPencil />}
+                      onClick={() => setModal({ property: p })}
+                      aria-label={t('propertyManager.editAria', { name: p.name })}
+                      title={t('common:edit')}
+                    />
+                    <Button
+                      size="sm"
+                      variant={archived ? 'success' : 'ghost'}
+                      icon={archived ? <LuArchiveRestore /> : <LuArchive />}
+                      onClick={() => setConfirm(p)}
+                      disabled={lastActive}
+                      aria-label={archived ? t('propertyManager.restoreAria', { name: p.name }) : t('propertyManager.archiveAria', { name: p.name })}
+                      title={lastActive ? t('propertyManager.lastActive') : archived ? t('propertyManager.restore') : t('propertyManager.archive')}
+                    >
+                      {archived ? t('propertyManager.restore') : null}
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <button
-                    className={`btn btn-sm ${isOpen ? 'btn-primary' : 'btn-outline'}`}
-                    onClick={() => setExpanded(isOpen ? null : p.id)}
-                    aria-expanded={isOpen}
-                  >
-                    <LuUsers size={14} aria-hidden /> Team & access
-                    <LuChevronDown size={14} aria-hidden className={`transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
-                  </button>
-                  <button className="btn btn-sm btn-outline" onClick={() => setModal({ property: p })} aria-label={`Edit ${p.name}`} title="Edit">
-                    <LuPencil size={14} aria-hidden />
-                  </button>
-                  <button
-                    className={`btn btn-sm ${archived ? 'btn-success' : 'btn-outline'}`}
-                    onClick={() => setConfirm(p)}
-                    disabled={!archived && activeCount <= 1}
-                    aria-label={`${archived ? 'Restore' : 'Archive'} ${p.name}`}
-                    title={!archived && activeCount <= 1 ? 'The only active property cannot be archived' : archived ? 'Restore' : 'Archive'}
-                  >
-                    {archived ? <><LuArchiveRestore size={14} aria-hidden /> Restore</> : <LuArchive size={14} aria-hidden />}
-                  </button>
-                </div>
-              </div>
-              {isOpen && <div className="border-t border-line"><PropertyTeam property={p} /></div>}
-            </li>
-          )
-        })}
-      </ul>
+                {isOpen && <div className="border-t border-line"><PropertyTeam property={p} /></div>}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+      <TablePager pager={pager} />
 
       {modal && (
         <PropertyModal
@@ -248,14 +275,17 @@ export default function PropertyManager() {
         onConfirm={toggleArchive}
         busy={busy}
         danger={archiving}
-        title={archiving ? 'Archive property' : 'Restore property'}
-        confirmLabel={archiving ? 'Archive' : 'Restore'}
+        title={archiving ? t('propertyManager.archiveTitle') : t('propertyManager.restoreTitle')}
+        confirmLabel={archiving ? t('propertyManager.archive') : t('propertyManager.restore')}
         message={
-          archiving
-            ? <>Archive <strong className="text-ink">{confirm?.name}</strong>? Its records are kept and stay viewable by owners, but no one can make changes and staff lose access until it is restored.</>
-            : <>Restore <strong className="text-ink">{confirm?.name}</strong>? Assigned staff will be able to open it again.</>
+          <Trans
+            t={t}
+            i18nKey={archiving ? 'propertyManager.archiveMessage' : 'propertyManager.restoreMessage'}
+            values={{ name: confirm?.name }}
+            components={{ b: <strong className="text-ink" /> }}
+          />
         }
       />
-    </div>
+    </Section>
   )
 }

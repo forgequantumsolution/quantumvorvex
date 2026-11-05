@@ -1,5 +1,6 @@
 /** PG occupant-card helpers shared by PgOccupants and BookingForm. */
 import { bedLabel } from '../../../utils/beds'
+import i18n from '../../../i18n'
 
 let occKey = 0
 
@@ -19,15 +20,18 @@ export const newOccupant = (bedNo, rate) => ({
 export const occField = (o, k) => `occ-${o.key}-${k}`
 
 /** Per-occupant validation; merges keyed errors into `e`. */
+// Messages are looked up when validating (not at import), so they follow the language.
 export function occupantErrors(occupants, beds) {
+  const t = (key, vars) => i18n.t(`bookings:pg.err.${key}`, vars)
   const e = {}
   occupants.forEach((o) => {
-    if (o.name.trim().length < 2) e[occField(o, 'name')] = `Bed ${bedLabel(o.bedNo)}: enter the occupant's name`
-    if (!/^\d{10}$/.test(o.phone.replace(/\D/g, ''))) e[occField(o, 'phone')] = `Bed ${bedLabel(o.bedNo)}: enter a 10-digit phone`
-    if (o.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(o.email.trim())) e[occField(o, 'email')] = 'Enter a valid email'
-    if (!(Number(o.rate) > 0)) e[occField(o, 'rate')] = `Bed ${bedLabel(o.bedNo)}: enter the rent`
-    const bed = beds?.find((b) => b.bedNo === o.bedNo)
-    if (bed && !bed.free) e[occField(o, 'bed')] = `Bed ${bedLabel(o.bedNo)} is taken for these dates`
+    const bed = bedLabel(o.bedNo)
+    if (o.name.trim().length < 2) e[occField(o, 'name')] = t('name', { bed })
+    if (!/^\d{10}$/.test(o.phone.replace(/\D/g, ''))) e[occField(o, 'phone')] = t('phone', { bed })
+    if (o.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(o.email.trim())) e[occField(o, 'email')] = t('email')
+    if (!(Number(o.rate) > 0)) e[occField(o, 'rate')] = t('rent', { bed })
+    const held = beds?.find((b) => b.bedNo === o.bedNo)
+    if (held && !held.free) e[occField(o, 'bed')] = t('taken', { bed })
   })
   return e
 }

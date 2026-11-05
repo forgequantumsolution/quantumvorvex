@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { LuTable2, LuLayoutGrid } from 'react-icons/lu'
-import { PageWrapper, StatCard, Card, FilterTabs, SearchInput, Button, Pagination, ViewToggle } from '../../ui-tw'
+import { useTranslation, Trans } from 'react-i18next'
+import { LuTable2, LuLayoutGrid, LuCalendarDays, LuCalendarCheck, LuIndianRupee, LuCircleAlert, LuPlus, LuRefreshCw, LuX } from 'react-icons/lu'
+import { PageWrapper, StatCard, Card, FilterTabs, Pagination } from '../../ui-tw'
 import BookingsTable from './BookingsTable'
 import BookingForm from './BookingForm'
 import CancelModal from '../cancellations/CancelModal'
@@ -16,24 +17,18 @@ import { useAppSelector, usePrimaryAction } from '../../../store/hooks'
 import { bookingsApi } from '../../../api/client'
 import { formatCurrency, formatDate } from '../../../utils/format'
 import { stayLabel } from '../../../utils/booking'
+import { useBreakpoint, useMinWidth } from '../../../hooks/useMediaQuery'
 import { bedLabel } from '../../../utils/beds'
 import { normalizeBooking as normalize } from '../../../utils/normalizeBooking'
 
-const TABS = [
-  { id: 'all', label: 'All' },
-  { id: 'Upcoming', label: 'Upcoming' },
-  { id: 'Confirmed', label: 'Confirmed' },
-  { id: 'CheckedIn', label: 'Checked In' },
-  { id: 'CheckedOut', label: 'Checked Out' },
-  { id: 'Cancelled', label: 'Cancelled' },
-]
-const TAB_IDS = TABS.map((t) => t.id)
+// Labels come from bookings:tabs.<id> at render time.
+const TAB_IDS = ['all', 'Upcoming', 'Confirmed', 'CheckedIn', 'CheckedOut', 'Cancelled']
 const PAGE_SIZE = 8
 const EMPTY_COUNTS = { all: 0, Upcoming: 0, Confirmed: 0, CheckedIn: 0, CheckedOut: 0, Cancelled: 0 }
 
 const VIEWS = [
-  { id: 'table', label: 'Table', icon: <LuTable2 size={14} /> },
-  { id: 'cards', label: 'Cards', icon: <LuLayoutGrid size={14} /> },
+  { id: 'table', labelKey: 'page.tableView', icon: <LuTable2 /> },
+  { id: 'cards', labelKey: 'page.cardView', icon: <LuLayoutGrid /> },
 ]
 // Remembered per browser — whichever layout someone works in, they land back in it.
 const VIEW_KEY = 'bookings:view'
@@ -46,15 +41,19 @@ const storedView = () => {
 
 // On a room clash PUT /bookings/:id returns the blocking record — name it so staff
 // know who/what is in the way instead of a generic "unavailable".
-function updateErrorMessage(err, fallback) {
+function updateErrorMessage(t, err, fallback) {
   const data = err.response?.data
   const c = data?.conflict
-  if (c?.type === 'booking') return `${c.bedNo ? `Bed ${bedLabel(c.bedNo)}` : 'Room'} already booked (${c.bookingNo}) from ${formatDate(c.fromDate)}. Pick other dates.`
-  if (c?.type === 'guest') return `Room is occupied by ${c.name}. Pick other dates.`
+  if (c?.type === 'booking') {
+    const vars = { no: c.bookingNo, date: formatDate(c.fromDate) }
+    return c.bedNo ? t('conflict.bedBooked', { ...vars, bed: bedLabel(c.bedNo) }) : t('conflict.roomBooked', vars)
+  }
+  if (c?.type === 'guest') return t('conflict.guest', { name: c.name })
   return data?.message || fallback
 }
 
 export default function Bookings() {
+  const { t } = useTranslation('bookings')
   const toast = useToast()
 
   // Today (and other panels) can deep-link to a specific status tab via navigateTo.
@@ -83,6 +82,11 @@ export default function Bookings() {
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [busyId, setBusyId] = useState(null)
   const [view, setView] = useState(storedView)
+  // On a phone the four stat tiles fill the first screen — while the New
+  // Booking form is open they only push it down, so they step aside.
+  const { isPhone } = useBreakpoint()
+  // The table only renders from 2xl (see BookingsTable), so the view switch does too.
+  const canTable = useMinWidth('2xl')
 
   const changeView = (next) => {
     setView(next)
@@ -114,11 +118,11 @@ export default function Bookings() {
       setBookings((data.bookings || []).map(normalize))
       setTotal(data.total ?? 0)
     } catch {
-      setError('Could not load bookings. Make sure the backend is running.')
+      setError(t('page.loadError'))
     } finally {
       setLoading(false)
     }
-  }, [debouncedQuery, tab, page])
+  }, [debouncedQuery, tab, page, t])
 
   const loadStats = useCallback(async () => {
     try {
@@ -162,10 +166,10 @@ export default function Bookings() {
       // PG: one booking per bed, created together.
       const n = booking.bookings.length
       toast(n === 1
-        ? `Booking ${booking.bookings[0].bookingNo} created for ${booking.bookings[0].guestName}`
-        : `${n} bed bookings created in Room ${booking.roomNumber}`)
+        ? t('toast.created', { no: booking.bookings[0].bookingNo, name: booking.bookings[0].guestName })
+        : t('toast.groupCreated', { count: n, room: booking.roomNumber }))
     } else {
-      toast(`Booking ${booking.bookingNo} created for ${booking.guestName}`)
+      toast(t('toast.created', { no: booking.bookingNo, name: booking.guestName }))
     }
     setShowNew(false)
     reload()
@@ -178,14 +182,14 @@ export default function Bookings() {
       toast(successMsg, tone)
       reload()
     } catch (err) {
-      toast(err.response?.data?.message || 'Action failed', 'error')
+      toast(err.response?.data?.message || t('toast.actionFailed'), 'error')
     } finally {
       setBusyId(null)
     }
   }
 
-  const handleCheckIn  = (b) => runAction(b.id, () => bookingsApi.checkIn(b.id), `${b.guestName} checked in`)
-  const handleConfirm  = (b) => runAction(b.id, () => bookingsApi.confirm(b.id), `Booking ${b.bookingNo} confirmed`)
+  const handleCheckIn  = (b) => runAction(b.id, () => bookingsApi.checkIn(b.id), t('toast.checkedIn', { name: b.guestName }))
+  const handleConfirm  = (b) => runAction(b.id, () => bookingsApi.confirm(b.id), t('toast.confirmed', { no: b.bookingNo }))
 
   // A tenancy's rent is cut to the days stayed at move-out, so show that bill.
   const openCheckOut = async (b) => {
@@ -195,7 +199,7 @@ export default function Bookings() {
       const { data } = await bookingsApi.rentAccount(b.id)
       setCheckOutTarget({ ...b, amount: data.moveOut.amount, balanceDue: data.moveOut.due, rentCredit: data.moveOut.credit })
     } catch (err) {
-      toast(err.response?.data?.message || 'Could not load the rent account', 'error')
+      toast(err.response?.data?.message || t('toast.rentAccountError'), 'error')
     } finally {
       setBusyId(null)
     }
@@ -222,14 +226,14 @@ export default function Bookings() {
       }
       const extraCharges = (Number(b.extraCharges) || 0) + (Number(extra) || 0)
       const { data } = await bookingsApi.checkOut(id, { finalPayment, extraCharges, paymentMethod, paymentReference })
-      toast(`${b.guestName || 'Guest'} checked out`)
+      toast(t('toast.checkedOut', { name: b.guestName || t('common:guest') }))
       setCheckOutTarget(null)
       // Money to hand back: go straight to the refund (it can also wait).
       const left = normalize(data.booking)
       if (left?.refundable > 0) setRefundTarget(left)
       reload()
     } catch (err) {
-      toast(err.response?.data?.message || 'Check-out failed', 'error')
+      toast(err.response?.data?.message || t('toast.checkOutFailed'), 'error')
     } finally {
       setBusyId(null)
     }
@@ -243,11 +247,11 @@ export default function Bookings() {
     setBusyId(b.id)
     try {
       await bookingsApi.update(b.id, payload)
-      toast(`Stay extended for ${b.guestName}`)
+      toast(t('toast.extended', { name: b.guestName }))
       setExtendTarget(null)
       reload()
     } catch (err) {
-      toast(updateErrorMessage(err, 'Could not extend the stay'), 'error')
+      toast(updateErrorMessage(t, err, t('toast.extendFailed')), 'error')
     } finally {
       setBusyId(null)
     }
@@ -261,11 +265,11 @@ export default function Bookings() {
     setBusyId(b.id)
     try {
       await bookingsApi.update(b.id, payload)
-      toast(`Booking ${b.bookingNo} updated`)
+      toast(t('toast.updated', { no: b.bookingNo }))
       setEditTarget(null)
       reload()
     } catch (err) {
-      toast(updateErrorMessage(err, 'Could not save the changes'), 'error')
+      toast(updateErrorMessage(t, err, t('toast.saveFailed')), 'error')
     } finally {
       setBusyId(null)
     }
@@ -273,66 +277,55 @@ export default function Bookings() {
 
   const handleCancel = async ({ id, reason }) => {
     const b = bookings.find((x) => x.id === id)
-    await runAction(id, () => bookingsApi.cancel(id, { reason }), `Booking ${b?.bookingNo || ''} cancelled`, 'error')
+    await runAction(id, () => bookingsApi.cancel(id, { reason }), t('toast.cancelled', { no: b?.bookingNo || '' }), 'error')
     setCancelTarget(null)
   }
 
   const handleDelete = async () => {
     if (!deleteTarget) return
-    await runAction(deleteTarget.id, () => bookingsApi.remove(deleteTarget.id), `Booking ${deleteTarget.bookingNo} deleted`, 'error')
+    await runAction(deleteTarget.id, () => bookingsApi.remove(deleteTarget.id), t('toast.deleted', { no: deleteTarget.bookingNo }), 'error')
     setDeleteTarget(null)
   }
 
   return (
     <PageWrapper
-      stats={
+      title={showNew ? t('page.newTitle') : t('page.title')}
+      subtitle={showNew ? t('page.newSubtitle') : t('page.subtitle')}
+      search={showNew ? null : { value: query, onChange: setQuery, placeholder: t('page.searchPlaceholder') }}
+      headerActions={showNew ? [
+        { id: 'close', label: t('common:close'), icon: <LuX />, onClick: () => setShowNew(false) },
+      ] : [
+        ...(canTable ? VIEWS.map((v) => ({ id: v.id, label: t(v.labelKey), icon: v.icon, variant: 'icon', active: view === v.id, onClick: () => changeView(v.id) })) : []),
+        { id: 'refresh', label: t('common:refresh'), icon: <LuRefreshCw />, variant: 'icon', disabled: loading, onClick: reload },
+        { id: 'new', label: t('page.newBooking'), icon: <LuPlus />, variant: 'primary', onClick: () => setShowNew(true) },
+      ]}
+      stats={showNew && isPhone ? null : (
         <>
-          <StatCard icon="◷" tone="gold" label="Total bookings" value={stats.total} />
-          <StatCard icon="✓" tone="blue" label="Confirmed" value={stats.confirmed} hint={`${stats.checkedIn} checked in`} />
-          <StatCard icon="₹" tone="green" label="Active value" value={formatCurrency(stats.revenue)} />
-          <StatCard icon="!" tone="amber" label="Outstanding dues" value={formatCurrency(stats.dues)} />
+          <StatCard icon={<LuCalendarDays />} tone="gold" label={t('stats.total')} value={stats.total} />
+          <StatCard icon={<LuCalendarCheck />} tone="blue" label={t('stats.confirmed')} value={stats.confirmed} hint={t('stats.checkedInHint', { count: stats.checkedIn })} />
+          <StatCard icon={<LuIndianRupee />} tone="green" label={t('stats.activeValue')} value={formatCurrency(stats.revenue)} />
+          <StatCard icon={<LuCircleAlert />} tone="amber" label={t('stats.dues')} value={formatCurrency(stats.dues)} />
         </>
-      }
+      )}
     >
       {showNew ? (
         <Card
           // The form's summary rail is sticky, which an overflow-hidden ancestor breaks.
           clip={false}
-          title="New Booking"
-          subtitle="Reserve a room and capture guest details"
-          actions={
-            <Button variant="ghost" onClick={() => setShowNew(false)}>✕ Close</Button>
-          }
         >
           <BookingForm onSaved={handleCreated} onCancel={() => setShowNew(false)} />
         </Card>
       ) : (
         <Card>
-          {/* One toolbar line: status tabs on the left, search + refresh on the
-              right. The tabs already name the view, so a separate "All Bookings"
-              title row would only cost a line. If the two halves stop fitting the
-              search group wraps to its own line — the tab strip is never clipped,
-              and on a phone it scrolls sideways instead of stacking three rows. */}
-          <div className="flex flex-wrap items-center justify-between gap-2.5
-                          px-4 sm:px-5 py-3 border-b border-line">
-            <div className="max-w-full shrink-0 -mx-1 px-1 overflow-x-auto
-                            [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <FilterTabs wrap={false} tabs={TABS.map((t) => ({ ...t, count: counts[t.id] }))}
-                          active={tab} onChange={handleTabChange} />
-            </div>
-            <div className="flex items-center gap-2 ml-auto grow sm:grow-0">
-              <SearchInput value={query} onChange={setQuery} placeholder="Search name, no. or room"
-                           className="grow sm:grow-0 sm:w-44 xl:w-52" />
-              <ViewToggle options={VIEWS} value={view} onChange={changeView} />
-              {/* Icon-only: with the tabs, search and view switch sharing this
-                  one line, a "Refresh" label is what tips it onto a second row. */}
-              <Button variant="ghost" onClick={reload} disabled={loading}
-                      title="Refresh" aria-label="Refresh bookings" className="px-2.5">↻</Button>
-            </div>
+          {/* Status tabs. Search, refresh, the view switch and New booking live in
+              the page header bar. The tab strip scrolls sideways on its own. */}
+          <div className="px-3 sm:px-5 py-3 border-b border-line min-w-0">
+            <FilterTabs wrap={false} tabs={TAB_IDS.map((id) => ({ id, label: t(`tabs.${id}`), count: counts[id] }))}
+                        active={tab} onChange={handleTabChange} />
           </div>
 
           {error && (
-            <div className="px-5 py-3 text-sm text-danger-text bg-danger-bg border-b border-line">{error}</div>
+            <div className="px-4 sm:px-5 py-3 text-sm text-danger-text bg-danger-bg border-b border-line">{error}</div>
           )}
 
           <BookingsTable
@@ -350,7 +343,7 @@ export default function Bookings() {
             onEdit={setEditTarget}
             onDelete={setDeleteTarget}
             view={view}
-            emptyMessage={debouncedQuery ? 'No bookings match your search.' : 'Create a booking to get started.'}
+            emptyMessage={debouncedQuery ? t('page.emptySearch') : t('page.emptyStart')}
           />
 
           <Pagination page={page} pageSize={PAGE_SIZE} total={total} disabled={loading}
@@ -368,18 +361,22 @@ export default function Bookings() {
           isOpen
           guestName={checkOutTarget.guestName}
           folio={checkOutTarget.bookingNo}
-          room={`${checkOutTarget.roomNumber}${checkOutTarget.bed ? ` · Bed ${checkOutTarget.bed}` : ''} · ${checkOutTarget.roomType}`}
+          room={`${checkOutTarget.roomNumber}${checkOutTarget.bed ? ` · ${t('bedN', { bed: checkOutTarget.bed })}` : ''} · ${checkOutTarget.roomType}`}
           stayPeriod={`${formatDate(checkOutTarget.checkedInAt || checkOutTarget.fromDate)} · ${stayLabel(checkOutTarget)}`}
-          lineItems={[[checkOutTarget.tenancy ? 'Rent up to today' : 'Total amount', checkOutTarget.amount]]}
+          lineItems={[[checkOutTarget.tenancy ? t('checkOut.rentToToday') : t('checkOut.totalAmount'), checkOutTarget.amount]]}
           advance={checkOutTarget.advance}
           balanceDue={checkOutTarget.balanceDue}
           defaultPayment={Math.max(0, checkOutTarget.balanceDue - (checkOutTarget.securityDeposit || 0))}
           allowExtraCharges
           allowPartialPayment
-          footnote={`Confirming releases ${checkOutTarget.bed ? `Bed ${checkOutTarget.bed} of ` : ''}Room ${checkOutTarget.roomNumber} and moves the guest to checked-out history.${
+          footnote={[
+            checkOutTarget.bed
+              ? t('checkOut.releasesBed', { bed: checkOutTarget.bed, room: checkOutTarget.roomNumber })
+              : t('checkOut.releasesRoom', { room: checkOutTarget.roomNumber }),
             // A PG deposit is held, not billed — remind the desk to settle it.
-            checkOutTarget.securityDeposit > 0 ? ` Security deposit of ${formatCurrency(checkOutTarget.securityDeposit)} is held: dues not collected now come out of it, and the refund is next.` : ''}${
-            checkOutTarget.rentCredit > 0 ? ` Rent paid in advance of ${formatCurrency(checkOutTarget.rentCredit)} is refunded next.` : ''}`}
+            checkOutTarget.securityDeposit > 0 && t('checkOut.depositHeld', { amount: formatCurrency(checkOutTarget.securityDeposit) }),
+            checkOutTarget.rentCredit > 0 && t('checkOut.creditRefund', { amount: formatCurrency(checkOutTarget.rentCredit) }),
+          ].filter(Boolean).join(' ')}
           submitting={busyId === checkOutTarget.id}
           onClose={() => setCheckOutTarget(null)}
           onConfirm={handleCheckOut}
@@ -408,7 +405,7 @@ export default function Bookings() {
           booking={refundTarget}
           onClose={() => { setRefundTarget(null); reload() }}
           onRefunded={(amount) => {
-            toast(amount > 0 ? `${formatCurrency(amount)} refund recorded for ${refundTarget.guestName.split(',')[0]}` : 'Deduction saved')
+            toast(amount > 0 ? t('toast.refundRecorded', { amount: formatCurrency(amount), name: refundTarget.guestName.split(',')[0] }) : t('toast.deductionSaved'))
             setRefundTarget(null)
             reload()
           }}
@@ -419,7 +416,7 @@ export default function Bookings() {
           booking={rentTarget}
           onClose={() => setRentTarget(null)}
           onCollected={(_, amount) => {
-            toast(`${formatCurrency(amount)} rent collected from ${rentTarget.guestName.split(',')[0]}`)
+            toast(t('toast.rentCollected', { amount: formatCurrency(amount), name: rentTarget.guestName.split(',')[0] }))
             setRentTarget(null)
             reload()
           }}
@@ -434,9 +431,13 @@ export default function Bookings() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Delete Booking"
-        message={deleteTarget ? <>Permanently delete booking <b>{deleteTarget.bookingNo}</b> for <b>{deleteTarget.guestName}</b>? This cannot be undone.</> : null}
-        confirmLabel="Delete"
+        title={t('delete.title')}
+        message={deleteTarget ? (
+          <Trans t={t} i18nKey="delete.message" values={{ no: deleteTarget.bookingNo, name: deleteTarget.guestName }}
+                 components={{ b: <b /> }} />
+        ) : null}
+        confirmLabel={t('common:delete')}
+        cancelLabel={t('common:cancel')}
         danger
         busy={busyId === deleteTarget?.id}
       />

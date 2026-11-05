@@ -1,15 +1,18 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, Field, Button } from '../../ui-tw'
 import { formatCurrency } from '../../../utils/format'
 import { balance, dateRangeLabel } from '../../../utils/booking'
 
+// The reason is saved on the booking as typed here, so the stored value stays in
+// English (one consistent history); only the dropdown label is translated.
 const REASONS = [
-  'Guest changed travel plans',
-  'Found alternative accommodation',
-  'Booked by mistake',
-  'Payment not completed',
-  'No-show',
-  'Other',
+  { value: 'Guest changed travel plans', key: 'changedPlans' },
+  { value: 'Found alternative accommodation', key: 'alternative' },
+  { value: 'Booked by mistake', key: 'mistake' },
+  { value: 'Payment not completed', key: 'payment' },
+  { value: 'No-show', key: 'noShow' },
+  { value: 'Other', key: 'other' },
 ]
 
 /**
@@ -19,9 +22,10 @@ const REASONS = [
  * Calls onConfirm({ id, reason }).
  */
 export default function CancelModal({ isOpen, onClose, booking, bookings = [], onConfirm }) {
+  const { t } = useTranslation('cancellations')
   const isPicker = !booking
   const [selectedId, setSelectedId] = useState('')
-  const [reason, setReason] = useState(REASONS[0])
+  const [reason, setReason] = useState(REASONS[0].value)
   const [error, setError] = useState('')
 
   // Derive the target without an effect: prefer the explicit selection, then the
@@ -34,7 +38,7 @@ export default function CancelModal({ isOpen, onClose, booking, bookings = [], o
 
   const reset = () => {
     setSelectedId('')
-    setReason(REASONS[0])
+    setReason(REASONS[0].value)
     setError('')
   }
 
@@ -45,7 +49,7 @@ export default function CancelModal({ isOpen, onClose, booking, bookings = [], o
 
   const handleConfirm = () => {
     if (!target) {
-      setError('Select a booking to cancel')
+      setError(t('modal.select'))
       return
     }
     onConfirm({ id: target.id, reason })
@@ -56,22 +60,22 @@ export default function CancelModal({ isOpen, onClose, booking, bookings = [], o
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Cancel Booking"
-      subtitle={booking ? `${booking.bookingNo} · ${booking.guestName}` : 'Select a booking to cancel'}
+      title={t('modal.title')}
+      subtitle={booking ? `${booking.bookingNo} · ${booking.guestName}` : t('modal.select')}
       size="sm"
       footer={
         <>
-          <Button variant="ghost" onClick={handleClose}>Keep Booking</Button>
-          <Button variant="danger" onClick={handleConfirm} icon="✕">Confirm Cancellation</Button>
+          <Button variant="ghost" onClick={handleClose}>{t('modal.keep')}</Button>
+          <Button variant="danger" onClick={handleConfirm} icon="✕">{t('modal.confirm')}</Button>
         </>
       }
     >
       {isPicker && (
         <Field
-          label="Booking"
+          label={t('modal.booking')}
           value={target?.id || ''}
           onChange={(e) => setSelectedId(e.target.value)}
-          options={bookings.map((b) => ({ value: b.id, label: `${b.bookingNo} · ${b.guestName} · Room ${b.roomNumber || b.room}` }))}
+          options={bookings.map((b) => ({ value: b.id, label: `${b.bookingNo} · ${b.guestName} · ${t('modal.roomN', { room: b.roomNumber || b.room })}` }))}
           error={error}
           className="mb-4"
         />
@@ -79,17 +83,18 @@ export default function CancelModal({ isOpen, onClose, booking, bookings = [], o
 
       {target && (
         <div className="rounded-lg bg-surface2 border border-line px-4 py-3 mb-4 text-sm space-y-1.5">
-          <Row label="Guest" value={target.guestName} />
-          <Row label="Room" value={`${target.roomNumber || target.room} · ${target.roomType}`} />
-          <Row label="Stay" value={dateRangeLabel(target)} />
-          <Row label="Outstanding" value={formatCurrency(balance(target))} />
+          <Row label={t('common:guest')} value={target.guestName} />
+          <Row label={t('common:room')} value={`${target.roomNumber || target.room} · ${target.roomType}`} />
+          <Row label={t('modal.stay')} value={dateRangeLabel(target)} />
+          <Row label={t('modal.outstanding')} value={formatCurrency(balance(target))} />
         </div>
       )}
 
-      <Field label="Reason for cancellation" value={reason} onChange={(e) => setReason(e.target.value)} options={REASONS} />
+      <Field label={t('modal.reason')} value={reason} onChange={(e) => setReason(e.target.value)}
+             options={REASONS.map((r) => ({ value: r.value, label: t(`reasons.${r.key}`) }))} />
 
       <p className="mt-4 text-[12.5px] text-danger-text bg-danger-bg border border-danger/30 rounded-lg px-3 py-2">
-        This frees the room and moves the booking to the Cancellations list. This can’t be undone.
+        {t('modal.warning')}
       </p>
     </Modal>
   )
@@ -98,8 +103,8 @@ export default function CancelModal({ isOpen, onClose, booking, bookings = [], o
 function Row({ label, value }) {
   return (
     <div className="flex justify-between gap-3">
-      <span className="text-ink3">{label}</span>
-      <span className="text-ink font-medium text-right">{value}</span>
+      <span className="text-ink3 shrink-0">{label}</span>
+      <span className="text-ink font-medium text-right min-w-0 break-words">{value}</span>
     </div>
   )
 }

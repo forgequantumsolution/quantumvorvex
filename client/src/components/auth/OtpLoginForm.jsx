@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation, Trans } from 'react-i18next'
 import { Formik, Form, Field, ErrorMessage } from 'formik'
 import { useAuthActions } from '../../store/hooks'
 import { authApi } from '../../api/client'
@@ -15,6 +16,7 @@ import { MailIcon, AlertIcon, CheckIcon } from './authIcons'
  */
 export default function OtpLoginForm() {
   const { login } = useAuthActions()
+  const { t } = useTranslation('auth')
 
   const [step, setStep]   = useState('email')   // 'email' | 'code'
   const [email, setEmail] = useState('')
@@ -26,9 +28,9 @@ export default function OtpLoginForm() {
     const status = err.response?.status
     return (
       data?.error || data?.message ||
-      (status === 500 ? 'Server error — please try again.' :
-       status === 429 ? 'Too many attempts. Please wait a moment.' :
-       'Cannot reach server. Make sure the backend is running.')
+      (status === 500 ? t('errors.server') :
+       status === 429 ? t('errors.tooMany') :
+       t('errors.unreachable'))
     )
   }
 
@@ -39,7 +41,7 @@ export default function OtpLoginForm() {
       await authApi.requestOtp({ email: values.email.trim() })
       setEmail(values.email.trim())
       setStep('code')
-      setInfo('We sent a 6-digit code to your email. It expires in 10 minutes.')
+      setInfo(t('otp.sent'))
     } catch (err) {
       setError(friendlyError(err))
     } finally {
@@ -64,7 +66,7 @@ export default function OtpLoginForm() {
     setError(''); setInfo('')
     try {
       await authApi.requestOtp({ email })
-      setInfo('A new code has been sent.')
+      setInfo(t('otp.resent'))
     } catch (err) {
       setError(friendlyError(err))
     }
@@ -90,20 +92,20 @@ export default function OtpLoginForm() {
           {({ isSubmitting }) => (
             <Form>
               <p className="login-hint">
-                Enter your email and we'll send you a one-time code to sign in — no password needed.
+                {t('otp.hint')}
               </p>
               <div className="login-field">
-                <label className="login-field-label">Email address</label>
+                <label className="login-field-label">{t('email')}</label>
                 <div className="login-field-wrap">
                   <span className="login-field-icon"><MailIcon /></span>
-                  <Field type="email" name="email" placeholder="you@hotel.com"
+                  <Field type="email" name="email" placeholder={t('emailPlaceholder')}
                          className="login-input" autoComplete="email" />
                 </div>
                 <ErrorMessage name="email" component="div" className="login-field-error" />
               </div>
               <button type="submit" disabled={isSubmitting} className="login-submit">
                 {isSubmitting && <span className="login-spinner" />}
-                {isSubmitting ? 'Sending code…' : 'Send Login Code'}
+                {isSubmitting ? t('otp.sending') : t('otp.send')}
               </button>
             </Form>
           )}
@@ -113,26 +115,26 @@ export default function OtpLoginForm() {
           {({ isSubmitting }) => (
             <Form>
               <p className="login-hint">
-                Enter the 6-digit code sent to <strong>{email}</strong>.
+                <Trans t={t} i18nKey="otp.enterCode" values={{ email }} components={{ b: <strong /> }} />
               </p>
               <div className="login-field">
-                <label className="login-field-label">Verification code</label>
+                <label className="login-field-label">{t('otp.code')}</label>
                 <Field type="text" name="code" inputMode="numeric" maxLength={6}
                        placeholder="••••••" className="login-otp-input" autoComplete="one-time-code" autoFocus />
                 <ErrorMessage name="code" component="div" className="login-field-error" />
               </div>
               <button type="submit" disabled={isSubmitting} className="login-submit">
                 {isSubmitting && <span className="login-spinner" />}
-                {isSubmitting ? 'Verifying…' : 'Verify & Sign In'}
+                {isSubmitting ? t('otp.verifying') : t('otp.verify')}
               </button>
 
-              <div className="login-meta-row between mt-[14px]">
+              <div className="login-meta-row between after">
                 <button type="button" className="login-link"
                         onClick={() => { setStep('email'); setError(''); setInfo('') }}>
-                  ← Use a different email
+                  ← {t('otp.differentEmail')}
                 </button>
                 <button type="button" className="login-link" onClick={resend}>
-                  Resend code
+                  {t('otp.resend')}
                 </button>
               </div>
             </Form>

@@ -1,0 +1,59 @@
+{
+  "title": "नाइट ऑडिट",
+  "subtitle": "दिवसअखेर बंद — {{date}}",
+  "dayLocked": "दिवस लॉक",
+  "lockAction": "लॉक करा आणि दिवस बंद करा",
+  "stats": {
+    "occupancy": "ऑक्युपन्सी",
+    "revenue": "आजचे उत्पन्न",
+    "checkIns": "Check-in",
+    "checkOuts": "Check-out"
+  },
+  "revenue": {
+    "title": "उत्पन्नाचा तपशील",
+    "roomRent": "रूम भाडे",
+    "foodOrders": "फूड ऑर्डर",
+    "amenities": "सुविधा",
+    "advances": "ॲडव्हान्स",
+    "refunds": "परतावा",
+    "gstCollected": "जमा झालेला GST",
+    "netTotal": "निव्वळ एकूण"
+  },
+  "checklist": {
+    "title": "ऑडिट चेकलिस्ट",
+    "done": "{{done}}/{{total}} पूर्ण",
+    "roomStatuses": "सर्व रूमची स्थिती अचूक आहे का ते तपासा",
+    "checkoutsSettled": "सर्व Check-out चा हिशेब पूर्ण झाल्याची खात्री करा",
+    "revenueReport": "दिवसअखेरचा उत्पन्न अहवाल काढा",
+    "reconcileCash": "कॅश रजिस्टर शिल्लक जुळवा",
+    "housekeeping": "रिकाम्या रूमचे हाउसकीपिंग पूर्ण झाले का ते तपासा",
+    "arrivals": "उद्याच्या आगमनांची खात्री करा आणि रिमाइंडर पाठवा",
+    "backup": "दैनिक व्यवहार लॉगचा बॅकअप घ्या",
+    "lockDay": "दिवस लॉक करा आणि बंद शिल्लक नोंदवा"
+  },
+  "pendingCheckouts": "बाकी Check-out",
+  "allClear": "सर्व ठीक आहे",
+  "roomN": "रूम {{number}}",
+  "todaysCheckIns": "आजचे Check-in",
+  "checkedIn": "Check-in झाले",
+  "cash": {
+    "title": "कॅश रजिस्टर",
+    "net": "निव्वळ कॅश"
+  },
+  "hk": {
+    "title": "हाउसकीपिंग स्थिती",
+    "clean": "स्वच्छ",
+    "dirty": "अस्वच्छ",
+    "inspecting": "तपासणी सुरू",
+    "blocked": "ब्लॉक"
+  },
+  "lock": {
+    "title": "दिवस लॉक करा आणि ऑडिट बंद करा",
+    "confirm": "लॉकची खात्री करा",
+    "body": "यामुळे आजचे सर्व व्यवहार लॉक होतील आणि ऑडिट पूर्ण मानले जाईल. या तारखेत पुढे कोणताही बदल करता येणार नाही.",
+    "netRevenue": "आजचे निव्वळ उत्पन्न"
+  },
+  "toast": {
+    "locked": "नाइट ऑडिट लॉक झाले. दिवस यशस्वीरीत्या बंद झाला."
+  }
+}

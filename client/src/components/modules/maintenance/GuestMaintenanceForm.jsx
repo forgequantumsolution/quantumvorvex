@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { maintenanceApi } from '../../../api/client'
+import GuestLanguageToggle from '../portal/GuestLanguageToggle'
 
 // Standalone, no-login page reached by scanning a room's maintenance QR code:
 //   /report?t=<room qrToken>
-// Mobile-first; intentionally renders outside the authenticated app shell.
+// Mobile-first; intentionally renders outside the authenticated app shell, so it
+// carries its own language toggle.
 
 const CATEGORIES = ['Plumbing', 'Electrical', 'HVAC', 'Furniture', 'Housekeeping', 'Other']
 
@@ -13,34 +16,36 @@ function getToken() {
 }
 
 export default function GuestMaintenanceForm() {
+  const { t } = useTranslation('maintenance')
   const [token]                 = useState(getToken)
   const [room, setRoom]         = useState(null)
   const [loading, setLoading]   = useState(true)
-  const [loadError, setLoadError] = useState('')
+  // Errors are kept as { key } (client text, translated at render) or { msg } (server text).
+  const [loadError, setLoadError] = useState(null)
 
   const [category, setCategory]       = useState('Other')
   const [title, setTitle]             = useState('')
   const [description, setDescription] = useState('')
 
   const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState('')
+  const [submitError, setSubmitError] = useState(null)
   const [done, setDone]             = useState(null) // { ticketNo }
 
   // Resolve the room from the token so the guest can confirm where they are.
   useEffect(() => {
     let active = true
-    if (!token) { setLoading(false); setLoadError('This link is missing its room code.'); return }
+    if (!token) { setLoading(false); setLoadError({ key: 'guest.missingCode' }); return }
     maintenanceApi.getPublicRoom(token)
       .then(({ data }) => { if (active) setRoom(data.room) })
-      .catch((err) => { if (active) setLoadError(err.response?.data?.message || 'This QR code is not recognised.') })
+      .catch((err) => { if (active) setLoadError(err.response?.data?.message ? { msg: err.response.data.message } : { key: 'guest.unknownCode' }) })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
   }, [token])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (title.trim().length < 2) { setSubmitError('Please describe the issue.'); return }
-    setSubmitting(true); setSubmitError('')
+    if (title.trim().length < 2) { setSubmitError({ key: 'guest.describeIssue' }); return }
+    setSubmitting(true); setSubmitError(null)
     try {
       const { data } = await maintenanceApi.createPublic({
         qrToken: token,
@@ -50,11 +55,13 @@ export default function GuestMaintenanceForm() {
       })
       setDone({ ticketNo: data.ticketNo })
     } catch (err) {
-      setSubmitError(err.response?.data?.message || 'Could not submit. Please try again.')
+      setSubmitError(err.response?.data?.message ? { msg: err.response.data.message } : { key: 'guest.submitFailed' })
     } finally {
       setSubmitting(false)
     }
   }
+
+  const errText = (e) => (e ? e.msg || t(e.key) : '')
 
   // Mobile-first control styling. 16px font on inputs is deliberate: it stops
   // iOS Safari from auto-zooming the page when a field gains focus.
@@ -71,38 +78,41 @@ export default function GuestMaintenanceForm() {
     <div className="flex-1 min-w-0 overflow-y-auto bg-surface2">
       <div className="min-h-full flex flex-col items-center justify-center px-4 pt-8 pb-[max(2rem,env(safe-area-inset-bottom))]">
         <div className="w-full max-w-md">
+        <div className="flex justify-center mb-5">
+          <GuestLanguageToggle />
+        </div>
         {/* Brand header */}
         <div className="flex flex-col items-center text-center mb-6">
           <div className="w-14 h-14 rounded-2xl bg-gold-bg border border-gold-border flex items-center justify-center text-[26px] mb-3">
             🔧
           </div>
-          <h1 className="text-2xl font-extrabold text-ink tracking-[-0.02em] m-0">Report an Issue</h1>
+          <h1 className="text-2xl font-extrabold text-ink tracking-[-0.02em] m-0">{t('guest.title')}</h1>
           {room && (
             <span className="inline-flex items-center gap-1.5 mt-2.5 rounded-full bg-surface2 border border-line px-3 py-1 text-sm font-medium text-ink2">
-              Room {room.number}{room.floor ? ` · Floor ${room.floor}` : ''}
+              {t('roomNo', { number: room.number })}{room.floor ? ` · ${t('floorNo', { floor: room.floor })}` : ''}
             </span>
           )}
         </div>
 
         <div className="bg-surface border border-line rounded-2xl shadow-soft p-5 sm:p-6">
           {loading && (
-            <p className="text-base text-ink3 text-center py-10 m-0">Loading…</p>
+            <p className="text-base text-ink3 text-center py-10 m-0">{t('common:loading')}</p>
           )}
 
           {!loading && loadError && (
             <div className="text-center py-8">
               <p className="text-4xl mb-3 m-0">⚠️</p>
-              <p className="text-base font-semibold text-ink2 m-0">{loadError}</p>
-              <p className="text-sm text-ink3 mt-2">Please ask the front desk for help.</p>
+              <p className="text-base font-semibold text-ink2 m-0">{errText(loadError)}</p>
+              <p className="text-sm text-ink3 mt-2">{t('guest.askFrontDesk')}</p>
             </div>
           )}
 
           {!loading && !loadError && done && (
             <div className="text-center py-8">
               <p className="text-5xl mb-3 m-0">✅</p>
-              <p className="text-lg font-bold text-ink m-0">Thank you!</p>
+              <p className="text-lg font-bold text-ink m-0">{t('guest.thanks')}</p>
               <p className="text-sm text-ink3 mt-2 leading-relaxed">
-                Your request has been sent to our team.
+                {t('guest.sent')}
               </p>
               <span className="inline-block mt-3 rounded-lg bg-surface2 border border-line px-3 py-1.5 font-mono text-sm text-ink2">
                 {done.ticketNo}
@@ -112,21 +122,22 @@ export default function GuestMaintenanceForm() {
 
           {!loading && !loadError && !done && (
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-              {/* Category — custom dropdown (native <select> popups render inconsistently
-                  across OS/browsers; this gives a styled, predictable list). */}
-              <div>
-                <label className={labelCls}>What needs attention?</label>
-                <CategorySelect value={category} onChange={setCategory} options={CATEGORIES} />
+              {/* Category — one-tap chips rather than a dropdown: on a phone every
+                  option is visible at once and there is no popup to fight with. */}
+              <div role="radiogroup" aria-labelledby="gm-category">
+                <span id="gm-category" className={labelCls}>{t('guest.whatNeedsAttention')}</span>
+                <CategoryChips value={category} onChange={setCategory} options={CATEGORIES} />
               </div>
 
               {/* Title */}
               <div>
-                <label className={labelCls}>Issue</label>
+                <label htmlFor="gm-title" className={labelCls}>{t('guest.issue')}</label>
                 <input
+                  id="gm-title"
                   className={fieldCls}
                   type="text"
                   maxLength={120}
-                  placeholder="e.g. AC not cooling"
+                  placeholder={t('guest.issuePlaceholder')}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                 />
@@ -134,18 +145,19 @@ export default function GuestMaintenanceForm() {
 
               {/* Description */}
               <div>
-                <label className={labelCls}>Details <span className="text-ink3 font-normal normal-case">(optional)</span></label>
+                <label htmlFor="gm-details" className={labelCls}>{t('guest.details')} <span className="text-ink3 font-normal normal-case">({t('common:optional').toLowerCase()})</span></label>
                 <textarea
+                  id="gm-details"
                   className={`${fieldCls} min-h-[110px] resize-y`}
                   maxLength={1000}
-                  placeholder="Anything that helps us fix it faster"
+                  placeholder={t('guest.detailsPlaceholder')}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
               </div>
 
               {submitError && (
-                <p className="text-sm text-danger-text bg-danger-bg rounded-lg px-3 py-2.5 m-0">{submitError}</p>
+                <p className="text-sm text-danger-text bg-danger-bg rounded-lg px-3 py-2.5 m-0">{errText(submitError)}</p>
               )}
 
               <button
@@ -153,76 +165,44 @@ export default function GuestMaintenanceForm() {
                 disabled={submitting}
                 className="w-full py-3.5 rounded-xl bg-gold text-black font-bold text-base shadow-soft active:scale-[0.99] disabled:opacity-60 transition"
               >
-                {submitting ? 'Sending…' : 'Submit Request'}
+                {submitting ? t('guest.sending') : t('guest.submit')}
               </button>
             </form>
           )}
         </div>
 
-          <p className="text-xs text-ink3 text-center mt-5">No login needed · Your room staff will be notified</p>
+          <p className="text-xs text-ink3 text-center mt-5">{t('guest.footer')}</p>
         </div>
       </div>
     </div>
   )
 }
 
-// A small custom dropdown used in place of a native <select>. Renders the option
-// list as real DOM so it's styled consistently (and verifiable) on every device.
-function CategorySelect({ value, onChange, options }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-
-  // Close on outside click or Escape.
-  useEffect(() => {
-    if (!open) return
-    const onDocClick = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('mousedown', onDocClick)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDocClick)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
-
+// Category picker: a grid of large tap targets, one per category, behaving as
+// a radio group (exactly one selected).
+function CategoryChips({ value, onChange, options }) {
+  const { t } = useTranslation('maintenance')
   return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        className="w-full flex items-center justify-between gap-2 text-base text-ink bg-surface2 border border-line rounded-xl px-4 py-3 outline-none transition focus:border-gold focus:ring-4 focus:ring-gold-bg"
-      >
-        <span>{value}</span>
-        <span className={`text-ink3 text-sm transition-transform ${open ? 'rotate-180' : ''}`}>▾</span>
-      </button>
-
-      {open && (
-        <ul
-          role="listbox"
-          className="absolute z-20 mt-2 w-full max-h-64 overflow-auto rounded-xl border border-line bg-surface shadow-lift p-1"
-        >
-          {options.map((opt) => {
-            const selected = opt === value
-            return (
-              <li key={opt}>
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  onClick={() => { onChange(opt); setOpen(false) }}
-                  className={`w-full text-left text-base rounded-lg px-3 py-2.5 transition ${
-                    selected ? 'bg-gold-bg text-ink font-semibold' : 'text-ink2 hover:bg-surface2'
-                  }`}
-                >
-                  {opt}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+    <div className="grid grid-cols-2 min-[400px]:grid-cols-3 gap-2">
+      {options.map((opt) => {
+        const selected = opt === value
+        return (
+          <button
+            key={opt}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(opt)}
+            className={`min-h-11 min-w-0 truncate rounded-xl border px-3 py-2.5 text-[15px] font-medium transition outline-none focus-visible:ring-4 focus-visible:ring-gold-bg ${
+              selected
+                ? 'bg-gold-bg border-gold text-ink font-semibold'
+                : 'bg-surface2 border-line text-ink2 hover:border-gold'
+            }`}
+          >
+            {t(`category.${opt}`, opt)}
+          </button>
+        )
+      })}
     </div>
   )
 }

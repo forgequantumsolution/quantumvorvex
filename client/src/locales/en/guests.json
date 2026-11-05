@@ -1,0 +1,164 @@
+{
+  "title": "All Guests",
+  "subtitle": "Guest registry, stay history & billing",
+  "searchPlaceholder": "Search name, room, DOC ID, phone…",
+  "status": {
+    "Active": "Active",
+    "Due": "Due",
+    "Checked Out": "Checked Out",
+    "CheckedIn": "Checked In",
+    "Overdue": "Overdue"
+  },
+  "invoiceStatus": {
+    "Paid": "Paid",
+    "Pending": "Pending",
+    "Overdue": "Overdue"
+  },
+  "foodPlan": {
+    "Breakfast Only": "Breakfast Only",
+    "All Meals": "All Meals",
+    "Dinner Only": "Dinner Only",
+    "No Meals": "No Meals"
+  },
+  "tag": {
+    "VIP": "VIP",
+    "Corporate": "Corporate",
+    "Long-term": "Long-term"
+  },
+  "stayType": {
+    "daily": "Daily",
+    "monthly": "Monthly"
+  },
+  "stats": {
+    "active": "Active",
+    "due": "Due / Overdue",
+    "checkedOut": "Checked out",
+    "total": "Total guests"
+  },
+  "filter": {
+    "allStays": "All stays",
+    "allStatuses": "All statuses"
+  },
+  "col": {
+    "typeStays": "Type · Stays",
+    "staysWord_one": "stay",
+    "staysWord_other": "stays",
+    "checkInDue": "Check-in → Due"
+  },
+  "fields": {
+    "stayType": "Stay Type",
+    "checkIn": "Check-In",
+    "checkOut": "Check-Out",
+    "checkInDate": "Check-In Date",
+    "checkOutDate": "Check-Out Date",
+    "months": "Months",
+    "foodPlan": "Food Plan",
+    "tags": "Tags"
+  },
+  "actions": {
+    "checkIn": "Check-in",
+    "checkout": "Checkout",
+    "renew": "Renew",
+    "viewProfile": "View profile",
+    "editGuest": "Edit guest",
+    "editGuestBtn": "Edit Guest",
+    "deleteGuest": "Delete guest"
+  },
+  "empty": {
+    "loading": "Loading guests…",
+    "title": "No guests found"
+  },
+  "errors": {
+    "load": "Could not load guests. Make sure the backend is running."
+  },
+  "profile": {
+    "tabs": {
+      "info": "Profile",
+      "billing": "Billing",
+      "comms": "Communications",
+      "history": "Stay History"
+    },
+    "totalStays": "Total Stays",
+    "lifetimeSpend": "Lifetime Spend",
+    "nationality": "Nationality",
+    "address": "Address",
+    "idType": "ID Type",
+    "idNumber": "ID Number",
+    "duration": "Duration",
+    "months_one": "{{count}} month",
+    "months_other": "{{count}} months",
+    "advancePaid": "Advance Paid",
+    "facilities": "Facilities",
+    "extraAmenities": "Extra Amenities",
+    "documents": "Documents",
+    "docsUploaded": "{{count}} / {{total}} uploaded"
+  },
+  "billing": {
+    "invoice": "Invoice",
+    "period": "Period",
+    "paidOn": "Paid On",
+    "method": "Method",
+    "empty": "No billing records",
+    "totalLifetimeSpend": "Total Lifetime Spend"
+  },
+  "comms": {
+    "logged": "Communication logged.",
+    "logFailed": "Could not log communication.",
+    "empty": "No communication log",
+    "received": "received",
+    "channel": {
+      "note": "Note",
+      "call": "Call",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS",
+      "email": "Email"
+    },
+    "placeholder": "What was communicated?",
+    "log": "Log Communication"
+  },
+  "history": {
+    "stayNo": "Stay #{{n}}",
+    "current": "CURRENT",
+    "checkIn": "Check-in: {{date}}",
+    "monthsAgo_one": "~{{count}} month ago",
+    "monthsAgo_other": "~{{count}} months ago",
+    "returning": "Returning guest",
+    "visits_one": "{{count}} visit",
+    "visits_other": "{{count}} visits",
+    "gold": "Gold Loyalty",
+    "silver": "Silver Loyalty",
+    "bronze": "Bronze Loyalty"
+  },
+  "edit": {
+    "title": "Edit — {{name}}"
+  },
+  "checkout": {
+    "roomRent": "Room Rent",
+    "amenities": "Amenities"
+  },
+  "toast": {
+    "exportFailed": "Could not export guests",
+    "checkedOut": "{{name}} checked out. Room marked for housekeeping.",
+    "checkoutFailed": "Checkout failed",
+    "renewed": "Stay renewed for {{name}}.",
+    "renewFailed": "Could not renew stay.",
+    "deleted": "{{name}} deleted",
+    "deleteFailed": "Could not delete guest",
+    "updated": "Guest details updated",
+    "updateFailed": "Could not update guest",
+    "billFailed": "Could not load checkout bill"
+  },
+  "delete": {
+    "title": "Delete Guest",
+    "message": "Delete <b>{{name}}</b> ({{docId}})? Their billing history is kept, but they'll be removed from the registry. This frees their room."
+  },
+  "validation": {
+    "nameRequired": "Name is required",
+    "roomRequired": "Room is required",
+    "checkInRequired": "Check-in date is required",
+    "checkOutRequired": "Check-out date is required",
+    "enterNumber": "Enter a number",
+    "minOneMonth": "At least 1 month",
+    "monthsRequired": "Months is required"
+  }
+}

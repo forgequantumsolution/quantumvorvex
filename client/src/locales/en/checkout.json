@@ -1,0 +1,42 @@
+{
+  "title": "Check-Out — {{name}}",
+  "steps": {
+    "bill": "Bill Summary",
+    "pay": "Confirm & Pay",
+    "photo": "Guest Photo"
+  },
+  "methods": {
+    "cash": "Cash",
+    "card": "Card",
+    "upi": "UPI",
+    "bank_transfer": "Bank transfer",
+    "cheque": "Cheque",
+    "other": "Other"
+  },
+  "footnote": "Room will be marked as Dirty and queued for housekeeping automatically.",
+  "processing": "Processing…",
+  "collectAndCheckOut": "Collect {{amount}} & Check Out",
+  "complete": "Complete Check-Out",
+  "review": "Review & Confirm",
+  "nextPhoto": "Next: Photo",
+  "folio": "Folio",
+  "stayPeriod": "Stay Period",
+  "advancePaid": "Advance Paid",
+  "balanceDue": "Balance Due",
+  "refund": "refund",
+  "amountToCollect": "Amount to Collect",
+  "extraCharges": "Extra charges (₹)",
+  "collectNow": "Collect now (₹)",
+  "paymentMethod": "Payment Method",
+  "reference": "Reference / txn no.",
+  "referencePlaceholder": "e.g. UPI ref, last 4 digits",
+  "remarks": "Remarks (optional)",
+  "remarksPlaceholder": "Key return confirmation, damages, etc.",
+  "proof": "Payment screenshot / proof (optional)",
+  "attachProof": "Attach an image or PDF (e.g. UPI / card receipt)",
+  "fileTooLarge": "File is too large (max 10MB).",
+  "balanceAfter": "Balance after check-out",
+  "settled": "Settled",
+  "confirmReceived": "Payment received & key returned — confirm checkout",
+  "photoHint": "Capture a check-out photo of the guest for the booking file. This is optional — continue without one if the camera is unavailable."
+}

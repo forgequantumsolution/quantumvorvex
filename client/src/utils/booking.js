@@ -3,6 +3,12 @@
  * Cancellations pages. Pure functions over a booking record.
  */
 import { formatDate } from './format'
+import i18n from '../i18n'
+
+// Display text comes from common.json (shared by every screen), in the current
+// language at call time; components re-render on a language change, so these
+// plain functions follow it.
+const t = (key, opts) => i18n.t(`common:${key}`, opts)
 
 // Local "today" as a YYYY-MM-DD string (avoids the UTC off-by-one of toISOString).
 export const TODAY = (() => {
@@ -20,14 +26,14 @@ export function balance(b) {
 // Human-readable stay duration ("3 nights" or "2 months").
 export function stayLabel(b) {
   // PG tenancy: open-ended, rent billed monthly.
-  if (b.stayType === 'monthly' && !b.months) return 'Monthly rent · until move-out'
-  if (b.stayType === 'monthly') return `${b.months} month${b.months !== 1 ? 's' : ''}`
-  return `${b.nights} night${b.nights !== 1 ? 's' : ''}`
+  if (b.stayType === 'monthly' && !b.months) return t('monthlyUntilMoveOut')
+  if (b.stayType === 'monthly') return t('monthCount', { count: Number(b.months) || 0 })
+  return t('nightCount', { count: Number(b.nights) || 0 })
 }
 
 // "08 Jun → 11 Jun" or "from 08 Jun (monthly)".
 export function dateRangeLabel(b) {
-  if (b.stayType === 'monthly' && !b.months) return `From ${formatDate(b.fromDate)}`
+  if (b.stayType === 'monthly' && !b.months) return t('fromDate', { date: formatDate(b.fromDate) })
   if (b.stayType === 'monthly') return `${formatDate(b.fromDate)} · ${stayLabel(b)}`
   return `${formatDate(b.fromDate)} → ${formatDate(b.toDate)}`
 }
@@ -66,11 +72,11 @@ export const joinPhones = joinList
 // the extra rows are optional.
 export function phoneErrors(list) {
   const e = {}
-  if (!(list || [])[0]) e[phoneFieldName(0)] = 'Phone number is required'
+  if (!(list || [])[0]) e[phoneFieldName(0)] = t('validation.phoneRequired')
   ;(list || []).forEach((p, i) => {
     if (!p) return
-    if (p.length !== 10) e[phoneFieldName(i)] = 'Enter a valid 10-digit number'
-    else if (list.indexOf(p) !== i) e[phoneFieldName(i)] = 'Already added above'
+    if (p.length !== 10) e[phoneFieldName(i)] = t('validation.phoneInvalid')
+    else if (list.indexOf(p) !== i) e[phoneFieldName(i)] = t('validation.alreadyAdded')
   })
   return e
 }
@@ -93,14 +99,14 @@ export const joinNames = joinList
 export function nameErrors(list) {
   const e = {}
   const names = list || []
-  if (!names[0]?.trim()) e[nameFieldName(0)] = 'Guest name is required'
+  if (!names[0]?.trim()) e[nameFieldName(0)] = t('validation.guestNameRequired')
   names.forEach((n, i) => {
     const name = (n || '').trim()
     if (!name) return
-    if (name.includes(',')) e[nameFieldName(i)] = 'Use a separate row for each name'
-    else if (name.length < 2) e[nameFieldName(i)] = 'Enter the full name'
+    if (name.includes(',')) e[nameFieldName(i)] = t('validation.nameNoComma')
+    else if (name.length < 2) e[nameFieldName(i)] = t('validation.fullName')
     else if (names.findIndex((x) => (x || '').trim().toLowerCase() === name.toLowerCase()) !== i)
-      e[nameFieldName(i)] = 'Already added above'
+      e[nameFieldName(i)] = t('validation.alreadyAdded')
   })
   return e
 }

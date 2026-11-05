@@ -1,0 +1,164 @@
+{
+  "title": "सर्व पाहुणे",
+  "subtitle": "पाहुणे नोंदवही, मुक्काम इतिहास आणि बिलिंग",
+  "searchPlaceholder": "नाव, खोली, DOC ID, फोन शोधा…",
+  "status": {
+    "Active": "सक्रिय",
+    "Due": "देय",
+    "Checked Out": "Check-out झाले",
+    "CheckedIn": "Check-in झाले",
+    "Overdue": "थकीत"
+  },
+  "invoiceStatus": {
+    "Paid": "भरले",
+    "Pending": "बाकी",
+    "Overdue": "थकीत"
+  },
+  "foodPlan": {
+    "Breakfast Only": "फक्त नाश्ता",
+    "All Meals": "सर्व जेवण",
+    "Dinner Only": "फक्त रात्रीचे जेवण",
+    "No Meals": "जेवण नाही"
+  },
+  "tag": {
+    "VIP": "VIP",
+    "Corporate": "कॉर्पोरेट",
+    "Long-term": "दीर्घ मुदत"
+  },
+  "stayType": {
+    "daily": "दैनिक",
+    "monthly": "मासिक"
+  },
+  "stats": {
+    "active": "सक्रिय",
+    "due": "देय / थकीत",
+    "checkedOut": "Check-out झालेले",
+    "total": "एकूण पाहुणे"
+  },
+  "filter": {
+    "allStays": "सर्व मुक्काम",
+    "allStatuses": "सर्व स्थिती"
+  },
+  "col": {
+    "typeStays": "प्रकार · मुक्काम",
+    "staysWord_one": "मुक्काम",
+    "staysWord_other": "मुक्काम",
+    "checkInDue": "Check-in → देय"
+  },
+  "fields": {
+    "stayType": "मुक्काम प्रकार",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "checkInDate": "Check-in तारीख",
+    "checkOutDate": "Check-out तारीख",
+    "months": "महिने",
+    "foodPlan": "जेवण प्लॅन",
+    "tags": "टॅग"
+  },
+  "actions": {
+    "checkIn": "Check-in",
+    "checkout": "Check-out",
+    "renew": "नूतनीकरण",
+    "viewProfile": "प्रोफाइल पहा",
+    "editGuest": "पाहुणा संपादित करा",
+    "editGuestBtn": "पाहुणा संपादित करा",
+    "deleteGuest": "पाहुणा हटवा"
+  },
+  "empty": {
+    "loading": "पाहुणे लोड होत आहेत…",
+    "title": "एकही पाहुणा सापडला नाही"
+  },
+  "errors": {
+    "load": "पाहुणे लोड झाले नाहीत. बॅकएंड चालू आहे का ते तपासा."
+  },
+  "profile": {
+    "tabs": {
+      "info": "प्रोफाइल",
+      "billing": "बिलिंग",
+      "comms": "संवाद",
+      "history": "मुक्काम इतिहास"
+    },
+    "totalStays": "एकूण मुक्काम",
+    "lifetimeSpend": "एकूण खर्च",
+    "nationality": "राष्ट्रीयत्व",
+    "address": "पत्ता",
+    "idType": "ID प्रकार",
+    "idNumber": "ID क्रमांक",
+    "duration": "कालावधी",
+    "months_one": "{{count}} महिना",
+    "months_other": "{{count}} महिने",
+    "advancePaid": "आगाऊ भरले",
+    "facilities": "सुविधा",
+    "extraAmenities": "अतिरिक्त सुविधा",
+    "documents": "कागदपत्रे",
+    "docsUploaded": "{{count}} / {{total}} अपलोड"
+  },
+  "billing": {
+    "invoice": "Invoice",
+    "period": "कालावधी",
+    "paidOn": "भरल्याची तारीख",
+    "method": "पद्धत",
+    "empty": "बिलिंग नोंदी नाहीत",
+    "totalLifetimeSpend": "एकूण आजीवन खर्च"
+  },
+  "comms": {
+    "logged": "संवाद नोंदवला.",
+    "logFailed": "संवाद नोंदवता आला नाही.",
+    "empty": "संवाद नोंदी नाहीत",
+    "received": "प्राप्त",
+    "channel": {
+      "note": "नोंद",
+      "call": "कॉल",
+      "whatsapp": "WhatsApp",
+      "sms": "SMS",
+      "email": "ईमेल"
+    },
+    "placeholder": "काय बोलणे झाले?",
+    "log": "संवाद नोंदवा"
+  },
+  "history": {
+    "stayNo": "मुक्काम #{{n}}",
+    "current": "सध्याचा",
+    "checkIn": "Check-in: {{date}}",
+    "monthsAgo_one": "~{{count}} महिन्यापूर्वी",
+    "monthsAgo_other": "~{{count}} महिन्यांपूर्वी",
+    "returning": "पुन्हा आलेले पाहुणे",
+    "visits_one": "{{count}} भेट",
+    "visits_other": "{{count}} भेटी",
+    "gold": "गोल्ड लॉयल्टी",
+    "silver": "सिल्व्हर लॉयल्टी",
+    "bronze": "ब्राँझ लॉयल्टी"
+  },
+  "edit": {
+    "title": "संपादित करा — {{name}}"
+  },
+  "checkout": {
+    "roomRent": "खोली भाडे",
+    "amenities": "सुविधा"
+  },
+  "toast": {
+    "exportFailed": "पाहुणे निर्यात करता आले नाहीत",
+    "checkedOut": "{{name}} चे Check-out झाले. खोली हाउसकीपिंगसाठी चिन्हांकित.",
+    "checkoutFailed": "Check-out अयशस्वी",
+    "renewed": "{{name}} चा मुक्काम वाढवला.",
+    "renewFailed": "मुक्काम वाढवता आला नाही.",
+    "deleted": "{{name}} हटवले",
+    "deleteFailed": "पाहुणा हटवता आला नाही",
+    "updated": "पाहुण्याचे तपशील अपडेट झाले",
+    "updateFailed": "पाहुणा अपडेट करता आला नाही",
+    "billFailed": "Check-out बिल लोड झाले नाही"
+  },
+  "delete": {
+    "title": "पाहुणा हटवा",
+    "message": "<b>{{name}}</b> ({{docId}}) हटवायचे? त्यांचा बिलिंग इतिहास राहील, पण ते नोंदवहीतून काढले जातील. त्यांची खोली मोकळी होईल."
+  },
+  "validation": {
+    "nameRequired": "नाव आवश्यक आहे",
+    "roomRequired": "खोली आवश्यक आहे",
+    "checkInRequired": "चेक-इन तारीख आवश्यक आहे",
+    "checkOutRequired": "चेक-आउट तारीख आवश्यक आहे",
+    "enterNumber": "संख्या टाका",
+    "minOneMonth": "किमान 1 महिना",
+    "monthsRequired": "महिने आवश्यक आहेत"
+  }
+}

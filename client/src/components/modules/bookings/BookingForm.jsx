@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Field, Button } from '../../ui-tw'
 import CameraCaptureModal from '../../ui/CameraCaptureModal'
 import { bookingsApi, roomsApi, settingsApi } from '../../../api/client'
@@ -14,6 +15,7 @@ import {
   TODAY, joinPhones, phoneErrors, phoneFieldName, splitPhones, MAX_PHONES,
   joinNames, nameErrors, nameFieldName, splitNames, MAX_NAMES,
 } from '../../../utils/booking'
+import { appLocale } from '../../../i18n'
 
 const DAY_MS = 86400000
 
@@ -28,14 +30,10 @@ const EMPTY = {
   invoiceNo: '',
 }
 
-const SOURCES = [
-  { value: 'walk_in', label: 'Walk-in' },
-  { value: 'phone', label: 'Phone' },
-  { value: 'website', label: 'Website' },
-  { value: 'ota', label: 'OTA (Booking.com / MMT)' },
-  { value: 'referral', label: 'Referral' },
-  { value: 'corporate', label: 'Corporate' },
-]
+// Source values go to the server; labels come from bookings:sources.<value>.
+const SOURCE_VALUES = ['walk_in', 'phone', 'website', 'ota', 'referral', 'corporate']
+// ID type values are stored as-is (and name the uploaded scans); only the chip
+// labels are translated, via bookings:idTypes.<value>.
 const ID_TYPES = ['Aadhaar', 'PAN', 'Passport', 'Driving License', 'Voter ID', 'Other']
 
 // Used for the captured file's name, which is what the server stores on disk —
@@ -85,11 +83,11 @@ function stayRange(v, openEnded) {
 function Section({ title, hint, children }) {
   return (
     <section className="rounded-xl border border-line overflow-hidden">
-      <header className="flex items-baseline justify-between gap-3 px-4 py-2.5 border-b border-line bg-surface2">
-        <h4 className="text-[12.5px] font-semibold text-ink">{title}</h4>
-        {hint && <span className="text-[11px] text-ink3 shrink-0">{hint}</span>}
+      <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 px-3.5 sm:px-4 py-2.5 border-b border-line bg-surface2">
+        <h4 className="text-[13px] font-semibold text-ink">{title}</h4>
+        {hint && <span className="text-xs text-ink3 min-w-0">{hint}</span>}
       </header>
-      <div className="p-4 bg-surface">{children}</div>
+      <div className="p-3.5 sm:p-4 bg-surface">{children}</div>
     </section>
   )
 }
@@ -110,7 +108,10 @@ function SumRow({ label, value }) {
  * success and onCancel() when the user backs out.
  */
 export default function BookingForm({ onSaved, onCancel }) {
+  const { t } = useTranslation('bookings')
   const toast = useToast()
+  const idTypeLabel = (type) => t(`idTypes.${type}`, { defaultValue: type })
+  const sourceOptions = SOURCE_VALUES.map((value) => ({ value, label: t(`sources.${value}`) }))
   const [values, setValues] = useState(EMPTY)
   const [errors, setErrors] = useState({})
   const [rooms, setRooms] = useState([])
@@ -148,13 +149,13 @@ export default function BookingForm({ onSaved, onCancel }) {
   const [photoBusy, setPhotoBusy] = useState(false)
 
   // Toggle an ID type on/off; clear its uploaded files when removed.
-  const toggleIdType = (t) => {
-    const has = values.idTypes.includes(t)
+  const toggleIdType = (type) => {
+    const has = values.idTypes.includes(type)
     setValues((v) => ({
       ...v,
-      idTypes: has ? v.idTypes.filter((x) => x !== t) : [...v.idTypes, t],
+      idTypes: has ? v.idTypes.filter((x) => x !== type) : [...v.idTypes, type],
     }))
-    if (has) setIdDocs((d) => { const n = { ...d }; delete n[t]; return n })
+    if (has) setIdDocs((d) => { const n = { ...d }; delete n[type]; return n })
   }
 
   const setIdDoc = (type, side, file) =>
@@ -258,11 +259,13 @@ export default function BookingForm({ onSaved, onCancel }) {
           invoiceNo: nextInvoiceNo,
         }))
       })
-      .catch(() => setApiError('Could not load rooms. Is the backend running?'))
+      .catch(() => setApiError(t('form.loadRoomsError')))
       .finally(() => setLoadingRooms(false))
+    // Runs once on mount; t only feeds the error text.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const typeName = (r) => roomTypes.find((t) => t.id === r?.typeId)?.name || ''
+  const typeName = (r) => roomTypes.find((rt) => rt.id === r?.typeId)?.name || ''
 
   const selectedRoom = rooms.find((r) => r.id === values.roomId)
   const pgRoom = isBedRoom(selectedRoom)
@@ -370,20 +373,20 @@ export default function BookingForm({ onSaved, onCancel }) {
   const validate = () => {
     const e = {}
     if (pgMode) {
-      if (!occupants.length) e.beds = 'Select at least one bed'
+      if (!occupants.length) e.beds = t('form.err.selectBed')
       Object.assign(e, occupantErrors(occupants, bedAvail.beds))
     } else {
       Object.assign(e, nameErrors(values.guestNames), phoneErrors(values.guestPhones))
       if (values.guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.guestEmail.trim()))
-        e.guestEmail = 'Enter a valid email address'
-      if (!values.roomRate || Number(values.roomRate) <= 0) e.roomRate = 'Enter the room rate'
+        e.guestEmail = t('form.err.email')
+      if (!values.roomRate || Number(values.roomRate) <= 0) e.roomRate = t('form.err.rate')
     }
-    if (!values.roomId) e.roomId = 'Select a room'
+    if (!values.roomId) e.roomId = t('form.err.room')
     if (values.stayType === 'daily') {
-      if (!values.toDate) e.toDate = 'Check-out date is required'
-      else if (nights(values.fromDate, values.toDate) < 1) e.toDate = 'Must be after check-in'
+      if (!values.toDate) e.toDate = t('form.err.checkOutRequired')
+      else if (nights(values.fromDate, values.toDate) < 1) e.toDate = t('form.err.afterCheckIn')
     } else if (!tenancyMode && (!values.months || Number(values.months) < 1)) {
-      e.months = 'At least 1 month'
+      e.months = t('form.err.oneMonth')
     }
     setErrors(e)
     return e
@@ -402,7 +405,7 @@ export default function BookingForm({ onSaved, onCancel }) {
     const errorKeys = Object.keys(e)
     if (errorKeys.length) {
       const first = FIELD_ORDER.find((k) => e[k]) || errorKeys[0]
-      toast(e[first] || 'Please fix the highlighted fields', 'danger')
+      toast(e[first] || t('form.err.fixFields'), 'danger')
       const el = document.querySelector(`[name="${first}"], [data-field="${first}"]`)
       el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       el?.focus?.({ preventScroll: true })
@@ -452,10 +455,11 @@ export default function BookingForm({ onSaved, onCancel }) {
 
       // Attach any ID documents to the new booking (best-effort).
       const entries = []
-      values.idTypes.forEach((t) => {
-        const docs = idDocs[t]
-        if (docs?.front) entries.push([`${t} — Front`, docs.front])
-        if (docs?.back) entries.push([`${t} — Back`, docs.back])
+      // Document labels are stored with the file, so they stay in English.
+      values.idTypes.forEach((type) => {
+        const docs = idDocs[type]
+        if (docs?.front) entries.push([`${type} — Front`, docs.front])
+        if (docs?.back) entries.push([`${type} — Back`, docs.back])
       })
       extraDocs.forEach((d) => {
         if (d.file) entries.push([d.label.trim() || d.file.name, d.file])
@@ -467,7 +471,7 @@ export default function BookingForm({ onSaved, onCancel }) {
         try {
           await bookingsApi.uploadDocuments(booking.id, form)
         } catch {
-          toast('Booking created, but some documents failed to upload.', 'danger')
+          toast(t('form.toast.docsFailed'), 'danger')
         }
       }
 
@@ -476,7 +480,7 @@ export default function BookingForm({ onSaved, onCancel }) {
       setPhotoFor(booking)
     } catch (err) {
       const d = err.response?.data
-      toast(d?.message || d?.error || 'Could not create the booking. Please try again.', 'danger')
+      toast(d?.message || d?.error || t('form.toast.createFailed'), 'danger')
     } finally {
       setSubmitting(false)
     }
@@ -512,7 +516,7 @@ export default function BookingForm({ onSaved, onCancel }) {
       bookings = data.bookings
     } catch (err) {
       const d = err.response?.data
-      toast(d?.message || d?.error || 'Could not create the bookings. Please try again.', 'danger')
+      toast(d?.message || d?.error || t('form.toast.createGroupFailed'), 'danger')
       // A bed may have just been taken — refresh the picker so it shows why.
       if (err.response?.status === 409 && range) {
         bookingsApi.bedAvailability({ roomId: values.roomId, ...range })
@@ -531,7 +535,7 @@ export default function BookingForm({ onSaved, onCancel }) {
       form.append('docTypes', JSON.stringify(files.map(([label]) => label)))
       try { await bookingsApi.uploadDocuments(bookings[i].id, form) } catch { failed++ }
     }))
-    if (failed) toast('Bookings created, but some ID scans failed to upload.', 'danger')
+    if (failed) toast(t('form.toast.scansFailed'), 'danger')
 
     onSaved({ group: true, bookings, roomNumber: selectedRoom?.number })
   }
@@ -546,39 +550,39 @@ export default function BookingForm({ onSaved, onCancel }) {
       form.append('docTypes', JSON.stringify(['guest_photo']))
       await bookingsApi.uploadDocuments(photoFor.id, form)
     } catch {
-      toast('Booking created, but the photo failed to upload.', 'danger')
+      toast(t('form.toast.photoFailed'), 'danger')
     } finally {
       setPhotoBusy(false)
       onSaved(photoFor)
     }
   }
 
-  const inr = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`
+  const inr = (n) => `₹${Number(n || 0).toLocaleString(appLocale())}`
 
   // Summary-rail context: which room, how long, and how many files are queued.
   const roomLabel = selectedRoom
-    ? `Room ${selectedRoom.number}${typeName(selectedRoom) ? ` · ${typeName(selectedRoom)}` : ''}${
-        pgMode ? ` · ${occupants.length} bed${occupants.length === 1 ? '' : 's'}` : ''}`
-    : 'No room selected'
+    ? `${t('roomN', { room: selectedRoom.number })}${typeName(selectedRoom) ? ` · ${typeName(selectedRoom)}` : ''}${
+        pgMode ? ` · ${t('form.beds', { count: occupants.length })}` : ''}`
+    : t('form.noRoom')
   // Room picker option. Rooms that can't take a booking now are shown greyed out
   // with the reason, rather than hidden or (worse) offered.
   const roomOption = (r) => {
-    const name = `Room ${r.number}${typeName(r) ? ` · ${typeName(r)}` : ''}`
-    const reason = r.status === 'maintenance' ? 'under maintenance'
-      : r.status === 'reserved' ? 'reserved'
-      : r.status === 'occupied' ? (hasBedStays(r) ? `full · ${r.bedCount}/${r.bedCount} beds` : 'occupied') : ''
+    const name = `${t('roomN', { room: r.number })}${typeName(r) ? ` · ${typeName(r)}` : ''}`
+    const reason = r.status === 'maintenance' ? t('form.roomState.maintenance')
+      : r.status === 'reserved' ? t('form.roomState.reserved')
+      : r.status === 'occupied' ? (hasBedStays(r) ? t('form.roomState.full', { count: r.bedCount }) : t('form.roomState.occupied')) : ''
     if (reason) return { value: r.id, label: `${name} — ${reason}`, disabled: true }
     if (!isBedRoom(r)) return { value: r.id, label: name }
     // Partly let bed by bed: say how many are free; otherwise just the bed count.
-    if (!hasBedStays(r)) return { value: r.id, label: `${name} · ${r.bedCount} beds` }
+    if (!hasBedStays(r)) return { value: r.id, label: `${name} · ${t('form.beds', { count: r.bedCount })}` }
     const free = bedOccupancy(r).filter((b) => b.state === 'free').length
     return { value: r.id, label: `${name} · ${bedFillLabel(free, r.bedCount)}` }
   }
   const bookableCount = rooms.filter(isBookable).length
-  const unitWord = values.stayType === 'daily' ? 'night' : 'month'
-  const stayLabel = tenancyMode ? 'Monthly · until move-out'
-    : pricing.units ? `${pricing.units} ${unitWord}${pricing.units === 1 ? '' : 's'}`
-    : 'Dates not set'
+  const unitWord = values.stayType === 'daily' ? t('form.unit.night') : t('form.unit.month')
+  const stayLabel = tenancyMode ? t('form.monthlyUntilMoveOut')
+    : pricing.units ? t(values.stayType === 'daily' ? 'form.nights' : 'form.months', { count: pricing.units })
+    : t('form.datesNotSet')
   const attachedCount = pgMode
     ? occupants.reduce((n, o) => n + [o.front, o.back].filter(Boolean).length, 0)
     : values.idTypes.reduce((n, t) => n + [idDocs[t]?.front, idDocs[t]?.back].filter(Boolean).length, 0) +
@@ -588,7 +592,7 @@ export default function BookingForm({ onSaved, onCancel }) {
 
   return (
     <div>
-      <div className="px-5 py-5">
+      <div className="px-3 py-4 sm:px-5 sm:py-5">
         {apiError && (
           <div className="mb-4 rounded-lg border border-danger/30 bg-danger-bg px-3 py-2 text-sm text-danger-text">
             {apiError}
@@ -603,90 +607,92 @@ export default function BookingForm({ onSaved, onCancel }) {
 
             {/* ── Guest ── (a PG bed booking takes guests per bed, below) */}
             {!pgMode && (
-            <Section title="Guest details" hint="Name and phone are required">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-x-4 gap-y-3.5">
-                <NameFields className="lg:col-span-4" names={values.guestNames} errors={errors}
+            <Section title={t('form.guestDetails')} hint={t('form.guestDetailsHint')}>
+              {/* Two columns even on a phone: name, phone, email and address take
+                  the full row, the short fields (nationality, adults, children) pair up. */}
+              <div className="grid grid-cols-2 lg:grid-cols-12 gap-x-3 sm:gap-x-4 gap-y-3.5">
+                <NameFields className="col-span-2 sm:col-span-1 lg:col-span-4" names={values.guestNames} errors={errors}
                             onChange={setNames} />
-                <PhoneFields className="lg:col-span-4" phones={values.guestPhones} errors={errors}
+                <PhoneFields className="col-span-2 sm:col-span-1 lg:col-span-4" phones={values.guestPhones} errors={errors}
                              onChange={setPhones} required />
-                <Field className="lg:col-span-4" label="Email" name="guestEmail" type="email" value={values.guestEmail}
+                <Field className="col-span-2 sm:col-span-1 lg:col-span-4" label={t('common:email')} name="guestEmail" type="email" value={values.guestEmail}
                        onChange={set('guestEmail')} placeholder="guest@example.com" error={errors.guestEmail} />
 
                 {/* What the number turned up — filled details are only ever a
                     starting point, so the row stays visible and reversible. */}
                 {lookup && (
-                  <div className="sm:col-span-2 lg:col-span-12">
+                  <div className="col-span-2 lg:col-span-12">
                     {lookup.state === 'found' ? (
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-gold-border
-                                      bg-gold-bg px-3 py-2 text-[12px] text-ink2">
-                        <span className="font-medium text-gold">Returning guest</span>
+                                      bg-gold-bg px-3 py-2 text-xs text-ink2">
+                        <span className="font-medium text-gold">{t('form.lookup.returning')}</span>
                         <span>
-                          {lookup.visits} booking{lookup.visits === 1 ? '' : 's'} on this number
-                          {lookup.lastStay && ` · last: ${lookup.lastStay.bookingNo}`}
-                          {lookup.lastStay?.roomNumber && ` · Room ${lookup.lastStay.roomNumber}`}
+                          {t('form.lookup.visits', { count: lookup.visits })}
+                          {lookup.lastStay && ` · ${t('form.lookup.last', { no: lookup.lastStay.bookingNo })}`}
+                          {lookup.lastStay?.roomNumber && ` · ${t('roomN', { room: lookup.lastStay.roomNumber })}`}
                           {lookup.lastStay?.fromDate && ` · ${formatDate(lookup.lastStay.fromDate)}`}
                         </span>
                         <button type="button" onClick={clearGuest}
-                                className="ml-auto font-medium text-ink3 hover:text-danger transition-colors">
-                          Clear filled details
+                                className="ml-auto font-medium text-ink3 hover:text-danger transition-colors pointer-coarse:min-h-11">
+                          {t('form.lookup.clear')}
                         </button>
                       </div>
                     ) : (
-                      <p className="text-[11.5px] text-ink3">
-                        {lookup.state === 'searching' && 'Checking for a previous stay…'}
-                        {lookup.state === 'none' && 'New guest — nothing on file for this number.'}
-                        {lookup.state === 'cleared' && 'Details cleared — enter them manually.'}
+                      <p className="text-xs text-ink3">
+                        {lookup.state === 'searching' && t('form.lookup.searching')}
+                        {lookup.state === 'none' && t('form.lookup.none')}
+                        {lookup.state === 'cleared' && t('form.lookup.cleared')}
                       </p>
                     )}
                   </div>
                 )}
-                <Field className="sm:col-span-2 lg:col-span-6" label="Address" value={values.guestAddress}
-                       onChange={set('guestAddress')} placeholder="City, State" />
-                <Field className="lg:col-span-2" label="Nationality" value={values.nationality}
-                       onChange={set('nationality')} placeholder="Indian" />
+                <Field className="col-span-2 sm:col-span-1 lg:col-span-6" label={t('form.address')} value={values.guestAddress}
+                       onChange={set('guestAddress')} placeholder={t('form.addressPlaceholder')} />
+                <Field className="col-span-2 sm:col-span-1 lg:col-span-2" label={t('form.nationality')} value={values.nationality}
+                       onChange={set('nationality')} placeholder={t('form.nationalityPlaceholder')} />
                 {/* Occupancy is a two-digit number — it never needs a full column. */}
-                <Field className="lg:col-span-2" label="Adults" type="number" min="1" value={values.adults}
+                <Field className="lg:col-span-2" label={t('form.adults')} type="number" min="1" value={values.adults}
                        onChange={set('adults')} />
-                <Field className="lg:col-span-2" label="Children" type="number" min="0" value={values.children}
+                <Field className="lg:col-span-2" label={t('form.children')} type="number" min="0" value={values.children}
                        onChange={set('children')} />
               </div>
             </Section>
             )}
 
             {/* ── Stay ── */}
-            <Section title="Stay & room" hint={stayLabel}>
+            <Section title={t('form.stayRoom')} hint={stayLabel}>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-3.5">
-                <Field label="Room" name="roomId" value={values.roomId} onChange={set('roomId')} error={errors.roomId}
+                <Field label={t('common:room')} name="roomId" value={values.roomId} onChange={set('roomId')} error={errors.roomId}
                        options={
                          loadingRooms
-                           ? [{ value: '', label: 'Loading rooms…' }]
+                           ? [{ value: '', label: t('form.loadingRooms') }]
                            : bookableCount
                              ? rooms.map(roomOption)
-                             : [{ value: '', label: 'No room or bed is free right now' }, ...rooms.map(roomOption)]
+                             : [{ value: '', label: t('form.noneFree') }, ...rooms.map(roomOption)]
                        } />
-                <Field label="Booking source" value={values.source} onChange={set('source')} options={SOURCES} />
+                <Field label={t('form.source')} value={values.source} onChange={set('source')} options={sourceOptions} />
                 {pgMode || tenancyMode ? (
                   <div>
-                    <span className="block text-xs font-medium text-ink2 mb-1.5">Invoices</span>
+                    <span className="block text-xs font-medium text-ink2 mb-1.5">{t('form.invoices')}</span>
                     <p className="text-[12px] text-ink3 rounded-lg border border-dashed border-line2 px-3 py-2 m-0">
                       {tenancyMode
-                        ? `Rent invoice every month${pgMode ? ' per person' : ''} — automatic`
-                        : 'Auto — one invoice per person'}
+                        ? (pgMode ? t('form.invoiceMonthlyPerPerson') : t('form.invoiceMonthly'))
+                        : t('form.invoicePerPerson')}
                     </p>
                   </div>
                 ) : (
-                  <Field label="Invoice no." value={values.invoiceNo} onChange={set('invoiceNo')}
-                         placeholder="Auto" hint="Auto-generated — edit to override" />
+                  <Field label={t('form.invoiceNo')} value={values.invoiceNo} onChange={set('invoiceNo')}
+                         placeholder={t('form.auto')} hint={t('form.invoiceNoHint')} />
                 )}
                 {pgRoom && (
                   <div className="sm:col-span-2 lg:col-span-3">
                     <span className="block text-xs font-medium text-ink2 mb-1.5">
-                      Book this room · {selectedRoom.bedCount} beds
+                      {t('form.bookThisRoom', { count: selectedRoom.bedCount })}
                     </span>
-                    <div className="inline-flex rounded-lg border border-line2 bg-surface2 p-[3px] gap-[3px]" role="radiogroup">
+                    <div className="grid grid-cols-2 sm:inline-flex w-full sm:w-auto rounded-lg border border-line2 bg-surface2 p-[3px] gap-[3px]" role="radiogroup">
                       {[
-                        { id: 'room', label: 'Whole room', sub: allBedsFree ? 'one party, all beds' : 'needs every bed free' },
-                        { id: 'bed', label: 'By bed (PG)', sub: 'one booking per person' },
+                        { id: 'room', label: t('form.wholeRoom'), sub: allBedsFree ? t('form.wholeRoomSub') : t('form.wholeRoomNeedsFree') },
+                        { id: 'bed', label: t('form.byBed'), sub: t('form.byBedSub') },
                       ].map((o) => {
                         const active = bookBy === o.id
                         const disabled = o.id === 'room' && !allBedsFree
@@ -698,40 +704,40 @@ export default function BookingForm({ onSaved, onCancel }) {
                                       : disabled ? 'text-ink3 opacity-50 cursor-not-allowed' : 'text-ink2 hover:text-ink'
                                   }`}>
                             <span className="block text-[12.5px] font-semibold">{o.label}</span>
-                            <span className="block text-[10.5px] text-ink3">{o.sub}</span>
+                            <span className="block text-xs text-ink3">{o.sub}</span>
                           </button>
                         )
                       })}
                     </div>
                     {!allBedsFree && (
                       // Say why "Whole room" is off rather than leave a dead button.
-                      <p className="text-[11.5px] text-ink3 mt-1.5 mb-0">
-                        Whole room needs every bed free —{' '}
-                        {bedAvail.beds.filter((b) => !b.free)
-                          .map((b) => `Bed ${b.label} (${b.heldBy.name}${b.heldBy.until ? ` till ${formatDate(b.heldBy.until)}` : ''})`)
-                          .join(', ')}{' '}
-                        {bedAvail.beds.filter((b) => !b.free).length === 1 ? 'is' : 'are'} taken for these dates.
-                        Change the dates, or book the free beds.
+                      <p className="text-xs text-ink3 mt-1.5 mb-0">
+                        {t('form.bedsTaken', {
+                          count: bedAvail.beds.filter((b) => !b.free).length,
+                          beds: bedAvail.beds.filter((b) => !b.free)
+                            .map((b) => `${t('bedN', { bed: b.label })} (${b.heldBy.name}${b.heldBy.until ? ` ${t('form.till', { date: formatDate(b.heldBy.until) })}` : ''})`)
+                            .join(', '),
+                        })}
                       </p>
                     )}
                   </div>
                 )}
-                <Field label="Stay type" value={values.stayType} onChange={set('stayType')}
-                       options={[{ value: 'daily', label: 'Daily' }, { value: 'monthly', label: 'Monthly' }]} />
-                <Field label={tenancyMode ? 'Move-in' : 'Check-in'} type="date" value={values.fromDate}
+                <Field label={t('form.stayType')} value={values.stayType} onChange={set('stayType')}
+                       options={[{ value: 'daily', label: t('form.daily') }, { value: 'monthly', label: t('form.monthly') }]} />
+                <Field label={tenancyMode ? t('form.moveIn') : t('form.checkIn')} type="date" value={values.fromDate}
                        onChange={set('fromDate')} />
                 {tenancyMode ? (
                   <div>
-                    <span className="block text-xs font-medium text-ink2 mb-1.5">Stay</span>
+                    <span className="block text-xs font-medium text-ink2 mb-1.5">{t('table.columns.stay')}</span>
                     <p className="text-[12px] text-ink2 rounded-lg border border-gold-border bg-gold-bg px-3 py-2 m-0">
-                      Until move-out · rent billed every month
+                      {t('form.untilMoveOut')}
                     </p>
                   </div>
                 ) : values.stayType === 'daily' ? (
-                  <Field label="Check-out" name="toDate" type="date" value={values.toDate} onChange={set('toDate')}
+                  <Field label={t('form.checkOut')} name="toDate" type="date" value={values.toDate} onChange={set('toDate')}
                          error={errors.toDate} required />
                 ) : (
-                  <Field label="Months" name="months" type="number" min="1" value={values.months} onChange={set('months')}
+                  <Field label={t('form.monthsLabel')} name="months" type="number" min="1" value={values.months} onChange={set('months')}
                          error={errors.months} required />
                 )}
               </div>
@@ -740,8 +746,8 @@ export default function BookingForm({ onSaved, onCancel }) {
             {/* ── PG occupants ── */}
             {pgMode && (
               <Section
-                title="Beds & occupants"
-                hint={occupants.length ? `${occupants.length} bed${occupants.length === 1 ? '' : 's'} selected` : 'Pick beds'}
+                title={t('form.bedsOccupants')}
+                hint={occupants.length ? t('form.bedsSelected', { count: occupants.length }) : t('form.pickBeds')}
               >
                 <div data-field="beds">
                   <PgOccupants
@@ -755,48 +761,48 @@ export default function BookingForm({ onSaved, onCancel }) {
                     idTypes={ID_TYPES}
                     onScan={setDocCamera}
                   />
-                  {errors.beds && <p className="text-[11.5px] text-danger mt-2 mb-0">{errors.beds}</p>}
+                  {errors.beds && <p className="text-xs text-danger mt-2 mb-0">{errors.beds}</p>}
                 </div>
               </Section>
             )}
 
             {/* ── Pricing ── */}
             {pgMode ? (
-              <Section title="Pricing" hint="Rent, advance & deposit are set per bed above">
+              <Section title={t('form.pricing')} hint={t('form.pricingPgHint')}>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3.5 items-end">
-                  <Field label="GST (%)" type="number" min="0" value={values.taxRate} onChange={set('taxRate')}
-                         hint="Included in the rent" />
-                  <p className="md:col-span-2 text-[11.5px] text-ink3 m-0 pb-1">
-                    Security deposits are held and refunded at check-out — they are not part of the bill.
+                  <Field label={t('form.gstPct')} type="number" min="0" value={values.taxRate} onChange={set('taxRate')}
+                         hint={t('form.gstIncludedRent')} />
+                  <p className="md:col-span-2 text-xs text-ink3 m-0 pb-1">
+                    {t('form.depositNote')}
                   </p>
                 </div>
               </Section>
             ) : (
-            <Section title="Pricing" hint="GST is included in the rate">
+            <Section title={t('form.pricing')} hint={t('form.gstIncludedRate')}>
               {/* Five across only at 2xl: at 1280 the summary rail leaves the form
                   ~580px, where "Extra charges (₹)" wraps and drags its input out of
                   line with the row. Three-up keeps every label on one line. */}
-              <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-5 gap-x-4 gap-y-3.5">
-                <Field label={`Rate (₹/${values.stayType === 'daily' ? 'night' : 'month'})`} name="roomRate" type="number"
-                       min="0" value={values.roomRate} onChange={setRate} placeholder="Enter rate"
+              <div className="grid grid-cols-2 md:grid-cols-3 2xl:grid-cols-5 gap-x-3 sm:gap-x-4 gap-y-3.5">
+                <Field className="col-span-2 md:col-span-1" label={t('form.rateLabel', { unit: unitWord })} name="roomRate" type="number"
+                       min="0" value={values.roomRate} onChange={setRate} placeholder={t('form.ratePlaceholder')}
                        hint={selectedRoom && autoRate
                          ? (rateEdited
-                           ? <>Room rate ₹{Number(autoRate).toLocaleString('en-IN')} ·{' '}
+                           ? <>{t('form.roomRateIs', { amount: `₹${Number(autoRate).toLocaleString(appLocale())}` })} ·{' '}
                                <button type="button" className="text-gold hover:underline"
-                                       onClick={() => setRateEdited(false)}>use it</button></>
+                                       onClick={() => setRateEdited(false)}>{t('form.useIt')}</button></>
                            : perBed
-                             ? `${selectedRoom.bedCount} beds × ₹${Number(perBed).toLocaleString('en-IN')} — edit to override`
-                             : `From Room ${selectedRoom.number} — edit to override`)
+                             ? t('form.rateFromBeds', { count: selectedRoom.bedCount, amount: `₹${Number(perBed).toLocaleString(appLocale())}` })
+                             : t('form.rateFromRoom', { room: selectedRoom.number }))
                          : undefined}
                        error={errors.roomRate} required />
                 {!tenancyMode && (
-                  <Field label="Discount (₹)" type="number" min="0" value={values.discount} onChange={set('discount')} />
+                  <Field label={t('form.discountInr')} type="number" min="0" value={values.discount} onChange={set('discount')} />
                 )}
-                <Field label="GST (%)" type="number" min="0" value={values.taxRate} onChange={set('taxRate')} />
+                <Field label={t('form.gstPct')} type="number" min="0" value={values.taxRate} onChange={set('taxRate')} />
                 {!tenancyMode && (
-                  <Field label="Extra charges (₹)" type="number" min="0" value={values.extraCharges} onChange={set('extraCharges')} />
+                  <Field label={t('form.extraInr')} type="number" min="0" value={values.extraCharges} onChange={set('extraCharges')} />
                 )}
-                <Field label="Advance paid (₹)" type="number" min="0" value={values.advance} onChange={set('advance')} />
+                <Field label={t('form.advanceInr')} type="number" min="0" value={values.advance} onChange={set('advance')} />
               </div>
             </Section>
             )}
@@ -807,73 +813,73 @@ export default function BookingForm({ onSaved, onCancel }) {
                 tiles right below instead of further down the page. */}
             {!pgMode && (
             <Section
-              title="Identification & documents"
-              hint={attachedCount ? `${attachedCount} file${attachedCount === 1 ? '' : 's'} attached` : 'Optional'}
+              title={t('form.idDocs')}
+              hint={attachedCount ? t('form.filesAttached', { count: attachedCount }) : t('common:optional')}
             >
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-4 gap-y-3.5 items-start">
                 <div className="lg:col-span-8">
-                  <span className="block text-xs font-medium text-ink2 mb-1.5">ID type(s)</span>
+                  <span className="block text-xs font-medium text-ink2 mb-1.5">{t('form.idTypes')}</span>
                   <div className="flex flex-wrap gap-2">
-                    {ID_TYPES.map((t) => {
-                      const active = values.idTypes.includes(t)
+                    {ID_TYPES.map((type) => {
+                      const active = values.idTypes.includes(type)
                       return (
                         <button
-                          key={t}
+                          key={type}
                           type="button"
-                          onClick={() => toggleIdType(t)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                          onClick={() => toggleIdType(type)}
+                          className={`px-3 py-1.5 pointer-coarse:min-h-10 rounded-full text-xs font-medium border transition-colors ${
                             active
                               ? 'bg-gold-bg text-gold border-gold'
                               : 'bg-surface2 text-ink2 border-line2 hover:border-gold'
                           }`}
                         >
-                          {active ? `✓ ${t}` : t}
+                          {active ? `✓ ${idTypeLabel(type)}` : idTypeLabel(type)}
                         </button>
                       )
                     })}
                   </div>
                 </div>
-                <Field className="lg:col-span-4" label="ID number" value={values.idNumber}
-                       onChange={set('idNumber')} placeholder="ID / document no." />
+                <Field className="lg:col-span-4" label={t('form.idNumber')} value={values.idNumber}
+                       onChange={set('idNumber')} placeholder={t('form.idNumberPlaceholder')} />
               </div>
 
               {values.idTypes.length === 0 ? (
                 <p className="text-xs text-ink3 mt-4 rounded-lg border border-dashed border-line2 px-3 py-3 text-center">
-                  Select an ID type above to attach front & back scans.
+                  {t('form.selectIdType')}
                 </p>
               ) : (
                 <div className="space-y-3 mt-4">
-                  {values.idTypes.map((t) => {
-                    const done = [idDocs[t]?.front, idDocs[t]?.back].filter(Boolean).length
+                  {values.idTypes.map((type) => {
+                    const done = [idDocs[type]?.front, idDocs[type]?.back].filter(Boolean).length
                     return (
-                      <div key={t} className="rounded-xl border border-line bg-surface2 p-3">
+                      <div key={type} className="rounded-xl border border-line bg-surface2 p-3">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-semibold text-ink2">{t}</span>
-                          <span className={`text-[10.5px] font-medium px-1.5 py-0.5 rounded ${
+                          <span className="text-xs font-semibold text-ink2">{idTypeLabel(type)}</span>
+                          <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
                             done === 2 ? 'text-gold bg-gold-bg' : 'text-ink3 bg-surface'
                           }`}>
-                            {done}/2 attached
+                            {t('form.attachedOf', { done })}
                           </span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <UploadZone
-                            label="Front"
-                            file={idDocs[t]?.front}
-                            onPick={(f) => setIdDoc(t, 'front', f)}
+                            label={t('form.front')}
+                            file={idDocs[type]?.front}
+                            onPick={(f) => setIdDoc(type, 'front', f)}
                             onScan={() => setDocCamera({
-                              title: `Scan ${t} — Front`,
-                              namePrefix: `${slugify(t)}-front`,
-                              onPick: (f) => setIdDoc(t, 'front', f),
+                              title: t('form.scanSide', { doc: idTypeLabel(type), side: t('form.front') }),
+                              namePrefix: `${slugify(type)}-front`,
+                              onPick: (f) => setIdDoc(type, 'front', f),
                             })}
                           />
                           <UploadZone
-                            label="Back"
-                            file={idDocs[t]?.back}
-                            onPick={(f) => setIdDoc(t, 'back', f)}
+                            label={t('form.back')}
+                            file={idDocs[type]?.back}
+                            onPick={(f) => setIdDoc(type, 'back', f)}
                             onScan={() => setDocCamera({
-                              title: `Scan ${t} — Back`,
-                              namePrefix: `${slugify(t)}-back`,
-                              onPick: (f) => setIdDoc(t, 'back', f),
+                              title: t('form.scanSide', { doc: idTypeLabel(type), side: t('form.back') }),
+                              namePrefix: `${slugify(type)}-back`,
+                              onPick: (f) => setIdDoc(type, 'back', f),
                             })}
                           />
                         </div>
@@ -888,24 +894,24 @@ export default function BookingForm({ onSaved, onCancel }) {
                   {extraDocs.map((d) => (
                     <div key={d.key} className="rounded-xl border border-line bg-surface2 p-3">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-ink2">Additional document</span>
+                        <span className="text-xs font-semibold text-ink2">{t('form.additionalDoc')}</span>
                         <button
                           type="button"
                           onClick={() => removeExtraDoc(d.key)}
-                          className="text-[11px] text-ink3 hover:text-danger-text"
+                          className="text-xs text-ink3 hover:text-danger-text pointer-coarse:min-h-11 pointer-coarse:px-2"
                         >
-                          Remove
+                          {t('common:remove')}
                         </button>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
-                        <Field label="Document type" value={d.label} placeholder="e.g. PAN card"
+                        <Field label={t('form.docType')} value={d.label} placeholder={t('form.docTypePlaceholder')}
                                onChange={(e) => updateExtraDoc(d.key, { label: e.target.value })} />
                         <UploadZone
-                          label="File"
+                          label={t('form.file')}
                           file={d.file}
                           onPick={(f) => updateExtraDoc(d.key, { file: f })}
                           onScan={() => setDocCamera({
-                            title: d.label.trim() ? `Scan ${d.label.trim()}` : 'Scan document',
+                            title: d.label.trim() ? t('form.scanDoc', { doc: d.label.trim() }) : t('form.scanDocument'),
                             namePrefix: slugify(d.label) || 'document',
                             onPick: (f) => updateExtraDoc(d.key, { file: f }),
                           })}
@@ -919,20 +925,20 @@ export default function BookingForm({ onSaved, onCancel }) {
               <button
                 type="button"
                 onClick={addExtraDoc}
-                className="mt-3 w-full rounded-lg border border-dashed border-line2 py-2 text-xs font-medium text-ink3 hover:border-gold hover:text-gold transition-colors"
+                className="mt-3 w-full rounded-lg border border-dashed border-line2 py-2 pointer-coarse:min-h-11 text-xs font-medium text-ink3 hover:border-gold hover:text-gold transition-colors"
               >
-                ＋ Add another document (PAN, Passport…)
+                ＋ {t('form.addDoc')}
               </button>
             </Section>
             )}
 
             {/* ── Notes ── */}
-            <Section title="Notes" hint="Optional">
+            <Section title={t('form.notes')} hint={t('common:optional')}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="Special requests" textarea value={values.specialRequests}
-                       onChange={set('specialRequests')} placeholder="Late check-in, extra bed…" />
-                <Field label="Internal notes" textarea value={values.notes} onChange={set('notes')}
-                       placeholder="Staff-only notes…" />
+                <Field label={t('form.specialRequests')} textarea value={values.specialRequests}
+                       onChange={set('specialRequests')} placeholder={t('form.specialRequestsPlaceholder')} />
+                <Field label={t('form.internalNotes')} textarea value={values.notes} onChange={set('notes')}
+                       placeholder={t('form.internalNotesPlaceholder')} />
               </div>
             </Section>
           </div>
@@ -942,46 +948,45 @@ export default function BookingForm({ onSaved, onCancel }) {
           <aside className="xl:sticky xl:top-4">
             <div className="rounded-xl border border-gold-border bg-gold-bg overflow-hidden">
               <div className="px-4 py-3 border-b border-gold-border">
-                <h4 className="text-[13px] font-semibold text-ink">Booking summary</h4>
-                <p className="text-[11.5px] text-ink3 mt-0.5">{roomLabel} · {stayLabel}</p>
+                <h4 className="text-[13px] font-semibold text-ink">{t('form.summary')}</h4>
+                <p className="text-xs text-ink3 mt-0.5">{roomLabel} · {stayLabel}</p>
               </div>
 
               {pgMode ? (
               <div className="px-4 py-3 text-[13px] space-y-1.5">
-                {occPricing.length === 0 && <p className="text-ink3 text-[12px] m-0">No beds selected yet.</p>}
+                {occPricing.length === 0 && <p className="text-ink3 text-[12px] m-0">{t('form.noBedsYet')}</p>}
                 {occPricing.map(({ o, total, balance }) => (
                   <div key={o.key} className="pb-1.5 border-b border-gold-border/60 last:border-b-0">
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="min-w-0 truncate text-ink">
-                        <span className="font-semibold text-gold">Bed {bedLabel(o.bedNo)}</span>
-                        {' · '}{o.name.trim() || 'Unnamed'}
+                        <span className="font-semibold text-gold">{t('bedN', { bed: bedLabel(o.bedNo) })}</span>
+                        {' · '}{o.name.trim() || t('form.unnamed')}
                       </span>
                       <span className="shrink-0 tabular-nums text-ink">{inr(total)}</span>
                     </div>
-                    <div className="text-[11px] text-ink3 mt-0.5">
-                      {tenancyMode ? `${inr(o.rate)}/month` : units ? `${units} × ${inr(o.rate)}` : 'Dates not set'}
-                      {' · '}adv {inr(o.advance)} · due {inr(Math.max(0, balance))}
-                      {Number(o.deposit) > 0 && ` · dep ${inr(o.deposit)}`}
+                    <div className="text-xs text-ink3 mt-0.5">
+                      {tenancyMode ? `${inr(o.rate)}${t('table.perMonth')}` : units ? `${units} × ${inr(o.rate)}` : t('form.datesNotSet')}
+                      {' · '}{t('form.occAdv', { amount: inr(o.advance) })} · {t('form.occDue', { amount: inr(Math.max(0, balance)) })}
+                      {Number(o.deposit) > 0 && ` · ${t('form.occDep', { amount: inr(o.deposit) })}`}
                     </div>
                   </div>
                 ))}
-                <SumRow label={`GST (${values.taxRate || 0}%) incl.`} value={inr(pgTotals.taxAmount)} />
+                <SumRow label={t('form.gstIncl', { rate: values.taxRate || 0 })} value={inr(pgTotals.taxAmount)} />
 
                 <div className="flex items-baseline justify-between pt-2 mt-2 border-t border-gold-border">
-                  <span className="font-display font-bold text-ink">{tenancyMode ? 'Billed at move-in' : 'Total rent'}</span>
+                  <span className="font-display font-bold text-ink">{tenancyMode ? t('form.billedAtMoveIn') : t('form.totalRent')}</span>
                   <span className="font-display font-bold text-lg text-gold">{inr(pgTotals.total)}</span>
                 </div>
-                <SumRow label={tenancyMode ? 'Advance (set against rent)' : 'Advance collected'} value={inr(pgTotals.advance)} />
+                <SumRow label={tenancyMode ? t('form.advanceAgainstRent') : t('form.advanceCollected')} value={inr(pgTotals.advance)} />
                 <div className="flex items-baseline justify-between font-semibold text-ink">
-                  <span>{tenancyMode ? 'Due at move-in' : 'Balance due'}</span><span>{inr(pgTotals.balance)}</span>
+                  <span>{tenancyMode ? t('form.dueAtMoveIn') : t('form.balanceDue')}</span><span>{inr(pgTotals.balance)}</span>
                 </div>
                 {pgTotals.deposit > 0 && (
-                  <SumRow label="Security deposits (held)" value={inr(pgTotals.deposit)} />
+                  <SumRow label={t('form.depositsHeld')} value={inr(pgTotals.deposit)} />
                 )}
                 {tenancyMode && (
-                  <p className="text-[11px] text-ink3 m-0 pt-1.5">
-                    {rentFirstMonthNote(values.fromDate)} Book once. Each person's rent invoice is raised
-                    automatically on the 1st of every month — collect it from the booking with "Collect rent".
+                  <p className="text-xs text-ink3 m-0 pt-1.5">
+                    {rentFirstMonthNote(values.fromDate)} {t('form.tenancyNotePg')}
                   </p>
                 )}
               </div>
@@ -989,56 +994,60 @@ export default function BookingForm({ onSaved, onCancel }) {
               <div className="px-4 py-3 text-[13px] space-y-1.5">
                 <SumRow
                   label={tenancyMode
-                    ? 'Rent at move-in (incl. GST)'
-                    : `Room charge (incl. GST)${pricing.units ? ` · ${pricing.units} × ${inr(values.roomRate)}` : ''}`}
+                    ? t('form.rentAtMoveIn')
+                    : `${t('form.roomCharge')}${pricing.units ? ` · ${pricing.units} × ${inr(values.roomRate)}` : ''}`}
                   value={inr(pricing.subtotal)}
                 />
-                {Number(values.discount) > 0 && <SumRow label="Discount" value={`− ${inr(values.discount)}`} />}
-                <SumRow label="Taxable value" value={inr(pricing.taxable)} />
-                <SumRow label={`GST (${values.taxRate || 0}%) incl.`} value={inr(pricing.taxAmount)} />
-                {Number(values.extraCharges) > 0 && <SumRow label="Extra charges" value={inr(values.extraCharges)} />}
+                {Number(values.discount) > 0 && <SumRow label={t('form.discount')} value={`− ${inr(values.discount)}`} />}
+                <SumRow label={t('form.taxable')} value={inr(pricing.taxable)} />
+                <SumRow label={t('form.gstIncl', { rate: values.taxRate || 0 })} value={inr(pricing.taxAmount)} />
+                {Number(values.extraCharges) > 0 && <SumRow label={t('form.extra')} value={inr(values.extraCharges)} />}
 
                 <div className="flex items-baseline justify-between pt-2 mt-2 border-t border-gold-border">
-                  <span className="font-display font-bold text-ink">{tenancyMode ? 'Billed at move-in' : 'Total'}</span>
+                  <span className="font-display font-bold text-ink">{tenancyMode ? t('form.billedAtMoveIn') : t('common:total')}</span>
                   <span className="font-display font-bold text-lg text-gold">{inr(pricing.total)}</span>
                 </div>
 
-                <SumRow label={tenancyMode ? 'Advance (set against rent)' : 'Advance'} value={inr(values.advance)} />
+                <SumRow label={tenancyMode ? t('form.advanceAgainstRent') : t('form.advance')} value={inr(values.advance)} />
                 <div className="flex items-baseline justify-between font-semibold text-ink">
-                  <span>{tenancyMode ? 'Due at move-in' : 'Balance due'}</span><span>{inr(Math.max(0, pricing.balance))}</span>
+                  <span>{tenancyMode ? t('form.dueAtMoveIn') : t('form.balanceDue')}</span><span>{inr(Math.max(0, pricing.balance))}</span>
                 </div>
                 {tenancyMode && (
-                  <p className="text-[11px] text-ink3 m-0 pt-1.5">
-                    {rentFirstMonthNote(values.fromDate)} Book once. Rent invoices are raised automatically on
-                    the 1st of every month — collect them from the booking with "Collect rent".
+                  <p className="text-xs text-ink3 m-0 pt-1.5">
+                    {rentFirstMonthNote(values.fromDate)} {t('form.tenancyNote')}
                   </p>
                 )}
               </div>
               )}
 
-              <div className="px-4 py-2.5 border-t border-gold-border text-[11.5px] text-ink3">
+              <div className="px-4 py-2.5 border-t border-gold-border text-xs text-ink3">
                 {attachedCount
-                  ? `${attachedCount} document${attachedCount === 1 ? '' : 's'} will be attached on save`
-                  : 'No documents attached yet'}
+                  ? t('form.docsOnSave', { count: attachedCount })
+                  : t('form.noDocsYet')}
               </div>
             </div>
           </aside>
         </div>
       </div>
 
-      {/* ── Actions ── */}
-      <div className="flex flex-wrap items-center justify-end gap-2 px-5 py-3.5 border-t border-line bg-surface2">
+      {/* ── Actions ── Below xl the bar sticks to the bottom of the screen (above
+          the phone's bottom bar) so Create is always one tap away on a long form.
+          .sticky-bottom-bar (index.css) cancels #content's bottom padding gap.
+          The floating AI button sits over its bottom-right corner, so on phones the
+          totals line goes last (beside the button) and from sm the bar keeps clear. */}
+      <div className="sticky-bottom-bar xl:static flex flex-wrap items-center justify-end gap-2
+                      px-3 sm:pl-5 sm:pr-fab xl:pr-5 py-3 sm:py-3.5 border-t border-line bg-surface2 rounded-b-[var(--radius)]">
         {/* Below xl the summary rail has scrolled away, so repeat the total here. */}
-        <div className="mr-auto text-[12.5px] text-ink3 xl:hidden">
-          Total <span className="font-semibold text-ink">{inr(shownTotal)}</span>
+        <div className="w-full sm:w-auto sm:mr-auto order-last sm:order-none pr-fab sm:pr-0 leading-[44px] sm:leading-normal text-[13px] text-ink3 xl:hidden">
+          {t('common:total')} <span className="font-semibold text-ink">{inr(shownTotal)}</span>
           <span className="mx-1.5 text-line2">·</span>
-          Balance <span className="font-semibold text-ink">{inr(shownBalance)}</span>
+          {t('form.balance')} <span className="font-semibold text-ink">{inr(shownBalance)}</span>
         </div>
-        <Button variant="ghost" onClick={onCancel} disabled={submitting}>Cancel</Button>
-        <Button onClick={handleSubmit} icon="＋" disabled={submitting || loadingRooms}>
+        <Button variant="ghost" className="flex-1 sm:flex-none" onClick={onCancel} disabled={submitting}>{t('common:cancel')}</Button>
+        <Button className="flex-[2] sm:flex-none" onClick={handleSubmit} icon="＋" disabled={submitting || loadingRooms}>
           {submitting
-            ? 'Saving…'
-            : pgMode && occupants.length > 1 ? `Create ${occupants.length} Bookings` : 'Create Booking'}
+            ? t('common:saving')
+            : pgMode && occupants.length > 1 ? t('form.createN', { count: occupants.length }) : t('form.create')}
         </Button>
       </div>
 
@@ -1049,11 +1058,11 @@ export default function BookingForm({ onSaved, onCancel }) {
         <CameraCaptureModal
           isOpen
           title={docCamera.title}
-          hint="Fill the frame with the document and keep it flat."
+          hint={t('form.camera.docHint')}
           facingMode="environment"
           namePrefix={docCamera.namePrefix}
-          confirmLabel="Attach scan"
-          skipLabel="Cancel"
+          confirmLabel={t('form.camera.attach')}
+          skipLabel={t('common:cancel')}
           onCapture={(file) => { docCamera.onPick(file); setDocCamera(null) }}
           onSkip={() => setDocCamera(null)}
         />
@@ -1064,12 +1073,12 @@ export default function BookingForm({ onSaved, onCancel }) {
       {photoFor && (
       <CameraCaptureModal
         isOpen
-        title="Guest photo"
-        hint={`Booking ${photoFor?.bookingNo || ''} created. Capture a photo of the guest for the file.`}
+        title={t('form.camera.guestPhoto')}
+        hint={t('form.camera.guestPhotoHint', { no: photoFor?.bookingNo || '' })}
         facingMode="user"
         busy={photoBusy}
-        confirmLabel="Save photo"
-        skipLabel="Skip for now"
+        confirmLabel={t('form.camera.savePhoto')}
+        skipLabel={t('form.camera.skip')}
         namePrefix="guest-photo"
         onCapture={savePhoto}
         onSkip={() => onSaved(photoFor)}

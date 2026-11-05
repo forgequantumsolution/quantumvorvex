@@ -1,0 +1,178 @@
+{
+  "user": "User",
+  "closeMenu": "Close menu",
+  "mainNavigation": "Main navigation",
+  "quickNavigation": "Quick navigation",
+  "expandSidebar": "Expand sidebar",
+  "collapseSidebar": "Collapse sidebar",
+  "clearSearch": "Clear search",
+  "searchShortcut": "Search (Ctrl+K)",
+  "newCount": "{{count}} new",
+  "closeNotifications": "Close notifications",
+  "dismissNotification": "Dismiss {{title}}",
+  "viewAllActivity": "View all activity",
+  "hoursAgo_one": "{{count}}h ago",
+  "hoursAgo_other": "{{count}}h ago",
+  "accountMenu": "Account menu",
+  "notif": {
+    "overdueInvoice": {
+      "title": "Overdue invoice",
+      "msg": "{{invoice}} — {{name}} ({{amount}})"
+    },
+    "checkoutDue": {
+      "title": "Check-out due",
+      "msg": "{{name}} — Room {{room}} due today"
+    },
+    "maintenance": {
+      "title": "Maintenance ticket",
+      "msg_one": "Room {{room}} {{task}} servicing overdue {{count}} day",
+      "msg_other": "Room {{room}} {{task}} servicing overdue {{count}} days"
+    },
+    "paymentReceived": {
+      "title": "Payment received",
+      "msg": "{{invoice}} — {{name}} paid {{amount}}"
+    },
+    "newBooking": {
+      "title": "New booking",
+      "msg": "{{name}} — Room {{room}}, {{dates}}"
+    }
+  },
+  "property": {
+    "activeProperties_one": "{{count}} active property",
+    "activeProperties_other": "{{count}} active properties",
+    "readOnly": "read-only",
+    "propertyCount_one": "{{count}} property",
+    "propertyCount_other": "{{count}} properties",
+    "current": "Current property",
+    "activeCount_one": "{{count}} active",
+    "activeCount_other": "{{count}} active",
+    "archivedCount_one": "{{count}} archived",
+    "archivedCount_other": "{{count}} archived",
+    "find": "Find a property",
+    "combined": "Combined dashboard",
+    "noMatch": "No property matches “{{q}}”",
+    "portfolioOverview": "Portfolio overview"
+  },
+  "showingRange": "Showing <b>{{range}}</b> of <b>{{total}}</b>",
+  "previousPage": "Previous page",
+  "nextPage": "Next page",
+  "viewMode": "{{label}} view",
+  "backOnline": "Back online — syncing your changes…",
+  "offline": "You're offline — showing cached data. Changes will sync when reconnected.",
+  "password": {
+    "title": "Change password",
+    "current": "Current password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "reenter": "Re-enter new password",
+    "enterCurrent": "Enter your current password",
+    "enterNew": "Enter a new password",
+    "confirmNew": "Confirm your new password",
+    "mismatch": "Passwords do not match",
+    "update": "Update password",
+    "updated": "Password updated.",
+    "failed": "Could not change password."
+  },
+  "camera": {
+    "title": "Capture photo",
+    "save": "Save photo",
+    "skip": "Skip",
+    "camera": "Camera",
+    "cameraN": "Camera {{n}}",
+    "preview": "Captured preview",
+    "starting": "Starting camera…",
+    "retake": "Retake",
+    "capture": "Capture",
+    "orUpload": "Or upload a photo",
+    "takeOrUpload": "Take or upload a photo",
+    "unavailable": "Live camera is unavailable here — use your device camera instead.",
+    "denied": "Camera permission was denied. Allow access in your browser, or upload a photo instead.",
+    "notFound": "No camera was found on this device.",
+    "inUse": "The camera is already in use by another app.",
+    "noMatch": "No camera matches the requested settings.",
+    "startFailed": "Could not start the camera.",
+    "captureFailed": "Could not capture the photo. Try again."
+  },
+  "upload": {
+    "file": "Upload file",
+    "badType": "Invalid file type. Accepted: {{accept}}",
+    "tooLarge": "File too large. Maximum size is {{size}}MB.",
+    "preview": "Preview",
+    "max": "max {{size}}MB"
+  },
+  "search": {
+    "placeholder": "Search panels, guests, rooms…",
+    "noResults": "No results for “{{q}}”",
+    "typePanel": "Page",
+    "due": "Due",
+    "meta": {
+      "dashboard": "Overview & stats",
+      "rooms": "Room inventory",
+      "floorplan": "Visual layout by floor",
+      "reports": "Revenue & occupancy analytics",
+      "guests": "Guest registry",
+      "bookings": "Reservations",
+      "documents": "KYC verification",
+      "food": "Meal plans & orders",
+      "billing": "Invoices & payments",
+      "settings": "Hotel configuration"
+    }
+  },
+  "ai": {
+    "title": "Quantum Assistant",
+    "clear": "Clear",
+    "clearChat": "Clear chat",
+    "configureKey": "Configure API key",
+    "close": "Close assistant",
+    "apiKey": "Anthropic API key",
+    "keyNote": "Key stored locally in your browser. Never sent to our servers.",
+    "insight": "Today's insight",
+    "insightNoKey": "Configure your Anthropic API key to get AI-powered daily insights.",
+    "insightFailed": "Could not load insight. Check your API key in settings.",
+    "suggested": "Suggested questions",
+    "placeholder": "Ask anything… (Enter to send)",
+    "send": "Send",
+    "open": "Open {{panel}}",
+    "cantProcess": "Sorry, I couldn't process that request.",
+    "connectionError": "Connection error. Please check your API key and try again.",
+    "prompt": {
+      "checkouts": "Who is checking out today?",
+      "overdue": "Show me overdue invoices",
+      "maintenance": "Which rooms need maintenance?",
+      "occupancy": "How is occupancy trending?",
+      "reminder": "Draft a payment reminder for Room 204"
+    },
+    "mock": {
+      "checkouts": "Today's check-outs: Sneha Rao from Room 118 and Arjun Patel from Room 312. Both have pending dues — Sneha's final bill is ₹3,240 and Arjun's is ₹6,800.",
+      "overdue": "There is 1 overdue invoice: INV-003 for Ankit Singh (Room 312), amount ₹17,024 — overdue since 31 Mar 2026. Send a payment reminder now.",
+      "maintenance": "3 maintenance requests are open: MNT-001 (Room 103 — AC issue, high priority), MNT-003 (Room 312 — electrical, high priority) and MNT-002 (Room 207 — plumbing, in progress).",
+      "occupancy": "Occupancy is 75% (12/32 rooms), up 8% from yesterday. Suite and Deluxe are full. 8 Single rooms are free — consider a walk-in offer.",
+      "reminder": "Here is a draft reminder for Room 204:\n\n\"Dear Guest, your payment of ₹29,344 for Room 204 (Apr 2026) is due. Please contact reception at your earliest convenience. Thank you for staying with Quantum Vorvex.\"\n\nYou can send it by WhatsApp or SMS from the Billing page.",
+      "default": "I'm your Quantum assistant. I can help with guests, room status, billing and more. Add your Anthropic API key (⚙ above) for full AI answers. Occupancy: 75% | Pending: ₹38,360 | Overdue: ₹17,024."
+    }
+  },
+  "install": {
+    "label": "Install Quantum Vorvex app",
+    "message": "Add Quantum Vorvex to your home screen for faster access",
+    "install": "Install",
+    "later": "Later"
+  },
+  "accessDenied": {
+    "title": "Access restricted",
+    "message": "Your role doesn't have permission to open <b>{{panel}}</b>."
+  },
+  "noProperty": {
+    "title": "No property assigned",
+    "message": "Your account isn't linked to any property yet. Ask the owner to give you access, then sign in again."
+  },
+  "ago": {
+    "seconds_one": "{{count}}s ago",
+    "seconds_other": "{{count}}s ago",
+    "minutes_one": "{{count}}m ago",
+    "minutes_other": "{{count}}m ago",
+    "hours_one": "{{count}}h ago",
+    "hours_other": "{{count}}h ago",
+    "days_one": "{{count}}d ago",
+    "days_other": "{{count}}d ago"
+  }
+}

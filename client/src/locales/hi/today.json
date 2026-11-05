@@ -1,0 +1,32 @@
+{
+  "title": "आज",
+  "kpi": {
+    "arrivals": "आगमन",
+    "arrivalsHint": "आज अपेक्षित",
+    "departures": "प्रस्थान",
+    "departuresHint": "Check-out बाकी",
+    "inHouse": "ठहरे हुए",
+    "inHouseHint": "आज रात ठहर रहे",
+    "openMaintenance": "खुले मेंटेनेंस",
+    "openMaintenanceHint": "हल करने वाले टिकट"
+  },
+  "expectedArrivals": "अपेक्षित आगमन",
+  "departures": "प्रस्थान",
+  "needsAttention": "ध्यान दें",
+  "viewBookings": "बुकिंग देखें",
+  "noArrivals": "कोई आगमन निर्धारित नहीं",
+  "noCheckouts": "कोई Check-out बाकी नहीं",
+  "roomNo": "कमरा {{number}}",
+  "checkIn": "Check-in",
+  "checkOut": "Check-out",
+  "overdueCheckouts": "देरी वाले Check-out",
+  "cancellationsToday": "आज के रद्दीकरण",
+  "openMaintenanceCount": "खुले मेंटेनेंस ({{count}})",
+  "noOpenTickets": "कोई खुला टिकट नहीं",
+  "priority": {
+    "urgent": "अति आवश्यक",
+    "high": "उच्च",
+    "medium": "मध्यम",
+    "low": "निम्न"
+  }
+}

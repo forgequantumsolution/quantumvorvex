@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useToast } from '../../../hooks/useToast'
 import { formatDate } from '../../../utils/format'
+import GuestLanguageToggle from './GuestLanguageToggle'
 
 // ─── Mock Booking ─────────────────────────────────────────────────────────────
 
@@ -15,58 +17,49 @@ const MOCK_BOOKING = {
   hotelPhone: '9876543210',
 }
 
-const STEP_LABELS = ['Welcome', 'Verify Details', 'Documents', 'Sign Terms', 'Confirmation']
+// Step titles: locales/*/portal.json → steps.<n>
+const STEP_KEYS = ['welcome', 'verify', 'documents', 'terms', 'confirmation']
 
-const TERMS_TEXT = `
-1. Check-In & Check-Out Policy
-Guests are required to check in between 12:00 PM and 11:00 PM on the scheduled date. Standard checkout time is 11:00 AM. Late checkout is subject to availability and may incur additional charges at the hotel's discretion. Early check-in requests are accommodated based on room availability.
-
-2. Identification & Verification
-All guests must present a valid government-issued photo ID at the time of check-in. This includes Aadhaar Card, Passport, Driving Licence, or Voter ID. Foreign nationals must present a valid passport with applicable visa. The hotel reserves the right to decline check-in if valid identification is not provided.
-
-3. Room & Property Conduct
-Guests are expected to maintain decorum and respect fellow guests and staff at all times. Smoking is strictly prohibited in all indoor areas. Loud music or disruptive behavior between 10:00 PM and 7:00 AM is not permitted. Any damage to hotel property caused by the guest will be charged to the registered payment method.
-
-4. Food, Amenities & Extra Services
-Meals and amenities purchased during your stay are governed by the rates and plans agreed at booking. Outside food delivery is permitted in guest rooms. In-room dining services may be available based on hotel configuration. Any additional service requests must be made through the front desk.
-
-5. Liability & Privacy
-The hotel is not liable for loss of personal belongings. Guests are advised to use the in-room safe for valuables. All personal data collected during this check-in process is processed solely for hotel management purposes and will not be shared with third parties without consent, in compliance with applicable data protection laws.
-`.trim()
+// Terms sections: locales/*/portal.json → terms.<n>.title / terms.<n>.body
+const TERMS_SECTIONS = ['1', '2', '3', '4', '5']
 
 // ─── Step Progress Bar ────────────────────────────────────────────────────────
 
 function PortalProgressBar({ current, total }) {
+  const { t } = useTranslation('portal')
   return (
-    <div className="flex items-center justify-center mb-7">
-      {Array.from({ length: total }, (_, i) => {
-        const stepNum = i + 1
-        const isCompleted = stepNum < current
-        const isActive = stepNum === current
-        return (
-          <div key={stepNum} className="flex items-center">
-            <div
-              className="w-[30px] h-[30px] rounded-full flex items-center justify-center font-bold text-[12px] shrink-0 transition-all duration-200"
-              style={
-                isCompleted
-                  ? { background: 'var(--green)', color: '#fff', border: '2px solid var(--green)' }
-                  : isActive
-                  ? { background: 'var(--gold)', color: '#000', border: '2px solid var(--gold)' }
-                  : { background: 'transparent', color: 'var(--text3)', border: '2px solid var(--border2)' }
-              }
-              title={STEP_LABELS[i]}
-            >
-              {isCompleted ? '✓' : stepNum}
-            </div>
-            {stepNum < total && (
+    <div className="mb-5 sm:mb-7">
+      {/* Steps: circles joined by connectors that stretch to the card width */}
+      <ol className="flex items-center px-1" aria-label={t('progress')}>
+        {Array.from({ length: total }, (_, i) => {
+          const stepNum = i + 1
+          const isCompleted = stepNum < current
+          const isActive = stepNum === current
+          return (
+            <li key={stepNum} className={`flex items-center ${stepNum < total ? 'flex-1' : ''}`}
+                aria-current={isActive ? 'step' : undefined}>
               <div
-                className="w-8 h-0.5 transition-[background] duration-200"
-                style={{ background: isCompleted ? 'var(--green)' : 'var(--border2)' }}
-              />
-            )}
-          </div>
-        )
-      })}
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-[12px] shrink-0 border-2 transition-all duration-200 ${
+                  isCompleted
+                    ? 'bg-success border-success text-white'
+                    : isActive
+                    ? 'bg-gold border-gold text-black shadow-[0_0_0_4px_var(--gold-bg)]'
+                    : 'bg-transparent border-line2 text-ink3'
+                }`}
+                title={t(`steps.${STEP_KEYS[i]}`)}
+              >
+                {isCompleted ? '✓' : stepNum}
+              </div>
+              {stepNum < total && (
+                <div className={`flex-1 h-0.5 mx-1 rounded-full transition-[background] duration-200 ${isCompleted ? 'bg-success' : 'bg-line2'}`} />
+              )}
+            </li>
+          )
+        })}
+      </ol>
+      <div className="mt-2.5 text-center t-xs text-ink3">
+        {t('stepOf', { current, total })} · <span className="text-ink2 font-semibold">{t(`steps.${STEP_KEYS[current - 1]}`)}</span>
+      </div>
     </div>
   )
 }
@@ -75,7 +68,7 @@ function PortalProgressBar({ current, total }) {
 
 function Field({ label, required, children }) {
   return (
-    <div className="flex flex-col gap-[5px]">
+    <div className="flex flex-col gap-1.5 min-w-0">
       <label className="t-label text-ink3">
         {label}{required && <span className="text-danger ml-0.5">*</span>}
       </label>
@@ -87,6 +80,7 @@ function Field({ label, required, children }) {
 // ─── Step 1: Welcome ──────────────────────────────────────────────────────────
 
 function Step1Welcome({ booking, onNext }) {
+  const { t } = useTranslation('portal')
   const firstName = booking.guestName.split(' ')[0]
   return (
     <div className="flex flex-col gap-5">
@@ -94,54 +88,55 @@ function Step1Welcome({ booking, onNext }) {
       <div className="text-center pt-2 pb-1">
         <div className="t-display mb-2">👋</div>
         <h2 className="t-h1 text-ink m-0 tracking-[-0.03em]">
-          Welcome, {firstName}!
+          {t('welcome.hello', { name: firstName })}
         </h2>
         <p className="t-sm text-ink2 mt-1.5">
-          Complete your self check-in in just a few steps.
+          {t('welcome.intro')}
         </p>
       </div>
 
       {/* Booking summary card */}
       <div className="bg-surface2 border border-line rounded-[10px] overflow-hidden">
-        <div className="bg-[var(--gold)] px-4 py-2.5 flex items-center justify-between">
-          <span className="t-title text-[#000]">
+        <div className="bg-gold px-4 py-2.5 flex items-center justify-between gap-3">
+          <span className="t-title text-black min-w-0 truncate">
             {booking.hotelName}
           </span>
-          <span className="text-[11px] text-[#000] opacity-80" style={{ fontFamily: 'var(--font-mono)' }}>
+          <span className="text-[12px] text-black opacity-80 font-mono shrink-0">
             {booking.bookingNo}
           </span>
         </div>
         <div className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-5">
+          <div className="grid grid-cols-2 gap-y-3.5 gap-x-4">
             <div>
-              <div className="t-label text-ink3 mb-1">Room</div>
+              <div className="t-label text-ink3 mb-1">{t('labels.room')}</div>
               <div className="t-h3 text-ink">{booking.room}</div>
               <div className="t-xs text-ink3">{booking.type}</div>
             </div>
             <div>
-              <div className="t-label text-ink3 mb-1">Guest</div>
+              <div className="t-label text-ink3 mb-1">{t('labels.guest')}</div>
               <div className="t-title text-ink">{booking.guestName}</div>
             </div>
             <div>
-              <div className="t-label text-ink3 mb-1">Check-In</div>
+              <div className="t-label text-ink3 mb-1">{t('labels.checkIn')}</div>
               <div className="t-title text-ink">{formatDate(booking.checkIn)}</div>
             </div>
             <div>
-              <div className="t-label text-ink3 mb-1">Check-Out</div>
+              <div className="t-label text-ink3 mb-1">{t('labels.checkOut')}</div>
               <div className="t-title text-ink">{formatDate(booking.checkOut)}</div>
             </div>
           </div>
-          <div className="t-xs mt-3.5 pt-3 border-t border-line text-ink3 flex items-center gap-1.5">
+          <a href={`tel:${booking.hotelPhone}`}
+             className="t-xs mt-3.5 pt-3 border-t border-line text-ink3 flex items-center gap-1.5 min-h-11 hover:text-ink">
             📞 {booking.hotelPhone}
-          </div>
+          </a>
         </div>
       </div>
 
       <button
-        className="btn btn-primary t-title w-full justify-center p-[13px] rounded-[9px]"
+        className="btn btn-primary t-title w-full justify-center min-h-12 p-[13px] rounded-[9px]"
         onClick={onNext}
       >
-        Begin Self Check-In →
+        {t('welcome.begin')} →
       </button>
     </div>
   )
@@ -149,7 +144,8 @@ function Step1Welcome({ booking, onNext }) {
 
 // ─── Step 2: Verify Details ───────────────────────────────────────────────────
 
-function Step2Verify({ booking, data, onChange, onNext }) {
+function Step2Verify({ data, onChange, onNext }) {
+  const { t } = useTranslation('portal')
   const set = (k, v) => onChange({ ...data, [k]: v })
 
   const handleSubmit = () => {
@@ -160,50 +156,52 @@ function Step2Verify({ booking, data, onChange, onNext }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="t-sm text-ink2 m-0">
-        Please verify and complete your personal details below.
+        {t('verify.intro')}
       </p>
 
-      <Field label="Full Name" required>
-        <input className="form-input" value={data.fullName}
-          onChange={(e) => set('fullName', e.target.value)} placeholder="As per ID" />
+      <Field label={t('verify.fullName')} required>
+        <input className="form-input" autoComplete="name" value={data.fullName}
+          onChange={(e) => set('fullName', e.target.value)} placeholder={t('verify.asPerId')} />
       </Field>
-      <Field label="Phone Number" required>
-        <input className="form-input" type="tel" value={data.phone}
-          onChange={(e) => set('phone', e.target.value)} placeholder="10-digit mobile" maxLength={10} />
+      <Field label={t('verify.phone')} required>
+        <input className="form-input" type="tel" inputMode="numeric" autoComplete="tel" value={data.phone}
+          onChange={(e) => set('phone', e.target.value)} placeholder={t('verify.phonePlaceholder')} maxLength={10} />
       </Field>
-      <Field label="Email Address">
-        <input className="form-input" type="email" value={data.email}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3.5">
+      <Field label={t('verify.email')}>
+        <input className="form-input" type="email" autoComplete="email" value={data.email}
           onChange={(e) => set('email', e.target.value)} placeholder="your@email.com" />
       </Field>
-      <Field label="Date of Birth">
+      <Field label={t('verify.dob')}>
         <input className="form-input" type="date" value={data.dob}
           onChange={(e) => set('dob', e.target.value)} />
       </Field>
-      <Field label="Nationality">
+      </div>
+      <Field label={t('verify.nationality')}>
         <input className="form-input" value={data.nationality}
-          onChange={(e) => set('nationality', e.target.value)} placeholder="Indian" />
+          onChange={(e) => set('nationality', e.target.value)} placeholder={t('verify.nationalityPlaceholder')} />
       </Field>
-      <Field label="Permanent Address">
+      <Field label={t('verify.address')}>
         <textarea className="form-textarea" value={data.address}
-          onChange={(e) => set('address', e.target.value)} placeholder="Full permanent address..." rows={3} />
+          onChange={(e) => set('address', e.target.value)} placeholder={t('verify.addressPlaceholder')} rows={3} />
       </Field>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-3.5">
-        <Field label="Emergency Contact Name">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3.5">
+        <Field label={t('verify.emergencyName')}>
           <input className="form-input" value={data.emergencyName}
-            onChange={(e) => set('emergencyName', e.target.value)} placeholder="Name" />
+            onChange={(e) => set('emergencyName', e.target.value)} placeholder={t('verify.namePlaceholder')} />
         </Field>
-        <Field label="Emergency Phone">
-          <input className="form-input" type="tel" value={data.emergencyPhone}
-            onChange={(e) => set('emergencyPhone', e.target.value)} placeholder="Phone" maxLength={10} />
+        <Field label={t('verify.emergencyPhone')}>
+          <input className="form-input" type="tel" inputMode="numeric" value={data.emergencyPhone}
+            onChange={(e) => set('emergencyPhone', e.target.value)} placeholder={t('verify.phoneShort')} maxLength={10} />
         </Field>
       </div>
 
       <button
-        className="btn btn-primary t-title w-full justify-center p-3 rounded-[9px] mt-1.5"
+        className="btn btn-primary t-title w-full justify-center min-h-12 p-3 rounded-[9px] mt-1.5"
         onClick={handleSubmit}
       >
-        Confirm Details →
+        {t('verify.confirm')} →
       </button>
     </div>
   )
@@ -212,6 +210,7 @@ function Step2Verify({ booking, data, onChange, onNext }) {
 // ─── Upload Zone Sub-component ─────────────────────────────────────────────────
 
 function UploadZone({ label, required, hint, file, onFile }) {
+  const { t } = useTranslation('portal')
   const [drag, setDrag] = useState(false)
   const inputRef = useRef()
 
@@ -226,35 +225,40 @@ function UploadZone({ label, required, hint, file, onFile }) {
         {label}{required && <span className="text-danger ml-0.5">*</span>}
       </div>
       {file ? (
-        <div className="border-2 border-success rounded-lg px-3.5 py-3 bg-success-bg flex items-center gap-2.5">
+        <div className="border-2 border-success rounded-lg px-3 py-3 bg-success-bg flex items-center gap-2.5">
           {file.type?.startsWith('image/') ? (
-            <img src={file.url} alt="preview" className="w-12 h-12 object-cover rounded-md" />
+            <img src={file.url} alt={t('upload.preview')} className="w-12 h-12 object-cover rounded-md shrink-0" />
           ) : (
-            <div className="t-display">📄</div>
+            <div className="t-display shrink-0">📄</div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="text-[12px] font-semibold text-success-text whitespace-nowrap overflow-hidden text-ellipsis">
+            <div className="text-[12px] font-semibold text-success-text truncate">
               {file.name}
             </div>
-            <div className="t-label text-ink3 mt-0.5">Uploaded successfully ✓</div>
+            <div className="t-label text-ink3 mt-0.5">{t('upload.done')} ✓</div>
           </div>
           <button
-            className="btn btn-outline btn-xs"
+            className="btn btn-outline btn-sm shrink-0"
             onClick={() => onFile(null)}
           >
-            Change
+            {t('upload.change')}
           </button>
         </div>
       ) : (
         <div
-          className={`upload-zone cursor-pointer${drag ? ' dragover' : ''}`}
+          className={`upload-zone cursor-pointer min-h-[120px] flex flex-col items-center justify-center${drag ? ' dragover' : ''}`}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current.click() } }}
           onClick={() => inputRef.current.click()}
           onDragOver={(e) => { e.preventDefault(); setDrag(true) }}
           onDragLeave={() => setDrag(false)}
           onDrop={(e) => { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]) }}
         >
           <div className="t-h1 mb-1">📤</div>
-          <div className="t-sm text-ink2">Tap to upload or drag & drop</div>
+          <div className="t-sm text-ink2">
+            {t('upload.tap')}<span className="hidden pointer-fine:inline"> {t('upload.orDrag')}</span>
+          </div>
           {hint && <div className="t-xs text-ink3 mt-[3px]">{hint}</div>}
           <input ref={inputRef} type="file" accept="image/*,.pdf" className="hidden"
             onChange={(e) => handleFile(e.target.files[0])} capture="environment" />
@@ -269,58 +273,61 @@ function UploadZone({ label, required, hint, file, onFile }) {
 const ID_TYPES = ['Aadhaar Card', 'Passport', 'Driving Licence', 'Voter ID', 'PAN Card']
 
 function Step3Documents({ data, onChange, onNext }) {
+  const { t } = useTranslation('portal')
   const addToast = useToast()
   const set = (k, v) => onChange({ ...data, [k]: v })
 
   const handleContinue = () => {
-    if (!data.idFront) { addToast('ID Front photo is required', 'danger'); return }
-    if (!data.guestPhoto) { addToast('Guest photo is required', 'danger'); return }
+    if (!data.idFront) { addToast(t('docs.idFrontRequired'), 'danger'); return }
+    if (!data.guestPhoto) { addToast(t('docs.photoRequired'), 'danger'); return }
     onNext()
   }
 
   return (
     <div className="flex flex-col gap-[18px]">
       <p className="t-sm text-ink2 m-0">
-        Upload your government ID and a clear photo of yourself.
+        {t('docs.intro')}
       </p>
 
-      <Field label="ID Type" required>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-3.5">
+      <Field label={t('docs.idType')} required>
         <select className="form-select" value={data.idType} onChange={(e) => set('idType', e.target.value)}>
-          {ID_TYPES.map((t) => <option key={t}>{t}</option>)}
+          {ID_TYPES.map((id) => <option key={id} value={id}>{t(`idTypes.${id}`, id)}</option>)}
         </select>
       </Field>
 
-      <Field label="ID Number" required>
+      <Field label={t('docs.idNumber')} required>
         <input className="form-input" value={data.idNumber}
-          onChange={(e) => set('idNumber', e.target.value)} placeholder="Enter ID number" />
+          onChange={(e) => set('idNumber', e.target.value)} placeholder={t('docs.idNumberPlaceholder')} />
       </Field>
+      </div>
 
       <UploadZone
-        label="ID Front"
+        label={t('docs.idFront')}
         required
-        hint="Use your device camera for best results"
+        hint={t('docs.idFrontHint')}
         file={data.idFront}
         onFile={(f) => set('idFront', f)}
       />
 
       <UploadZone
-        label="Guest Photo"
+        label={t('docs.photo')}
         required
-        hint="Take a clear selfie — no caps or sunglasses"
+        hint={t('docs.photoHint')}
         file={data.guestPhoto}
         onFile={(f) => set('guestPhoto', f)}
       />
 
       {/* Camera hint */}
-      <div className="t-xs bg-info-bg border border-info rounded-lg px-3.5 py-2.5 text-info-text flex items-center gap-2">
-        📷 <span>On mobile? Tap the upload zones above to use your device camera directly.</span>
+      <div className="t-xs bg-info-bg border border-info rounded-lg px-3.5 py-2.5 text-info-text flex items-start gap-2 pointer-fine:hidden">
+        📷 <span>{t('docs.cameraHint')}</span>
       </div>
 
       <button
-        className="btn btn-primary t-title w-full justify-center p-3 rounded-[9px]"
+        className="btn btn-primary t-title w-full justify-center min-h-12 p-3 rounded-[9px]"
         onClick={handleContinue}
       >
-        Continue →
+        {t('docs.continue')} →
       </button>
     </div>
   )
@@ -329,81 +336,80 @@ function Step3Documents({ data, onChange, onNext }) {
 // ─── Step 4: Sign Terms ───────────────────────────────────────────────────────
 
 function Step4Terms({ data, onChange, onNext }) {
+  const { t } = useTranslation('portal')
   const addToast = useToast()
   const set = (k, v) => onChange({ ...data, [k]: v })
 
   const handleSubmit = () => {
-    if (!data.signature.trim()) { addToast('Please enter your signature', 'danger'); return }
-    if (!data.agreed) { addToast('Please agree to the terms and conditions', 'danger'); return }
+    if (!data.signature.trim()) { addToast(t('terms.signatureRequired'), 'danger'); return }
+    if (!data.agreed) { addToast(t('terms.agreeRequired'), 'danger'); return }
     onNext()
   }
 
   return (
     <div className="flex flex-col gap-[18px]">
       <p className="t-sm text-ink2 m-0">
-        Please read and accept our terms and conditions to complete your pre check-in.
+        {t('terms.intro')}
       </p>
 
       {/* Terms scroll box */}
       <div
-        className="t-xs h-[150px] overflow-y-auto bg-surface2 border border-line rounded-lg px-4 py-3.5 text-ink2 leading-[1.7]"
-        style={{ scrollbarWidth: 'thin' }}
+        className="t-xs h-[200px] sm:h-[150px] overflow-y-auto overscroll-contain bg-surface2 border border-line rounded-lg px-4 py-3.5 text-ink2 leading-[1.7] [scrollbar-width:thin]"
+        tabIndex={0}
+        aria-label={t('terms.name')}
       >
-        {TERMS_TEXT.split('\n\n').map((para, i) => (
-          <p key={i} style={{ margin: i === 0 ? 0 : '12px 0 0' }}>{para}</p>
+        {TERMS_SECTIONS.map((n, i) => (
+          <p key={n} className={i === 0 ? 'm-0' : 'mt-3 mb-0'}>
+            {n}. {t(`terms.sections.${n}.title`)}<br />{t(`terms.sections.${n}.body`)}
+          </p>
         ))}
       </div>
 
       {/* Digital signature */}
       <div>
         <div className="t-label text-ink3 mb-1.5">
-          Digital Signature <span className="text-danger">*</span>
+          {t('terms.signature')} <span className="text-danger">*</span>
         </div>
         <div
-          className="rounded-lg overflow-hidden transition-[border-color] duration-[140ms] bg-surface border-2"
-          style={{ borderColor: data.signature.trim() ? 'var(--gold)' : 'var(--border2)' }}
+          className={`rounded-lg overflow-hidden transition-[border-color] duration-[140ms] bg-surface border-2 ${data.signature.trim() ? 'border-gold' : 'border-line2'}`}
         >
           <div className="t-label text-ink3 px-3 pt-1.5">
-            TYPE YOUR FULL NAME AS SIGNATURE
+            {t('terms.typeName')}
           </div>
           <input
             type="text"
             value={data.signature}
             onChange={(e) => set('signature', e.target.value)}
-            placeholder="Sign here..."
-            className="w-full border-none outline-none bg-transparent px-3.5 pt-2 pb-3 text-[20px] italic underline text-ink"
+            placeholder={t('terms.signHere')}
+            autoComplete="name"
+            className="w-full border-none outline-none focus:ring-0 bg-transparent px-3.5 pt-2 pb-3 text-[20px] italic underline text-ink"
           />
         </div>
         <div className="t-xs text-ink3 mt-1">
-          This constitutes a legally binding digital signature.
+          {t('terms.binding')}
         </div>
       </div>
 
       {/* Agreement checkbox */}
       <label
-        className="flex items-start gap-2.5 cursor-pointer px-3.5 py-3 rounded-lg border-[1.5px] transition-all duration-[140ms]"
-        style={{
-          borderColor: data.agreed ? 'var(--gold)' : 'var(--border)',
-          background: data.agreed ? 'var(--gold-bg)' : 'var(--surface2)',
-        }}
+        className={`flex items-start gap-3 cursor-pointer px-3.5 py-3 rounded-lg border-[1.5px] transition-all duration-[140ms] ${data.agreed ? 'border-gold bg-gold-bg' : 'border-line bg-surface2'}`}
       >
         <input
           type="checkbox"
           checked={data.agreed}
           onChange={(e) => set('agreed', e.target.checked)}
-          className="w-4 h-4 shrink-0 mt-px"
-          style={{ accentColor: 'var(--gold)' }}
+          className="w-5 h-5 shrink-0 mt-px rounded text-gold focus:ring-gold/30 accent-gold"
         />
         <span className="t-sm text-ink2 leading-[1.5]">
-          I agree to the <strong className="text-ink">Terms and Conditions</strong> of {MOCK_BOOKING.hotelName} and confirm that all information provided is accurate.
+          {t('terms.agreeBefore', { hotel: MOCK_BOOKING.hotelName })}<strong className="text-ink">{t('terms.name')}</strong>{t('terms.agreeAfter', { hotel: MOCK_BOOKING.hotelName })}
         </span>
       </label>
 
       <button
-        className="btn btn-primary t-title w-full justify-center p-3 rounded-[9px]"
+        className="btn btn-primary t-title w-full justify-center min-h-12 p-3 rounded-[9px]"
         onClick={handleSubmit}
       >
-        Confirm & Submit ✓
+        {t('terms.submit')} ✓
       </button>
     </div>
   )
@@ -412,15 +418,19 @@ function Step4Terms({ data, onChange, onNext }) {
 // ─── Step 5: Confirmation ─────────────────────────────────────────────────────
 
 function Step5Confirmation({ booking, guestName }) {
+  const { t } = useTranslation('portal')
   const addToast = useToast()
 
   const handleDownload = () => {
-    addToast('PDF download will be ready at check-in', 'info')
+    addToast(t('done.pdfLater'), 'info')
   }
 
   const handleWhatsApp = () => {
     const text = encodeURIComponent(
-      `Hi! I've completed my pre check-in for ${booking.hotelName}.\n\nBooking: ${booking.bookingNo}\nRoom: ${booking.room} (${booking.type})\nCheck-In: ${formatDate(booking.checkIn)}\nCheck-Out: ${formatDate(booking.checkOut)}\n\nGuest: ${guestName}`
+      t('done.whatsapp', {
+        hotel: booking.hotelName, bookingNo: booking.bookingNo, room: booking.room, type: booking.type,
+        checkIn: formatDate(booking.checkIn), checkOut: formatDate(booking.checkOut), guest: guestName,
+      })
     )
     window.open(`https://wa.me/?text=${text}`, '_blank')
   }
@@ -435,56 +445,54 @@ function Step5Confirmation({ booking, guestName }) {
       {/* Title */}
       <div>
         <h2 className="t-h1 text-ink mt-0 mx-0 mb-1.5 tracking-[-0.03em]">
-          Pre-Check-In Complete!
+          {t('done.title')}
         </h2>
         <p className="t-sm text-ink2 m-0">
-          Your details have been submitted successfully. Our team will verify everything before your arrival.
+          {t('done.message')}
         </p>
       </div>
 
       {/* Summary card */}
-      <div className="w-full bg-surface2 border border-line rounded-[10px] px-5 py-4 text-left">
+      <div className="w-full bg-surface2 border border-line rounded-[10px] px-4 sm:px-5 py-4 text-left">
         <div className="t-label text-ink3 mb-3.5">
-          Booking Summary
+          {t('done.summary')}
         </div>
         {[
-          { label: 'Guest',    value: guestName },
-          { label: 'Room',     value: `${booking.room} · ${booking.type}` },
-          { label: 'Check-In', value: formatDate(booking.checkIn) },
-          { label: 'Check-Out', value: formatDate(booking.checkOut) },
-          { label: 'Booking No', value: booking.bookingNo },
+          { label: t('labels.guest'),     value: guestName },
+          { label: t('labels.room'),      value: `${booking.room} · ${booking.type}` },
+          { label: t('labels.checkIn'),   value: formatDate(booking.checkIn) },
+          { label: t('labels.checkOut'),  value: formatDate(booking.checkOut) },
+          { label: t('labels.bookingNo'), value: booking.bookingNo },
         ].map(({ label, value }) => (
-          <div key={label} className="flex justify-between items-center py-[7px] border-b border-line">
-            <span className="t-xs text-ink3">{label}</span>
-            <span className="t-title text-ink">{value}</span>
+          <div key={label} className="flex justify-between items-center gap-3 py-2 border-b border-line last:border-b-0">
+            <span className="t-xs text-ink3 shrink-0">{label}</span>
+            <span className="t-title text-ink text-right min-w-0 break-words">{value}</span>
           </div>
         ))}
       </div>
 
       {/* See you message */}
-      <div className="t-title bg-[var(--gold-bg)] border border-[var(--gold-border)] rounded-lg px-4 py-3 w-full text-gold">
-        See you on {formatDate(booking.checkIn)}! 🎉
+      <div className="t-title bg-gold-bg border border-gold-border rounded-lg px-4 py-3 w-full text-gold">
+        {t('done.seeYou', { date: formatDate(booking.checkIn) })} 🎉
       </div>
 
       {/* Action buttons */}
-      <div className="flex flex-col gap-2.5 w-full">
+      <div className="flex flex-col sm:flex-row gap-2.5 w-full">
         <button
-          className="btn btn-outline t-sm w-full justify-center p-[11px]"
+          className="btn btn-outline t-sm w-full sm:flex-1 justify-center min-h-12 p-[11px]"
           onClick={handleDownload}
         >
-          📄 Download Confirmation
+          📄 {t('done.download')}
         </button>
         <button
-          className="t-title w-full p-[11px] rounded-md border-none cursor-pointer text-[#fff] flex items-center justify-center gap-[7px] transition-opacity duration-[140ms]"
+          className="t-title w-full sm:flex-1 min-h-12 p-[11px] rounded-md border-none cursor-pointer text-white flex items-center justify-center gap-[7px] transition-opacity duration-[140ms] hover:opacity-[0.88]"
           onClick={handleWhatsApp}
           style={{ background: '#25D366' }}
-          onMouseEnter={(e) => e.currentTarget.style.opacity = '0.88'}
-          onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
           </svg>
-          Share via WhatsApp
+          {t('done.share')}
         </button>
       </div>
     </div>
@@ -494,6 +502,7 @@ function Step5Confirmation({ booking, guestName }) {
 // ─── Main GuestPortal ─────────────────────────────────────────────────────────
 
 export default function GuestPortal() {
+  const { t } = useTranslation('portal')
   const [step, setStep] = useState(1)
 
   const [verifyData, setVerifyData] = useState({
@@ -523,18 +532,26 @@ export default function GuestPortal() {
   const goBack = () => setStep((s) => Math.max(1, s - 1))
 
   return (
-    <div className="fixed inset-0 bg-canvas z-[1500] flex flex-col items-center overflow-y-auto pt-7 px-4 pb-[60px]">
-      <div className="w-full max-w-[480px]">
-        {/* Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--gold)] mb-2.5">
-            <span className="t-h2 text-[#000]">QV</span>
+    <div className="fixed inset-0 bg-canvas z-[1500] flex flex-col items-center overflow-y-auto overflow-x-hidden overscroll-contain
+                    pt-[max(16px,env(safe-area-inset-top))] sm:pt-10
+                    px-[max(12px,env(safe-area-inset-left))] sm:px-4
+                    pb-[max(32px,env(safe-area-inset-bottom))] sm:pb-[60px]">
+      <div className="w-full max-w-[520px]">
+        <div className="flex justify-end sm:justify-center mb-3 sm:mb-4">
+          <GuestLanguageToggle />
+        </div>
+        {/* Header — inline on phones, stacked from sm */}
+        <div className="flex sm:flex-col items-center sm:justify-center gap-3 sm:gap-0 mb-5 sm:mb-6 px-1 sm:text-center">
+          <div className="inline-flex items-center justify-center w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gold shrink-0 sm:mb-2.5">
+            <span className="t-h3 sm:t-h2 text-black">QV</span>
           </div>
-          <div className="t-h2 text-ink tracking-[-0.03em]">
-            {MOCK_BOOKING.hotelName}
-          </div>
-          <div className="text-[12px] text-ink3 mt-0.5 font-semibold uppercase tracking-[0.08em]">
-            Self Check-In
+          <div className="min-w-0">
+            <div className="t-h3 sm:t-h2 text-ink tracking-[-0.03em] truncate">
+              {MOCK_BOOKING.hotelName}
+            </div>
+            <div className="text-[12px] text-ink3 mt-0.5 font-semibold uppercase tracking-[0.08em]">
+              {t('selfCheckIn')}
+            </div>
           </div>
         </div>
 
@@ -542,13 +559,13 @@ export default function GuestPortal() {
         <PortalProgressBar current={step} total={5} />
 
         {/* Card */}
-        <div className="bg-surface border border-line rounded-xl p-[22px] shadow-[var(--shadow-md)]">
+        <div className="bg-surface border border-line rounded-xl px-4 py-5 sm:p-[22px] shadow-[var(--shadow-md)]">
           {/* Step heading */}
           <div className="mb-[18px]">
             <div className="t-h3 text-ink tracking-[-0.02em]">
-              {STEP_LABELS[step - 1]}
+              {t(`steps.${STEP_KEYS[step - 1]}`)}
             </div>
-            <div className="w-7 h-0.5 bg-[var(--gold)] mt-[5px] rounded-[2px]" />
+            <div className="w-7 h-0.5 bg-gold mt-[5px] rounded-[2px]" />
           </div>
 
           {/* Step content */}
@@ -560,14 +577,12 @@ export default function GuestPortal() {
 
           {/* Back link (steps 2–4) */}
           {step >= 2 && step <= 4 && (
-            <div className="mt-3.5 text-center">
+            <div className="mt-2 text-center">
               <button
                 onClick={goBack}
-                className="t-xs bg-none border-none cursor-pointer text-ink3 p-0 transition-[color] duration-[140ms]"
-                onMouseEnter={(e) => e.currentTarget.style.color = 'var(--text)'}
-                onMouseLeave={(e) => e.currentTarget.style.color = 'var(--text3)'}
+                className="t-sm bg-transparent border-none cursor-pointer text-ink3 hover:text-ink min-h-11 px-4 transition-[color] duration-[140ms]"
               >
-                ← Go Back
+                ← {t('goBack')}
               </button>
             </div>
           )}
@@ -575,8 +590,9 @@ export default function GuestPortal() {
 
         {/* Footer */}
         <div className="t-xs text-center mt-5 text-ink3">
-          Secure self check-in powered by{' '}
+          {t('poweredBy')}
           <span className="text-gold font-semibold">Quantum Vorvex</span>
+          {t('poweredByAfter')}
         </div>
       </div>
     </div>

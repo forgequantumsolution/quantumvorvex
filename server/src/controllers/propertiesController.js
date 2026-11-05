@@ -28,6 +28,10 @@ export const listProperties = async (req, res) => {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000
+// Periods the portfolio dashboard can ask for (?forecast=&trend=); anything else
+// falls back to the default.
+export const FORECAST_OPTIONS = [7, 14, 30]
+export const TREND_OPTIONS = ['7', '30', '90', 'month']
 export const FORECAST_DAYS = 14
 export const TREND_DAYS = 30
 const LIVE_BOOKING = ['Pending', 'Confirmed', 'CheckedIn']
@@ -52,27 +56,34 @@ const nightlyRate = (stayType, rate) => (stayType === 'monthly' ? (rate || 0) / 
 //   RevPAR     = room revenue tonight / sellable rooms
 // forecast[i]  = rooms on the books for night i (day 0 = tonight's actual), from
 //                live bookings plus in-house guests, de-duplicated per room.
-// collections[i] = payments received on day i of the last TREND_DAYS (oldest first);
-// paymentMethods = this month's collections by method; roomTypes = rooms and
-// occupied rooms per room type; stayMix = in-house stays by stay type.
-async function propertyStats() {
+// collections[i] = money received on day i of the trend period (oldest first),
+// net of refunds paid out that day; paymentMethods = this month's money received
+// by method; roomTypes = rooms and occupied rooms per room type; stayMix =
+// in-house stays by stay type. Payments on deleted invoices are left out, as in
+// the cash register. A room counts as occupied while anyone is in it, so a PG
+// room with some beds let is occupied even though it can still take bookings.
+// outstanding = unpaid invoices + what hotel stays still owe (those are billed
+// on the booking, with no invoice row; tenancies bill through invoices).
+// `forecastDays` nights ahead; `trendDays` days of collections ending today.
+async function propertyStats({ forecastDays = FORECAST_DAYS, trendDays = TREND_DAYS } = {}) {
   const now = new Date()
   const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0)
   const dayEnd = new Date(dayStart.getTime() + DAY_MS)
-  const horizon = new Date(dayStart.getTime() + FORECAST_DAYS * DAY_MS)
+  const horizon = new Date(dayStart.getTime() + forecastDays * DAY_MS)
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-  const trendStart = new Date(dayStart.getTime() - (TREND_DAYS - 1) * DAY_MS)
+  const trendStart = new Date(dayStart.getTime() - (trendDays - 1) * DAY_MS)
 
-  const [roomList, recentPayments, methodTotals, roomsByStatus, inHouse, arrivalsToday, departuresToday, collectedMonth, collectedToday, open, liveBookings, activeGuests] = await Promise.all([
-    prisma.room.findMany({ where: { deletedAt: null }, select: { status: true, type: { select: { name: true } } } }),
-    prisma.payment.findMany({ where: { createdAt: { gte: trendStart } }, select: { amount: true, createdAt: true } }),
-    prisma.payment.groupBy({ by: ['method'], where: { createdAt: { gte: monthStart } }, _sum: { amount: true } }),
-    prisma.room.groupBy({ by: ['status'], where: { deletedAt: null }, _count: { _all: true } }),
+  const counted = { OR: [{ invoiceId: null }, { invoice: { deletedAt: null } }] }
+  const [roomList, recentPayments, methodTotals, inHouseRooms, inHouse, arrivalsToday, departuresToday, monthPayments, todayPayments, open, liveBookings, activeGuests, stayDues] = await Promise.all([
+    prisma.room.findMany({ where: { deletedAt: null }, select: { id: true, status: true, type: { select: { name: true } } } }),
+    prisma.payment.findMany({ where: { createdAt: { gte: trendStart }, ...counted }, select: { amount: true, type: true, createdAt: true } }),
+    prisma.payment.groupBy({ by: ['method'], where: { createdAt: { gte: monthStart }, type: { not: 'refund' }, ...counted }, _sum: { amount: true } }),
+    prisma.booking.findMany({ where: { status: 'CheckedIn', deletedAt: null, room: { deletedAt: null } }, select: { roomId: true }, distinct: ['roomId'] }),
     prisma.booking.findMany({ where: { status: 'CheckedIn', deletedAt: null }, select: { stayType: true, roomRate: true } }),
     prisma.booking.count({ where: { status: { in: ['Pending', 'Confirmed'] }, deletedAt: null, fromDate: { gte: dayStart, lt: dayEnd } } }),
     prisma.booking.count({ where: { status: 'CheckedIn', deletedAt: null, toDate: { gte: dayStart, lt: dayEnd } } }),
-    prisma.payment.aggregate({ where: { createdAt: { gte: monthStart } }, _sum: { amount: true } }),
-    prisma.payment.aggregate({ where: { createdAt: { gte: dayStart } }, _sum: { amount: true } }),
+    prisma.payment.groupBy({ by: ['type'], where: { createdAt: { gte: monthStart }, ...counted }, _sum: { amount: true } }),
+    prisma.payment.groupBy({ by: ['type'], where: { createdAt: { gte: dayStart }, ...counted }, _sum: { amount: true } }),
     prisma.invoice.aggregate({ where: { status: { not: 'Paid' }, deletedAt: null }, _sum: { total: true, amountPaid: true } }),
     prisma.booking.findMany({
       where: { status: { in: LIVE_BOOKING }, deletedAt: null, fromDate: { lt: horizon }, room: { deletedAt: null } },
@@ -82,10 +93,22 @@ async function propertyStats() {
       where: { status: { in: ['Active', 'Due'] }, deletedAt: null, room: { deletedAt: null } },
       select: { roomId: true, checkInDate: true, checkOutDate: true },
     }),
+    // Hotel stays that still owe money (not tenancies: their dues are invoices).
+    prisma.booking.findMany({
+      where: { status: { in: ['Confirmed', 'CheckedIn', 'CheckedOut'] }, deletedAt: null, balance: { gt: 0 } },
+      select: { balance: true, stayType: true, months: true },
+    }),
   ])
 
-  const rooms = Object.fromEntries(roomsByStatus.map((r) => [r.status, r._count._all]))
-  const totalRooms = roomsByStatus.reduce((n, r) => n + r._count._all, 0)
+  // Money in minus refunds paid out, from groupBy-by-type rows.
+  const net = (rows) => rows.reduce((n, r) => n + (r.type === 'refund' ? -1 : 1) * (r._sum.amount || 0), 0)
+
+  // Room status, except a room with anyone checked in counts as occupied (a PG
+  // room keeps status "available" until its last bed is let).
+  const occupiedIds = new Set([...roomList.filter((r) => r.status === 'occupied').map((r) => r.id), ...inHouseRooms.map((b) => b.roomId)])
+  const statusOf = (r) => (occupiedIds.has(r.id) && r.status !== 'maintenance' ? 'occupied' : r.status)
+  const rooms = roomList.reduce((acc, r) => { acc[statusOf(r)] = (acc[statusOf(r)] || 0) + 1; return acc }, {})
+  const totalRooms = roomList.length
   const outOfOrder = rooms.maintenance || 0
   const sellable = Math.max(totalRooms - outOfOrder, 0)
   const occupied = rooms.occupied || 0
@@ -98,7 +121,7 @@ async function propertyStats() {
     ...liveBookings.map((b) => ({ roomId: b.roomId, from: new Date(b.fromDate), to: stayEnd(b) })),
     ...activeGuests.map((g) => ({ roomId: g.roomId, from: new Date(g.checkInDate), to: g.checkOutDate ? new Date(g.checkOutDate) : horizon })),
   ]
-  const forecast = Array.from({ length: FORECAST_DAYS }, (_, i) => {
+  const forecast = Array.from({ length: forecastDays }, (_, i) => {
     const night = new Date(dayStart.getTime() + i * DAY_MS)
     const booked = i === 0
       ? occupied
@@ -106,13 +129,13 @@ async function propertyStats() {
     return { date: localDate(night), booked }
   })
 
-  const collections = Array.from({ length: TREND_DAYS }, (_, i) => ({
+  const collections = Array.from({ length: trendDays }, (_, i) => ({
     date: localDate(new Date(trendStart.getTime() + i * DAY_MS)), amount: 0,
   }))
   const dayIndex = Object.fromEntries(collections.map((c, i) => [c.date, i]))
   for (const p of recentPayments) {
     const i = dayIndex[localDate(new Date(p.createdAt))]
-    if (i !== undefined) collections[i].amount = round2(collections[i].amount + (p.amount || 0))
+    if (i !== undefined) collections[i].amount = round2(collections[i].amount + (p.type === 'refund' ? -1 : 1) * (p.amount || 0))
   }
 
   const byType = {}
@@ -120,7 +143,7 @@ async function propertyStats() {
     const name = r.type?.name || 'Other'
     byType[name] ??= { type: name, total: 0, occupied: 0 }
     byType[name].total += 1
-    if (r.status === 'occupied') byType[name].occupied += 1
+    if (statusOf(r) === 'occupied') byType[name].occupied += 1
   }
 
   return {
@@ -141,9 +164,10 @@ async function propertyStats() {
     inHouse: roomsSold,
     arrivalsToday,
     departuresToday,
-    collectedToday: collectedToday._sum.amount || 0,
-    collectedThisMonth: collectedMonth._sum.amount || 0,
-    outstanding: round2((open._sum.total || 0) - (open._sum.amountPaid || 0)),
+    collectedToday: round2(net(todayPayments)),
+    collectedThisMonth: round2(net(monthPayments)),
+    outstanding: round2((open._sum.total || 0) - (open._sum.amountPaid || 0)
+      + stayDues.filter((b) => !(b.stayType === 'monthly' && !b.months)).reduce((n, b) => n + b.balance, 0)),
     forecast,
   }
 }
@@ -157,16 +181,26 @@ const mergeBy = (rows, key, fields) => Object.values(rows.reduce((acc, row) => {
   return acc
 }, {}))
 
-// GET /properties/summary — portfolio view: headline numbers for every property
-// the caller can open, plus totals. Owners see all; managers see their own.
+// GET /properties/summary?forecast=7|14|30&trend=7|30|90|month&properties=id,id —
+// portfolio view: headline numbers for every property the caller can open, plus
+// totals. Owners see all; others see the properties where they can view reports.
+// `properties` narrows the view to some of those (ids the caller can't open are
+// ignored); without it every accessible property is included.
 export const getPortfolioSummary = async (req, res) => {
   try {
+    const forecastDays = FORECAST_OPTIONS.includes(Number(req.query?.forecast)) ? Number(req.query.forecast) : FORECAST_DAYS
+    const trend = TREND_OPTIONS.includes(String(req.query?.trend)) ? String(req.query.trend) : String(TREND_DAYS)
+    // "month" = the 1st of this month up to today.
+    const trendDays = trend === 'month' ? new Date().getDate() : Number(trend)
     const access = await getUserAccess(req.user.userId)
-    const accessible = (await listPropertyAccess(access)).filter((pa) => pa.isOwner || pa.perms.reports === 'VIEW' || pa.perms.reports === 'MANAGE')
+    const wanted = String(req.query?.properties || '').split(',').map((x) => x.trim()).filter(Boolean)
+    const accessible = (await listPropertyAccess(access))
+      .filter((pa) => pa.isOwner || pa.perms.reports === 'VIEW' || pa.perms.reports === 'MANAGE')
+      .filter((pa) => !wanted.length || wanted.includes(pa.property.id))
 
     const properties = await Promise.all(accessible.map(async (pa) => ({
       ...shapePropertyAccess(pa),
-      stats: await runWithProperty(pa.property.id, propertyStats),
+      stats: await runWithProperty(pa.property.id, () => propertyStats({ forecastDays, trendDays })),
     })))
 
     // Portfolio totals cover active properties only; archived ones are history.
@@ -179,6 +213,7 @@ export const getPortfolioSummary = async (req, res) => {
     const roomsSold = sum((s) => s.inHouse)
     res.json({
       generatedAt: new Date().toISOString(),
+      period: { forecast: forecastDays, trend, trendDays },
       properties,
       totals: {
         properties: live.length,
@@ -197,7 +232,7 @@ export const getPortfolioSummary = async (req, res) => {
         outstanding: +sum((s) => s.outstanding).toFixed(2),
         available: sum((s) => s.rooms.available),
         reserved: sum((s) => s.rooms.reserved),
-        collections: Array.from({ length: TREND_DAYS }, (_, i) => ({
+        collections: Array.from({ length: trendDays }, (_, i) => ({
           date: live[0]?.stats.collections[i]?.date ?? null,
           amount: +sum((s) => s.collections[i]?.amount || 0).toFixed(2),
         })),
@@ -205,7 +240,7 @@ export const getPortfolioSummary = async (req, res) => {
         roomTypes: mergeBy(live.flatMap((p) => p.stats.roomTypes), 'type', ['total', 'occupied']),
         stayMix: { daily: sum((s) => s.stayMix.daily), monthly: sum((s) => s.stayMix.monthly) },
         // Portfolio "on the books" per night, against sellable rooms.
-        forecast: Array.from({ length: FORECAST_DAYS }, (_, i) => ({
+        forecast: Array.from({ length: forecastDays }, (_, i) => ({
           date: live[0]?.stats.forecast[i]?.date ?? null,
           booked: sum((s) => s.forecast[i]?.booked || 0),
         })),

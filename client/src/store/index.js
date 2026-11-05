@@ -15,6 +15,7 @@ import authReducer, { clearCredentials } from './slices/authSlice'
 import hotelReducer from './slices/hotelSlice'
 import toastReducer from './slices/toastSlice'
 import opsReducer from './slices/opsSlice'
+import pageHeaderReducer from './slices/pageHeaderSlice'
 
 // localStorage-backed storage for redux-persist. Defined inline (instead of
 // importing `redux-persist/lib/storage`) to avoid a CJS/ESM interop issue where
@@ -42,6 +43,7 @@ const rootReducer = combineReducers({
   hotel: hotelReducer,
   toast: toastReducer, // never persisted
   ops: opsReducer,
+  pageHeader: pageHeaderReducer, // never persisted
 })
 
 // Persist auth (token, currentUser) and hotel (name, owner) — matches the old

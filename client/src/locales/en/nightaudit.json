@@ -1,0 +1,59 @@
+{
+  "title": "Night Audit",
+  "subtitle": "End-of-day close — {{date}}",
+  "dayLocked": "Day locked",
+  "lockAction": "Lock & close day",
+  "stats": {
+    "occupancy": "Occupancy",
+    "revenue": "Today's revenue",
+    "checkIns": "Check-ins",
+    "checkOuts": "Check-outs"
+  },
+  "revenue": {
+    "title": "Revenue Breakdown",
+    "roomRent": "Room Rent",
+    "foodOrders": "Food Orders",
+    "amenities": "Amenities",
+    "advances": "Advances",
+    "refunds": "Refunds",
+    "gstCollected": "GST Collected",
+    "netTotal": "Net Total"
+  },
+  "checklist": {
+    "title": "Audit Checklist",
+    "done": "{{done}}/{{total}} done",
+    "roomStatuses": "Verify all room statuses are accurate",
+    "checkoutsSettled": "Confirm all check-outs are settled",
+    "revenueReport": "Run end-of-day revenue report",
+    "reconcileCash": "Reconcile cash register balance",
+    "housekeeping": "Check housekeeping completion for vacant rooms",
+    "arrivals": "Confirm tomorrow's arrivals and send reminders",
+    "backup": "Back up daily transaction log",
+    "lockDay": "Lock the day & post closing balance"
+  },
+  "pendingCheckouts": "Pending Checkouts",
+  "allClear": "All clear",
+  "roomN": "Room {{number}}",
+  "todaysCheckIns": "Today's Check-Ins",
+  "checkedIn": "Checked In",
+  "cash": {
+    "title": "Cash Register",
+    "net": "Net Cash"
+  },
+  "hk": {
+    "title": "Housekeeping Status",
+    "clean": "Clean",
+    "dirty": "Dirty",
+    "inspecting": "Inspecting",
+    "blocked": "Blocked"
+  },
+  "lock": {
+    "title": "Lock Day & Close Audit",
+    "confirm": "Confirm Lock",
+    "body": "This will lock the current day's transactions and mark the audit as complete. The date will be closed for further edits.",
+    "netRevenue": "Net Revenue Today"
+  },
+  "toast": {
+    "locked": "Night audit locked. Day closed successfully."
+  }
+}

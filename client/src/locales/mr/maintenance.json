@@ -1,0 +1,98 @@
+{
+  "title": "देखभाल",
+  "subtitle": "खोल्यांतील समस्या, दुरुस्ती आणि त्यांची स्थिती",
+  "searchPlaceholder": "खोली, शीर्षक, प्रकार शोधा",
+  "newTicket": "नवीन तिकीट",
+  "tickets": "तिकिटे",
+  "shown": "{{total}} पैकी {{count}} दाखवले",
+  "loadFailed": "तिकिटे लोड झाली नाहीत. सर्व्हर चालू आहे का ते तपासा.",
+  "roomNo": "खोली {{number}}",
+  "floorNo": "मजला {{floor}}",
+  "unassigned": "नियुक्त नाही",
+  "deleteTicket": "तिकीट हटवा",
+  "stats": {
+    "total": "एकूण तिकिटे",
+    "urgent": "तातडीची, न सुटलेली"
+  },
+  "status": {
+    "Open": "उघडे",
+    "In Progress": "काम सुरू",
+    "Resolved": "सोडवले"
+  },
+  "priority": {
+    "Low": "कमी",
+    "Medium": "मध्यम",
+    "High": "जास्त",
+    "Urgent": "तातडीचे"
+  },
+  "category": {
+    "Plumbing": "प्लंबिंग",
+    "Electrical": "इलेक्ट्रिकल",
+    "HVAC": "AC / वायुवीजन",
+    "Furniture": "फर्निचर",
+    "Housekeeping": "हाउसकीपिंग",
+    "Other": "इतर"
+  },
+  "reporter": {
+    "Front Desk": "फ्रंट डेस्क",
+    "Housekeeping": "हाउसकीपिंग",
+    "Guest": "पाहुणा",
+    "Manager": "मॅनेजर"
+  },
+  "empty": {
+    "noMatch": "जुळणारी तिकिटे नाहीत",
+    "none": "येथे तिकिटे नाहीत",
+    "fetching": "तिकिटे आणत आहोत.",
+    "tryDifferent": "दुसरे काही शोधून पहा.",
+    "createHint": "समस्येचा पाठपुरावा करण्यासाठी तिकीट तयार करा."
+  },
+  "toast": {
+    "created": "खोली {{room}} साठी तिकीट {{ticketNo}} तयार केले",
+    "createFailed": "तिकीट तयार करता आले नाही",
+    "marked": "तिकिटाची स्थिती: {{status}}",
+    "updateFailed": "अपडेट झाले नाही",
+    "deleted": "तिकीट {{ticketNo}} हटवले",
+    "deleteFailed": "तिकीट हटवता आले नाही"
+  },
+  "delete": {
+    "title": "तिकीट हटवा",
+    "before": "तिकीट",
+    "after": " कायमचे हटवायचे? हे परत आणता येणार नाही."
+  },
+  "form": {
+    "title": "नवीन देखभाल तिकीट",
+    "subtitle": "देखभाल टीमसाठी समस्या नोंदवा",
+    "create": "तिकीट तयार करा",
+    "selectRoom": "खोली निवडा",
+    "titleRequired": "छोटे शीर्षक आवश्यक आहे",
+    "loadingRooms": "खोल्या लोड होत आहेत…",
+    "noRooms": "एकही खोली सापडली नाही",
+    "category": "प्रकार",
+    "titleLabel": "शीर्षक",
+    "titlePlaceholder": "थोडक्यात माहिती",
+    "description": "वर्णन",
+    "descriptionPlaceholder": "समस्येचा तपशील…",
+    "priority": "प्राधान्य",
+    "assignTo": "कोणाकडे सोपवायचे",
+    "assignPlaceholder": "टेक्निशियन (ऐच्छिक)",
+    "reportedBy": "कोणी कळवले"
+  },
+  "guest": {
+    "title": "समस्या कळवा",
+    "missingCode": "या लिंकमध्ये खोली कोड नाही.",
+    "unknownCode": "हा QR कोड ओळखता आला नाही.",
+    "askFrontDesk": "कृपया मदतीसाठी फ्रंट डेस्कशी संपर्क साधा.",
+    "thanks": "धन्यवाद!",
+    "sent": "तुमची विनंती आमच्या टीमला पाठवली आहे.",
+    "whatNeedsAttention": "कशात समस्या आहे?",
+    "issue": "समस्या",
+    "issuePlaceholder": "उदा. AC थंड करत नाही",
+    "details": "तपशील",
+    "detailsPlaceholder": "आम्हाला लवकर दुरुस्त करण्यास मदत होईल अशी माहिती",
+    "describeIssue": "कृपया समस्या सांगा.",
+    "submitFailed": "पाठवता आले नाही. कृपया पुन्हा प्रयत्न करा.",
+    "sending": "पाठवत आहोत…",
+    "submit": "विनंती पाठवा",
+    "footer": "लॉगिनची गरज नाही · स्टाफला सूचना मिळेल"
+  }
+}

@@ -1,0 +1,123 @@
+{
+  "title": "Billing & Payments",
+  "subtitle": "Invoice management with GST compliance",
+  "searchPlaceholder": "Search guest or invoice…",
+  "records_one": "{{count}} record",
+  "records_other": "{{count}} records",
+  "roomNo": "Room {{room}}",
+  "tabs": { "invoices": "Invoices", "ledger": "Ledger", "cashRegister": "Cash Register" },
+  "status": { "Paid": "Paid", "Pending": "Pending", "Overdue": "Overdue", "Cancelled": "Cancelled", "Partial": "Partial" },
+  "stats": {
+    "collected": "Collected this month",
+    "invoicesPaid_one": "{{count}} invoice paid",
+    "invoicesPaid_other": "{{count}} invoices paid",
+    "invoices_one": "{{count}} invoice",
+    "invoices_other": "{{count}} invoices",
+    "gstCollected": "GST collected",
+    "fromPaid": "From paid invoices"
+  },
+  "actions": {
+    "billing": "Billing…",
+    "billPgRent": "Bill PG rent now",
+    "generateInvoice": "Generate invoice",
+    "collect": "Collect",
+    "invoice": "Invoice",
+    "viewInvoice": "View invoice",
+    "sendReminder": "Send reminder",
+    "deleteInvoice": "Delete invoice"
+  },
+  "col": { "type": "Type", "rent": "Rent", "food": "Food", "amenities": "Amenities", "charges": "Charges" },
+  "empty": { "loading": "Loading invoices…", "title": "No invoices found", "message": "Generate an invoice or adjust your filters" },
+  "errors": { "loadInvoices": "Could not load invoices. Make sure the backend is running." },
+  "invoice": {
+    "title": "Invoice — {{no}}",
+    "print": "Print Invoice",
+    "taxInvoice": "Tax Invoice",
+    "invoiceNo": "Invoice No",
+    "period": "Period",
+    "description": "Description",
+    "roomRent": "Room Rent",
+    "foodPlan": "Food Plan",
+    "amenities": "Amenities",
+    "taxableValue": "Taxable Value",
+    "grandTotal": "Grand Total",
+    "paymentStatus": "Payment Status:",
+    "paidOn": "Paid on {{date}}",
+    "poweredBy": "Powered by Quantum Vorvex · Forge Quantum Solutions"
+  },
+  "collect": {
+    "title": "Record Payment",
+    "confirm": "Confirm Payment",
+    "amountDue": "Amount Due",
+    "paymentMethod": "Payment Method",
+    "method": { "cash": "Cash", "upi": "UPI", "card": "Card", "bank": "Bank Transfer" },
+    "reference": "Reference / Transaction ID (optional)",
+    "referencePlaceholder": "UPI ref, cheque no., etc."
+  },
+  "remind": {
+    "title": "Send Payment Reminder",
+    "send": "Send Reminder",
+    "recipient": "Recipient",
+    "channel": "Channel",
+    "message": "Message",
+    "defaultMessage": "Dear {{guest}}, Your payment of {{amount}} for Room {{room}} is due. Please contact us at the earliest."
+  },
+  "generate": {
+    "title": "Generate Invoice",
+    "submit": "Generate",
+    "noGuests": "No guests available",
+    "periodPlaceholder": "e.g. Apr 2026",
+    "gstRate": "GST Rate (%)"
+  },
+  "ledger": {
+    "loadFailed": "Failed to load ledger",
+    "runningBalance": "Running Balance",
+    "balance": "Balance",
+    "entryType": { "Credit": "Credit", "Debit": "Debit" },
+    "selectGuest": "Select Guest",
+    "searchGuest": "Search guest…",
+    "loading": "Loading ledger…",
+    "noEntries": "No ledger entries for {{guest}}",
+    "closingBalanceFor": "Closing Balance — {{guest}}",
+    "print": "Print Ledger",
+    "noGuestTitle": "No guest selected",
+    "noGuestMessage": "Select a guest to view their account ledger"
+  },
+  "cash": {
+    "loadFailed": "Failed to load cash register",
+    "exported": "Cash register exported as CSV",
+    "time": "Time",
+    "type": { "collection": "Collection", "advance": "Advance", "refund": "Refund" },
+    "cashIn": "Cash In",
+    "cashOut": "Cash Out",
+    "openingBalance": "Opening Balance",
+    "empty": "No cash transactions for this date",
+    "totals": "Totals",
+    "in": "In",
+    "out": "Out",
+    "totalIn": "Total In",
+    "totalOut": "Total Out",
+    "closingBalance": "Closing Balance",
+    "print": "Print Register"
+  },
+  "toast": {
+    "collected": "{{amount}} collected via {{method}} for {{guest}}",
+    "collectFailed": "Could not record payment",
+    "reminderSent": "Reminder sent via {{channel}}",
+    "reminderFailed": "Could not send reminder",
+    "deleted": "Invoice {{no}} deleted",
+    "deleteFailed": "Could not delete invoice",
+    "pgRentCreated_one": "{{count}} PG rent invoice created",
+    "pgRentCreated_other": "{{count}} PG rent invoices created",
+    "pgRentUpToDate": "PG rent is already billed up to today",
+    "pgRentFailed": "Could not bill PG rent",
+    "generated": "Invoice {{no}} generated",
+    "generateFailed": "Could not generate invoice",
+    "exportFailed": "Could not export invoices",
+    "exported": "Invoice CSV exported"
+  },
+  "delete": {
+    "title": "Delete Invoice",
+    "message": "Delete invoice <b>{{no}}</b> for <b>{{guest}}</b> ({{amount}})? It will be removed from billing, the ledger, the cash register and revenue reports. This cannot be undone."
+  }
+}

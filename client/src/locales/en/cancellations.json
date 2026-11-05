@@ -1,0 +1,60 @@
+{
+  "title": "Cancellations",
+  "subtitle": "Cancelled bookings and lost value",
+  "searchPlaceholder": "Search name, no. or reason",
+  "cancelBooking": "Cancel booking",
+  "loadError": "Could not load bookings. Make sure the backend is running.",
+  "noneEligible": "No bookings are eligible to cancel",
+  "stats": {
+    "cancelled": "Cancelled bookings",
+    "rate": "Cancellation rate",
+    "lost": "Lost value",
+    "cancellable": "Still cancellable"
+  },
+  "listTitle": "Cancelled Bookings",
+  "columns": {
+    "booking": "Booking",
+    "plannedStay": "Planned stay",
+    "reason": "Reason",
+    "cancelled": "Cancelled"
+  },
+  "value": "{{amount}} value",
+  "deleteOne": "Delete cancellation",
+  "empty": {
+    "noMatch": "No matching cancellations",
+    "none": "No cancellations",
+    "fetching": "Fetching bookings.",
+    "tryAgain": "Try a different search.",
+    "hint": "Cancelled bookings will appear here."
+  },
+  "toast": {
+    "cancelled": "Booking {{no}} cancelled",
+    "cancelFailed": "Cancellation failed",
+    "deleted": "Booking {{no}} deleted",
+    "deleteFailed": "Could not delete booking"
+  },
+  "delete": {
+    "title": "Delete Cancellation",
+    "message": "Permanently delete the cancelled booking <b>{{no}}</b> for <b>{{name}}</b>? It will be removed from this list. This cannot be undone."
+  },
+  "modal": {
+    "title": "Cancel Booking",
+    "select": "Select a booking to cancel",
+    "keep": "Keep Booking",
+    "confirm": "Confirm Cancellation",
+    "booking": "Booking",
+    "roomN": "Room {{room}}",
+    "stay": "Stay",
+    "outstanding": "Outstanding",
+    "reason": "Reason for cancellation",
+    "warning": "This frees the room and moves the booking to the Cancellations list. This can’t be undone."
+  },
+  "reasons": {
+    "changedPlans": "Guest changed travel plans",
+    "alternative": "Found alternative accommodation",
+    "mistake": "Booked by mistake",
+    "payment": "Payment not completed",
+    "noShow": "No-show",
+    "other": "Other"
+  }
+}

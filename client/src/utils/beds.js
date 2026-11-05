@@ -1,3 +1,4 @@
+import { appLocale } from '../i18n'
 /**
  * Bed helpers. A room with 2+ beds (`bedCount`) can be booked whole or bed by
  * bed (PG) — decided per booking. Beds are numbered 1..bedCount, shown A, B, C…
@@ -54,7 +55,7 @@ export function rentFirstMonthNote(fromDate) {
   const start = parseDay(fromDate)
   if (Number.isNaN(start.getTime()) || start.getDate() === 1) return null
   const inMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate()
-  const month = start.toLocaleDateString('en-IN', { month: 'short' })
+  const month = start.toLocaleDateString(appLocale(), { month: 'short' })
   return `${start.getDate()}–${inMonth} ${month} is charged for ${inMonth - start.getDate() + 1} of ${inMonth} days. Full rent from the 1st of each month after.`
 }
 

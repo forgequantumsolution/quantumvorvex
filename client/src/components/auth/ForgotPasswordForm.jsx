@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Formik, Form, Field, ErrorMessage } from 'formik'
 import { authApi } from '../../api/client'
 import { forgotPasswordSchema, forgotPasswordInitialValues } from '../../validation/authSchema'
@@ -11,6 +12,7 @@ import { MailIcon, AlertIcon, CheckIcon } from './authIcons'
  * `onBack` returns to the login form.
  */
 export default function ForgotPasswordForm({ onBack }) {
+  const { t } = useTranslation('auth')
   const [sent, setSent]   = useState(false)
   const [error, setError] = useState('')
 
@@ -21,7 +23,7 @@ export default function ForgotPasswordForm({ onBack }) {
       setSent(true)
     } catch (err) {
       const data = err.response?.data
-      setError(data?.error || data?.message || 'Cannot reach server. Make sure the backend is running.')
+      setError(data?.error || data?.message || t('errors.unreachable'))
     } finally {
       setSubmitting(false)
     }
@@ -32,11 +34,10 @@ export default function ForgotPasswordForm({ onBack }) {
       <>
         <div className="login-success">
           <span className="shrink-0 mt-px inline-flex"><CheckIcon /></span>
-          If an account exists for that email, a password-reset link is on its way.
-          The link expires in 30 minutes.
+          {t('forgot.sent')}
         </div>
         <button type="button" className="login-submit" onClick={onBack}>
-          Back to Sign In
+          {t('backToSignIn')}
         </button>
       </>
     )
@@ -55,25 +56,25 @@ export default function ForgotPasswordForm({ onBack }) {
         {({ isSubmitting }) => (
           <Form>
             <p className="login-hint">
-              Enter the email tied to your account and we'll send you a link to reset your password.
+              {t('forgot.hint')}
             </p>
             <div className="login-field">
-              <label className="login-field-label">Email address</label>
+              <label className="login-field-label">{t('email')}</label>
               <div className="login-field-wrap">
                 <span className="login-field-icon"><MailIcon /></span>
-                <Field type="email" name="email" placeholder="you@hotel.com"
+                <Field type="email" name="email" placeholder={t('emailPlaceholder')}
                        className="login-input" autoComplete="email" autoFocus />
               </div>
               <ErrorMessage name="email" component="div" className="login-field-error" />
             </div>
             <button type="submit" disabled={isSubmitting} className="login-submit">
               {isSubmitting && <span className="login-spinner" />}
-              {isSubmitting ? 'Sending link…' : 'Send Reset Link'}
+              {isSubmitting ? t('forgot.sending') : t('forgot.send')}
             </button>
 
-            <div className="login-meta-row mt-[14px] justify-center">
+            <div className="login-meta-row after center">
               <button type="button" className="login-link" onClick={onBack}>
-                ← Back to Sign In
+                ← {t('backToSignIn')}
               </button>
             </div>
           </Form>

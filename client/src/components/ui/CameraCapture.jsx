@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const JPEG_QUALITY = 0.85
 const IDEAL_WIDTH = 1280
@@ -40,11 +41,12 @@ const writeStoredId = (id) => {
   } catch { /* ignore */ }
 }
 
+// getUserMedia error name → shell:camera.* message key (the error state holds the key)
 const ERRORS = {
-  NotAllowedError: 'Camera permission was denied. Allow access in your browser, or upload a photo instead.',
-  NotFoundError: 'No camera was found on this device.',
-  NotReadableError: 'The camera is already in use by another app.',
-  OverconstrainedError: 'No camera matches the requested settings.',
+  NotAllowedError: 'denied',
+  NotFoundError: 'notFound',
+  NotReadableError: 'inUse',
+  OverconstrainedError: 'noMatch',
 }
 
 /**
@@ -76,7 +78,8 @@ export default function CameraCapture({
   // starting | live | preview | error — seeded from `live` so the effect below
   // never has to set state synchronously just to report an unusable camera.
   const [phase, setPhase] = useState(() => (hasLiveCamera() ? 'starting' : 'error'))
-  const [error, setError] = useState('')
+  const { t } = useTranslation('shell')
+  const [error, setError] = useState('') // a camera.* key, or ''
   const [previewUrl, setPreviewUrl] = useState(null)
   const [devices, setDevices] = useState([])
   // '' means "let the browser choose"; anything else is requested with exact:.
@@ -151,7 +154,7 @@ export default function CameraCapture({
           setRequestedId('')
           return
         }
-        setError(ERRORS[err.name] || 'Could not start the camera.')
+        setError(ERRORS[err.name] || 'startFailed')
         setPhase('error')
       })
   }, [facingMode, live, refreshDevices])
@@ -202,7 +205,7 @@ export default function CameraCapture({
     canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
     canvas.toBlob(
       (blob) => {
-        if (!blob) { setError('Could not capture the photo. Try again.'); return }
+        if (!blob) { setError('captureFailed'); return }
         showPreview(URL.createObjectURL(blob))
         stopStream()
         setPhase('preview')
@@ -244,7 +247,7 @@ export default function CameraCapture({
     <div>
       <div className="relative overflow-hidden rounded-lg bg-surface2 border border-line aspect-[4/3] flex items-center justify-center">
         {phase === 'preview' && previewUrl ? (
-          <img src={previewUrl} alt="Captured preview" className="w-full h-full object-contain" />
+          <img src={previewUrl} alt={t('camera.preview')} className="w-full h-full object-contain" />
         ) : live && phase !== 'error' ? (
           <>
             <video
@@ -255,13 +258,13 @@ export default function CameraCapture({
               className="w-full h-full object-cover"
               style={mirrored ? { transform: 'scaleX(-1)' } : undefined}
             />
-            {phase !== 'live' && <span className="absolute t-sm text-ink3">Starting camera…</span>}
+            {phase !== 'live' && <span className="absolute t-sm text-ink3">{t('camera.starting')}</span>}
           </>
         ) : (
           <div className="px-6 py-8 text-center">
             <div className="text-3xl mb-2">📷</div>
             <p className="t-sm text-ink3">
-              {error || 'Live camera is unavailable here — use your device camera instead.'}
+              {t(`camera.${error || 'unavailable'}`)}
             </p>
           </div>
         )}
@@ -269,7 +272,7 @@ export default function CameraCapture({
 
       {showPicker && (
         <label className="flex items-center gap-2 mt-3">
-          <span className="t-sm text-ink3 shrink-0">Camera</span>
+          <span className="t-sm text-ink3 shrink-0">{t('camera.camera')}</span>
           <select
             className="form-select flex-1"
             value={activeId}
@@ -278,7 +281,7 @@ export default function CameraCapture({
           >
             {devices.map((d, i) => (
               <option key={d.deviceId} value={d.deviceId}>
-                {d.label || `Camera ${i + 1}`}
+                {d.label || t('camera.cameraN', { n: i + 1 })}
               </option>
             ))}
           </select>
@@ -288,7 +291,7 @@ export default function CameraCapture({
       <div className="flex items-center gap-2 mt-3">
         {phase === 'preview' ? (
           <button type="button" className="btn btn-outline btn-sm" disabled={disabled} onClick={retake}>
-            Retake
+            {t('camera.retake')}
           </button>
         ) : (
           live && phase !== 'error' && (
@@ -298,7 +301,7 @@ export default function CameraCapture({
               disabled={disabled || phase !== 'live'}
               onClick={capture}
             >
-              📷 Capture
+              📷 {t('camera.capture')}
             </button>
           )
         )}
@@ -307,7 +310,7 @@ export default function CameraCapture({
             insecure-origin access from a tablet on the local network. */}
         <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer rounded-lg border border-dashed border-line2 bg-surface px-3 py-2 t-sm text-ink3 hover:border-gold hover:text-ink2">
           <span className="text-base">⬆</span>
-          <span>{live && phase !== 'error' ? 'Or upload a photo' : 'Take or upload a photo'}</span>
+          <span>{live && phase !== 'error' ? t('camera.orUpload') : t('camera.takeOrUpload')}</span>
           <input
             type="file"
             accept="image/*"
@@ -320,7 +323,7 @@ export default function CameraCapture({
       </div>
 
       {error && phase === 'preview' && (
-        <span className="block text-[11.5px] text-danger mt-1">{error}</span>
+        <span className="block text-xs text-danger mt-1">{t(`camera.${error}`)}</span>
       )}
     </div>
   )

@@ -1,0 +1,123 @@
+{
+  "title": "बिलिंग और भुगतान",
+  "subtitle": "GST अनुपालन के साथ Invoice प्रबंधन",
+  "searchPlaceholder": "अतिथि या Invoice खोजें…",
+  "records_one": "{{count}} रिकॉर्ड",
+  "records_other": "{{count}} रिकॉर्ड",
+  "roomNo": "कमरा {{room}}",
+  "tabs": { "invoices": "Invoices", "ledger": "खाता बही", "cashRegister": "कैश रजिस्टर" },
+  "status": { "Paid": "भुगतान हुआ", "Pending": "बाकी", "Overdue": "अतिदेय", "Cancelled": "रद्द", "Partial": "आंशिक" },
+  "stats": {
+    "collected": "इस महीने वसूला गया",
+    "invoicesPaid_one": "{{count}} Invoice चुकाया",
+    "invoicesPaid_other": "{{count}} Invoices चुकाए",
+    "invoices_one": "{{count}} Invoice",
+    "invoices_other": "{{count}} Invoices",
+    "gstCollected": "वसूला गया GST",
+    "fromPaid": "भुगतान हुए Invoices से"
+  },
+  "actions": {
+    "billing": "बिल बन रहा है…",
+    "billPgRent": "अभी PG किराया बिल करें",
+    "generateInvoice": "Invoice बनाएँ",
+    "collect": "वसूलें",
+    "invoice": "Invoice",
+    "viewInvoice": "Invoice देखें",
+    "sendReminder": "रिमाइंडर भेजें",
+    "deleteInvoice": "Invoice हटाएँ"
+  },
+  "col": { "type": "प्रकार", "rent": "किराया", "food": "भोजन", "amenities": "सुविधाएँ", "charges": "शुल्क" },
+  "empty": { "loading": "Invoices लोड हो रहे हैं…", "title": "कोई Invoice नहीं मिला", "message": "Invoice बनाएँ या फ़िल्टर बदलें" },
+  "errors": { "loadInvoices": "Invoices लोड नहीं हो सके। जाँचें कि बैकएंड चल रहा है।" },
+  "invoice": {
+    "title": "Invoice — {{no}}",
+    "print": "Invoice प्रिंट करें",
+    "taxInvoice": "टैक्स Invoice",
+    "invoiceNo": "Invoice नं.",
+    "period": "अवधि",
+    "description": "विवरण",
+    "roomRent": "कमरे का किराया",
+    "foodPlan": "भोजन प्लान",
+    "amenities": "सुविधाएँ",
+    "taxableValue": "कर योग्य मूल्य",
+    "grandTotal": "कुल योग",
+    "paymentStatus": "भुगतान स्थिति:",
+    "paidOn": "{{date}} को भुगतान हुआ",
+    "poweredBy": "Powered by Quantum Vorvex · Forge Quantum Solutions"
+  },
+  "collect": {
+    "title": "भुगतान दर्ज करें",
+    "confirm": "भुगतान की पुष्टि करें",
+    "amountDue": "देय राशि",
+    "paymentMethod": "भुगतान का तरीका",
+    "method": { "cash": "नकद", "upi": "UPI", "card": "कार्ड", "bank": "बैंक ट्रांसफ़र" },
+    "reference": "रेफ़रेंस / ट्रांज़ैक्शन ID (वैकल्पिक)",
+    "referencePlaceholder": "UPI रेफ़, चेक नं. आदि"
+  },
+  "remind": {
+    "title": "भुगतान रिमाइंडर भेजें",
+    "send": "रिमाइंडर भेजें",
+    "recipient": "प्राप्तकर्ता",
+    "channel": "माध्यम",
+    "message": "संदेश",
+    "defaultMessage": "प्रिय {{guest}}, कमरा {{room}} का {{amount}} का भुगतान देय है। कृपया जल्द से जल्द हमसे संपर्क करें।"
+  },
+  "generate": {
+    "title": "Invoice बनाएँ",
+    "submit": "बनाएँ",
+    "noGuests": "कोई अतिथि उपलब्ध नहीं",
+    "periodPlaceholder": "जैसे Apr 2026",
+    "gstRate": "GST दर (%)"
+  },
+  "ledger": {
+    "loadFailed": "खाता बही लोड नहीं हो सकी",
+    "runningBalance": "चालू शेष",
+    "balance": "शेष",
+    "entryType": { "Credit": "जमा", "Debit": "नामे" },
+    "selectGuest": "अतिथि चुनें",
+    "searchGuest": "अतिथि खोजें…",
+    "loading": "खाता बही लोड हो रही है…",
+    "noEntries": "{{guest}} की कोई एंट्री नहीं",
+    "closingBalanceFor": "अंतिम शेष — {{guest}}",
+    "print": "खाता बही प्रिंट करें",
+    "noGuestTitle": "कोई अतिथि नहीं चुना गया",
+    "noGuestMessage": "खाता बही देखने के लिए अतिथि चुनें"
+  },
+  "cash": {
+    "loadFailed": "कैश रजिस्टर लोड नहीं हो सका",
+    "exported": "कैश रजिस्टर CSV में निर्यात हुआ",
+    "time": "समय",
+    "type": { "collection": "वसूली", "advance": "अग्रिम", "refund": "रिफ़ंड" },
+    "cashIn": "नकद आया",
+    "cashOut": "नकद गया",
+    "openingBalance": "प्रारंभिक शेष",
+    "empty": "इस तारीख का कोई नकद लेन-देन नहीं",
+    "totals": "कुल",
+    "in": "आया",
+    "out": "गया",
+    "totalIn": "कुल आया",
+    "totalOut": "कुल गया",
+    "closingBalance": "अंतिम शेष",
+    "print": "रजिस्टर प्रिंट करें"
+  },
+  "toast": {
+    "collected": "{{guest}} से {{method}} द्वारा {{amount}} वसूले गए",
+    "collectFailed": "भुगतान दर्ज नहीं हो सका",
+    "reminderSent": "{{channel}} से रिमाइंडर भेजा गया",
+    "reminderFailed": "रिमाइंडर नहीं भेजा जा सका",
+    "deleted": "Invoice {{no}} हटाया गया",
+    "deleteFailed": "Invoice हटाया नहीं जा सका",
+    "pgRentCreated_one": "{{count}} PG किराया Invoice बना",
+    "pgRentCreated_other": "{{count}} PG किराया Invoices बने",
+    "pgRentUpToDate": "PG किराया आज तक बिल हो चुका है",
+    "pgRentFailed": "PG किराया बिल नहीं हो सका",
+    "generated": "Invoice {{no}} बनाया गया",
+    "generateFailed": "Invoice नहीं बन सका",
+    "exportFailed": "Invoices निर्यात नहीं हो सके",
+    "exported": "Invoice CSV निर्यात हुआ"
+  },
+  "delete": {
+    "title": "Invoice हटाएँ",
+    "message": "<b>{{guest}}</b> का Invoice <b>{{no}}</b> ({{amount}}) हटाएँ? यह बिलिंग, खाता बही, कैश रजिस्टर और राजस्व रिपोर्ट से हट जाएगा। इसे वापस नहीं लाया जा सकता।"
+  }
+}

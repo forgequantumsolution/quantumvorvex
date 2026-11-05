@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   PieChart, Pie, Cell,
   BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -6,8 +7,11 @@ import {
 } from 'recharts'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
+import { LuCalendarCheck, LuIndianRupee, LuLink } from 'react-icons/lu'
+import { PageWrapper, DataTable, StatCard } from '../../ui-tw'
 import { useToast } from '../../../hooks/useToast'
 import { formatCurrency } from '../../../utils/format'
+import { appLocale } from '../../../i18n'
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const MOCK_CHANNELS = [
@@ -34,13 +38,16 @@ function statusBadge(status) {
   return 'grey'
 }
 
+// Display labels for channel statuses (the values stay in English).
+const STATUS_KEYS = { Connected: 'status.connected', Manual: 'status.manual', Disconnected: 'status.disconnected' }
+
 function getParityStatus(row) {
   const competitors = [row.bookingCom, row.mmtRate, row.goibibo]
   const allHigher = competitors.every(c => row.yourRate < c)
   const anyHigher = competitors.some(c => row.yourRate > c)
-  if (allHigher) return { label: '✓ You\'re cheapest', type: 'green' }
-  if (anyHigher) return { label: '⚠ Parity Issue',    type: 'amber' }
-  return { label: '✓ Parity', type: 'green' }
+  if (allHigher) return { labelKey: 'parity.cheapest', type: 'green' }
+  if (anyHigher) return { labelKey: 'parity.issue',    type: 'amber' }
+  return { labelKey: 'parity.ok', type: 'green' }
 }
 
 // ─── Custom Tooltip for Bar Chart ─────────────────────────────────────────────
@@ -51,7 +58,7 @@ function RateTooltip({ active, payload, label }) {
       <p className="mb-1.5 font-bold text-ink">{label}</p>
       {payload.map(p => (
         <p key={p.name} className="my-0.5" style={{ color: p.color }}>
-          {p.name}: ₹{p.value.toLocaleString('en-IN')}
+          {p.name}: ₹{p.value.toLocaleString(appLocale())}
         </p>
       ))}
     </div>
@@ -61,6 +68,7 @@ function RateTooltip({ active, payload, label }) {
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
 function OverviewTab({ channels }) {
   const addToast = useToast()
+  const { t } = useTranslation('channels')
   const totalBookings = channels.reduce((a, c) => a + c.bookings, 0)
   const totalRevenue  = channels.reduce((a, c) => a + c.revenue,  0)
   const connectedCount = channels.filter(c => c.status === 'Connected').length
@@ -68,48 +76,39 @@ function OverviewTab({ channels }) {
   return (
     <div>
       {/* Stat Cards */}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-[14px] mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-[14px] mb-5 sm:mb-6">
         {[
-          { label: 'Total Bookings',     value: totalBookings,               sub: 'This month' },
-          { label: 'Total Revenue',      value: formatCurrency(totalRevenue), sub: 'This month' },
-          { label: 'Channels Connected', value: connectedCount,              sub: `of ${channels.length} channels` },
-        ].map(card => (
-          <div key={card.label} className="stat-card py-4 px-[18px]">
-            <div className="t-label text-ink3 tracking-[0.06em] mb-1">
-              {card.label}
-            </div>
-            <div className="t-h1 text-ink tracking-[-0.02em]">
-              {card.value}
-            </div>
-            <div className="text-[11px] text-ink3 mt-0.5">{card.sub}</div>
-          </div>
-        ))}
+          { id: 'bookings', label: t('stats.totalBookings'), value: totalBookings, hint: t('stats.thisMonth'), icon: <LuCalendarCheck />, tone: 'blue' },
+          { id: 'revenue', label: t('stats.totalRevenue'), value: formatCurrency(totalRevenue), hint: t('stats.thisMonth'), icon: <LuIndianRupee />, tone: 'green' },
+          { id: 'connected', label: t('stats.connected'), value: connectedCount, hint: t('stats.ofChannels', { count: channels.length }), icon: <LuLink />, tone: 'gold',
+            progress: channels.length ? (connectedCount / channels.length) * 100 : 0, className: 'col-span-2 sm:col-span-1' },
+        ].map(({ id, ...card }) => <StatCard key={id} {...card} />)}
       </div>
 
       {/* Channel Cards Grid */}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-[14px]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-[14px]">
         {channels.map(ch => (
           <div key={ch.id} className="card p-0 overflow-hidden" style={{
             borderLeft: `4px solid ${ch.color}`,
           }}>
             <div className="py-[14px] px-4">
               {/* Header */}
-              <div className="flex items-center justify-between mb-2.5">
-                <span className="t-title text-ink">
+              <div className="flex items-center justify-between gap-2 mb-2.5 min-w-0">
+                <span className="t-title text-ink truncate">
                   {ch.name}
                 </span>
-                <Badge type={statusBadge(ch.status)}>{ch.status}</Badge>
+                <Badge type={statusBadge(ch.status)}>{STATUS_KEYS[ch.status] ? t(STATUS_KEYS[ch.status]) : ch.status}</Badge>
               </div>
 
               {/* Stats */}
               <div className="flex flex-col gap-1.5 mb-3">
                 {[
-                  { label: 'Bookings', value: ch.bookings },
-                  { label: 'Revenue',  value: formatCurrency(ch.revenue) },
-                  { label: 'Avg Rate', value: `₹${ch.avgRate.toLocaleString('en-IN')}` },
+                  { label: t('card.bookings'), value: ch.bookings },
+                  { label: t('card.revenue'),  value: formatCurrency(ch.revenue) },
+                  { label: t('card.avgRate'), value: `₹${ch.avgRate.toLocaleString(appLocale())}` },
                 ].map(stat => (
                   <div key={stat.label} className="flex justify-between items-center">
-                    <span className="text-[11px] text-ink3">{stat.label}</span>
+                    <span className="text-xs text-ink3">{stat.label}</span>
                     <span className="text-[12px] font-semibold text-ink" style={{ fontFamily: 'var(--font-mono)' }}>
                       {stat.value}
                     </span>
@@ -122,18 +121,19 @@ function OverviewTab({ channels }) {
                 {ch.status === 'Connected' ? (
                   <button
                     className="btn btn-outline btn-xs w-full"
-                    onClick={() => addToast({ type: 'info', message: `API configuration for ${ch.name} coming soon.` })}
+                    onClick={() => addToast(t('toast.apiSoon', { name: ch.name }), 'info')}
                   >
-                    Configure API
+                    {t('card.configureApi')}
                   </button>
                 ) : (
-                  <label className="t-xs flex items-center gap-[7px] cursor-pointer text-ink2">
+                  <label className="t-xs flex items-center gap-[7px] cursor-pointer text-ink2 pointer-coarse:min-h-11">
                     <input
                       type="checkbox"
+                      className="rounded text-gold focus:ring-gold/30 pointer-coarse:w-5 pointer-coarse:h-5"
                       defaultChecked={ch.status === 'Manual'}
-                      onChange={() => addToast({ type: 'success', message: `${ch.name} marked as Manual.` })}
+                      onChange={() => addToast(t('toast.markedManual', { name: ch.name }), 'success')}
                     />
-                    Mark as Manual
+                    {t('card.markManual')}
                   </label>
                 )}
               </div>
@@ -147,9 +147,9 @@ function OverviewTab({ channels }) {
 
 // ─── Rate Parity Tab ──────────────────────────────────────────────────────────
 function RateParityTab() {
+  const { t } = useTranslation('channels')
   const [rows, setRows] = useState(RATE_PARITY)
   const [editingCell, setEditingCell] = useState(null) // { rowIndex, field }
-  const addToast = useToast()
 
   function handleCellClick(rowIndex, field) {
     setEditingCell({ rowIndex, field })
@@ -163,30 +163,94 @@ function RateParityTab() {
     setEditingCell(null)
   }
 
+  // One competitor rate: click to edit inline (table cell on md+, card tile on phones).
+  function rateCell(row, rowIndex, field, val) {
+    const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.field === field
+    return isEditing ? (
+      <input
+        autoFocus
+        type="number"
+        defaultValue={val}
+        className="form-input w-full md:w-[90px] py-[3px] px-[7px] text-[12px] focus:ring-gold/20 focus:border-gold"
+        style={{ fontFamily: 'var(--font-mono)' }}
+        onBlur={e => handleCellBlur(rowIndex, field, e.target.value)}
+        onKeyDown={e => {
+          if (e.key === 'Enter') e.target.blur()
+          if (e.key === 'Escape') setEditingCell(null)
+        }}
+      />
+    ) : (
+      <span className="py-0.5 px-1 rounded" style={{
+        color: val > row.yourRate ? 'var(--text2)' : 'var(--red-text)',
+      }}>
+        ₹{val.toLocaleString(appLocale())}
+      </span>
+    )
+  }
+
+  const COMPETITORS = [
+    { field: 'bookingCom', label: 'Booking.com' },
+    { field: 'mmtRate',    label: 'MakeMyTrip'  },
+    { field: 'goibibo',    label: 'Goibibo'     },
+  ]
+
   const barData = rows.map(r => ({
-    name:        r.type,
-    'Your Rate': r.yourRate,
-    'Booking.com': r.bookingCom,
-    'MakeMyTrip':  r.mmtRate,
+    name:       r.type,
+    yourRate:   r.yourRate,
+    bookingCom: r.bookingCom,
+    mmtRate:    r.mmtRate,
   }))
 
   return (
     <div>
       <p className="t-sm mb-4 text-ink2">
-        Compare your rates vs OTA platforms. Click competitor cells to edit inline.
+        {t('parity.intro')}
       </p>
 
-      {/* Table */}
-      <div className="overflow-x-auto mb-[28px]">
+      {/* Phones: one card per room type; tap a competitor rate to edit it */}
+      <ul className="md:hidden list-none m-0 p-0 flex flex-col gap-3 mb-5">
+        {rows.map((row, rowIndex) => {
+          const parity = getParityStatus(row)
+          return (
+            <li key={row.type} className="card px-4 py-3.5">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <span className="t-title">{row.type}</span>
+                <Badge type={parity.type}>{t(parity.labelKey)}</Badge>
+              </div>
+              <div className="flex items-baseline justify-between gap-2 mb-2.5">
+                <span className="t-xs text-ink3">{t('parity.yourRate')}</span>
+                <span className="font-bold text-gold" style={{ fontFamily: 'var(--font-mono)' }}>₹{row.yourRate.toLocaleString(appLocale())}</span>
+              </div>
+              <dl className="grid grid-cols-3 gap-2 m-0">
+                {COMPETITORS.map(({ field, label }) => (
+                  <div key={field} className="min-w-0">
+                    <dt className="text-xs text-ink3 truncate">{label}</dt>
+                    <dd
+                      className="m-0 mt-1 min-h-11 flex items-center rounded-md bg-surface2 border border-line px-1.5 cursor-pointer text-[13px]"
+                      style={{ fontFamily: 'var(--font-mono)' }}
+                      onClick={() => handleCellClick(rowIndex, field)}
+                    >
+                      {rateCell(row, rowIndex, field, row[field])}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </li>
+          )
+        })}
+      </ul>
+
+      {/* Table (md+) */}
+      <div className="hidden md:block overflow-x-auto mb-[28px]">
         <table>
           <thead>
             <tr>
-              <th>Room Type</th>
-              <th>Your Rate ₹</th>
+              <th>{t('parity.roomType')}</th>
+              <th>{t('parity.yourRate')} ₹</th>
               <th>Booking.com ₹</th>
               <th>MakeMyTrip ₹</th>
               <th>Goibibo ₹</th>
-              <th>Parity Status</th>
+              <th>{t('parity.status')}</th>
             </tr>
           </thead>
           <tbody>
@@ -196,42 +260,16 @@ function RateParityTab() {
                 <tr key={row.type}>
                   <td className="font-semibold">{row.type}</td>
                   <td className="font-bold text-gold" style={{ fontFamily: 'var(--font-mono)' }}>
-                    ₹{row.yourRate.toLocaleString('en-IN')}
+                    ₹{row.yourRate.toLocaleString(appLocale())}
                   </td>
-                  {[
-                    { field: 'bookingCom', val: row.bookingCom },
-                    { field: 'mmtRate',    val: row.mmtRate    },
-                    { field: 'goibibo',    val: row.goibibo    },
-                  ].map(({ field, val }) => {
-                    const isEditing = editingCell?.rowIndex === rowIndex && editingCell?.field === field
-                    return (
-                      <td key={field} onClick={() => handleCellClick(rowIndex, field)}
-                        className="cursor-pointer" style={{ fontFamily: 'var(--font-mono)' }}>
-                        {isEditing ? (
-                          <input
-                            autoFocus
-                            type="number"
-                            defaultValue={val}
-                            className="form-input w-[90px] py-[3px] px-[7px] text-[12px]"
-                            style={{ fontFamily: 'var(--font-mono)' }}
-                            onBlur={e => handleCellBlur(rowIndex, field, e.target.value)}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter') e.target.blur()
-                              if (e.key === 'Escape') setEditingCell(null)
-                            }}
-                          />
-                        ) : (
-                          <span className="py-0.5 px-1 rounded" style={{
-                            color: val > row.yourRate ? 'var(--text2)' : 'var(--red-text)',
-                          }}>
-                            ₹{val.toLocaleString('en-IN')}
-                          </span>
-                        )}
-                      </td>
-                    )
-                  })}
+                  {COMPETITORS.map(({ field }) => (
+                    <td key={field} onClick={() => handleCellClick(rowIndex, field)}
+                      className="cursor-pointer" style={{ fontFamily: 'var(--font-mono)' }}>
+                      {rateCell(row, rowIndex, field, row[field])}
+                    </td>
+                  ))}
                   <td>
-                    <Badge type={parity.type}>{parity.label}</Badge>
+                    <Badge type={parity.type}>{t(parity.labelKey)}</Badge>
                   </td>
                 </tr>
               )
@@ -243,7 +281,7 @@ function RateParityTab() {
       {/* Bar Chart */}
       <div className="card">
         <div className="card-header">
-          <span className="card-title">Rate Comparison Chart</span>
+          <span className="card-title">{t('parity.chartTitle')}</span>
         </div>
         <div className="card-body pt-2">
           <ResponsiveContainer width="100%" height={240}>
@@ -252,9 +290,9 @@ function RateParityTab() {
               <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `₹${v}`} />
               <Tooltip content={<RateTooltip />} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="Your Rate"   fill="#c9a84c" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Booking.com" fill="#2563eb" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="MakeMyTrip"  fill="#d5001c" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="yourRate"   name={t('parity.yourRate')} fill="#c9a84c" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="bookingCom" name="Booking.com"        fill="#2563eb" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="mmtRate"    name="MakeMyTrip"         fill="#d5001c" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -264,7 +302,8 @@ function RateParityTab() {
 }
 
 // ─── Import Tab ───────────────────────────────────────────────────────────────
-const CSV_SYSTEM_FIELDS = ['Guest Name', 'Room Number', 'Check-in Date', 'Check-out Date', 'Amount', 'Channel']
+// System field ids; their labels live in channels.json under importTab.fields.
+const CSV_SYSTEM_FIELDS = ['guestName', 'roomNumber', 'checkIn', 'checkOut', 'amount', 'channel']
 const CSV_MOCK_COLUMNS  = ['guest_name', 'room_no', 'checkin', 'checkout', 'total_amount', 'source']
 const CSV_PREVIEW_ROWS  = [
   ['Rahul Sharma',  '102', '2026-04-01', '2026-04-05', '4800', 'Booking.com'],
@@ -276,6 +315,7 @@ const CSV_PREVIEW_ROWS  = [
 
 function ImportTab() {
   const addToast = useToast()
+  const { t } = useTranslation('channels')
   const [mapping, setMapping] = useState(
     Object.fromEntries(CSV_SYSTEM_FIELDS.map((f, i) => [f, CSV_MOCK_COLUMNS[i]]))
   )
@@ -288,7 +328,7 @@ function ImportTab() {
     const file = e.dataTransfer?.files?.[0]
     if (file) {
       setFileUploaded(true)
-      addToast({ type: 'success', message: `File "${file.name}" loaded.` })
+      addToast(t('toast.fileLoaded', { name: file.name }), 'success')
     }
   }
 
@@ -296,16 +336,16 @@ function ImportTab() {
     const file = e.target.files?.[0]
     if (file) {
       setFileUploaded(true)
-      addToast({ type: 'success', message: `File "${file.name}" loaded.` })
+      addToast(t('toast.fileLoaded', { name: file.name }), 'success')
     }
   }
 
   function handleImport() {
-    addToast({ type: 'success', message: '6 bookings imported successfully.' })
+    addToast(t('toast.imported', { count: 6 }), 'success')
   }
 
   function handleDownloadTemplate() {
-    addToast({ type: 'info', message: 'Template CSV download started.' })
+    addToast(t('toast.templateStarted'), 'info')
     const header = CSV_MOCK_COLUMNS.join(',')
     const sample = CSV_PREVIEW_ROWS.map(r => r.join(',')).join('\n')
     const blob = new Blob([header + '\n' + sample], { type: 'text/csv' })
@@ -318,13 +358,13 @@ function ImportTab() {
   }
 
   return (
-    <div className="max-w-[700px]">
+    <div className="w-full max-w-[700px]">
       {/* Upload Zone */}
       <div
         onDragOver={e => { e.preventDefault(); setIsDragging(true) }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-[10px] py-10 px-5 text-center transition-all duration-[180ms] mb-5 cursor-pointer relative ${isDragging ? 'border-gold bg-[var(--gold-bg)]' : 'border-line bg-surface2'}`}
+        className={`border-2 border-dashed rounded-[10px] py-8 sm:py-10 px-4 sm:px-5 text-center transition-all duration-[180ms] mb-5 cursor-pointer relative ${isDragging ? 'border-gold bg-[var(--gold-bg)]' : 'border-line bg-surface2'}`}
         onClick={() => document.getElementById('csv-file-input').click()}
       >
         <input
@@ -336,40 +376,58 @@ function ImportTab() {
         />
         <div className="text-[36px] mb-2">☁</div>
         <p className="t-title mb-1 text-ink">
-          {fileUploaded ? '✓ File loaded — ready to map columns' : 'Drop your CSV file here, or click to browse'}
+          {fileUploaded ? t('importTab.fileReady') : t('importTab.drop')}
         </p>
         <p className="t-xs m-0 text-ink3">
-          Supports .csv files · Max 5 MB
+          {t('importTab.supports')}
         </p>
       </div>
 
       {/* Download template */}
-      <div className="flex items-center gap-3 mb-6">
-        <button className="btn btn-outline btn-sm" onClick={handleDownloadTemplate}>
-          Download Template CSV
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-6">
+        <button className="btn btn-outline btn-sm self-start shrink-0" onClick={handleDownloadTemplate}>
+          {t('importTab.downloadTemplate')}
         </button>
         <span className="t-xs text-ink3">
-          Use this template to format your booking data correctly before importing.
+          {t('importTab.templateHint')}
         </span>
       </div>
 
       {/* Column Mapping */}
       <div className="card mb-5">
         <div className="card-header">
-          <span className="card-title">Column Mapping</span>
+          <span className="card-title">{t('importTab.columnMapping')}</span>
         </div>
         <div className="card-body">
-          <table>
+          {/* Phones: field name over its select; a table from sm up */}
+          <ul className="sm:hidden list-none m-0 p-0 flex flex-col gap-3">
+            {CSV_SYSTEM_FIELDS.map(field => (
+              <li key={field} className="flex flex-col gap-1">
+                <label htmlFor={`map-${field}`} className="t-title">{t(`importTab.fields.${field}`)}</label>
+                <select
+                  id={`map-${field}`}
+                  className="form-select t-xs"
+                  value={mapping[field]}
+                  onChange={e => setMapping(m => ({ ...m, [field]: e.target.value }))}
+                >
+                  {CSV_MOCK_COLUMNS.map(col => (
+                    <option key={col} value={col}>{col}</option>
+                  ))}
+                </select>
+              </li>
+            ))}
+          </ul>
+          <table className="hidden sm:table">
             <thead>
               <tr>
-                <th>System Field</th>
-                <th>Your CSV Column</th>
+                <th>{t('importTab.systemField')}</th>
+                <th>{t('importTab.csvColumn')}</th>
               </tr>
             </thead>
             <tbody>
               {CSV_SYSTEM_FIELDS.map(field => (
                 <tr key={field}>
-                  <td className="t-title">{field}</td>
+                  <td className="t-title">{t(`importTab.fields.${field}`)}</td>
                   <td>
                     <select
                       className="form-select t-xs"
@@ -391,7 +449,7 @@ function ImportTab() {
       {/* CSV Preview */}
       <div className="card mb-5">
         <div className="card-header">
-          <span className="card-title">CSV Preview (5 rows)</span>
+          <span className="card-title">{t('importTab.preview', { count: CSV_PREVIEW_ROWS.length })}</span>
         </div>
         <div className="card-body overflow-x-auto">
           <table>
@@ -415,15 +473,31 @@ function ImportTab() {
         </div>
       </div>
 
-      <button className="btn btn-primary" onClick={handleImport}>
-        Import Bookings
+      <button className="btn btn-primary w-full sm:w-auto justify-center" onClick={handleImport}>
+        {t('importTab.importBtn')}
       </button>
     </div>
   )
 }
 
 // ─── Revenue by Source Tab ────────────────────────────────────────────────────
+function PieTooltip({ active, payload, totalRevenue }) {
+  if (!active || !payload?.length) return null
+  const d = payload[0]
+  return (
+    <div className="t-xs bg-surface border border-line rounded-lg py-[9px] px-[13px]">
+      <p className="m-0 font-bold text-ink">{d.name}</p>
+      <p className="mt-[3px] text-ink2">
+        {formatCurrency(d.value)} ({((d.value / totalRevenue) * 100).toFixed(1)}%)
+      </p>
+    </div>
+  )
+}
+
+const mono = { fontFamily: 'var(--font-mono)' }
+
 function RevenueBySourceTab({ channels }) {
+  const { t } = useTranslation('channels')
   const totalRevenue  = channels.reduce((a, c) => a + c.revenue,  0)
   const totalBookings = channels.reduce((a, c) => a + c.bookings, 0)
 
@@ -433,59 +507,74 @@ function RevenueBySourceTab({ channels }) {
     color:   ch.color,
   }))
 
-  // Custom Pie tooltip
-  function PieTooltip({ active, payload }) {
-    if (!active || !payload?.length) return null
-    const d = payload[0]
-    return (
-      <div className="t-xs bg-surface border border-line rounded-lg py-[9px] px-[13px]">
-        <p className="m-0 font-bold text-ink">{d.name}</p>
-        <p className="mt-[3px] text-ink2">
-          {formatCurrency(d.value)} ({((d.value / totalRevenue) * 100).toFixed(1)}%)
-        </p>
-      </div>
-    )
-  }
+  const share = (ch) => ((ch.revenue / totalRevenue) * 100).toFixed(1)
+  const columns = [
+    {
+      key: 'source', header: t('revenue.source'), primary: true,
+      render: (ch) => (
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 inline-block" style={{ background: ch.color }} />
+          <span className="t-title truncate">{ch.name}</span>
+        </div>
+      ),
+    },
+    { key: 'bookings', header: t('card.bookings'), render: (ch) => <span style={mono}>{ch.bookings}</span> },
+    { key: 'revenue', header: `${t('card.revenue')} ₹`, render: (ch) => <span className="font-semibold" style={mono}>{formatCurrency(ch.revenue)}</span> },
+    { key: 'avg', header: `${t('revenue.avgStay')} ₹`, render: (ch) => <span style={mono}>{formatCurrency(ch.avgRate)}</span> },
+    {
+      key: 'share', header: t('revenue.share'),
+      render: (ch) => (
+        <div className="flex items-center gap-2">
+          <div className="w-[60px] h-1.5 rounded-[3px] bg-line overflow-hidden shrink-0">
+            <div className="h-full rounded-[3px]" style={{ width: `${share(ch)}%`, background: ch.color }} />
+          </div>
+          <span className="text-[12px]" style={mono}>{share(ch)}%</span>
+        </div>
+      ),
+    },
+  ]
 
   return (
     <div>
       {/* Pie Chart */}
       <div className="card mb-5">
         <div className="card-header">
-          <span className="card-title">Revenue by Channel</span>
+          <span className="card-title">{t('revenue.byChannel')}</span>
         </div>
         <div className="card-body">
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={110}
-                innerRadius={55}
-                paddingAngle={3}
-              >
-                {pieData.map((entry, index) => (
-                  <Cell key={index} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip content={<PieTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="h-[240px] sm:h-[300px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius="90%"
+                  innerRadius="45%"
+                  paddingAngle={3}
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={index} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip content={<PieTooltip totalRevenue={totalRevenue} />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
 
           {/* Legend */}
-          <div className="flex flex-wrap gap-x-[18px] gap-y-2 justify-center mt-3">
+          <div className="grid grid-cols-1 sm:flex sm:flex-wrap gap-x-[18px] gap-y-2 sm:justify-center mt-3">
             {channels.map(ch => (
-              <div key={ch.id} className="t-xs flex items-center gap-1.5">
+              <div key={ch.id} className="t-xs flex items-center gap-1.5 min-w-0">
                 <span className="w-2.5 h-2.5 rounded-full shrink-0 inline-block" style={{ background: ch.color }} />
-                <span className="text-ink2">{ch.name}</span>
-                <span className="font-semibold text-ink" style={{ fontFamily: 'var(--font-mono)' }}>
+                <span className="text-ink2 truncate">{ch.name}</span>
+                <span className="font-semibold text-ink ml-auto sm:ml-0" style={mono}>
                   {formatCurrency(ch.revenue)}
                 </span>
                 <span className="text-ink3">
-                  ({((ch.revenue / totalRevenue) * 100).toFixed(1)}%)
+                  ({share(ch)}%)
                 </span>
               </div>
             ))}
@@ -493,66 +582,19 @@ function RevenueBySourceTab({ channels }) {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <table>
-          <thead>
-            <tr>
-              <th>Source</th>
-              <th>Bookings</th>
-              <th>Revenue ₹</th>
-              <th>Avg Stay ₹</th>
-              <th>% of Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {channels
-              .slice()
-              .sort((a, b) => b.revenue - a.revenue)
-              .map(ch => (
-                <tr key={ch.id}>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0 inline-block" style={{ background: ch.color }} />
-                      <span className="t-title">{ch.name}</span>
-                    </div>
-                  </td>
-                  <td style={{ fontFamily: 'var(--font-mono)' }}>{ch.bookings}</td>
-                  <td className="font-semibold" style={{ fontFamily: 'var(--font-mono)' }}>
-                    {formatCurrency(ch.revenue)}
-                  </td>
-                  <td style={{ fontFamily: 'var(--font-mono)' }}>
-                    {formatCurrency(ch.avgRate)}
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <div className="w-[60px] h-1.5 rounded-[3px] bg-line overflow-hidden">
-                        <div
-                          className="h-full rounded-[3px]"
-                          style={{
-                            width: `${(ch.revenue / totalRevenue) * 100}%`,
-                            background: ch.color,
-                          }}
-                        />
-                      </div>
-                      <span className="text-[12px]" style={{ fontFamily: 'var(--font-mono)' }}>
-                        {((ch.revenue / totalRevenue) * 100).toFixed(1)}%
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-
-            {/* Totals row */}
-            <tr className="border-t-2 border-line font-bold">
-              <td>Total</td>
-              <td style={{ fontFamily: 'var(--font-mono)' }}>{totalBookings}</td>
-              <td style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(totalRevenue)}</td>
-              <td className="text-ink3" style={{ fontFamily: 'var(--font-mono)' }}>—</td>
-              <td style={{ fontFamily: 'var(--font-mono)' }}>100%</td>
-            </tr>
-          </tbody>
-        </table>
+      {/* Table (cards on phones) + totals */}
+      <div className="card overflow-hidden">
+        <DataTable
+          columns={columns}
+          rows={channels.slice().sort((a, b) => b.revenue - a.revenue)}
+          rowKey={(ch) => ch.id}
+        />
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-4 lg:px-5 py-3 border-t-2 border-line font-bold text-ink text-[13px]">
+          <span>{t('common:total')}</span>
+          <span style={mono}>{t('revenue.bookingsCount', { count: totalBookings })}</span>
+          <span style={mono}>{formatCurrency(totalRevenue)}</span>
+          <span className="sm:ml-auto" style={mono}>100%</span>
+        </div>
       </div>
     </div>
   )
@@ -560,26 +602,18 @@ function RevenueBySourceTab({ channels }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function Channels() {
+  const { t } = useTranslation('channels')
   const [activeTab, setActiveTab] = useState('overview')
 
   const tabs = [
-    { id: 'overview',  label: 'Overview'          },
-    { id: 'parity',    label: 'Rate Parity'        },
-    { id: 'import',    label: 'Import'             },
-    { id: 'revenue',   label: 'Revenue by Source'  },
+    { id: 'overview',  label: t('tabs.overview') },
+    { id: 'parity',    label: t('tabs.parity')   },
+    { id: 'import',    label: t('tabs.import')   },
+    { id: 'revenue',   label: t('tabs.revenue')  },
   ]
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="mb-5">
-        <h1 className="t-h1 m-0 text-ink tracking-[-0.02em]">
-          🔗 Booking Channels
-        </h1>
-        <p className="t-sm mt-[3px] text-ink3">
-          Manage OTA and direct bookings
-        </p>
-      </div>
+    <PageWrapper title={t('title')} subtitle={t('subtitle')} search={null} headerActions={[]}>
 
       {/* Tabs */}
       <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab}>
@@ -596,6 +630,6 @@ export default function Channels() {
           <RevenueBySourceTab channels={MOCK_CHANNELS} />
         </div>
       </Tabs>
-    </div>
+    </PageWrapper>
   )
 }

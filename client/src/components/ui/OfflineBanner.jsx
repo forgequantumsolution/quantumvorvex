@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export default function OfflineBanner() {
+  const { t } = useTranslation('shell')
   const [isOnline, setIsOnline]     = useState(navigator.onLine)
   const [visible, setVisible]       = useState(!navigator.onLine)
   const [fading, setFading]         = useState(false)
@@ -40,7 +42,9 @@ export default function OfflineBanner() {
     <div
       role="status"
       aria-live="polite"
-      className="t-title sticky top-0 z-[2000] bg-[#92400e] border-b border-[#b45309] px-5 py-[9px] text-center text-[#fef3c7] transition-opacity duration-[600ms] ease"
+      // Pinned to the bottom (above the phone bottom bar) so it never covers
+      // the topbar's controls; #root is a flex row, so it can't sit in flow.
+      className="t-title fixed inset-x-0 bottom-[var(--bottom-nav-h)] z-[2000] bg-[#92400e] border-t border-[#b45309] px-4 sm:px-5 py-[9px] text-center text-[#fef3c7] transition-opacity duration-[600ms] ease"
       style={{
         letterSpacing:   '0.01em',
         opacity:         fading ? 0 : 1,
@@ -48,8 +52,8 @@ export default function OfflineBanner() {
       }}
     >
       {isOnline
-        ? '✅ Back online — syncing your changes…'
-        : '📡 You\'re offline — showing cached data. Changes will sync when reconnected.'}
+        ? `✅ ${t('backOnline')}`
+        : `📡 ${t('offline')}`}
     </div>
   )
 }

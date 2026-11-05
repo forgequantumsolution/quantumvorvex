@@ -1,0 +1,24 @@
+{
+  "title": "फ़्लोर प्लान",
+  "subtitle": "मंज़िल के अनुसार रूम लेआउट",
+  "legend": "संकेत",
+  "occupiedOf": "{{occupied}}/{{total}} भरे हुए",
+  "noRooms": "कोई रूम नहीं मिला",
+  "floorN": "मंज़िल {{n}}",
+  "roomN": "रूम {{number}}",
+  "roomCount_one": "{{count}} रूम",
+  "roomCount_other": "{{count}} रूम",
+  "status": {
+    "available": "उपलब्ध",
+    "occupied": "भरा हुआ",
+    "maintenance": "मेंटेनेंस",
+    "reserved": "आरक्षित"
+  },
+  "detail": {
+    "roomNumber": "रूम नंबर",
+    "floor": "मंज़िल",
+    "type": "प्रकार",
+    "dailyRate": "दैनिक दर",
+    "currentOccupant": "वर्तमान निवासी"
+  }
+}

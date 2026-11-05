@@ -1,0 +1,74 @@
+{
+  "title": "रिपोर्ट और विश्लेषण",
+  "subtitle": "वित्तीय जानकारी, ऑक्यूपेंसी डेटा और GST सारांश",
+  "loadError": "रिपोर्ट लोड नहीं हो सकीं। जाँचें कि सर्वर चल रहा है।",
+  "tabs": {
+    "overview": "सारांश",
+    "revenue": "राजस्व",
+    "occupancy": "ऑक्यूपेंसी",
+    "gst": "GST",
+    "export": "निर्यात"
+  },
+  "overview": {
+    "revenuePaid": "राजस्व (भुगतान हुए Invoice)",
+    "occupancyRate": "ऑक्यूपेंसी दर",
+    "activeGuests": "सक्रिय अतिथि",
+    "revenueByDayPaid": "दैनिक राजस्व (भुगतान हुए Invoice)",
+    "noPaidInvoices": "अभी कोई भुगतान हुआ Invoice नहीं"
+  },
+  "revenue": {
+    "total": "कुल राजस्व",
+    "paidInvoices": "भुगतान हुए Invoice",
+    "byDay": "दैनिक राजस्व",
+    "empty": "अभी कोई राजस्व दर्ज नहीं",
+    "series": "राजस्व"
+  },
+  "occupancy": {
+    "other": "अन्य",
+    "avg": "औसत ऑक्यूपेंसी (अवधि)",
+    "totalRooms": "कुल कमरे",
+    "trend": "ऑक्यूपेंसी रुझान (दैनिक %)",
+    "trendEmpty": "इस अवधि का कोई ऑक्यूपेंसी डेटा नहीं",
+    "series": "ऑक्यूपेंसी %",
+    "byType": "कमरे के प्रकार अनुसार वर्तमान ऑक्यूपेंसी",
+    "noRooms": "कोई कमरा नहीं मिला",
+    "col": {
+      "type": "कमरे का प्रकार",
+      "total": "कुल कमरे",
+      "occupied": "भरे हुए",
+      "rate": "दर",
+      "occupancy": "ऑक्यूपेंसी"
+    }
+  },
+  "gst": {
+    "totalTaxable": "कुल कर योग्य",
+    "totalGst": "कुल GST",
+    "totalAmount": "कुल राशि",
+    "invoices": "GST Invoice",
+    "split": "GST को CGST + SGST (आधा-आधा) में बाँटा गया।",
+    "empty": "इस अवधि में कोई Invoice नहीं",
+    "col": {
+      "invoice": "Invoice #",
+      "period": "अवधि",
+      "taxable": "कर योग्य"
+    }
+  },
+  "export": {
+    "done": "{{report}} रिपोर्ट निर्यात हुई ({{format}})",
+    "failed": "निर्यात विफल रहा",
+    "exporting": "निर्यात हो रहा है…",
+    "pdf": "PDF निर्यात करें",
+    "guests": {
+      "label": "अतिथि",
+      "desc": "सभी विवरणों के साथ अतिथि रजिस्टर"
+    },
+    "billing": {
+      "label": "बिलिंग",
+      "desc": "सभी Invoice और भुगतान"
+    },
+    "gst": {
+      "label": "GST रिपोर्ट",
+      "desc": "CA फाइलिंग के लिए GST विवरण"
+    }
+  }
+}

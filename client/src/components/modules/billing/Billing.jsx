@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
-import { LuTrash2 } from 'react-icons/lu'
+import { useTranslation, Trans } from 'react-i18next'
+import { LuTrash2, LuReceipt, LuBell, LuWallet, LuClock, LuCircleAlert, LuPercent, LuRefreshCw, LuDownload, LuCalendarClock, LuPlus } from 'react-icons/lu'
+import { PageWrapper, StatCard, Card, DataTable, FilterTabs, Pagination, EmptyState } from '../../ui-tw'
+import ActionMenu from '../../ui-tw/ActionMenu'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
@@ -36,15 +39,23 @@ function statusBadgeType(status) {
   return 'grey'
 }
 
-function cashTypeBadge(type) {
-  if (type === 'collection') return { bg: 'var(--green-bg)',  color: 'var(--green-text)',  label: 'Collection' }
-  if (type === 'advance')    return { bg: 'var(--blue-bg)',   color: 'var(--blue-text)',   label: 'Advance'    }
-  if (type === 'refund')     return { bg: 'var(--red-bg)',    color: 'var(--red-text)',    label: 'Refund'     }
+// Display label for an invoice status value (the value itself stays English).
+function useStatusLabel() {
+  const { t } = useTranslation('billing')
+  return (status) => t(`status.${status}`, { defaultValue: status })
+}
+
+function cashTypeBadge(type, t) {
+  if (type === 'collection') return { bg: 'var(--green-bg)',  color: 'var(--green-text)',  label: t('cash.type.collection') }
+  if (type === 'advance')    return { bg: 'var(--blue-bg)',   color: 'var(--blue-text)',   label: t('cash.type.advance')    }
+  if (type === 'refund')     return { bg: 'var(--red-bg)',    color: 'var(--red-text)',    label: t('cash.type.refund')     }
   return { bg: 'var(--surface2)', color: 'var(--text2)', label: type }
 }
 
 // ─── Invoice Print Modal ──────────────────────────────────────────────────────
 function InvoiceModal({ invoice, onClose }) {
+  const { t } = useTranslation('billing')
+  const statusLabel = useStatusLabel()
   // Header details and logo of the active property, as set in Settings.
   const [hotel, setHotel] = useState(null)
   const isOpen = !!invoice
@@ -67,12 +78,12 @@ function InvoiceModal({ invoice, onClose }) {
     <Modal
       isOpen={!!invoice}
       onClose={onClose}
-      title={`Invoice — ${invoice.invoiceNo}`}
+      title={t('invoice.title', { no: invoice.invoiceNo })}
       size="lg"
       footer={
         <>
-          <button className="btn btn-outline" onClick={onClose}>Close</button>
-          <button className="btn btn-primary" onClick={() => window.print()}>Print Invoice</button>
+          <button className="btn btn-outline" onClick={onClose}>{t('common:close')}</button>
+          <button className="btn btn-primary" onClick={() => window.print()}>{t('invoice.print')}</button>
         </>
       }
     >
@@ -85,32 +96,28 @@ function InvoiceModal({ invoice, onClose }) {
           <p className="t-h1 m-0 text-gold tracking-[-0.02em]">
             {hotel?.name}
           </p>
-          <p className="mt-0.5 mb-0 text-[11px] text-ink3">
+          <p className="mt-0.5 mb-0 text-xs text-ink3 break-words">
             {[hotel?.address, hotel?.phone, hotel?.email, hotel?.gstin && `GSTIN: ${hotel.gstin}`].filter(Boolean).join(' · ')}
           </p>
           <p className="t-title mt-3 mb-0 tracking-[0.12em] uppercase">
-            Tax Invoice
+            {t('invoice.taxInvoice')}
           </p>
         </div>
 
         {/* Invoice meta */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5 mb-5">
           {[
-            ['Invoice No',  invoice.invoiceNo],
-            ['Date',        formatDate(invoice.createdAt)],
-            ['Guest',       invoice.guest],
-            ['Room',        invoice.room],
-            ['Period',      invoice.period],
-          ].map(([label, val]) => (
-            <div key={label} className="bg-surface2 border border-line rounded-md px-3 py-2">
+            ['invoiceNo', t('invoice.invoiceNo'), invoice.invoiceNo],
+            ['date',      t('common:date'),       formatDate(invoice.createdAt)],
+            ['guest',     t('common:guest'),      invoice.guest],
+            ['room',      t('common:room'),       invoice.room],
+            ['period',    t('invoice.period'),    invoice.period],
+          ].map(([id, label, val]) => (
+            <div key={id} className={`min-w-0 bg-surface2 border border-line rounded-md px-3 py-2 ${id === 'guest' ? 'col-span-2 sm:col-span-1' : ''}`}>
               <p className="t-label m-0">
                 {label}
               </p>
-              <p className="t-title mt-[3px] mb-0" style={{
-                fontFamily: label === 'Invoice No' || label === 'Room'
-                  ? 'var(--font-mono)'
-                  : undefined,
-              }}>
+              <p className={`t-title mt-[3px] mb-0 break-words ${id === 'invoiceNo' || id === 'room' ? 'font-mono' : ''}`}>
                 {val}
               </p>
             </div>
@@ -121,19 +128,19 @@ function InvoiceModal({ invoice, onClose }) {
         <table className="w-full border-collapse mb-4">
           <thead>
             <tr className="bg-surface2">
-              <th className="t-label text-left px-3 py-2">Description</th>
-              <th className="t-label text-right px-3 py-2">Amount</th>
+              <th className="t-label text-left px-3 py-2">{t('invoice.description')}</th>
+              <th className="t-label text-right px-3 py-2">{t('common:amount')}</th>
             </tr>
           </thead>
           <tbody>
             {[
-              ['Room Rent',  invoice.rent],
-              invoice.food       > 0 ? ['Food Plan',  invoice.food]       : null,
-              invoice.amenities  > 0 ? ['Amenities',  invoice.amenities]  : null,
+              [t('invoice.roomRent'),  invoice.rent],
+              invoice.food       > 0 ? [t('invoice.foodPlan'),  invoice.food]       : null,
+              invoice.amenities  > 0 ? [t('invoice.amenities'), invoice.amenities]  : null,
             ].filter(Boolean).map(([desc, amt]) => (
               <tr key={desc} className="border-b border-line">
                 <td className="t-sm px-3 py-[9px]">{desc}</td>
-                <td className="t-sm px-3 py-[9px] text-right" style={{ fontFamily: 'var(--font-mono)' }}>
+                <td className="t-sm px-3 py-[9px] text-right font-mono">
                   {formatCurrency(amt)}
                 </td>
               </tr>
@@ -141,8 +148,8 @@ function InvoiceModal({ invoice, onClose }) {
 
             {/* Taxable value (rent is GST-inclusive, so its base is shown net of tax) */}
             <tr className="border-b border-line bg-surface2">
-              <td className="t-title px-3 py-[9px] text-ink2">Taxable Value</td>
-              <td className="t-title px-3 py-[9px] text-right text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>
+              <td className="t-title px-3 py-[9px] text-ink2">{t('invoice.taxableValue')}</td>
+              <td className="t-title px-3 py-[9px] text-right text-ink2 font-mono">
                 {formatCurrency(taxable)}
               </td>
             </tr>
@@ -152,7 +159,7 @@ function InvoiceModal({ invoice, onClose }) {
               <td className="t-sm px-3 py-[9px] text-ink3">
                 CGST ({invoice.gstRate / 2}%)
               </td>
-              <td className="t-sm px-3 py-[9px] text-right text-ink3" style={{ fontFamily: 'var(--font-mono)' }}>
+              <td className="t-sm px-3 py-[9px] text-right text-ink3 font-mono">
                 {formatCurrency(halfGst)}
               </td>
             </tr>
@@ -162,7 +169,7 @@ function InvoiceModal({ invoice, onClose }) {
               <td className="t-sm px-3 py-[9px] text-ink3">
                 SGST ({invoice.gstRate / 2}%)
               </td>
-              <td className="t-sm px-3 py-[9px] text-right text-ink3" style={{ fontFamily: 'var(--font-mono)' }}>
+              <td className="t-sm px-3 py-[9px] text-right text-ink3 font-mono">
                 {formatCurrency(halfGst)}
               </td>
             </tr>
@@ -170,9 +177,9 @@ function InvoiceModal({ invoice, onClose }) {
             {/* Grand Total */}
             <tr className="bg-[var(--gold-bg)]">
               <td className="t-title px-3 py-[11px] text-gold">
-                Grand Total
+                {t('invoice.grandTotal')}
               </td>
-              <td className="t-h3 px-3 py-[11px] text-right text-gold" style={{ fontFamily: 'var(--font-mono)' }}>
+              <td className="t-h3 px-3 py-[11px] text-right text-gold font-mono">
                 {formatCurrency(invoice.total)}
               </td>
             </tr>
@@ -180,19 +187,19 @@ function InvoiceModal({ invoice, onClose }) {
         </table>
 
         {/* Payment status */}
-        <div className="flex items-center gap-2.5 px-[14px] py-2.5 bg-surface2 rounded-md border border-line mb-4">
-          <span className="t-xs text-ink3">Payment Status:</span>
-          <Badge type={statusBadgeType(invoice.status)}>{invoice.status}</Badge>
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-3 sm:px-[14px] py-2.5 bg-surface2 rounded-md border border-line mb-4">
+          <span className="t-xs text-ink3">{t('invoice.paymentStatus')}</span>
+          <Badge type={statusBadgeType(invoice.status)}>{statusLabel(invoice.status)}</Badge>
           {invoice.paidAt && (
-            <span className="t-xs text-ink3 ml-1">
-              · Paid on {formatDate(invoice.paidAt)}
+            <span className="t-xs text-ink3">
+              · {t('invoice.paidOn', { date: formatDate(invoice.paidAt) })}
             </span>
           )}
         </div>
 
         {/* Footer */}
-        <p className="m-0 text-center text-[11px] text-ink3 pt-3 border-t border-line">
-          Powered by Quantum Vorvex · Forge Quantum Solutions
+        <p className="m-0 text-center text-xs text-ink3 pt-3 border-t border-line">
+          {t('invoice.poweredBy')}
         </p>
       </div>
     </Modal>
@@ -200,7 +207,15 @@ function InvoiceModal({ invoice, onClose }) {
 }
 
 // ─── Collect Payment Confirmation ─────────────────────────────────────────────
+const PAY_METHODS = [
+  { id: 'Cash', key: 'collect.method.cash' },
+  { id: 'UPI', key: 'collect.method.upi' },
+  { id: 'Card', key: 'collect.method.card' },
+  { id: 'Bank Transfer', key: 'collect.method.bank' },
+]
+
 function CollectModal({ invoice, onClose, onConfirm }) {
+  const { t } = useTranslation('billing')
   const [method, setMethod] = useState('Cash')
   const [ref, setRef]       = useState('')
   if (!invoice) return null
@@ -208,42 +223,42 @@ function CollectModal({ invoice, onClose, onConfirm }) {
     <Modal
       isOpen={!!invoice}
       onClose={onClose}
-      title="Record Payment"
+      title={t('collect.title')}
       maxWidth="420px"
       footer={
         <>
-          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
-          <button className="btn btn-success" onClick={() => onConfirm(method)}>Confirm Payment</button>
+          <button className="btn btn-outline" onClick={onClose}>{t('common:cancel')}</button>
+          <button className="btn btn-success" onClick={() => onConfirm(method)}>{t('collect.confirm')}</button>
         </>
       }
     >
       {/* Amount highlight */}
-      <div className="bg-[var(--gold-bg)] rounded-lg px-[14px] py-3 mb-4 flex justify-between items-center">
-        <div>
-          <div className="text-[10.5px] font-bold text-gold uppercase tracking-[0.08em] mb-0.5">Amount Due</div>
-          <div className="t-h1 text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(invoice.total)}</div>
+      <div className="bg-[var(--gold-bg)] rounded-lg px-[14px] py-3 mb-4 flex justify-between items-center gap-3">
+        <div className="min-w-0">
+          <div className="text-xs font-bold text-gold uppercase tracking-[0.08em] mb-0.5">{t('collect.amountDue')}</div>
+          <div className="t-h1 text-gold font-mono">{formatCurrency(invoice.total)}</div>
         </div>
-        <div className="t-xs text-right text-ink3">
+        <div className="t-xs text-right text-ink3 min-w-0 break-words">
           <div>{invoice.guest}</div>
-          <div>Room {invoice.room}</div>
+          <div>{t('roomNo', { room: invoice.room })}</div>
           <div>{invoice.invoiceNo}</div>
         </div>
       </div>
 
       {/* Payment method */}
       <div className="mb-3">
-        <label className="form-label block mb-[5px]">Payment Method</label>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-          {['Cash', 'UPI', 'Card', 'Bank Transfer'].map(m => (
-            <button key={m} onClick={() => setMethod(m)} className={`t-xs px-1.5 py-2 rounded-[7px] cursor-pointer text-center transition-all duration-150 ${method === m ? 'bg-[var(--gold-bg)] border-[1.5px] border-gold text-gold' : 'bg-surface2 border border-line text-ink2'}`}>{m}</button>
+        <label className="form-label block mb-[5px]">{t('collect.paymentMethod')}</label>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {PAY_METHODS.map(m => (
+            <button key={m.id} type="button" onClick={() => setMethod(m.id)} className={`t-xs px-1.5 py-2 min-h-10 pointer-coarse:min-h-11 rounded-[7px] cursor-pointer text-center transition-all duration-150 ${method === m.id ? 'bg-[var(--gold-bg)] border-[1.5px] border-gold text-gold' : 'bg-surface2 border border-line text-ink2'}`}>{t(m.key)}</button>
           ))}
         </div>
       </div>
 
       {/* Reference */}
       <div>
-        <label className="form-label block mb-[5px]">Reference / Transaction ID (optional)</label>
-        <input className="form-input" placeholder="UPI ref, cheque no., etc." value={ref} onChange={e => setRef(e.target.value)} />
+        <label className="form-label block mb-[5px]">{t('collect.reference')}</label>
+        <input className="form-input" placeholder={t('collect.referencePlaceholder')} value={ref} onChange={e => setRef(e.target.value)} />
       </div>
     </Modal>
   )
@@ -251,29 +266,35 @@ function CollectModal({ invoice, onClose, onConfirm }) {
 
 // ─── Remind Modal ─────────────────────────────────────────────────────────────
 function RemindModal({ invoice, onClose, onSend }) {
+  const { t } = useTranslation('billing')
   const [channel, setChannel] = useState('WhatsApp')
   // Pre-filled from the invoice. The parent keys this modal by invoice id, so it
   // remounts per invoice and this initializer re-runs with the right values.
   const [message, setMessage] = useState(() =>
     invoice
-      ? `Dear ${invoice.guest}, Your payment of ${formatCurrency(invoice.total)} for Room ${invoice.room} is due. Please contact us at the earliest.`
+      ? t('remind.defaultMessage', { guest: invoice.guest, amount: formatCurrency(invoice.total), room: invoice.room })
       : ''
   )
 
   if (!invoice) return null
 
-  const CHANNELS = ['WhatsApp', 'SMS', 'Email']
+  // Values sent to the server stay English; only Email has a translated label.
+  const CHANNELS = [
+    { id: 'WhatsApp', label: 'WhatsApp' },
+    { id: 'SMS', label: 'SMS' },
+    { id: 'Email', label: t('common:email') },
+  ]
 
   return (
     <Modal
       isOpen={!!invoice}
       onClose={onClose}
-      title="Send Payment Reminder"
+      title={t('remind.title')}
       footer={
         <>
-          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+          <button className="btn btn-outline" onClick={onClose}>{t('common:cancel')}</button>
           <button className="btn btn-primary" onClick={() => onSend(channel, message)}>
-            Send Reminder
+            {t('remind.send')}
           </button>
         </>
       }
@@ -281,7 +302,7 @@ function RemindModal({ invoice, onClose, onSend }) {
       <div className="flex flex-col gap-4">
         {/* Recipient */}
         <div>
-          <label className="form-label block mb-[5px]">Recipient</label>
+          <label className="form-label block mb-[5px]">{t('remind.recipient')}</label>
           <input
             className="form-input w-full"
             value={invoice.guest}
@@ -291,16 +312,16 @@ function RemindModal({ invoice, onClose, onSend }) {
 
         {/* Channel toggle */}
         <div>
-          <label className="form-label block mb-2">Channel</label>
+          <label className="form-label block mb-2">{t('remind.channel')}</label>
           <div className="flex gap-2">
             {CHANNELS.map(ch => (
               <button
-                key={ch}
+                key={ch.id}
                 type="button"
-                className={`food-opt flex-1 text-center${channel === ch ? ' sel' : ''}`}
-                onClick={() => setChannel(ch)}
+                className={`food-opt flex-1 min-w-0 text-center pointer-coarse:min-h-11${channel === ch.id ? ' sel' : ''}`}
+                onClick={() => setChannel(ch.id)}
               >
-                {ch}
+                {ch.label}
               </button>
             ))}
           </div>
@@ -308,7 +329,7 @@ function RemindModal({ invoice, onClose, onSend }) {
 
         {/* Message */}
         <div>
-          <label className="form-label block mb-[5px]">Message</label>
+          <label className="form-label block mb-[5px]">{t('remind.message')}</label>
           <textarea
             className="form-textarea w-full min-h-24 resize-y"
             value={message}
@@ -322,6 +343,7 @@ function RemindModal({ invoice, onClose, onSend }) {
 
 // ─── Generate Invoice Modal ───────────────────────────────────────────────────
 function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
+  const { t } = useTranslation('billing')
   const EMPTY = { guestId: '', period: '', rent: '', food: '', amenities: '', gstRate: 12 }
   const [form, setForm] = useState(EMPTY)
   const [guests, setGuests] = useState([])
@@ -361,51 +383,51 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
     <Modal
       isOpen={isOpen}
       onClose={() => { onClose(); setForm(EMPTY) }}
-      title="Generate Invoice"
+      title={t('generate.title')}
       footer={
         <>
-          <button className="btn btn-outline" onClick={() => { onClose(); setForm(EMPTY) }}>Cancel</button>
-          <button className="btn btn-primary" onClick={handleGenerate}>Generate</button>
+          <button className="btn btn-outline" onClick={() => { onClose(); setForm(EMPTY) }}>{t('common:cancel')}</button>
+          <button className="btn btn-primary" onClick={handleGenerate}>{t('generate.submit')}</button>
         </>
       }
     >
       <div className="flex flex-col gap-[14px]">
         {/* Guest */}
         <div>
-          <label className="form-label block mb-[5px]">Guest</label>
+          <label className="form-label block mb-[5px]">{t('common:guest')}</label>
           <select
             className="form-select w-full"
             value={form.guestId}
             onChange={e => setForm(p => ({ ...p, guestId: e.target.value }))}
           >
             {guests.length === 0
-              ? <option value="">No guests available</option>
+              ? <option value="">{t('generate.noGuests')}</option>
               : guests.map(g => <option key={g.id} value={g.id}>{g.name} · {g.docId}</option>)}
           </select>
         </div>
 
         {/* Period */}
         <div>
-          <label className="form-label block mb-[5px]">Period</label>
+          <label className="form-label block mb-[5px]">{t('invoice.period')}</label>
           <input
             className="form-input w-full"
-            placeholder="e.g. Apr 2026"
+            placeholder={t('generate.periodPlaceholder')}
             value={form.period}
             onChange={e => setForm(p => ({ ...p, period: e.target.value }))}
           />
         </div>
 
         {/* Amount fields */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 min-[420px]:grid-cols-3 gap-3">
           {[
-            ['Rent ₹',       'rent'],
-            ['Food ₹',       'food'],
-            ['Amenities ₹',  'amenities'],
+            [`${t('col.rent')} ₹`,      'rent'],
+            [`${t('col.food')} ₹`,      'food'],
+            [`${t('col.amenities')} ₹`, 'amenities'],
           ].map(([label, key]) => (
             <div key={key}>
               <label className="form-label block mb-[5px]">{label}</label>
               <input
-                className="form-input"
+                className="form-input w-full"
                 type="number"
                 min="0"
                 placeholder="0"
@@ -418,7 +440,7 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
 
         {/* GST Rate */}
         <div>
-          <label className="form-label block mb-[5px]">GST Rate (%)</label>
+          <label className="form-label block mb-[5px]">{t('generate.gstRate')}</label>
           <select
             className="form-select w-full"
             value={form.gstRate}
@@ -433,17 +455,17 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
           <div className="bg-[var(--gold-bg)] border border-[var(--gold-border)] rounded-md px-[14px] py-3">
             <div className="flex flex-col gap-[5px]">
               {[
-                ['Taxable value',          taxable],
-                [`GST (${form.gstRate}%)`, gstAmount],
-              ].map(([label, val]) => (
-                <div key={label} className="t-xs flex justify-between">
+                ['taxable', t('invoice.taxableValue'), taxable],
+                ['gst',     `GST (${form.gstRate}%)`,  gstAmount],
+              ].map(([id, label, val]) => (
+                <div key={id} className="t-xs flex justify-between">
                   <span>{label}</span>
-                  <span style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(val)}</span>
+                  <span className="font-mono">{formatCurrency(val)}</span>
                 </div>
               ))}
               <div className="t-title flex justify-between text-gold border-t border-[var(--gold-border)] pt-1.5 mt-0.5">
-                <span>Total</span>
-                <span style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(total)}</span>
+                <span>{t('common:total')}</span>
+                <span className="font-mono">{formatCurrency(total)}</span>
               </div>
             </div>
           </div>
@@ -455,6 +477,7 @@ function GenerateInvoiceModal({ isOpen, onClose, onGenerate }) {
 
 // ─── Ledger Tab ───────────────────────────────────────────────────────────────
 function LedgerTab() {
+  const { t } = useTranslation('billing')
   const addToast = useToast()
   const [guestSearch, setGuestSearch] = useState('')
   const [selectedGuest, setSelectedGuest] = useState('')   // guest display name
@@ -481,27 +504,45 @@ function LedgerTab() {
       setLedgerRows(res.data.entries || [])
       setClosingBalance(res.data.closingBalance ?? null)
     } catch {
-      addToast('Failed to load ledger', 'error'); setLedgerRows([])
+      addToast(t('ledger.loadFailed'), 'error'); setLedgerRows([])
     } finally {
       setLoading(false)
     }
-  }, [selectedGuestId, addToast])
+  }, [selectedGuestId, addToast, t])
   useEffect(() => { loadLedger() }, [loadLedger])
 
   const filteredGuests = guests.filter(g =>
     g.name.toLowerCase().includes(guestSearch.toLowerCase())
   )
 
-  const monoStyle = { fontFamily: 'var(--font-mono)' }
+  const ledgerColumns = [
+    { key: 'date', header: t('common:date'), render: (row) => <span className="t-xs text-ink3 font-mono">{row.date}</span> },
+    {
+      key: 'type', header: t('col.type'),
+      render: (row) => (
+        <span className={`t-xs font-mono ${row.type === 'Credit' ? 'text-success-text' : 'text-danger-text'}`}>{t(`ledger.entryType.${row.type}`, { defaultValue: row.type })}</span>
+      ),
+    },
+    { key: 'desc', header: t('invoice.description'), primary: true, className: 'whitespace-normal min-w-[180px]', render: (row) => <span className="t-sm">{row.desc}</span> },
+    { key: 'amount', header: `${t('common:amount')} ₹`, align: 'right', render: (row) => <span className="t-sm text-ink2 font-mono">{formatCurrency(row.amount)}</span> },
+    {
+      key: 'balance', header: `${t('ledger.runningBalance')} ₹`, mobileLabel: t('ledger.balance'), align: 'right', primary: true,
+      render: (row) => (
+        <span className={`t-title font-mono ${row.balance >= 0 ? 'text-success-text' : 'text-danger-text'}`}>
+          {row.balance >= 0 ? '+' : ''}{formatCurrency(row.balance)}
+        </span>
+      ),
+    },
+  ]
 
   return (
     <div>
       {/* Guest selector */}
-      <div className="mb-5 max-w-[340px] relative">
-        <label className="form-label block mb-1.5">Select Guest</label>
+      <div className="mb-4 sm:mb-5 w-full sm:max-w-[340px] relative">
+        <label className="form-label block mb-1.5">{t('ledger.selectGuest')}</label>
         <input
           className="form-input w-full"
-          placeholder="Search guest…"
+          placeholder={t('ledger.searchGuest')}
           value={selectedGuest || guestSearch}
           onFocus={() => { setDropdownOpen(true); if (selectedGuest) { setGuestSearch(''); setSelectedGuest(''); setSelectedGuestId('') } }}
           onChange={e => { setGuestSearch(e.target.value); setSelectedGuest(''); setSelectedGuestId(''); setDropdownOpen(true) }}
@@ -512,11 +553,9 @@ function LedgerTab() {
               <div
                 key={g.id}
                 onClick={() => { setSelectedGuest(g.name); setSelectedGuestId(g.id); setGuestSearch(g.name); setDropdownOpen(false) }}
-                className="t-sm px-[14px] py-[9px] cursor-pointer border-b border-line transition-[background] duration-100"
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                className="t-sm px-[14px] py-[9px] pointer-coarse:py-3 cursor-pointer border-b border-line last:border-b-0 transition-[background] duration-100 hover:bg-surface2 active:bg-surface2"
               >
-                {g.name}{g.room?.number ? ` · Room ${g.room.number}` : ''}
+                {g.name}{g.room?.number ? ` · ${t('roomNo', { room: g.room.number })}` : ''}
               </div>
             ))}
           </div>
@@ -527,71 +566,27 @@ function LedgerTab() {
       {selectedGuestId && (
         <>
           {loading ? (
-            <div className="empty-state"><p className="t-sm m-0 text-ink3">Loading ledger…</p></div>
+            <EmptyState icon="◌" title={t('ledger.loading')} />
           ) : ledgerRows.length === 0 ? (
-            <div className="empty-state">
-              <p className="m-0 font-semibold text-ink2">No ledger entries for {selectedGuest}</p>
-            </div>
+            <EmptyState icon="₹" title={t('ledger.noEntries', { guest: selectedGuest })} />
           ) : (
             <>
-              <div className="card overflow-x-auto mb-[14px]">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr>
-                      {['Date', 'Type', 'Description', 'Amount ₹', 'Running Balance ₹'].map(h => (
-                        <th key={h} className={`px-[14px] py-2.5 whitespace-nowrap ${h === 'Amount ₹' || h === 'Running Balance ₹' ? 'text-right' : 'text-left'}`}>
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ledgerRows.map((row, i) => (
-                      <tr key={i} className="border-t border-line">
-                        <td className="t-xs px-[14px] py-[11px] text-ink3" style={{ ...monoStyle }}>
-                          {row.date}
-                        </td>
-                        <td className="px-[14px] py-[11px]">
-                          <span className="t-xs" style={{
-                            color: row.type === 'Credit' ? 'var(--green-text)' : 'var(--red-text)',
-                            ...monoStyle,
-                          }}>
-                            {row.type}
-                          </span>
-                        </td>
-                        <td className="t-sm px-[14px] py-[11px]">
-                          {row.desc}
-                        </td>
-                        <td className="t-sm px-[14px] py-[11px] text-right text-ink2" style={{ ...monoStyle }}>
-                          {formatCurrency(row.amount)}
-                        </td>
-                        <td className="t-title px-[14px] py-[11px] text-right" style={{
-                          ...monoStyle,
-                          color: row.balance >= 0 ? 'var(--green-text)' : 'var(--red-text)',
-                        }}>
-                          {row.balance >= 0 ? '+' : ''}{formatCurrency(row.balance)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="border border-line rounded-xl overflow-hidden mb-[14px]">
+                <DataTable columns={ledgerColumns} rows={ledgerRows} rowKey={(row) => ledgerRows.indexOf(row)} />
               </div>
 
               {/* Closing balance */}
-              <div className="flex items-center justify-between bg-surface2 border border-line rounded-md px-4 py-3 mb-4">
-                <span className="t-title text-ink2">
-                  Closing Balance — {selectedGuest}
+              <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 bg-surface2 border border-line rounded-md px-4 py-3 mb-4">
+                <span className="t-title text-ink2 min-w-0">
+                  {t('ledger.closingBalanceFor', { guest: selectedGuest })}
                 </span>
-                <span className="t-h3" style={{
-                  fontFamily: 'var(--font-mono)',
-                  color: closingBalance >= 0 ? 'var(--green-text)' : 'var(--red-text)',
-                }}>
+                <span className={`t-h3 font-mono ${closingBalance >= 0 ? 'text-success-text' : 'text-danger-text'}`}>
                   {closingBalance >= 0 ? '+' : ''}{formatCurrency(closingBalance)}
                 </span>
               </div>
 
-              <button className="btn btn-outline" onClick={() => window.print()}>
-                Print Ledger
+              <button className="btn btn-outline w-full sm:w-auto justify-center" onClick={() => window.print()}>
+                {t('ledger.print')}
               </button>
             </>
           )}
@@ -599,11 +594,7 @@ function LedgerTab() {
       )}
 
       {!selectedGuest && (
-        <div className="empty-state">
-          <p className="t-sm m-0 text-ink3">
-            Select a guest to view their account ledger
-          </p>
-        </div>
+        <EmptyState icon="☰" title={t('ledger.noGuestTitle')} message={t('ledger.noGuestMessage')} />
       )}
     </div>
   )
@@ -611,6 +602,7 @@ function LedgerTab() {
 
 // ─── Cash Register Tab ────────────────────────────────────────────────────────
 function CashRegisterTab() {
+  const { t } = useTranslation('billing')
   const addToast = useToast()
   const today = new Date().toISOString().slice(0, 10)
   const [date, setDate]             = useState(today)
@@ -625,23 +617,21 @@ function CashRegisterTab() {
       const res = await billingApi.getCashRegister(date)
       setTransactions(res.data.transactions || [])
     } catch {
-      addToast('Failed to load cash register', 'error'); setTransactions([])
+      addToast(t('cash.loadFailed'), 'error'); setTransactions([])
     } finally {
       setLoading(false)
     }
-  }, [date, addToast])
+  }, [date, addToast, t])
   useEffect(() => { loadCashRegister() }, [loadCashRegister])
 
-  const totalIn  = transactions.reduce((s, t) => s + t.cashIn,  0)
-  const totalOut = transactions.reduce((s, t) => s + t.cashOut, 0)
+  const totalIn  = transactions.reduce((s, txn) => s + txn.cashIn,  0)
+  const totalOut = transactions.reduce((s, txn) => s + txn.cashOut, 0)
   const closing  = openingBalance + totalIn - totalOut
-
-  const monoStyle = { fontFamily: 'var(--font-mono)' }
 
   const handleExportCSV = () => {
     const header = 'Time,Type,Description,Cash In,Cash Out'
-    const rows   = transactions.map(t =>
-      `${t.time},${t.type},"${t.desc}",${t.cashIn},${t.cashOut}`
+    const rows   = transactions.map(txn =>
+      `${txn.time},${txn.type},"${txn.desc}",${txn.cashIn},${txn.cashOut}`
     )
     const csv = [header, ...rows].join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -651,119 +641,95 @@ function CashRegisterTab() {
     a.download = `cash-register-${date}.csv`
     a.click()
     URL.revokeObjectURL(url)
-    addToast('Cash register exported as CSV', 'success')
+    addToast(t('cash.exported'), 'success')
   }
+
+  const cashColumns = [
+    { key: 'time', header: t('cash.time'), render: (txn) => <span className="t-xs text-ink3 font-mono">{txn.time}</span> },
+    {
+      key: 'type', header: t('col.type'),
+      render: (txn) => {
+        const badge = cashTypeBadge(txn.type, t)
+        return (
+          <span className="inline-block px-2 py-0.5 rounded text-xs font-bold capitalize" style={{ background: badge.bg, color: badge.color }}>
+            {badge.label}
+          </span>
+        )
+      },
+    },
+    { key: 'desc', header: t('invoice.description'), primary: true, className: 'whitespace-normal min-w-[180px]', render: (txn) => <span className="t-sm">{txn.desc}</span> },
+    {
+      key: 'cashIn', header: `${t('cash.cashIn')} ₹`, align: 'right',
+      render: (txn) => txn.cashIn > 0
+        ? <span className="t-sm font-mono font-semibold text-success-text">{formatCurrency(txn.cashIn)}</span>
+        : <span className="t-sm text-ink3">—</span>,
+    },
+    {
+      key: 'cashOut', header: `${t('cash.cashOut')} ₹`, align: 'right',
+      render: (txn) => txn.cashOut > 0
+        ? <span className="t-sm font-mono font-semibold text-danger-text">{formatCurrency(txn.cashOut)}</span>
+        : <span className="t-sm text-ink3">—</span>,
+    },
+  ]
 
   return (
     <div>
       {/* Controls row */}
-      <div className="flex gap-4 flex-wrap items-end mb-5">
-        <div>
-          <label className="form-label block mb-[5px]">Date</label>
+      <div className="grid grid-cols-2 sm:flex gap-3 sm:gap-4 sm:flex-wrap items-end mb-4 sm:mb-5">
+        <div className="min-w-0">
+          <label className="form-label block mb-[5px]">{t('common:date')}</label>
           <input
-            className="form-input w-[180px]"
+            className="form-input w-full sm:w-[180px]"
             type="date"
             value={date}
             onChange={e => setDate(e.target.value)}
           />
         </div>
-        <div>
-          <label className="form-label block mb-[5px]">Opening Balance ₹</label>
+        <div className="min-w-0">
+          <label className="form-label block mb-[5px]">{t('cash.openingBalance')} ₹</label>
           <input
-            className="form-input w-40"
+            className="form-input w-full sm:w-40 font-mono"
             type="number"
             min="0"
             value={openingBalance}
             onChange={e => setOpening(parseFloat(e.target.value) || 0)}
-            style={{ fontFamily: 'var(--font-mono)' }}
           />
         </div>
       </div>
 
       {/* Transactions table */}
-      <div className="card overflow-x-auto mb-[14px]">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr>
-              {['Time', 'Type', 'Description', 'Cash In ₹', 'Cash Out ₹'].map(h => (
-                <th key={h} className={`px-[14px] py-2.5 whitespace-nowrap ${h === 'Cash In ₹' || h === 'Cash Out ₹' ? 'text-right' : 'text-left'}`}>
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {(loading || transactions.length === 0) && (
-              <tr className="border-t border-line">
-                <td colSpan={5} className="t-sm px-[14px] py-6 text-center text-ink3">
-                  {loading ? 'Loading…' : 'No cash transactions for this date'}
-                </td>
-              </tr>
-            )}
-            {transactions.map((txn, i) => {
-              const badge = cashTypeBadge(txn.type)
-              return (
-                <tr key={i} className="border-t border-line">
-                  <td className="t-xs px-[14px] py-[11px] text-ink3" style={{ ...monoStyle }}>
-                    {txn.time}
-                  </td>
-                  <td className="px-[14px] py-[11px]">
-                    <span className="inline-block px-2 py-0.5 rounded text-[11px] font-bold capitalize" style={{
-                      background: badge.bg,
-                      color: badge.color,
-                    }}>
-                      {badge.label}
-                    </span>
-                  </td>
-                  <td className="t-sm px-[14px] py-[11px]">
-                    {txn.desc}
-                  </td>
-                  <td className="t-sm px-[14px] py-[11px] text-right" style={{ ...monoStyle }}>
-                    {txn.cashIn > 0
-                      ? <span className="font-semibold text-success-text">{formatCurrency(txn.cashIn)}</span>
-                      : <span className="text-ink3">—</span>}
-                  </td>
-                  <td className="t-sm px-[14px] py-[11px] text-right" style={{ ...monoStyle }}>
-                    {txn.cashOut > 0
-                      ? <span className="font-semibold text-danger-text">{formatCurrency(txn.cashOut)}</span>
-                      : <span className="text-ink3">—</span>}
-                  </td>
-                </tr>
-              )
-            })}
+      <div className="border border-line rounded-xl overflow-hidden mb-[14px]">
+        {loading || transactions.length === 0 ? (
+          <div className="t-sm px-[14px] py-6 text-center text-ink3">
+            {loading ? t('common:loading') : t('cash.empty')}
+          </div>
+        ) : (
+          <DataTable columns={cashColumns} rows={transactions} rowKey={(txn) => transactions.indexOf(txn)} />
+        )}
 
-            {/* Totals row */}
-            <tr className="border-t-2 border-line bg-surface2">
-              <td colSpan={3} className="t-title px-[14px] py-[11px] text-ink2">
-                Totals
-              </td>
-              <td className="t-title px-[14px] py-[11px] text-right text-success-text" style={{ ...monoStyle }}>
-                {formatCurrency(totalIn)}
-              </td>
-              <td className="t-title px-[14px] py-[11px] text-right text-danger-text" style={{ ...monoStyle }}>
-                {formatCurrency(totalOut)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        {/* Totals row */}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t-2 border-line bg-surface2 px-4 lg:px-5 py-[11px]">
+          <span className="t-title text-ink2">{t('cash.totals')}</span>
+          <div className="flex items-center gap-4 sm:gap-8">
+            <span className="t-title font-mono text-success-text"><span className="sm:hidden t-xs text-ink3 font-sans font-normal mr-1">{t('cash.in')}</span>{formatCurrency(totalIn)}</span>
+            <span className="t-title font-mono text-danger-text"><span className="sm:hidden t-xs text-ink3 font-sans font-normal mr-1">{t('cash.out')}</span>{formatCurrency(totalOut)}</span>
+          </div>
+        </div>
       </div>
 
       {/* Closing balance summary */}
-      <div className="flex flex-wrap gap-2.5 mb-[18px]">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-[18px]">
         {[
-          { label: 'Opening Balance', value: formatCurrency(openingBalance), color: 'var(--text2)' },
-          { label: 'Total In',        value: formatCurrency(totalIn),        color: 'var(--green-text)' },
-          { label: 'Total Out',       value: formatCurrency(totalOut),       color: 'var(--red-text)'   },
-          { label: 'Closing Balance', value: formatCurrency(closing),        color: closing >= 0 ? 'var(--green-text)' : 'var(--red-text)', bold: true },
+          { id: 'opening', label: t('cash.openingBalance'), value: formatCurrency(openingBalance), color: 'var(--text2)' },
+          { id: 'in',      label: t('cash.totalIn'),        value: formatCurrency(totalIn),        color: 'var(--green-text)' },
+          { id: 'out',     label: t('cash.totalOut'),       value: formatCurrency(totalOut),       color: 'var(--red-text)'   },
+          { id: 'closing', label: t('cash.closingBalance'), value: formatCurrency(closing),        color: closing >= 0 ? 'var(--green-text)' : 'var(--red-text)', bold: true },
         ].map(item => (
-          <div key={item.label} className="flex-[1_1_140px] bg-surface2 border border-line rounded-md px-[14px] py-2.5">
+          <div key={item.id} className="min-w-0 bg-surface2 border border-line rounded-md px-3 sm:px-[14px] py-2.5">
             <p className="t-label m-0">
               {item.label}
             </p>
-            <p className="t-h3 mt-1 mb-0" style={{
-              fontFamily: 'var(--font-mono)',
-              color: item.color,
-            }}>
+            <p className="t-h3 mt-1 mb-0 font-mono truncate" style={{ color: item.color }}>
               {item.value}
             </p>
           </div>
@@ -772,26 +738,36 @@ function CashRegisterTab() {
 
       {/* Action buttons */}
       <div className="flex gap-2.5">
-        <button className="btn btn-outline" onClick={() => window.print()}>
-          Print Register
+        <button className="btn btn-outline flex-1 sm:flex-none justify-center" onClick={() => window.print()}>
+          {t('cash.print')}
         </button>
-        <button className="btn btn-primary" onClick={handleExportCSV}>
-          Export CSV
+        <button className="btn btn-primary flex-1 sm:flex-none justify-center" onClick={handleExportCSV}>
+          {t('common:exportCsv')}
         </button>
       </div>
     </div>
   )
 }
 
-// ─── Tab styles helper ────────────────────────────────────────────────────────
-const TAB_CLASS_BASE = 'px-[18px] py-2 rounded-md text-[13px] cursor-pointer transition-all duration-[130ms]'
-const TAB_CLASS_ACTIVE = 'font-semibold bg-[var(--gold-bg)] border border-gold text-gold'
-const TAB_CLASS_INACTIVE = 'font-medium bg-surface border border-line text-ink2'
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
+const BILLING_TABS = [
+  { id: 'invoices',      labelKey: 'tabs.invoices'     },
+  { id: 'ledger',        labelKey: 'tabs.ledger'       },
+  { id: 'cash-register', labelKey: 'tabs.cashRegister' },
+]
+const STATUS_FILTERS = [
+  { id: 'All',     labelKey: 'common:all'     },
+  { id: 'Paid',    labelKey: 'common:paid'    },
+  { id: 'Pending', labelKey: 'common:pending' },
+  { id: 'Overdue', labelKey: 'common:overdue' },
+]
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const PAGE_SIZE = 20
 
 export default function Billing() {
+  const { t } = useTranslation('billing')
+  const statusLabel = useStatusLabel()
   const addToast = useToast()
 
   const [activeTab, setActiveTab]           = useState('invoices')
@@ -837,11 +813,11 @@ export default function Billing() {
       setInvoices((data.invoices || []).map(normalizeInvoice))
       setTotal(data.total ?? 0)
     } catch {
-      setError('Could not load invoices. Make sure the backend is running.')
+      setError(t('errors.loadInvoices'))
     } finally {
       setLoading(false)
     }
-  }, [listParams, page])
+  }, [listParams, page, t])
 
   const loadStats = useCallback(async () => {
     try {
@@ -866,7 +842,6 @@ export default function Billing() {
   const reload = useCallback(() => { loadList(); loadStats() }, [loadList, loadStats])
 
   const handleStatusFilter = (s) => { setStatusFilter(s); setPage(1) }
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleCollect = async (method) => {
@@ -874,11 +849,12 @@ export default function Billing() {
     const target = collectModal
     try {
       await billingApi.collect(target.id)
-      addToast(`${formatCurrency(target.total)} collected via ${method || 'Cash'} for ${target.guest}`, 'success')
+      const m = PAY_METHODS.find(p => p.id === (method || 'Cash'))
+      addToast(t('toast.collected', { amount: formatCurrency(target.total), method: m ? t(m.key) : method, guest: target.guest }), 'success')
       setCollectModal(null)
       reload()
     } catch (err) {
-      addToast(err.response?.data?.message || 'Could not record payment', 'error')
+      addToast(err.response?.data?.message || t('toast.collectFailed'), 'error')
     }
   }
 
@@ -888,10 +864,10 @@ export default function Billing() {
       if (remindModal.guestId) {
         await remindersApi.send({ guestId: remindModal.guestId, channel, message })
       }
-      addToast(`Reminder sent via ${channel}`, 'success')
+      addToast(t('toast.reminderSent', { channel: channel === 'Email' ? t('common:email') : channel }), 'success')
       setRemindModal(null)
     } catch (err) {
-      addToast(err.response?.data?.error || 'Could not send reminder', 'error')
+      addToast(err.response?.data?.error || t('toast.reminderFailed'), 'error')
     }
   }
 
@@ -900,11 +876,11 @@ export default function Billing() {
     setDeleting(true)
     try {
       await billingApi.delete(deleteModal.id)
-      addToast(`Invoice ${deleteModal.invoiceNo} deleted`, 'success')
+      addToast(t('toast.deleted', { no: deleteModal.invoiceNo }), 'success')
       setDeleteModal(null)
       reload()
     } catch (err) {
-      addToast(err.response?.data?.message || 'Could not delete invoice', 'error')
+      addToast(err.response?.data?.message || t('toast.deleteFailed'), 'error')
     } finally {
       setDeleting(false)
     }
@@ -916,11 +892,11 @@ export default function Billing() {
     try {
       const { data } = await billingApi.billPgRent()
       addToast(data.created
-        ? `${data.created} PG rent invoice${data.created === 1 ? '' : 's'} created`
-        : 'PG rent is already billed up to today', 'success')
+        ? t('toast.pgRentCreated', { count: data.created })
+        : t('toast.pgRentUpToDate'), 'success')
       if (data.created) reload()
     } catch (err) {
-      addToast(err.response?.data?.message || 'Could not bill PG rent', 'danger')
+      addToast(err.response?.data?.message || t('toast.pgRentFailed'), 'danger')
     } finally {
       setBillingRent(false)
     }
@@ -929,11 +905,11 @@ export default function Billing() {
   const handleGenerate = async (payload) => {
     try {
       const { data } = await billingApi.generate(payload)
-      addToast(`Invoice ${data.invoice?.invoiceNo || ''} generated`, 'success')
+      addToast(t('toast.generated', { no: data.invoice?.invoiceNo || '' }), 'success')
       setShowGenerate(false)
       reload()
     } catch (err) {
-      addToast(err.response?.data?.message || 'Could not generate invoice', 'error')
+      addToast(err.response?.data?.message || t('toast.generateFailed'), 'error')
     }
   }
 
@@ -944,7 +920,7 @@ export default function Billing() {
       const { data } = await billingApi.getAll(listParams())
       list = (data.invoices || []).map(normalizeInvoice)
     } catch {
-      addToast('Could not export invoices', 'error')
+      addToast(t('toast.exportFailed'), 'error')
       return
     }
     const headers = ['Invoice No', 'Guest', 'Room', 'Period', 'Rent', 'Food', 'Amenities', 'GST', 'Total', 'Status', 'Created', 'Paid On']
@@ -958,299 +934,147 @@ export default function Billing() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = 'invoices.csv'; a.click()
     URL.revokeObjectURL(url)
-    addToast('Invoice CSV exported', 'success')
+    addToast(t('toast.exported'), 'success')
   }
+
+  // ── Invoice columns (table from xl up, stacked cards below) ────────────────
+  const money = (v) => <span className="t-xs text-ink2 font-mono">{formatCurrency(v)}</span>
+  const optionalMoney = (v) => (
+    <span className={`t-xs font-mono ${v > 0 ? 'text-ink2' : 'text-ink3'}`}>{v > 0 ? formatCurrency(v) : '—'}</span>
+  )
+  const invoiceColumns = [
+    {
+      key: 'guest', header: t('common:guest'), primary: true, className: 'max-w-[200px]',
+      render: (inv) => (
+        <div className="min-w-0">
+          <div className="t-title truncate">{inv.guest}</div>
+          <div className="t-xs text-gold font-mono mt-0.5">{inv.invoiceNo}</div>
+        </div>
+      ),
+    },
+    { key: 'room', header: t('common:room'), render: (inv) => <span className="t-sm text-ink2 font-mono">{inv.room}</span> },
+    { key: 'period', header: t('invoice.period'), className: 'whitespace-normal', render: (inv) => <span className="t-xs text-ink3">{inv.period}</span> },
+    { key: 'rent', header: t('col.rent'), align: 'right', hideOnMobile: true, render: (inv) => money(inv.rent) },
+    { key: 'food', header: t('col.food'), align: 'right', hideOnMobile: true, render: (inv) => optionalMoney(inv.food) },
+    { key: 'amenities', header: t('col.amenities'), align: 'right', hideOnMobile: true, render: (inv) => optionalMoney(inv.amenities) },
+    { key: 'gst', header: 'GST', align: 'right', hideOnMobile: true, render: (inv) => money(inv.gstAmount) },
+    {
+      // Cards only (the table, xl+, has a column per charge): one compact breakdown
+      key: 'charges', header: t('col.charges'), mobileOnly: true,
+      render: (inv) => (
+        <span className="block font-mono text-xs text-ink2 leading-relaxed">
+          {t('col.rent')} {formatCurrency(inv.rent)}
+          {inv.food > 0 && <> · {t('col.food')} {formatCurrency(inv.food)}</>}
+          {inv.amenities > 0 && <> · {t('col.amenities')} {formatCurrency(inv.amenities)}</>}
+          {' '}· GST {formatCurrency(inv.gstAmount)}
+        </span>
+      ),
+    },
+    {
+      key: 'total', header: t('common:total'), align: 'right', primary: true,
+      render: (inv) => (
+        <div className="text-right">
+          <div className="t-title font-mono">{formatCurrency(inv.total)}</div>
+          {/* Cards: the status rides under the total on the card's title line */}
+          <div className="xl:hidden mt-1"><Badge type={statusBadgeType(inv.status)}>{statusLabel(inv.status)}</Badge></div>
+        </div>
+      ),
+    },
+    { key: 'status', header: t('common:status'), hideOnMobile: true, render: (inv) => <Badge type={statusBadgeType(inv.status)}>{statusLabel(inv.status)}</Badge> },
+    {
+      key: 'actions', header: '', align: 'right',
+      render: (inv) => (
+        <div className="flex items-center justify-end gap-1.5">
+          {/* Collect is the next step for a pending bill; otherwise the invoice itself */}
+          {inv.status === 'Pending' ? (
+            <button className="btn btn-sm bg-[var(--amber-bg)] text-warning-text border border-[var(--amber)] font-semibold" onClick={() => setCollectModal(inv)}>
+              {t('actions.collect')}
+            </button>
+          ) : (
+            <button className="btn btn-sm bg-[var(--gold-bg)] text-gold border border-[var(--gold-border)] font-semibold" onClick={() => setInvoiceModal(inv)}>
+              {t('actions.invoice')}
+            </button>
+          )}
+          <ActionMenu
+            items={[
+              inv.status === 'Pending' && { label: t('actions.viewInvoice'), icon: <LuReceipt size={14} />, onClick: () => setInvoiceModal(inv) },
+              inv.status !== 'Paid' && { label: t('actions.sendReminder'), icon: <LuBell size={14} />, onClick: () => setRemindModal(inv) },
+              { label: t('actions.deleteInvoice'), icon: <LuTrash2 size={14} />, danger: true, onClick: () => setDeleteModal(inv) },
+            ]}
+          />
+        </div>
+      ),
+    },
+  ]
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div>
-
-      {/* ── Page Header ────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between mb-[22px] gap-4 flex-wrap">
-        <div>
-          <h1 className="text-[26px] font-extrabold m-0 text-ink tracking-[-0.03em]">
-            Billing &amp; Payments
-          </h1>
-          <p className="t-sm mt-[3px] mb-0 text-ink3">
-            Invoice management with GST compliance
-          </p>
-        </div>
-        {activeTab === 'invoices' && (
-          <div className="flex gap-2">
-            <button className="btn btn-outline btn-sm" onClick={reload} disabled={loading}>↻ Refresh</button>
-            <button className="btn btn-outline btn-sm" onClick={handleExportCSV}>↓ Export CSV</button>
-            <button className="btn btn-outline btn-sm" onClick={handleBillPgRent} disabled={billingRent}
-              title="PG rent is billed automatically each day; this runs it now">
-              {billingRent ? 'Billing…' : '⟳ Bill PG rent'}
-            </button>
-            <button className="btn btn-primary" onClick={() => setShowGenerate(true)}>+ Generate Invoice</button>
-          </div>
-        )}
-      </div>
-
+    <PageWrapper
+      title={t('title')}
+      subtitle={t('subtitle')}
+      // Search and buttons belong to the Invoices tab; Ledger and Cash Register
+      // keep their own controls inside the tab.
+      search={activeTab === 'invoices' ? { value: search, onChange: setSearch, placeholder: t('searchPlaceholder') } : null}
+      headerActions={activeTab === 'invoices' ? [
+        { id: 'refresh', label: t('common:refresh'), icon: <LuRefreshCw />, variant: 'icon', disabled: loading, onClick: reload },
+        { id: 'export', label: t('common:exportCsv'), icon: <LuDownload />, onClick: handleExportCSV },
+        // PG rent is billed automatically each day; this runs it now.
+        { id: 'pg-rent', label: billingRent ? t('actions.billing') : t('actions.billPgRent'), icon: <LuCalendarClock />, disabled: billingRent, onClick: handleBillPgRent },
+        { id: 'generate', label: t('actions.generateInvoice'), icon: <LuPlus />, variant: 'primary', onClick: () => setShowGenerate(true) },
+      ] : []}
+      stats={
+        <>
+          <StatCard icon={<LuWallet />} tone="green" label={t('stats.collected')} value={formatCurrency(stats.collected)}
+            hint={t('stats.invoicesPaid', { count: stats.paidCount })} />
+          <StatCard icon={<LuClock />} tone="amber" label={t('common:pending')} value={formatCurrency(stats.pendingTotal)}
+            hint={t('stats.invoices', { count: stats.pendingCount })} />
+          <StatCard icon={<LuCircleAlert />} tone="red" label={t('common:overdue')} value={formatCurrency(stats.overdueTotal)}
+            hint={t('stats.invoices', { count: stats.overdueCount })} />
+          <StatCard icon={<LuPercent />} tone="blue" label={t('stats.gstCollected')} value={formatCurrency(stats.gstCollected)} hint={t('stats.fromPaid')} />
+        </>
+      }
+      toolbar={<FilterTabs tabs={BILLING_TABS.map(tab => ({ id: tab.id, label: t(tab.labelKey) }))} active={activeTab} onChange={setActiveTab} wrap={false} />}
+    >
       {error && (
         <div className="t-sm mb-4 px-[14px] py-2.5 rounded-lg bg-danger-bg text-danger-text">
           {error}
         </div>
       )}
 
-      {/* ── Stat Cards ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3 mb-[22px]">
-        {/* Collected */}
-        <div className="stat-card stat-bar-green">
-          <p className="t-label mt-0 mx-0 mb-1">
-            Collected this month
-          </p>
-          <p className="t-h1 m-0 text-success-text">
-            {formatCurrency(stats.collected)}
-          </p>
-          <p className="mt-[3px] mb-0 text-[11px] text-ink3">
-            {stats.paidCount} invoices paid
-          </p>
-        </div>
-
-        {/* Pending */}
-        <div className="stat-card stat-bar-amber">
-          <p className="t-label mt-0 mx-0 mb-1">
-            Pending
-          </p>
-          <p className="t-h1 m-0 text-warning-text">
-            {formatCurrency(stats.pendingTotal)}
-          </p>
-          <p className="mt-[3px] mb-0 text-[11px] text-ink3">
-            {stats.pendingCount} invoice{stats.pendingCount !== 1 ? 's' : ''}
-          </p>
-        </div>
-
-        {/* Overdue */}
-        <div className="stat-card stat-bar-red">
-          <p className="t-label mt-0 mx-0 mb-1">
-            Overdue
-          </p>
-          <p className="t-h1 m-0 text-danger-text">
-            {formatCurrency(stats.overdueTotal)}
-          </p>
-          <p className="mt-[3px] mb-0 text-[11px] text-ink3">
-            {stats.overdueCount} invoice{stats.overdueCount !== 1 ? 's' : ''}
-          </p>
-        </div>
-
-        {/* GST Collected */}
-        <div className="stat-card stat-bar-blue">
-          <p className="t-label mt-0 mx-0 mb-1">
-            GST Collected
-          </p>
-          <p className="t-h1 m-0 text-info-text">
-            {formatCurrency(stats.gstCollected)}
-          </p>
-          <p className="mt-[3px] mb-0 text-[11px] text-ink3">From paid invoices</p>
-        </div>
-      </div>
-
-      {/* ── Tab Navigation ──────────────────────────────────────────────────── */}
-      <div className="flex gap-2 mb-5 flex-wrap">
-        {[
-          { id: 'invoices',      label: 'Invoices'      },
-          { id: 'ledger',        label: 'Ledger'        },
-          { id: 'cash-register', label: 'Cash Register' },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`${TAB_CLASS_BASE} ${activeTab === tab.id ? TAB_CLASS_ACTIVE : TAB_CLASS_INACTIVE}`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
       {/* ── Invoices Tab ────────────────────────────────────────────────────── */}
       {activeTab === 'invoices' && (
-        <>
-          {/* Filter Row */}
-          <div className="flex gap-2.5 mb-4 flex-wrap items-center">
-            {/* Search */}
-            <div className="relative shrink-0">
-              <span className="t-sm absolute left-2.5 top-1/2 -translate-y-1/2 text-ink3 pointer-events-none">
-                ⌕
-              </span>
-              <input
-                className="form-input pl-7 w-[220px] text-[12px]"
-                type="text"
-                placeholder="Search guest or invoice..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
+        <Card>
+          {/* Status pills (they scroll sideways on phones) + record count */}
+          <div className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-line">
+            <div className="min-w-0 max-w-full">
+              <FilterTabs
+                wrap={false}
+                tabs={STATUS_FILTERS.map(s => ({ id: s.id, label: t(s.labelKey) }))}
+                active={statusFilter}
+                onChange={handleStatusFilter}
               />
             </div>
-
-            {/* Status filter pills */}
-            <div className="flex gap-1.5">
-              {['All', 'Paid', 'Pending', 'Overdue'].map(s => {
-                const active = statusFilter === s
-                return (
-                  <button
-                    key={s}
-                    onClick={() => handleStatusFilter(s)}
-                    className={`t-xs px-[13px] py-[5px] rounded-[20px] cursor-pointer transition-all duration-[130ms] ${active ? 'bg-[var(--gold-bg)] border border-gold text-gold' : 'bg-surface border border-line text-ink2'}`}
-                  >
-                    {s}
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="flex-1" />
-            <p className="t-xs m-0 text-ink3 shrink-0">
-              {total} record{total !== 1 ? 's' : ''}
+            <p className="t-xs m-0 text-ink3 shrink-0 ml-auto">
+              {t('records', { count: total })}
             </p>
           </div>
 
-          {/* Payment Records Table */}
-          <div className="card overflow-x-auto">
-            {invoices.length === 0 ? (
-              <div className="empty-state">
-                <p className="m-0 font-semibold text-ink2">{loading ? 'Loading invoices…' : 'No invoices found'}</p>
-                {!loading && <p className="t-xs mt-1 mx-0 mb-0">Generate an invoice or adjust your filters</p>}
-              </div>
-            ) : (
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr>
-                    {['Invoice #', 'Guest', 'Room', 'Period', 'Rent', 'Food', 'Amenities', 'GST (12%)', 'Total', 'Status', 'Actions'].map(h => (
-                      <th key={h} className={`px-3 py-2.5 whitespace-nowrap ${h === 'Actions' ? 'text-center' : h === 'Rent' || h === 'Food' || h === 'Amenities' || h === 'GST (12%)' || h === 'Total' ? 'text-right' : 'text-left'}`}>
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {invoices.map(inv => (
-                    <tr key={inv.id} className="transition-[background] duration-100">
-                      {/* Invoice # */}
-                      <td className="px-3 py-[11px]">
-                        <span className="t-xs text-gold" style={{ fontFamily: 'var(--font-mono)' }}>
-                          {inv.invoiceNo}
-                        </span>
-                      </td>
+          {/* Payment Records */}
+          <DataTable
+            columns={invoiceColumns}
+            rows={invoices}
+            tableFrom="xl"
+            empty={
+              <EmptyState
+                icon="₹"
+                title={loading ? t('empty.loading') : t('empty.title')}
+                message={loading ? undefined : t('empty.message')}
+              />
+            }
+          />
 
-                      {/* Guest */}
-                      <td className="px-3 py-[11px]">
-                        <span className="t-title">
-                          {inv.guest}
-                        </span>
-                      </td>
-
-                      {/* Room */}
-                      <td className="px-3 py-[11px]">
-                        <span className="t-sm text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>
-                          {inv.room}
-                        </span>
-                      </td>
-
-                      {/* Period */}
-                      <td className="t-xs px-3 py-[11px] text-ink3 whitespace-nowrap">
-                        {inv.period}
-                      </td>
-
-                      {/* Rent */}
-                      <td className="px-3 py-[11px] text-right">
-                        <span className="t-xs text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>
-                          {formatCurrency(inv.rent)}
-                        </span>
-                      </td>
-
-                      {/* Food */}
-                      <td className="px-3 py-[11px] text-right">
-                        <span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: inv.food > 0 ? 'var(--text2)' : 'var(--text3)' }}>
-                          {inv.food > 0 ? formatCurrency(inv.food) : '—'}
-                        </span>
-                      </td>
-
-                      {/* Amenities */}
-                      <td className="px-3 py-[11px] text-right">
-                        <span className="t-xs" style={{ fontFamily: 'var(--font-mono)', color: inv.amenities > 0 ? 'var(--text2)' : 'var(--text3)' }}>
-                          {inv.amenities > 0 ? formatCurrency(inv.amenities) : '—'}
-                        </span>
-                      </td>
-
-                      {/* GST */}
-                      <td className="px-3 py-[11px] text-right">
-                        <span className="t-xs text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>
-                          {formatCurrency(inv.gstAmount)}
-                        </span>
-                      </td>
-
-                      {/* Total */}
-                      <td className="px-3 py-[11px] text-right">
-                        <span className="t-title" style={{ fontFamily: 'var(--font-mono)' }}>
-                          {formatCurrency(inv.total)}
-                        </span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-3 py-[11px]">
-                        <Badge type={statusBadgeType(inv.status)}>{inv.status}</Badge>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-3 py-[11px]">
-                        <div className="flex gap-[5px] justify-center flex-nowrap">
-                          {/* Collect — only for pending */}
-                          {inv.status === 'Pending' && (
-                            <button
-                              className="btn btn-xs bg-[var(--amber-bg)] text-warning-text border border-[var(--amber)] rounded px-2 py-[3px] text-[11px] cursor-pointer font-semibold whitespace-nowrap"
-                              onClick={() => setCollectModal(inv)}
-                            >
-                              Collect
-                            </button>
-                          )}
-
-                          {/* Remind — only if not paid */}
-                          {inv.status !== 'Paid' && (
-                            <button
-                              className="btn btn-outline btn-xs"
-                              onClick={() => setRemindModal(inv)}
-                            >
-                              Remind
-                            </button>
-                          )}
-
-                          {/* Invoice */}
-                          <button
-                            className="btn btn-xs bg-[var(--gold-bg)] text-gold border border-[var(--gold-border)] rounded px-2 py-[3px] text-[11px] cursor-pointer font-semibold"
-                            onClick={() => setInvoiceModal(inv)}
-                          >
-                            Invoice
-                          </button>
-
-                          {/* Delete */}
-                          <button
-                            className="btn btn-danger btn-xs inline-flex items-center"
-                            title="Delete invoice"
-                            onClick={() => setDeleteModal(inv)}
-                          >
-                            <LuTrash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-
-          {total > PAGE_SIZE && (
-            <div className="flex items-center justify-between mt-3 t-xs text-ink3">
-              <span>Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}</span>
-              <div className="flex items-center gap-2">
-                <button className="btn btn-outline btn-xs" disabled={page <= 1 || loading} onClick={() => setPage(p => Math.max(1, p - 1))}>← Prev</button>
-                <span>Page {page} of {totalPages}</span>
-                <button className="btn btn-outline btn-xs" disabled={page >= totalPages || loading} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next →</button>
-              </div>
-            </div>
-          )}
-        </>
+          <Pagination page={page} pageSize={PAGE_SIZE} total={total} disabled={loading} onChange={setPage} />
+        </Card>
       )}
 
       {/* ── Ledger Tab ──────────────────────────────────────────────────────── */}
@@ -1288,12 +1112,19 @@ export default function Billing() {
         isOpen={!!deleteModal}
         onClose={() => setDeleteModal(null)}
         onConfirm={handleDelete}
-        title="Delete Invoice"
-        message={deleteModal ? <>Delete invoice <b>{deleteModal.invoiceNo}</b> for <b>{deleteModal.guest}</b> ({formatCurrency(deleteModal.total)})? It will be removed from billing, the ledger, the cash register and revenue reports. This cannot be undone.</> : null}
-        confirmLabel="Delete"
+        title={t('delete.title')}
+        message={deleteModal ? (
+          <Trans
+            t={t}
+            i18nKey="delete.message"
+            values={{ no: deleteModal.invoiceNo, guest: deleteModal.guest, amount: formatCurrency(deleteModal.total) }}
+            components={{ b: <b /> }}
+          />
+        ) : null}
+        confirmLabel={t('common:delete')}
         danger
         busy={deleting}
       />
-    </div>
+    </PageWrapper>
   )
 }

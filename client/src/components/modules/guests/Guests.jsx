@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation, Trans } from 'react-i18next'
 import { Formik, Form } from 'formik'
-import { LuTrash2 } from 'react-icons/lu'
+import { LuTrash2, LuUserCheck, LuCircleAlert, LuLogOut, LuUsers, LuRefreshCw, LuDownload, LuUserPlus } from 'react-icons/lu'
+import { PageWrapper, StatCard, Card, DataTable, Pagination, EmptyState } from '../../ui-tw'
+import ActionMenu from '../../ui-tw/ActionMenu'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import CheckOutModal from '../checkout/CheckOutModal'
@@ -78,12 +81,25 @@ function editPayload(values) {
 
 const FOOD_PLANS = ['Breakfast Only', 'All Meals', 'Dinner Only', 'No Meals']
 const GUEST_TAGS = ['VIP', 'Corporate', 'Long-term']
+const GUEST_STATUSES = ['Active', 'Due', 'Checked Out']
 const PROFILE_TABS = [
-  { id: 'info',    label: 'Profile' },
-  { id: 'billing', label: 'Billing' },
-  { id: 'comms',   label: 'Communications' },
-  { id: 'history', label: 'Stay History' },
+  { id: 'info',    labelKey: 'profile.tabs.info' },
+  { id: 'billing', labelKey: 'profile.tabs.billing' },
+  { id: 'comms',   labelKey: 'profile.tabs.comms' },
+  { id: 'history', labelKey: 'profile.tabs.history' },
 ]
+
+// Display labels for stored values (the values themselves stay English).
+function useGuestLabels() {
+  const { t } = useTranslation('guests')
+  return {
+    t,
+    status: (s) => t(`status.${s}`, { defaultValue: s }),
+    food: (p) => t(`foodPlan.${p}`, { defaultValue: p }),
+    tag: (tag) => t(`tag.${tag}`, { defaultValue: tag }),
+    stay: (type) => t(type === 'monthly' ? 'stayType.monthly' : 'stayType.daily'),
+  }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -123,15 +139,30 @@ function exportGuestCSV(guests) {
 function InfoRow({ label, value }) {
   return (
     <div>
-      <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.07em] mb-[3px]">{label}</div>
-      <div className="t-sm">{value || '—'}</div>
+      <div className="text-xs font-semibold text-ink3 uppercase tracking-[0.07em] mb-[3px]">{label}</div>
+      <div className="t-sm break-words">{value || '—'}</div>
     </div>
   )
 }
 
+// Invoice history in the profile's Billing tab (cards on phones).
+const billingColumns = (t) => [
+  { key: 'invoiceNo', header: t('billing.invoice'), render: (b) => <span className="t-xs text-gold font-mono">{b.invoiceNo}</span> },
+  { key: 'period', header: t('billing.period'), render: (b) => <span className="text-[12.5px] text-ink2">{b.period}</span> },
+  { key: 'total', header: t('common:total'), primary: true, render: (b) => <span className="t-title font-mono">{formatCurrency(b.total)}</span> },
+  {
+    key: 'status', header: t('common:status'),
+    render: (b) => <Badge type={b.status === 'Paid' ? 'green' : b.status === 'Overdue' ? 'red' : 'amber'}>{t(`invoiceStatus.${b.status}`, { defaultValue: b.status })}</Badge>,
+  },
+  { key: 'paidOn', header: t('billing.paidOn'), render: (b) => <span className="t-xs text-ink3">{b.paidOn ? formatDate(b.paidOn) : '—'}</span> },
+  { key: 'method', header: t('billing.method'), render: (b) => <span className="t-xs text-ink2">{b.method || '—'}</span> },
+]
+
 // ─── Guest Profile Modal (tabbed) ────────────────────────────────────────────
 
 function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
+  const L = useGuestLabels()
+  const { t } = L
   const addToast = useToast()
   const [tab, setTab] = useState('info')
   const [comms, setComms] = useState([])
@@ -162,10 +193,10 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
     try {
       await guestsApi.addCommunication(guestId, { channel: commChannel, content: commText.trim(), direction: 'outbound' })
       setCommText(''); setShowComposer(false)
-      addToast('Communication logged.', 'success')
+      addToast(t('comms.logged'), 'success')
       loadComms()
     } catch (err) {
-      addToast(err.response?.data?.message || 'Could not log communication.', 'error')
+      addToast(err.response?.data?.message || t('comms.logFailed'), 'error')
     } finally {
       setSavingComm(false)
     }
@@ -180,72 +211,70 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
       isOpen={!!guest}
       onClose={onClose}
       title={
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div className="t-title w-9 h-9 rounded-full bg-gold flex items-center justify-center text-black shrink-0">
             {guest.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
           </div>
-          <div>
-            <div className="t-h3">{guest.name}</div>
-            <div className="text-[11px] text-gold font-normal" style={{ fontFamily: 'var(--font-mono)' }}>{guest.docId}</div>
+          <div className="min-w-0">
+            <div className="t-h3 truncate">{guest.name}</div>
+            <div className="text-xs text-gold font-normal font-mono">{guest.docId}</div>
           </div>
         </div>
       }
       size="lg"
       footer={
         <>
-          <button className="btn btn-outline btn-sm" onClick={onClose}>Close</button>
+          <button className="btn btn-outline btn-sm" onClick={onClose}>{t('common:close')}</button>
           {(guest.status === 'Active' || guest.status === 'Due') && (
-            <button className="btn btn-danger btn-sm" onClick={() => onCheckout(guest)}>Checkout</button>
+            <button className="btn btn-danger btn-sm" onClick={() => onCheckout(guest)}>{t('actions.checkout')}</button>
           )}
-          <button className="btn btn-primary btn-sm" onClick={() => onEdit(guest)}>Edit Guest</button>
+          <button className="btn btn-primary btn-sm" onClick={() => onEdit(guest)}>{t('actions.editGuestBtn')}</button>
         </>
       }
     >
       {/* Summary bar */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-[18px]">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 mb-4 sm:mb-[18px]">
         {[
-          { label: 'Room', value: guest.room, mono: true },
-          { label: 'Stay Type', value: guest.stayType === 'monthly' ? 'Monthly' : 'Daily' },
-          { label: 'Total Stays', value: guest.stayCount },
-          { label: 'Lifetime Spend', value: formatCurrency(totalSpend), mono: true },
+          { id: 'room', label: t('common:room'), value: guest.room, mono: true },
+          { id: 'stay', label: t('fields.stayType'), value: L.stay(guest.stayType) },
+          { id: 'stays', label: t('profile.totalStays'), value: guest.stayCount },
+          { id: 'spend', label: t('profile.lifetimeSpend'), value: formatCurrency(totalSpend), mono: true },
         ].map(item => (
-          <div key={item.label} className="bg-surface2 rounded-lg px-3 py-2.5 border border-line">
+          <div key={item.id} className="min-w-0 bg-surface2 rounded-lg px-3 py-2.5 border border-line">
             <div className="t-label mb-1">{item.label}</div>
-            <div className="t-title" style={{
-              fontFamily: item.mono ? 'var(--font-mono)' : undefined,
-            }}>{item.value}</div>
+            <div className={`t-title truncate ${item.mono ? 'font-mono' : ''}`}>{item.value || '—'}</div>
           </div>
         ))}
       </div>
 
       {/* Status + tags row */}
       <div className="flex items-center gap-2 mb-[18px] flex-wrap">
-        <Badge type={statusColor(guest.status).replace('badge-', '')}>{guest.status}</Badge>
-        {guest.tags.map(t => <span key={t} className={getTagClass(t)}>{t}</span>)}
+        <Badge type={statusColor(guest.status).replace('badge-', '')}>{L.status(guest.status)}</Badge>
+        {guest.tags.map(tag => <span key={tag} className={getTagClass(tag)}>{L.tag(tag)}</span>)}
       </div>
 
-      <Tabs tabs={PROFILE_TABS} active={tab} onChange={setTab} />
+      <Tabs tabs={PROFILE_TABS.map(pt => ({ id: pt.id, label: t(pt.labelKey) }))} active={tab} onChange={setTab} />
 
       <div className="mt-4">
         {/* ── Profile Tab ── */}
         {tab === 'info' && (
           <div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3.5 mb-4">
-              <InfoRow label="Phone" value={guest.phone} />
-              <InfoRow label="Email" value={guest.email} />
-              <InfoRow label="Nationality" value={guest.nationality} />
-              <InfoRow label="Address" value={guest.address} />
-              <InfoRow label="ID Type" value={guest.idType} />
-              <InfoRow label="ID Number" value={guest.idNumber} />
-              <InfoRow label="Check-In" value={formatDate(guest.checkInDate)} />
-              <InfoRow label={guest.stayType === 'monthly' ? 'Duration' : 'Check-Out'} value={guest.stayType === 'monthly' ? `${guest.months} month${guest.months !== 1 ? 's' : ''}` : formatDate(dueDate)} />
-              <InfoRow label="Food Plan" value={guest.foodPlan} />
-              <InfoRow label="Advance Paid" value={formatCurrency(guest.advance)} />
+            <div className="grid grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-3.5 mb-4">
+              <InfoRow label={t('common:phone')} value={guest.phone} />
+              <InfoRow label={t('common:email')} value={guest.email} />
+              <InfoRow label={t('profile.nationality')} value={guest.nationality} />
+              <InfoRow label={t('profile.address')} value={guest.address} />
+              <InfoRow label={t('profile.idType')} value={guest.idType} />
+              <InfoRow label={t('profile.idNumber')} value={guest.idNumber} />
+              <InfoRow label={t('fields.checkIn')} value={formatDate(guest.checkInDate)} />
+              <InfoRow label={guest.stayType === 'monthly' ? t('profile.duration') : t('fields.checkOut')} value={guest.stayType === 'monthly' ? t('profile.months', { count: guest.months }) : formatDate(dueDate)} />
+              <InfoRow label={t('fields.foodPlan')} value={L.food(guest.foodPlan)} />
+              <InfoRow label={t('profile.advancePaid')} value={formatCurrency(guest.advance)} />
             </div>
 
             {guest.facilities.length > 0 && (
               <div className="mb-3.5">
-                <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.07em] mb-[7px]">Facilities</div>
+                <div className="text-xs font-semibold text-ink3 uppercase tracking-[0.07em] mb-[7px]">{t('profile.facilities')}</div>
                 <div className="flex gap-1.5 flex-wrap">
                   {guest.facilities.map(f => <span key={f} className="badge badge-grey">{f}</span>)}
                 </div>
@@ -254,17 +283,17 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
 
             {guest.amenities.length > 0 && (
               <div className="mb-3.5">
-                <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.07em] mb-[7px]">Extra Amenities</div>
+                <div className="text-xs font-semibold text-ink3 uppercase tracking-[0.07em] mb-[7px]">{t('profile.extraAmenities')}</div>
                 <div className="flex gap-1.5 flex-wrap">
                   {guest.amenities.map(a => <span key={a} className="badge badge-blue">{a}</span>)}
                 </div>
               </div>
             )}
 
-            <div className="flex items-center gap-2.5">
-              <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.07em]">Documents</div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="text-xs font-semibold text-ink3 uppercase tracking-[0.07em]">{t('profile.documents')}</div>
               <Badge type={guest.documents >= 4 ? 'green' : guest.documents >= 2 ? 'amber' : 'red'}>
-                {guest.documents} / 4 uploaded
+                {t('profile.docsUploaded', { count: guest.documents, total: 4 })}
               </Badge>
             </div>
           </div>
@@ -274,37 +303,15 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
         {tab === 'billing' && (
           <div>
             {guest.billingHistory.length === 0 ? (
-              <div className="t-sm text-center py-8 text-ink3">No billing records</div>
+              <div className="t-sm text-center py-8 text-ink3">{t('billing.empty')}</div>
             ) : (
-              <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-surface2">
-                    {['Invoice', 'Period', 'Total', 'Status', 'Paid On', 'Method'].map(h => (
-                      <th key={h} className="text-left px-3 py-2 text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.05em]">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {guest.billingHistory.map(b => (
-                    <tr key={b.invoiceNo} className="border-b border-line">
-                      <td className="t-xs px-3 py-[9px] text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{b.invoiceNo}</td>
-                      <td className="px-3 py-[9px] text-[12.5px] text-ink2">{b.period}</td>
-                      <td className="t-title px-3 py-[9px]" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(b.total)}</td>
-                      <td className="px-3 py-[9px]">
-                        <Badge type={b.status === 'Paid' ? 'green' : b.status === 'Overdue' ? 'red' : 'amber'}>{b.status}</Badge>
-                      </td>
-                      <td className="t-xs px-3 py-[9px] text-ink3">{b.paidOn ? formatDate(b.paidOn) : '—'}</td>
-                      <td className="t-xs px-3 py-[9px] text-ink2">{b.method || '—'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="border border-line rounded-lg overflow-hidden">
+                <DataTable columns={billingColumns(t)} rows={guest.billingHistory} rowKey={(b) => b.invoiceNo} />
               </div>
             )}
-            <div className="mt-3.5 px-3.5 py-2.5 bg-[var(--gold-bg)] rounded-lg flex justify-between">
-              <span className="t-title text-gold">Total Lifetime Spend</span>
-              <span className="font-bold text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(totalSpend)}</span>
+            <div className="mt-3.5 px-3.5 py-2.5 bg-[var(--gold-bg)] rounded-lg flex flex-wrap justify-between gap-x-3">
+              <span className="t-title text-gold">{t('billing.totalLifetimeSpend')}</span>
+              <span className="font-bold text-gold font-mono">{formatCurrency(totalSpend)}</span>
             </div>
           </div>
         )}
@@ -314,14 +321,14 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
           <div>
             <div className="flex flex-col gap-2.5">
               {commsLoading ? (
-                <div className="t-sm text-center py-8 text-ink3">Loading…</div>
+                <div className="t-sm text-center py-8 text-ink3">{t('common:loading')}</div>
               ) : comms.length === 0 ? (
-                <div className="t-sm text-center py-8 text-ink3">No communication log</div>
+                <div className="t-sm text-center py-8 text-ink3">{t('comms.empty')}</div>
               ) : comms.map((c) => {
                 const ch = (c.channel || 'note').toLowerCase()
                 const icon = ch === 'whatsapp' ? '💬' : ch === 'sms' ? '📱' : ch === 'email' ? '✉️' : ch === 'call' ? '📞' : '📄'
-                const bg = ch === 'whatsapp' ? '#dcfce7' : ch === 'sms' ? '#dbeafe' : 'var(--gold-bg)'
-                const color = ch === 'whatsapp' ? '#16a34a' : ch === 'sms' ? '#2563eb' : 'var(--gold)'
+                const bg = ch === 'whatsapp' ? 'var(--green-bg)' : ch === 'sms' ? 'var(--blue-bg)' : 'var(--gold-bg)'
+                const color = ch === 'whatsapp' ? 'var(--green-text)' : ch === 'sms' ? 'var(--blue-text)' : 'var(--gold)'
                 return (
                   <div key={c.id} className="flex items-start gap-3 px-3.5 py-3 bg-surface2 rounded-lg border border-line">
                     <div className="t-body w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: bg, color }}>
@@ -329,10 +336,10 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-[12.5px] font-semibold text-ink mb-0.5 capitalize">
-                        {c.channel}{c.direction === 'inbound' ? ' · received' : ''}
+                        {t(`comms.channel.${ch}`, { defaultValue: c.channel })}{c.direction === 'inbound' ? ` · ${t('comms.received')}` : ''}
                       </div>
-                      <div className="t-xs mb-1">{c.content}</div>
-                      <div className="text-[11px] text-ink3">
+                      <div className="t-xs mb-1 break-words">{c.content}</div>
+                      <div className="text-xs text-ink3">
                         {formatDate(c.createdAt)}{c.staff ? ` · ${c.staff}` : ''}
                       </div>
                     </div>
@@ -344,28 +351,26 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
             {showComposer ? (
               <div className="mt-3.5 flex flex-col gap-2 p-3 bg-surface2 rounded-lg border border-line">
                 <select className="form-input" value={commChannel} onChange={e => setCommChannel(e.target.value)}>
-                  <option value="note">Note</option>
-                  <option value="call">Call</option>
-                  <option value="whatsapp">WhatsApp</option>
-                  <option value="sms">SMS</option>
-                  <option value="email">Email</option>
+                  {['note', 'call', 'whatsapp', 'sms', 'email'].map(c => (
+                    <option key={c} value={c}>{t(`comms.channel.${c}`)}</option>
+                  ))}
                 </select>
                 <textarea
                   className="form-input min-h-[72px]"
-                  placeholder="What was communicated?"
+                  placeholder={t('comms.placeholder')}
                   value={commText}
                   onChange={e => setCommText(e.target.value)}
                 />
-                <div className="flex gap-2">
+                <div className="flex gap-2 [&>*]:flex-1 sm:[&>*]:flex-none">
                   <button className="btn btn-primary btn-sm" disabled={savingComm || !commText.trim()} onClick={handleLogComm}>
-                    {savingComm ? 'Saving…' : 'Save'}
+                    {savingComm ? t('common:saving') : t('common:save')}
                   </button>
-                  <button className="btn btn-outline btn-sm" onClick={() => { setShowComposer(false); setCommText('') }}>Cancel</button>
+                  <button className="btn btn-outline btn-sm" onClick={() => { setShowComposer(false); setCommText('') }}>{t('common:cancel')}</button>
                 </div>
               </div>
             ) : (
-              <button className="btn btn-outline btn-sm mt-3.5" onClick={() => setShowComposer(true)}>
-                + Log Communication
+              <button className="btn btn-outline btn-sm mt-3.5 w-full sm:w-auto justify-center" onClick={() => setShowComposer(true)}>
+                + {t('comms.log')}
               </button>
             )}
           </div>
@@ -378,17 +383,17 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
               {Array.from({ length: guest.stayCount }, (_, i) => {
                 const isLatest = i === 0
                 return (
-                  <div key={i} className={`px-3.5 py-3 bg-surface2 rounded-lg border flex justify-between items-center ${isLatest ? 'border-gold' : 'border-line'}`}>
+                  <div key={i} className={`px-3.5 py-3 bg-surface2 rounded-lg border flex justify-between items-center gap-3 ${isLatest ? 'border-gold' : 'border-line'}`}>
                     <div>
                       <div className="t-title">
-                        Stay #{guest.stayCount - i} {isLatest && <span className="text-[10.5px] text-gold ml-1.5">CURRENT</span>}
+                        {t('history.stayNo', { n: guest.stayCount - i })} {isLatest && <span className="text-xs text-gold ml-1.5">{t('history.current')}</span>}
                       </div>
-                      <div className="text-[11.5px] text-ink3 mt-[3px]">
-                        {isLatest ? `Check-in: ${formatDate(guest.checkInDate)}` : `~${2 + i * 3} months ago`}
+                      <div className="text-xs text-ink3 mt-[3px]">
+                        {isLatest ? t('history.checkIn', { date: formatDate(guest.checkInDate) }) : t('history.monthsAgo', { count: 2 + i * 3 })}
                       </div>
                     </div>
                     <Badge type={isLatest ? (guest.status === 'Checked Out' ? 'grey' : 'green') : 'grey'}>
-                      {isLatest ? guest.status : 'Checked Out'}
+                      {isLatest ? L.status(guest.status) : L.status('Checked Out')}
                     </Badge>
                   </div>
                 )
@@ -396,7 +401,7 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
             </div>
             <div className="mt-3.5 px-3.5 py-2.5 bg-surface2 rounded-lg flex justify-between">
               <span className="text-[12.5px] text-ink2">
-                Returning guest · {guest.stayCount} visit{guest.stayCount !== 1 ? 's' : ''} · {guest.stayCount >= 5 ? '🥇 Gold Loyalty' : guest.stayCount >= 3 ? '🥈 Silver Loyalty' : '🥉 Bronze Loyalty'}
+                {t('history.returning')} · {t('history.visits', { count: guest.stayCount })} · {guest.stayCount >= 5 ? `🥇 ${t('history.gold')}` : guest.stayCount >= 3 ? `🥈 ${t('history.silver')}` : `🥉 ${t('history.bronze')}`}
               </span>
             </div>
           </div>
@@ -409,6 +414,8 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
 // ─── Edit Guest Modal ──────────────────────────────────────────────────────────
 
 function EditGuestModal({ guest, onClose, onSave }) {
+  const L = useGuestLabels()
+  const { t } = L
   if (!guest) return null
 
   const initialValues = {
@@ -427,7 +434,7 @@ function EditGuestModal({ guest, onClose, onSave }) {
       {({ values, setFieldValue, submitForm, isSubmitting }) => {
         const toggleTag = (tag) => {
           const tags = values.tags?.includes(tag)
-            ? values.tags.filter(t => t !== tag)
+            ? values.tags.filter(x => x !== tag)
             : [...(values.tags || []), tag]
           setFieldValue('tags', tags)
         }
@@ -435,45 +442,46 @@ function EditGuestModal({ guest, onClose, onSave }) {
           <Modal
             isOpen={!!guest}
             onClose={onClose}
-            title={`Edit — ${guest.name}`}
+            title={t('edit.title', { name: guest.name })}
             maxWidth="580px"
             footer={
               <>
-                <button className="btn btn-outline btn-sm" onClick={onClose}>Cancel</button>
+                <button className="btn btn-outline btn-sm" onClick={onClose}>{t('common:cancel')}</button>
                 <button className="btn btn-primary btn-sm" onClick={submitForm} disabled={isSubmitting}>
-                  Save Changes
+                  {t('common:saveChanges')}
                 </button>
               </>
             }
           >
-            <Form className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <FormikField name="name" label="Name" required />
-              <FormikField name="phone" label="Phone" required />
-              <FormikField name="email" label="Email" type="email" />
-              <FormikField name="room" label="Room" required />
-              <FormikField name="stayType" label="Stay Type" as="select">
-                <option value="daily">Daily</option>
-                <option value="monthly">Monthly</option>
+            <Form className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FormikField name="name" label={t('common:name')} required />
+              <FormikField name="phone" label={t('common:phone')} required />
+              <FormikField name="email" label={t('common:email')} type="email" />
+              <FormikField name="room" label={t('common:room')} required />
+              <FormikField name="stayType" label={t('fields.stayType')} as="select">
+                <option value="daily">{t('stayType.daily')}</option>
+                <option value="monthly">{t('stayType.monthly')}</option>
               </FormikField>
-              <FormikField name="checkInDate" label="Check-In Date" required type="date" />
+              <FormikField name="checkInDate" label={t('fields.checkInDate')} required type="date" />
               {values.stayType === 'monthly'
-                ? <FormikField name="months" label="Months" required type="number" min="1" />
-                : <FormikField name="checkOutDate" label="Check-Out Date" required type="date" />}
-              <FormikField name="foodPlan" label="Food Plan" as="select">
-                {FOOD_PLANS.map(p => <option key={p}>{p}</option>)}
+                ? <FormikField name="months" label={t('fields.months')} required type="number" min="1" />
+                : <FormikField name="checkOutDate" label={t('fields.checkOutDate')} required type="date" />}
+              <FormikField name="foodPlan" label={t('fields.foodPlan')} as="select">
+                {FOOD_PLANS.map(p => <option key={p} value={p}>{L.food(p)}</option>)}
               </FormikField>
-              <FormikField name="status" label="Status" as="select">
-                {['Active', 'Due', 'Checked Out'].map(s => <option key={s}>{s}</option>)}
+              <FormikField name="status" label={t('common:status')} as="select">
+                {GUEST_STATUSES.map(s => <option key={s} value={s}>{L.status(s)}</option>)}
               </FormikField>
             </Form>
             <div className="mt-3.5">
-              <label className="form-label block mb-[7px]">Tags</label>
+              <label className="form-label block mb-[7px]">{t('fields.tags')}</label>
               <div className="flex gap-2 flex-wrap">
                 {GUEST_TAGS.map(tag => (
                   <button key={tag} type="button" onClick={() => toggleTag(tag)}
-                    className={`${getTagClass(tag)} cursor-pointer`}
-                    style={{ opacity: values.tags?.includes(tag) ? 1 : 0.4, border: values.tags?.includes(tag) ? undefined : '1px dashed var(--border2)' }}>
-                    {tag}
+                    aria-pressed={!!values.tags?.includes(tag)}
+                    className={`${getTagClass(tag)} cursor-pointer pointer-coarse:min-h-11 pointer-coarse:px-4 ${values.tags?.includes(tag) ? '' : 'opacity-40'}`}
+                    style={{ border: values.tags?.includes(tag) ? undefined : '1px dashed var(--border2)' }}>
+                    {L.tag(tag)}
                   </button>
                 ))}
               </div>
@@ -490,6 +498,8 @@ function EditGuestModal({ guest, onClose, onSave }) {
 const PAGE_SIZE = 20
 
 export default function Guests() {
+  const L = useGuestLabels()
+  const { t } = L
   const addToast = useToast()
   const { navigateTo } = useUiActions()
 
@@ -535,11 +545,11 @@ export default function Guests() {
       setGuests((data.guests || []).map(normalizeGuest))
       setTotal(data.total ?? 0)
     } catch {
-      setError('Could not load guests. Make sure the backend is running.')
+      setError(t('errors.load'))
     } finally {
       setLoading(false)
     }
-  }, [listParams, page])
+  }, [listParams, page, t])
 
   const loadStats = useCallback(async () => {
     try {
@@ -557,7 +567,6 @@ export default function Guests() {
 
   const handleStayChange   = (v) => { setStayFilter(v); setPage(1) }
   const handleStatusChange = (v) => { setStatusFilter(v); setPage(1) }
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   // Export every guest matching the current filters (not just the visible page).
   const handleExportCSV = async () => {
@@ -565,7 +574,7 @@ export default function Guests() {
       const { data } = await guestsApi.getAll(listParams())
       exportGuestCSV((data.guests || []).map(normalizeGuest))
     } catch {
-      addToast('Could not export guests', 'error')
+      addToast(t('toast.exportFailed'), 'error')
     }
   }
 
@@ -593,10 +602,10 @@ export default function Guests() {
       })
       setCheckoutGuest(null)
       setCheckoutBill(null)
-      addToast(`${guest.name} checked out. Room marked for housekeeping.`, 'success')
+      addToast(t('toast.checkedOut', { name: guest.name }), 'success')
       reload()
     } catch (err) {
-      addToast(err.response?.data?.message || 'Checkout failed', 'error')
+      addToast(err.response?.data?.message || t('toast.checkoutFailed'), 'error')
     }
   }
 
@@ -607,10 +616,10 @@ export default function Guests() {
         ? { months: 1 }
         : { checkOutDate: new Date(Date.now() + 86400000).toISOString() }
       await guestsApi.renew(guest.id, payload)
-      addToast(`Stay renewed for ${guest.name}.`, 'success')
+      addToast(t('toast.renewed', { name: guest.name }), 'success')
       reload()
     } catch (err) {
-      addToast(err.response?.data?.message || 'Could not renew stay.', 'error')
+      addToast(err.response?.data?.message || t('toast.renewFailed'), 'error')
     }
   }
 
@@ -619,11 +628,11 @@ export default function Guests() {
     setDeleting(true)
     try {
       await guestsApi.delete(deleteGuest.id)
-      addToast(`${deleteGuest.name} deleted`, 'success')
+      addToast(t('toast.deleted', { name: deleteGuest.name }), 'success')
       setDeleteGuest(null)
       reload()
     } catch (err) {
-      addToast(err.response?.data?.message || 'Could not delete guest', 'error')
+      addToast(err.response?.data?.message || t('toast.deleteFailed'), 'error')
     } finally {
       setDeleting(false)
     }
@@ -633,10 +642,10 @@ export default function Guests() {
     try {
       await guestsApi.update(updated.id, editPayload(updated))
       setEditGuest(null)
-      addToast('Guest details updated', 'success')
+      addToast(t('toast.updated'), 'success')
       reload()
     } catch (err) {
-      addToast(err.response?.data?.message || 'Could not update guest', 'error')
+      addToast(err.response?.data?.message || t('toast.updateFailed'), 'error')
     }
   }
 
@@ -661,127 +670,124 @@ export default function Guests() {
       setCheckoutBill(data.bill)
     } catch (err) {
       setCheckoutGuest(null)
-      addToast(err.response?.data?.message || 'Could not load checkout bill', 'error')
+      addToast(err.response?.data?.message || t('toast.billFailed'), 'error')
     }
   }
   const closeCheckout = () => { setCheckoutGuest(null); setCheckoutBill(null) }
   const openEdit     = (guest) => { setProfileGuest(null); setEditGuest(guest) }
 
-  return (
-    <div>
-      {/* Header */}
-      <div className="flex justify-between items-start mb-5">
-        <div>
-          <h1 className="t-h1 m-0 tracking-[-0.03em]">All Guests</h1>
-          <p className="t-sm mt-1 mb-0 text-ink3">Guest registry, stay history & billing</p>
+  const columns = [
+    {
+      // Wraps in table mode (tags drop under the name) so the row fits at 1280.
+      key: 'guest', header: t('common:guest'), primary: true, className: 'whitespace-normal min-w-[180px] max-w-[240px]',
+      render: (guest) => (
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 min-w-0">
+            <span className="font-semibold text-ink truncate">{guest.name}</span>
+            {guest.tags.map(tag => <span key={tag} className={`${getTagClass(tag)} shrink-0`}>{L.tag(tag)}</span>)}
+          </div>
+          <div className="text-xs text-ink3 mt-px whitespace-nowrap">
+            <span className="text-gold font-mono">{guest.docId}</span> · {guest.phone}
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button className="btn btn-outline btn-sm" onClick={reload} disabled={loading}>↻ Refresh</button>
-          <button className="btn btn-outline btn-sm" onClick={handleExportCSV}>↓ Export CSV</button>
-          <button className="btn btn-primary" onClick={() => navigateTo({ panel: 'bookings', params: { tab: 'Upcoming' } })}>+ Check-In</button>
+      ),
+    },
+    { key: 'room', header: t('common:room'), render: (guest) => <span className="font-semibold font-mono">{guest.room || '—'}</span> },
+    {
+      key: 'type', header: t('col.typeStays'), mobileLabel: t('col.typeStays'),
+      render: (guest) => (
+        <div className="flex items-center gap-2 whitespace-nowrap">
+          <Badge type={guest.stayType === 'monthly' ? 'purple' : 'blue'}>{L.stay(guest.stayType)}</Badge>
+          <span className="text-xs text-ink3" title={t('profile.totalStays')}><span className="t-title font-mono text-ink">{guest.stayCount}</span> {t('col.staysWord', { count: guest.stayCount })}</span>
         </div>
-      </div>
+      ),
+    },
+    {
+      key: 'stay', header: t('col.checkInDue'), className: 'md:min-w-[120px]', mobileLabel: t('col.checkInDue'),
+      render: (guest) => (
+        <span className="block text-[12.5px] leading-snug">
+          {formatDate(guest.checkInDate)}<span className="text-ink3"> → </span><br className="hidden xl:inline" />{formatDate(getDueDate(guest))}
+        </span>
+      ),
+    },
+    { key: 'food', header: t('fields.foodPlan'), className: 'whitespace-normal min-w-[90px]', render: (guest) => <span className="t-xs">{L.food(guest.foodPlan)}</span> },
+    {
+      key: 'status', header: t('common:status'), primary: true,
+      render: (guest) => <Badge type={statusColor(guest.status).replace('badge-', '')}>{L.status(guest.status)}</Badge>,
+    },
+    {
+      key: 'actions', header: '', align: 'right',
+      render: (guest) => {
+        const canCheckout = guest.status === 'Active' || guest.status === 'Due'
+        return (
+          // Rows open the profile; the buttons here must not.
+          <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+            {canCheckout
+              ? <button className="btn btn-danger btn-sm" onClick={() => openCheckout(guest)}>{t('actions.checkout')}</button>
+              : <button className="btn btn-outline btn-sm" onClick={() => openProfile(guest)}>{t('common:view')}</button>}
+            {guest.status === 'Due' && (
+              <button className="btn btn-sm bg-success-bg text-success-text" onClick={() => handleRenew(guest)}>{t('actions.renew')}</button>
+            )}
+            <ActionMenu
+              items={[
+                canCheckout && { label: t('actions.viewProfile'), icon: '◉', onClick: () => openProfile(guest) },
+                { label: t('actions.editGuest'), icon: '✎', onClick: () => openEdit(guest) },
+                { label: t('actions.deleteGuest'), icon: <LuTrash2 size={14} />, danger: true, onClick: () => setDeleteGuest(guest) },
+              ]}
+            />
+          </div>
+        )
+      },
+    },
+  ]
 
+  return (
+    <PageWrapper
+      title={t('title')}
+      subtitle={t('subtitle')}
+      search={{ value: search, onChange: setSearch, placeholder: t('searchPlaceholder') }}
+      headerActions={[
+        { id: 'refresh', label: t('common:refresh'), icon: <LuRefreshCw />, variant: 'icon', disabled: loading, onClick: reload },
+        { id: 'export', label: t('common:exportCsv'), icon: <LuDownload />, onClick: handleExportCSV },
+        { id: 'checkin', label: t('actions.checkIn'), icon: <LuUserPlus />, variant: 'primary', onClick: () => navigateTo({ panel: 'bookings', params: { tab: 'Upcoming' } }) },
+      ]}
+      stats={
+        <>
+          <StatCard icon={<LuUserCheck />} tone="green" label={t('stats.active')} value={stats.active} />
+          <StatCard icon={<LuCircleAlert />} tone="amber" label={t('stats.due')} value={stats.due} />
+          <StatCard icon={<LuLogOut />} tone="grey" label={t('stats.checkedOut')} value={stats.checkedOut} />
+          <StatCard icon={<LuUsers />} tone="blue" label={t('stats.total')} value={stats.total} />
+        </>
+      }
+    >
       {error && (
         <div className="t-sm mb-4 px-3.5 py-2.5 rounded-lg bg-danger-bg text-danger-text">
           {error}
         </div>
       )}
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-[18px]">
-        {[
-          { label: 'Active', count: stats.active, bar: 'stat-bar-green' },
-          { label: 'Due / Overdue', count: stats.due, bar: 'stat-bar-amber' },
-          { label: 'Checked Out', count: stats.checkedOut, bar: '' },
-          { label: 'Total Guests', count: stats.total, bar: 'stat-bar-blue' },
-        ].map(({ label, count, bar }) => (
-          <div key={label} className={`stat-card ${bar}`}>
-            <div className="t-label mb-1.5">{label}</div>
-            <div className="text-[26px] font-bold text-ink" style={{ fontFamily: 'var(--font-mono)' }}>{count}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div className="card mb-4">
-        <div className="px-4 py-3 flex gap-2.5 flex-wrap items-center">
-          <div className="relative flex-1 min-w-[200px]">
-            <span className="t-h3 absolute left-2.5 top-1/2 -translate-y-1/2 text-ink3">⌕</span>
-            <input className="form-input pl-[30px]" placeholder="Search name, room, DOC ID, phone..." value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <select className="form-select w-[140px]" value={stayFilter} onChange={e => handleStayChange(e.target.value)}>
-            <option>All</option><option>Daily</option><option>Monthly</option>
+      <Card>
+        {/* Filters: the two selects side by side */}
+        <div className="grid grid-cols-2 sm:flex gap-2.5 px-4 sm:px-5 py-3 border-b border-line">
+          <select aria-label={t('fields.stayType')} className="form-select w-full sm:w-[140px]" value={stayFilter} onChange={e => handleStayChange(e.target.value)}>
+            <option value="All">{t('filter.allStays')}</option><option value="Daily">{t('stayType.daily')}</option><option value="Monthly">{t('stayType.monthly')}</option>
           </select>
-          <select className="form-select w-[150px]" value={statusFilter} onChange={e => handleStatusChange(e.target.value)}>
-            <option>All</option><option>Active</option><option>Due</option><option>Checked Out</option>
+          <select aria-label={t('common:status')} className="form-select w-full sm:w-[150px]" value={statusFilter} onChange={e => handleStatusChange(e.target.value)}>
+            <option value="All">{t('filter.allStatuses')}</option>
+            {GUEST_STATUSES.map(s => <option key={s} value={s}>{L.status(s)}</option>)}
           </select>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="card">
-        <div className="overflow-x-auto">
-          <table>
-            <thead>
-              <tr>
-                <th>DOC ID</th><th>Guest</th><th>Room</th><th>Type</th>
-                <th>Check-In</th><th>Due / Out</th><th>Food Plan</th>
-                <th>Stays</th><th>Tags</th><th>Status</th><th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {guests.length === 0 && (
-                <tr><td colSpan={11}><div className="empty-state">{loading ? 'Loading guests…' : 'No guests found'}</div></td></tr>
-              )}
-              {guests.map(guest => {
-                const dueDate = getDueDate(guest)
-                return (
-                  <tr key={guest.id} className="cursor-pointer" onClick={() => openProfile(guest)}>
-                    <td><span className="t-xs text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{guest.docId}</span></td>
-                    <td>
-                      <div className="font-semibold text-ink">{guest.name}</div>
-                      <div className="text-[11.5px] text-ink3 mt-px">{guest.phone}</div>
-                    </td>
-                    <td><span className="font-semibold" style={{ fontFamily: 'var(--font-mono)' }}>{guest.room || '—'}</span></td>
-                    <td><Badge type={guest.stayType === 'monthly' ? 'purple' : 'blue'}>{guest.stayType === 'monthly' ? 'Monthly' : 'Daily'}</Badge></td>
-                    <td className="whitespace-nowrap text-[12.5px]">{formatDate(guest.checkInDate)}</td>
-                    <td className="whitespace-nowrap text-[12.5px]">{formatDate(dueDate)}</td>
-                    <td className="t-xs whitespace-nowrap">{guest.foodPlan}</td>
-                    <td><span className="t-title" style={{ fontFamily: 'var(--font-mono)' }}>{guest.stayCount}</span></td>
-                    <td><div className="flex gap-1 flex-wrap">{guest.tags.map(t => <span key={t} className={getTagClass(t)}>{t}</span>)}</div></td>
-                    <td><Badge type={statusColor(guest.status).replace('badge-', '')}>{guest.status}</Badge></td>
-                    <td onClick={e => e.stopPropagation()}>
-                      <div className="flex gap-[5px]">
-                        <button className="btn btn-outline btn-xs" onClick={() => openProfile(guest)}>View</button>
-                        {(guest.status === 'Active' || guest.status === 'Due') && (
-                          <button className="btn btn-danger btn-xs" onClick={() => openCheckout(guest)}>Checkout</button>
-                        )}
-                        {guest.status === 'Due' && (
-                          <button className="btn btn-xs bg-success-bg text-success-text"
-                            onClick={() => handleRenew(guest)}>Renew</button>
-                        )}
-                        <button className="btn btn-danger btn-xs" title="Delete guest"
-                          onClick={() => setDeleteGuest(guest)}><LuTrash2 size={14} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-        {total > PAGE_SIZE && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-line t-xs text-ink3">
-            <span>Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}</span>
-            <div className="flex items-center gap-2">
-              <button className="btn btn-outline btn-xs" disabled={page <= 1 || loading} onClick={() => setPage(p => Math.max(1, p - 1))}>← Prev</button>
-              <span>Page {page} of {totalPages}</span>
-              <button className="btn btn-outline btn-xs" disabled={page >= totalPages || loading} onClick={() => setPage(p => Math.min(totalPages, p + 1))}>Next →</button>
-            </div>
-          </div>
-        )}
-      </div>
+        <DataTable
+          columns={columns}
+          rows={guests}
+          tableFrom="xl"
+          onRowClick={openProfile}
+          empty={<EmptyState icon="◉" title={loading ? t('empty.loading') : t('empty.title')} />}
+        />
+
+        <Pagination page={page} pageSize={PAGE_SIZE} total={total} disabled={loading} onChange={setPage} />
+      </Card>
 
       {/* Modals */}
       <GuestProfileModal guest={profileGuest} onClose={() => setProfileGuest(null)} onCheckout={openCheckout} onEdit={openEdit} />
@@ -793,7 +799,7 @@ export default function Guests() {
           folio={checkoutGuest.docId}
           room={checkoutGuest.room}
           stayPeriod={`${formatDate(checkoutGuest.checkInDate)} → ${formatDate(getDueDate(checkoutGuest))}`}
-          lineItems={[['Room Rent', checkoutBill.rent], ['Food Plan', checkoutBill.food], ['Amenities', checkoutBill.amenities], [`GST (${checkoutBill.gstRate}%)`, checkoutBill.gst]]}
+          lineItems={[[t('checkout.roomRent'), checkoutBill.rent], [t('fields.foodPlan'), checkoutBill.food], [t('checkout.amenities'), checkoutBill.amenities], [`GST (${checkoutBill.gstRate}%)`, checkoutBill.gst]]}
           advance={checkoutBill.advance}
           balanceDue={checkoutBill.balanceDue}
           allowExtraCharges
@@ -807,12 +813,14 @@ export default function Guests() {
         isOpen={!!deleteGuest}
         onClose={() => setDeleteGuest(null)}
         onConfirm={handleDeleteConfirm}
-        title="Delete Guest"
-        message={deleteGuest ? <>Delete <b>{deleteGuest.name}</b> ({deleteGuest.docId})? Their billing history is kept, but they'll be removed from the registry. This frees their room.</> : null}
-        confirmLabel="Delete"
+        title={t('delete.title')}
+        message={deleteGuest ? (
+          <Trans t={t} i18nKey="delete.message" values={{ name: deleteGuest.name, docId: deleteGuest.docId }} components={{ b: <b /> }} />
+        ) : null}
+        confirmLabel={t('common:delete')}
         danger
         busy={deleting}
       />
-    </div>
+    </PageWrapper>
   )
 }

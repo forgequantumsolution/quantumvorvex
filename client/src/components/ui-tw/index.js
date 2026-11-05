@@ -1,4 +1,5 @@
 export { default as Button } from './Button'
+export { default as ActionMenu } from './ActionMenu'
 export { default as Card } from './Card'
 export { default as StatCard } from './StatCard'
 export { default as StatusBadge } from './StatusBadge'

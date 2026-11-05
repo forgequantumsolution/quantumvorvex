@@ -1,0 +1,115 @@
+{
+  "title": "हाउसकीपिंग",
+  "subtitle": "कमरों की स्थिति, स्टाफ़ असाइनमेंट और इंस्पेक्शन संभालें",
+  "loadFailed": "हाउसकीपिंग बोर्ड लोड नहीं हो सका। जाँचें कि सर्वर चल रहा है।",
+  "loadingBoard": "बोर्ड लोड हो रहा है…",
+  "roomNo": "कमरा {{number}}",
+  "floorNo": "फ़्लोर {{floor}}",
+  "floorShort": "फ़्लोर {{floor}}",
+  "unassigned": "असाइन नहीं",
+  "days_one": "{{count}} दिन",
+  "days_other": "{{count}} दिन",
+  "duration": {
+    "m": "{{m}} मि",
+    "hm": "{{h}} घं {{m}} मि"
+  },
+  "tabs": {
+    "board": "बोर्ड",
+    "daily": "रोज़ की सूची",
+    "linen": "लिनन ट्रैकर",
+    "inspection": "इंस्पेक्शन"
+  },
+  "status": {
+    "clean_available": "साफ़",
+    "dirty_available": "गंदा",
+    "occupied": "भरा हुआ",
+    "checkout_pending": "चेक-आउट",
+    "cleaning_in_progress": "सफ़ाई जारी",
+    "maintenance": "रखरखाव"
+  },
+  "stats": {
+    "clean": "साफ़ और उपलब्ध",
+    "cleanHint": "चेक-इन के लिए तैयार",
+    "dirty": "गंदे / सफ़ाई बाकी",
+    "dirtyHint": "गंदे + चेक-आउट बाकी",
+    "cleaning": "सफ़ाई जारी",
+    "cleaningHint": "अभी साफ़ हो रहे हैं"
+  },
+  "bulk": {
+    "label": "एक साथ अपडेट",
+    "checkoutsDirty": "चेक-आउट वाले कमरे गंदे मार्क करें",
+    "dirtyInProgress": "सभी गंदे → सफ़ाई जारी"
+  },
+  "assign": {
+    "title": "कमरा {{number}} — अपडेट",
+    "staff": "स्टाफ़ असाइन करें"
+  },
+  "empty": {
+    "noRooms": "अभी कोई कमरा नहीं",
+    "noRoomsHint": "सेटिंग्स में कमरे जोड़ने पर वे यहाँ दिखेंगे।",
+    "noMatch": "फ़िल्टर से कोई कमरा नहीं मिला"
+  },
+  "daily": {
+    "assignedTo": "किसे सौंपा",
+    "assignAria": "कमरा {{number}} के लिए स्टाफ़ असाइन करें",
+    "startedAt": "शुरू हुआ",
+    "completedAt": "पूरा हुआ",
+    "duration": "समय लगा",
+    "timing": "शुरू · पूरा",
+    "start": "शुरू करें",
+    "done": "हो गया",
+    "staff": "स्टाफ़",
+    "allStaff": "सभी स्टाफ़",
+    "floor": "फ़्लोर",
+    "allFloors": "सभी फ़्लोर"
+  },
+  "linen": {
+    "lastChanged": "पिछली बार बदला",
+    "nextDue": "अगली बार",
+    "daysUntilDue": "कितने दिन बाकी",
+    "daysOverdue_one": "{{count}} दिन देर",
+    "daysOverdue_other": "{{count}} दिन देर",
+    "overdue": "देर हो गई",
+    "dueToday": "आज बदलना है",
+    "changedBy": "किसने बदला",
+    "markChanged": "बदला गया मार्क करें"
+  },
+  "inspection": {
+    "selectRoom": "कमरा चुनें",
+    "checklistTitle": "इंस्पेक्शन चेकलिस्ट — कमरा {{number}}",
+    "historyTitle": "इंस्पेक्शन इतिहास — कमरा {{number}}",
+    "pass": "पास",
+    "fail": "फ़ेल",
+    "unchecked": "बाकी",
+    "score": "स्कोर",
+    "you": "आप",
+    "submit": "इंस्पेक्शन सबमिट करें",
+    "checkAll": "सबमिट करने से पहले सभी आइटम जाँचें",
+    "emptyTitle": "अभी कोई इंस्पेक्शन नहीं",
+    "emptyMessage": "इस सेशन में कोई इंस्पेक्शन सबमिट नहीं हुआ।"
+  },
+  "checklist": {
+    "Minibar stocked": "मिनीबार भरा हुआ",
+    "Toiletries refilled": "टॉयलेटरीज़ भरी गईं",
+    "AC functional": "AC चालू है",
+    "TV functional": "TV चालू है",
+    "Bathroom clean": "बाथरूम साफ़",
+    "Bed made": "बिस्तर लगा हुआ",
+    "Fresh towels": "नए तौलिए",
+    "Floor mopped": "फ़र्श पर पोछा लगा",
+    "Dustbin emptied": "कूड़ेदान खाली"
+  },
+  "toast": {
+    "cleaningStarted": "कमरा {{number}} की सफ़ाई शुरू",
+    "markedClean": "कमरा {{number}} साफ़ मार्क किया गया",
+    "saveFailed": "कमरे का अपडेट सेव नहीं हो सका",
+    "roomUpdated": "कमरा {{number}} अपडेट हुआ",
+    "noMatching": "कोई मिलता कमरा नहीं मिला",
+    "bulkMarked_one": "{{count}} कमरा: {{status}}",
+    "bulkMarked_other": "{{count}} कमरे: {{status}}",
+    "linenChanged": "कमरा {{number}} का लिनन बदला गया",
+    "linenFailed": "लिनन बदलाव दर्ज नहीं हो सका",
+    "inspectionSaved": "इंस्पेक्शन सेव हुआ — स्कोर: {{score}}%",
+    "inspectionFailed": "इंस्पेक्शन सेव नहीं हो सका"
+  }
+}

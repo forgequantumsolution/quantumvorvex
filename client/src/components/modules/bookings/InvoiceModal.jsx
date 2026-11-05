@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, Button } from '../../ui-tw'
 import { bookingsApi } from '../../../api/client'
 import { useToast } from '../../../hooks/useToast'
@@ -18,6 +19,7 @@ async function errorMessage(err, fallback) {
  * a blob object URL.
  */
 export default function InvoiceModal({ isOpen, booking, onClose }) {
+  const { t } = useTranslation('bookings')
   const toast = useToast()
   const [url, setUrl] = useState('')
   const [loading, setLoading] = useState(false)
@@ -56,7 +58,7 @@ export default function InvoiceModal({ isOpen, booking, onClose }) {
         if (!active) return
         showPreview(htmlBlob)
       } catch (err) {
-        const msg = await errorMessage(err, 'Could not generate invoice')
+        const msg = await errorMessage(err, t('invoice.generateError'))
         if (active) setError(msg)
       } finally {
         if (active) setLoading(false)
@@ -64,6 +66,8 @@ export default function InvoiceModal({ isOpen, booking, onClose }) {
     })()
 
     return () => { active = false }
+    // t only feeds the fallback error text — a language switch shouldn't refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, booking])
 
   // Revoke the live object URL when the modal unmounts.
@@ -79,9 +83,9 @@ export default function InvoiceModal({ isOpen, booking, onClose }) {
       setSavedSerial(data.invoiceNo); setSerial(data.invoiceNo)
       const { data: htmlBlob } = await bookingsApi.getInvoice(booking.id)
       showPreview(htmlBlob)
-      toast('Invoice number updated', 'success')
+      toast(t('invoice.numberUpdated'), 'success')
     } catch (err) {
-      toast(await errorMessage(err, 'Could not update invoice number'), 'error')
+      toast(await errorMessage(err, t('invoice.numberError')), 'error')
     } finally {
       setSavingSerial(false)
     }
@@ -99,7 +103,7 @@ export default function InvoiceModal({ isOpen, booking, onClose }) {
       document.body.appendChild(a); a.click(); a.remove()
       setTimeout(() => URL.revokeObjectURL(pdfUrl), 10000)
     } catch (err) {
-      toast(await errorMessage(err, 'Could not download invoice PDF'), 'error')
+      toast(await errorMessage(err, t('invoice.downloadError')), 'error')
     } finally {
       setDownloading(false)
     }
@@ -116,42 +120,47 @@ export default function InvoiceModal({ isOpen, booking, onClose }) {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Tax Invoice"
+      title={t('invoice.title')}
       subtitle={`${booking.guestName} · ${booking.bookingNo}`}
       size="xl"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Close</Button>
-          <Button variant="ghost" onClick={print} disabled={!url}>🖨 Print</Button>
+          <Button variant="ghost" onClick={onClose}>{t('common:close')}</Button>
+          <Button variant="ghost" onClick={print} disabled={!url}>🖨 {t('common:print')}</Button>
+          {/* Three buttons share a phone's row, so the label shortens there. */}
           <Button onClick={download} disabled={!url || downloading}>
-            {downloading ? 'Preparing PDF…' : '⬇ Download PDF'}
+            {downloading
+              ? <><span className="sm:hidden">{t('invoice.preparing')}</span><span className="hidden sm:inline">{t('invoice.preparingPdf')}</span></>
+              : <>⬇ <span className="sm:hidden">PDF</span><span className="hidden sm:inline">{t('invoice.downloadPdf')}</span></>}
           </Button>
         </>
       }
     >
       {url && !error && (
-        <div className="mb-3 flex items-center gap-2">
-          <label className="text-[12px] font-semibold text-ink2 shrink-0">Invoice No.</label>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <label htmlFor="invoice-serial" className="w-full sm:w-auto text-xs font-semibold text-ink2 shrink-0">{t('invoice.number')}</label>
           <input
+            id="invoice-serial"
             value={serial}
             onChange={(e) => setSerial(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && saveSerial()}
-            placeholder="e.g. INV-0001"
-            className="w-[220px] px-2.5 py-1.5 text-[13px] bg-surface2 border border-line rounded-md text-ink"
+            placeholder={t('invoice.numberPlaceholder')}
+            className="flex-1 min-w-0 sm:flex-none sm:w-[220px] px-2.5 py-1.5 min-h-11 sm:min-h-0 text-base sm:text-[13px] bg-surface2 border border-line rounded-md text-ink
+                       focus:ring-gold/20 focus:border-gold"
           />
-          <Button variant="ghost" onClick={saveSerial} disabled={savingSerial || !serialDirty}>
-            {savingSerial ? 'Saving…' : 'Update'}
+          <Button variant="ghost" className="shrink-0" onClick={saveSerial} disabled={savingSerial || !serialDirty}>
+            {savingSerial ? t('common:saving') : t('invoice.update')}
           </Button>
         </div>
       )}
-      {loading && <div className="py-20 text-center text-ink3 text-sm">Generating invoice…</div>}
+      {loading && <div className="py-20 text-center text-ink3 text-sm">{t('invoice.generating')}</div>}
       {error && <div className="py-20 text-center text-danger-text text-sm">{error}</div>}
       {url && !error && (
         <iframe
           ref={frameRef}
-          title="Invoice preview"
+          title={t('invoice.preview')}
           src={url}
-          className="w-full h-[70vh] rounded-lg border border-line bg-white"
+          className="w-full h-[60dvh] sm:h-[70vh] rounded-lg border border-line bg-white"
         />
       )}
     </Modal>
