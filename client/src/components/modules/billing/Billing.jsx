@@ -7,6 +7,7 @@ import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
 import { useToast } from '../../../hooks/useToast'
+import { useAppSelector } from '../../../store/hooks'
 import { billingApi, guestsApi, remindersApi } from '../../../api/client'
 import { formatCurrency, formatDate } from '../../../utils/format'
 
@@ -776,7 +777,9 @@ export default function Billing() {
   const [error, setError]                   = useState('')
   const [search, setSearch]                 = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [statusFilter, setStatusFilter]     = useState('All')
+  // Another page can open Billing on a status (e.g. Portfolio's Collected → Paid).
+  const navStatus = useAppSelector((s) => s.ui.activePanelParams?.status)
+  const [statusFilter, setStatusFilter]     = useState(() => (['Paid', 'Pending', 'Overdue'].includes(navStatus) ? navStatus : 'All'))
   const [page, setPage]                     = useState(1)
   const [total, setTotal]                   = useState(0)
   // Full-dataset aggregates for the stat cards (independent of search/filter/page).
@@ -1024,13 +1027,23 @@ export default function Billing() {
       ] : []}
       stats={
         <>
-          <StatCard icon={<LuWallet />} tone="green" label={t('stats.collected')} value={formatCurrency(stats.collected)}
-            hint={t('stats.invoicesPaid', { count: stats.paidCount })} />
-          <StatCard icon={<LuClock />} tone="amber" label={t('common:pending')} value={formatCurrency(stats.pendingTotal)}
-            hint={t('stats.invoices', { count: stats.pendingCount })} />
-          <StatCard icon={<LuCircleAlert />} tone="red" label={t('common:overdue')} value={formatCurrency(stats.overdueTotal)}
-            hint={t('stats.invoices', { count: stats.overdueCount })} />
-          <StatCard icon={<LuPercent />} tone="blue" label={t('stats.gstCollected')} value={formatCurrency(stats.gstCollected)} hint={t('stats.fromPaid')} />
+          {/* Each card filters the Invoices list to the invoices it counts.
+              GST collected also filters to Paid, but only Collected shows as selected. */}
+          {[
+            { id: 'collected', filter: 'Paid', icon: <LuWallet />, tone: 'green', label: t('stats.collected'), value: formatCurrency(stats.collected), hint: t('stats.invoicesPaid', { count: stats.paidCount }) },
+            { id: 'pending', filter: 'Pending', icon: <LuClock />, tone: 'amber', label: t('common:pending'), value: formatCurrency(stats.pendingTotal), hint: t('stats.invoices', { count: stats.pendingCount }) },
+            { id: 'overdue', filter: 'Overdue', icon: <LuCircleAlert />, tone: 'red', label: t('common:overdue'), value: formatCurrency(stats.overdueTotal), hint: t('stats.invoices', { count: stats.overdueCount }) },
+            { id: 'gst', filter: 'Paid', icon: <LuPercent />, tone: 'blue', label: t('stats.gstCollected'), value: formatCurrency(stats.gstCollected), hint: t('stats.fromPaid') },
+          ].map(({ id, filter, ...k }) => {
+            const selected = activeTab === 'invoices' && statusFilter === filter && id !== 'gst'
+            return (
+              <StatCard key={id} {...k} selected={selected} onClick={() => {
+                setActiveTab('invoices')
+                // Clicking the selected card again goes back to every invoice.
+                handleStatusFilter(selected ? 'All' : filter)
+              }} />
+            )
+          })}
         </>
       }
       toolbar={<FilterTabs tabs={BILLING_TABS.map(tab => ({ id: tab.id, label: t(tab.labelKey) }))} active={activeTab} onChange={setActiveTab} wrap={false} />}

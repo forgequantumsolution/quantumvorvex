@@ -33,7 +33,9 @@
     "active": "సక్రియం",
     "due": "బాకీ / బకాయి",
     "checkedOut": "చెక్-అవుట్ అయినవారు",
-    "total": "మొత్తం అతిథులు"
+    "total": "మొత్తం అతిథులు",
+    "inHouseHint_one": "{{count}} ప్రస్తుతం ఉంటున్నారు",
+    "inHouseHint_other": "{{count}} ప్రస్తుతం ఉంటున్నారు"
   },
   "filter": {
     "allStays": "అన్ని బసలు",

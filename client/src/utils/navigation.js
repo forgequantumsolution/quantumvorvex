@@ -1,7 +1,7 @@
 import {
   LuLayoutDashboard, LuCalendarCheck, LuCalendarX, LuWrench,
   LuUsers, LuBedDouble, LuFileText, LuUtensils, LuSparkles,
-  LuCreditCard, LuChartColumn, LuUserCog, LuSettings, LuBuilding2,
+  LuCreditCard, LuWallet, LuChartColumn, LuUserCog, LuSettings, LuBuilding2,
 } from 'react-icons/lu'
 
 // Single source of truth for the app's navigation structure — consumed by the
@@ -40,6 +40,7 @@ export const NAV_SECTIONS = [
     label: 'Finance',
     items: [
       { id: 'billing',       label: 'Billing',       Icon: LuCreditCard },
+      { id: 'expenses',      label: 'Expenses',      Icon: LuWallet },
       { id: 'reports',       label: 'Reports',       Icon: LuChartColumn },
     ],
   },

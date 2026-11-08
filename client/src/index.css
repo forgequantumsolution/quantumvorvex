@@ -520,8 +520,8 @@
   position: sticky;
   top: calc(-1 * var(--content-pt));
   z-index: 20;
-  margin: calc(-1 * var(--content-pt)) calc(-1 * max(var(--content-px), env(safe-area-inset-right))) var(--content-pt) calc(-1 * max(var(--content-px), env(safe-area-inset-left)));
-  padding: 14px max(var(--content-px), env(safe-area-inset-right)) 14px max(var(--content-px), env(safe-area-inset-left));
+  margin: calc(-1 * var(--content-pt)) calc(-1 * max(var(--content-px), env(safe-area-inset-right))) 16px calc(-1 * max(var(--content-px), env(safe-area-inset-left)));
+  padding: 12px max(var(--content-px), env(safe-area-inset-right)) 12px max(var(--content-px), env(safe-area-inset-left));
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   backdrop-filter: saturate(1.4) blur(10px);
   -webkit-backdrop-filter: saturate(1.4) blur(10px);
@@ -535,8 +535,8 @@
 }
 @media (min-width: 768px) {
   .page-header {
-    margin: calc(-1 * var(--content-pt)) calc(-1 * var(--content-px)) var(--content-pt);
-    padding: 16px var(--content-px);
+    margin: calc(-1 * var(--content-pt)) calc(-1 * var(--content-px)) 20px;
+    padding: 12px var(--content-px);
   }
 }
 

@@ -1,0 +1,218 @@
+{
+  "title": "Expenses",
+  "searchPlaceholder": "Search payee, note or bill no…",
+  "loadError": "Couldn't load expenses. Check your connection and try again.",
+  "addExpense": "Add expense",
+  "exportCsv": "Export CSV",
+  "periods": {
+    "thisMonth": "This month",
+    "lastMonth": "Last month",
+    "thisQuarter": "This quarter",
+    "thisYear": "This year"
+  },
+  "tabs": {
+    "ledger": "Ledger",
+    "analysis": "Analysis",
+    "categories": "Categories"
+  },
+  "filters": {
+    "all": "All",
+    "out": "Money out",
+    "in": "Money in",
+    "unpaid": "Unpaid",
+    "reception": "Reception cash"
+  },
+  "kpi": {
+    "expenses": "Expenses",
+    "revenue": "Revenue collected",
+    "otherIncomeHint": "+{{amount}} other",
+    "net": "Net profit",
+    "marginHint": "{{pct}}%",
+    "unpaid": "Unpaid bills",
+    "unpaidHint_one": "{{count}} bill",
+    "unpaidHint_other": "{{count}} bills",
+    "cash": "Cash at reception",
+    "cashHint": "out {{amount}}"
+  },
+  "groups": {
+    "utilities": "Utilities",
+    "staff": "Staff",
+    "repairs": "Repairs & maintenance",
+    "housekeeping": "Housekeeping & laundry",
+    "guest_supplies": "Guest supplies",
+    "commission": "Commission",
+    "taxes_fees": "Taxes & fees",
+    "transport": "Transport & fuel",
+    "refunds": "Refunds",
+    "admin_other": "Admin & other"
+  },
+  "groupHelp": {
+    "utilities": "Electricity, water, gas, diesel, internet",
+    "staff": "Salaries, wages, advances",
+    "repairs": "Electrician, plumber, hardware, appliances, vehicle",
+    "housekeeping": "Laundry, cleaning, linen",
+    "guest_supplies": "Drinking water, newspaper, toiletries, first aid",
+    "commission": "Booking.com, MakeMyTrip and other OTAs",
+    "taxes_fees": "GST paid, licences, police and local fees",
+    "transport": "Petrol, fuel, travel",
+    "refunds": "Deposit, meter and guest refunds",
+    "admin_other": "Donations, garbage collection, anything else"
+  },
+  "paidFrom": {
+    "reception": "Reception",
+    "owner": "Owner",
+    "bank": "Bank"
+  },
+  "modes": {
+    "cash": "Cash",
+    "upi": "UPI",
+    "bank": "Bank transfer",
+    "card": "Card",
+    "cheque": "Cheque"
+  },
+  "status": {
+    "paid": "Paid",
+    "unpaid": "Unpaid"
+  },
+  "csv": {
+    "date": "Date",
+    "payee": "Payee",
+    "category": "Category",
+    "group": "Group",
+    "note": "Note",
+    "paidFrom": "Paid from",
+    "paidBy": "Paid by",
+    "mode": "Mode",
+    "reference": "Reference",
+    "status": "Status",
+    "out": "Out",
+    "in": "In"
+  },
+  "toast": {
+    "added": "Saved: {{payee}}",
+    "updated": "Updated: {{payee}}",
+    "paid": "Marked paid: {{payee}}",
+    "deleted": "Deleted: {{payee}}",
+    "failed": "Couldn't save. Please try again.",
+    "exportFailed": "Couldn't export. Please try again."
+  },
+  "delete": {
+    "title": "Delete entry",
+    "message": "Delete <b>{{payee}}</b> ({{amount}})? It will be removed from all totals."
+  },
+  "actions": {
+    "markPaid": "Mark paid",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "table": {
+    "date": "Date",
+    "particular": "Particular",
+    "paidFrom": "Paid from",
+    "mode": "Mode",
+    "out": "Out (−)",
+    "in": "In (+)",
+    "dayTotal": "Total for {{date}}",
+    "total": "Total",
+    "totalNote": "all pages of this view",
+    "net": "Net",
+    "totalOut": "Total out",
+    "totalIn": "Total in",
+    "balance": "Balance",
+    "today": "Today"
+  },
+  "empty": {
+    "title": "No entries yet",
+    "message": "Record each payment as it happens — totals and analysis update automatically.",
+    "search": "Nothing matches your search in this period."
+  },
+  "form": {
+    "addTitle": "Add expense",
+    "editTitle": "Edit entry",
+    "saveAnother": "Save & add another",
+    "type": "Entry",
+    "moneyOut": "Money out (−)",
+    "moneyIn": "Money in (+)",
+    "payee": "Paid to",
+    "receivedFrom": "Received from",
+    "payeePlaceholder": "e.g. MSEB, Uttam, Booking.com",
+    "category": "Category",
+    "chooseCategory": "Choose a category",
+    "refundHint": "Deposit refunds given at check-out are already recorded in Billing — only add refunds made outside the app.",
+    "amount": "Amount (₹)",
+    "date": "Date",
+    "status": "Status",
+    "paid": "Paid",
+    "notPaid": "Not paid yet",
+    "received": "Received",
+    "notReceived": "Not received yet",
+    "paidFrom": "Paid from",
+    "receivedInto": "Received into",
+    "paidBy": "Paid by",
+    "receivedBy": "Received by",
+    "paidByPlaceholder": "e.g. Ravi",
+    "mode": "Mode",
+    "reference": "Bill / invoice / UTR no.",
+    "referencePlaceholder": "Optional",
+    "note": "Note",
+    "notePlaceholder": "What was it for? (optional)",
+    "errors": {
+      "payee": "Enter who was paid.",
+      "category": "Choose a category.",
+      "amount": "Enter an amount above zero.",
+      "date": "Choose a date.",
+      "payer": "Enter who paid you."
+    },
+    "searchCategory": "Search categories",
+    "noCategory": "No matching category"
+  },
+  "analysis": {
+    "moneyOut": "Money out",
+    "moneyIn": "Money in",
+    "noSpend": "No spending recorded in this period.",
+    "budget": "Budget {{amount}}",
+    "entries_one": "{{count}} entry",
+    "entries_other": "{{count}} entries",
+    "overBudget": "Over budget by {{amount}} (budget {{budget}})",
+    "budgetLeft": "{{amount}} left of {{budget}}",
+    "cpor": "Cost per occupied room night",
+    "cporHelp": "What it cost to run the property for each room-night sold.",
+    "expenseRatio": "Expense-to-revenue ratio",
+    "expenseRatioHelp": "Out of every ₹100 collected from guests, how much was spent.",
+    "netMargin": "Net margin",
+    "netMarginHelp": "Share of all money in that is left after expenses.",
+    "roomNights": "Occupied room nights",
+    "roomNightsHelp": "Room-nights (or beds) sold in this period.",
+    "byGroup": "Spend by group",
+    "byGroupSub": "Total spent {{amount}} · the tick marks the budget",
+    "paidFrom": "Who paid",
+    "topPayees": "Top payees",
+    "dailyTrend": "Daily trend",
+    "monthlyTrend": "Monthly trend",
+    "trendSub": "Paid entries only"
+  },
+  "categories": {
+    "intro": "Expense heads used in the ledger. Set a monthly budget to compare it with actual spend under Analysis.",
+    "add": "Add category",
+    "addTo": "Add a category to {{group}}",
+    "addTitle": "Add category",
+    "editTitle": "Edit category",
+    "name": "Name",
+    "group": "Group",
+    "budget": "Monthly budget (₹)",
+    "budgetHint": "Leave empty for no budget.",
+    "budgetValue": "Budget {{amount}} / month",
+    "noBudget": "No budget",
+    "inactive": "Hidden from new entries",
+    "edit": "Rename / budget",
+    "activate": "Use again",
+    "deactivate": "Deactivate",
+    "empty": "No categories yet.",
+    "saved": "Saved: {{name}}",
+    "activated": "{{name}} is back in use",
+    "deactivated": "{{name}} is hidden from new entries",
+    "errors": {
+      "name": "Enter a name."
+    }
+  }
+}

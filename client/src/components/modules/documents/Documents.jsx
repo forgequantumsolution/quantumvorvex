@@ -514,10 +514,15 @@ export default function Documents() {
       ]}
       stats={
         <>
-          <StatCard icon={<LuUsers />} tone="blue"  label={t('stats.total')} value={totalGuests} />
-          <StatCard icon={<LuFileCheck />} tone="green" label={t('verification.verified')} value={verifiedCount}   hint={t('stats.verifiedHint')} />
-          <StatCard icon={<LuFileClock />} tone="amber" label={t('verification.pending')}  value={pendingCount}    hint={t('stats.pendingHint')} />
-          <StatCard icon={<LuFileX />} tone="red"   label={t('verification.incomplete')} value={incompleteCount} hint={t('stats.incompleteHint')} />
+          {/* Each card sets the status select below; the paging resets with it. */}
+          {[
+            { key: 'all', icon: <LuUsers />, tone: 'blue', label: t('stats.total'), value: totalGuests },
+            { key: 'verified', icon: <LuFileCheck />, tone: 'green', label: t('verification.verified'), value: verifiedCount, hint: t('stats.verifiedHint') },
+            { key: 'pending', icon: <LuFileClock />, tone: 'amber', label: t('verification.pending'), value: pendingCount, hint: t('stats.pendingHint') },
+            { key: 'incomplete', icon: <LuFileX />, tone: 'red', label: t('verification.incomplete'), value: incompleteCount, hint: t('stats.incompleteHint') },
+          ].map(({ key, ...k }) => (
+            <StatCard key={key} {...k} selected={statusFilter === key} onClick={() => { setStatusFilter(key); setPage(1) }} />
+          ))}
         </>
       }
     >

@@ -31,7 +31,7 @@ const withProperty = (url) => {
 // ── Mock adapter — short-circuits all HTTP when VITE_MOCK=true ────────────────
 if (MOCK) {
   api.defaults.adapter = async (config) => {
-    const data = await getMockResponse(config.method, config.url)
+    const data = await getMockResponse(config.method, config.url, config.params, config.data)
     return { data, status: 200, statusText: 'OK', headers: {}, config, request: {} }
   }
 }
@@ -113,6 +113,21 @@ export const billingApi = {
   getLetterhead:   ()        => api.get('/billing/letterhead'),
   getLedger:       (guestId) => api.get('/billing/ledger', { params: { guestId } }),
   getCashRegister: (date)    => api.get('/billing/cash-register', { params: { date } }),
+}
+
+// Cash book: money out (expenses) and other money in, with a period summary.
+// Dates are YYYY-MM-DD (inclusive); the period defaults to the current month.
+export const expensesApi = {
+  list:           (params)   => api.get('/expenses', { params }),   // { from, to, type, status, paidFrom, categoryId, group, search, page, limit }
+  summary:        (params)   => api.get('/expenses/summary', { params }), // { from, to }
+  payees:         ()         => api.get('/expenses/payees'),
+  create:         (data)     => api.post('/expenses', data),
+  update:         (id, data) => api.put(`/expenses/${id}`, data),
+  pay:            (id, data) => api.post(`/expenses/${id}/pay`, data || {}), // { date?, paymentMode?, paidFrom? }
+  remove:         (id)       => api.delete(`/expenses/${id}`),
+  categories:     ()         => api.get('/expenses/categories'),
+  createCategory: (data)     => api.post('/expenses/categories', data),     // { name, group, monthlyBudget? }
+  updateCategory: (id, data) => api.put(`/expenses/categories/${id}`, data), // { name?, group?, monthlyBudget?, active? }
 }
 
 export const bookingsApi = {

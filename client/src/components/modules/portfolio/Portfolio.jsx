@@ -7,6 +7,7 @@ import {
   LuBedDouble, LuTrendingUp, LuUsers, LuLogIn, LuCircleAlert, LuFilter, LuX, LuCheck,
 } from 'react-icons/lu'
 import StatCard from '../../ui-tw/StatCard'
+import { StatStrip } from '../../ui-tw'
 import { useAppSelector, useAuthActions, useUiActions, usePageHeader } from '../../../store/hooks'
 import { selectActiveProperty, selectProperties } from '../../../store/slices/authSlice'
 import { propertiesApi } from '../../../api/client'
@@ -101,8 +102,8 @@ function MiniForecast({ forecast, sellable, accent }) {
 
 // ─── KPI header ───────────────────────────────────────────────────────────────
 
-function KpiTile({ label, value, sub, icon: Icon, tone }) {
-  return <StatCard label={label} value={value} hint={sub} icon={Icon && <Icon />} tone={tone} />
+function KpiTile({ label, value, sub, icon: Icon, tone, onClick }) {
+  return <StatCard label={label} value={value} hint={sub} icon={Icon && <Icon />} tone={tone} onClick={onClick} />
 }
 
 function HeroOccupancy({ totals, accent }) {
@@ -858,10 +859,10 @@ function Skeleton() {
   const block = 'rounded-[10px] bg-line animate-pulse'
   return (
     <div className="flex flex-col gap-4" aria-busy="true" aria-label={t('loading')}>
-      <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
+      <div className="grid gap-4 xl:grid-cols-[300px_1fr]">
         <div className={`${block} h-[180px]`} />
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {[...Array(6)].map((_, i) => <div key={i} className={`${block} h-[84px]`} />)}
+        <div className="hidden xl:flex flex-col gap-3 min-w-0">
+          {[0, 1].map((i) => <div key={i} className={`${block} flex-1`} />)}
         </div>
       </div>
       <div className="grid gap-4 lg:grid-cols-[1fr_340px]">
@@ -963,6 +964,12 @@ export default function Portfolio() {
       window.removeEventListener('focus', onVisible)
     }
   }, [load])
+
+  // KPI deep-links. They open the active property's pages: in single-property
+  // scope that is the property shown; in the combined view it is whichever
+  // property is active. Billing takes no filter param, so Collected just opens it.
+  const goBookings = (tab) => navigateTo({ panel: 'bookings', params: { tab } })
+  const goReports = () => navigateTo({ panel: 'reports', params: { tab: 'revenue' } })
 
   const open = (id, panel = 'today') => {
     if (id !== activePropertyId) setActiveProperty(id)
@@ -1084,15 +1091,22 @@ export default function Portfolio() {
       {tot && (
         <>
           {/* Hero + KPIs */}
-          <section className="grid gap-4 lg:grid-cols-[300px_1fr]" aria-label={t('keyFigures')}>
+          {/* Hero + KPIs. The KPI strips (two rows of three) show from xl and
+              deep-link to the active property's pages; below xl only the hero
+              stays, full width. */}
+          <section className="grid gap-4 xl:grid-cols-[300px_1fr]" aria-label={t('keyFigures')}>
             <HeroOccupancy totals={tot} accent={accent} />
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <KpiTile icon={LuBedDouble} tone="gold" label={t('col.adr')} value={tot.adr ? formatCurrency(tot.adr) : '—'} sub={t('kpi.adrSub')} />
-              <KpiTile icon={LuTrendingUp} tone="blue" label={t('col.revpar')} value={tot.revpar ? formatCurrency(tot.revpar) : '—'} sub={t('kpi.revparSub')} />
-              <KpiTile icon={LuUsers} tone="green" label={t('kpi.inHouse')} value={tot.inHouse} sub={t('kpi.inHouseSub', { count: tot.occupied })} />
-              <KpiTile icon={LuLogIn} tone="purple" label={t('kpi.arrivals')} value={tot.arrivalsToday} sub={t('kpi.arrivalsSub', { count: tot.departuresToday })} />
-              <KpiTile icon={LuWallet} tone="green" label={t('kpi.collected')} value={formatCurrency(tot.collectedThisMonth)} sub={t('kpi.collectedSub', { amount: formatCurrency(tot.collectedToday) })} />
-              <KpiTile icon={LuCircleAlert} tone="amber" label={t('col.outstanding')} value={formatCurrency(tot.outstanding)} sub={tot.outstanding > 0 ? t('kpi.outstandingSub') : t('kpi.nothingDue')} />
+            <div className="hidden xl:flex flex-col gap-3 min-w-0">
+              <StatStrip className="flex-1">
+                <KpiTile icon={LuBedDouble} tone="gold" label={t('col.adr')} value={tot.adr ? formatCurrency(tot.adr) : '—'} sub={t('kpi.adrSub')} onClick={goReports} />
+                <KpiTile icon={LuTrendingUp} tone="blue" label={t('col.revpar')} value={tot.revpar ? formatCurrency(tot.revpar) : '—'} sub={t('kpi.revparSub')} onClick={goReports} />
+                <KpiTile icon={LuUsers} tone="green" label={t('kpi.inHouse')} value={tot.inHouse} sub={t('kpi.inHouseSub', { count: tot.occupied })} onClick={() => goBookings('CheckedIn')} />
+              </StatStrip>
+              <StatStrip className="flex-1">
+                <KpiTile icon={LuLogIn} tone="purple" label={t('kpi.arrivals')} value={tot.arrivalsToday} sub={t('kpi.arrivalsSub', { count: tot.departuresToday })} onClick={() => goBookings('Upcoming')} />
+                <KpiTile icon={LuWallet} tone="green" label={t('kpi.collected')} value={formatCurrency(tot.collectedThisMonth)} sub={t('kpi.collectedSub', { amount: formatCurrency(tot.collectedToday) })} onClick={() => navigateTo({ panel: 'billing', params: { status: 'Paid' } })} />
+                <KpiTile icon={LuCircleAlert} tone="amber" label={t('col.outstanding')} value={formatCurrency(tot.outstanding)} sub={tot.outstanding > 0 ? t('kpi.outstandingSub') : t('kpi.nothingDue')} onClick={() => goBookings('Dues')} />
+              </StatStrip>
             </div>
           </section>
 

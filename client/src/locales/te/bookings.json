@@ -21,14 +21,22 @@
     "Confirmed": "నిర్ధారించబడినవి",
     "CheckedIn": "చెక్-ఇన్ అయినవి",
     "CheckedOut": "చెక్-అవుట్ అయినవి",
-    "Cancelled": "రద్దు చేయబడినవి"
+    "Cancelled": "రద్దు చేయబడినవి",
+    "Dues": "బాకీ ఉన్నవి"
   },
   "stats": {
     "total": "మొత్తం బుకింగ్‌లు",
     "confirmed": "నిర్ధారించబడినవి",
     "checkedInHint": "{{count}} చెక్-ఇన్ అయ్యారు",
     "activeValue": "యాక్టివ్ విలువ",
-    "dues": "మిగిలిన బాకీలు"
+    "dues": "మిగిలిన బాకీలు",
+    "inHouse": "బసలో ఉన్నవారు",
+    "upcomingHint": "{{count}} రాబోయేవి",
+    "pendingHint": "{{count}} నిర్ధారణ కోసం వేచి ఉన్నాయి",
+    "activeValueHint": "{{amount}} యాక్టివ్ విలువ",
+    "duesHint_one": "{{count}} బుకింగ్",
+    "duesHint_other": "{{count}} బుకింగ్‌లు",
+    "showFiltered": "{{label}} చూపించండి"
   },
   "toast": {
     "created": "{{name}} కోసం బుకింగ్ {{no}} సృష్టించబడింది",
@@ -444,5 +452,18 @@
     "update": "అప్‌డేట్ చేయండి",
     "generating": "ఇన్‌వాయిస్ రూపొందిస్తోంది…",
     "preview": "ఇన్‌వాయిస్ ప్రివ్యూ"
+  },
+  "card": {
+    "checkIn": "చెక్-ఇన్",
+    "checkOut": "చెక్-అవుట్",
+    "moveIn": "ప్రవేశం",
+    "untilMoveOut": "ఖాళీ చేసే వరకు",
+    "nightOf": "{{total}}లో {{n}}వ రాత్రి",
+    "arrivesIn_one": "రేపు వస్తారు",
+    "arrivesIn_other": "{{count}} రోజుల్లో వస్తారు",
+    "arrivesToday": "ఈరోజు వస్తారు",
+    "leavesToday": "ఈరోజు వెళ్తారు",
+    "paid": "{{amount}} చెల్లించారు",
+    "perMonth": "/ నెల"
   }
 }

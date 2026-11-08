@@ -41,6 +41,25 @@ export function validate(schema) {
 
 // ─── Shared schemas ────────────────────────────────────────────────────────────
 
+export const EXPENSE_GROUPS = ['utilities', 'staff', 'repairs', 'housekeeping', 'guest_supplies', 'commission', 'taxes_fees', 'transport', 'refunds', 'admin_other']
+const EXPENSE_MODES     = ['cash', 'upi', 'bank', 'card', 'cheque']
+const EXPENSE_PAID_FROM = ['reception', 'owner', 'bank']
+
+// YYYY-MM-DD (or a full ISO timestamp); the controller turns it into a local day.
+const expenseDate = z.string().trim().refine((v) => !Number.isNaN(Date.parse(v)), 'Enter a valid date')
+
+// Optional fields shared by create/update expense.
+const expenseFields = z.object({
+  type:        z.enum(['expense', 'income']).optional(),
+  description: z.string().max(500).trim().optional().nullable(),
+  status:      z.enum(['paid', 'unpaid']).optional(),
+  paymentMode: z.enum(EXPENSE_MODES).optional(),
+  paidFrom:    z.enum(EXPENSE_PAID_FROM).optional(),
+  paidByName:  z.string().max(80).trim().optional().nullable(),
+  reference:   z.string().max(80).trim().optional().nullable(),
+  bookingId:   z.string().max(40).optional().nullable(),
+})
+
 export const schemas = {
   // Auth
   login: z.object({
@@ -395,6 +414,40 @@ export const schemas = {
   addMaintenanceNote: z.object({
     author:  z.string().max(100).optional().nullable(),
     content: z.string().min(1, 'Note cannot be empty').max(1000).trim(),
+  }),
+
+  // Expenses (cash book)
+  createExpenseCategory: z.object({
+    name:          z.string().min(1, 'Name is required').max(80).trim(),
+    group:         z.enum(EXPENSE_GROUPS),
+    monthlyBudget: z.number().min(0).max(100000000).optional().nullable(),
+  }),
+
+  updateExpenseCategory: z.object({
+    name:          z.string().min(1).max(80).trim().optional(),
+    group:         z.enum(EXPENSE_GROUPS).optional(),
+    monthlyBudget: z.number().min(0).max(100000000).optional().nullable(),
+    active:        z.boolean().optional(),
+  }),
+
+  createExpense: expenseFields.extend({
+    date:       expenseDate,
+    categoryId: z.string().min(1, 'Choose a category'),
+    payee:      z.string().min(1, 'Payee is required').max(120).trim(),
+    amount:     z.number({ message: 'Enter an amount' }).positive('Amount must be more than 0').max(100000000),
+  }),
+
+  updateExpense: expenseFields.extend({
+    date:       expenseDate.optional(),
+    categoryId: z.string().min(1).optional(),
+    payee:      z.string().min(1).max(120).trim().optional(),
+    amount:     z.number().positive('Amount must be more than 0').max(100000000).optional(),
+  }),
+
+  payExpense: z.object({
+    date:        expenseDate.optional(),
+    paymentMode: z.enum(EXPENSE_MODES).optional(),
+    paidFrom:    z.enum(EXPENSE_PAID_FROM).optional(),
   }),
 
   // Food plan

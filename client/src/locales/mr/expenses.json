@@ -1,0 +1,218 @@
+{
+  "title": "खर्च",
+  "searchPlaceholder": "कोणाला दिले, नोंद किंवा बिल क्रमांक शोधा…",
+  "loadError": "खर्च लोड झाले नाहीत. इंटरनेट तपासून पुन्हा प्रयत्न करा.",
+  "addExpense": "खर्च जोडा",
+  "exportCsv": "CSV डाउनलोड करा",
+  "periods": {
+    "thisMonth": "या महिन्यात",
+    "lastMonth": "मागच्या महिन्यात",
+    "thisQuarter": "या तिमाहीत",
+    "thisYear": "या वर्षी"
+  },
+  "tabs": {
+    "ledger": "खातेवही",
+    "analysis": "विश्लेषण",
+    "categories": "प्रकार"
+  },
+  "filters": {
+    "all": "सर्व",
+    "out": "पैसे गेले",
+    "in": "पैसे आले",
+    "unpaid": "बाकी",
+    "reception": "रिसेप्शन रोख"
+  },
+  "kpi": {
+    "expenses": "खर्च",
+    "revenue": "पाहुण्यांकडून वसुली",
+    "otherIncomeHint": "+{{amount}} इतर",
+    "net": "निव्वळ नफा",
+    "marginHint": "{{pct}}%",
+    "unpaid": "बाकी बिले",
+    "unpaidHint_one": "{{count}} बिल",
+    "unpaidHint_other": "{{count}} बिले",
+    "cash": "रिसेप्शनवरील रोख",
+    "cashHint": "खर्च {{amount}}"
+  },
+  "groups": {
+    "utilities": "वीज-पाणी इ.",
+    "staff": "कर्मचारी",
+    "repairs": "दुरुस्ती व देखभाल",
+    "housekeeping": "हाउसकीपिंग व धुलाई",
+    "guest_supplies": "पाहुण्यांचे साहित्य",
+    "commission": "कमिशन",
+    "taxes_fees": "कर व शुल्क",
+    "transport": "प्रवास व इंधन",
+    "refunds": "परतावा",
+    "admin_other": "प्रशासन व इतर"
+  },
+  "groupHelp": {
+    "utilities": "वीज, पाणी, गॅस, डिझेल, इंटरनेट",
+    "staff": "पगार, मजुरी, उचल",
+    "repairs": "इलेक्ट्रिशियन, प्लंबर, हार्डवेअर, उपकरणे, वाहन",
+    "housekeeping": "धुलाई, स्वच्छता, चादरी-टॉवेल",
+    "guest_supplies": "पिण्याचे पाणी, वर्तमानपत्र, टॉयलेटरी, प्रथमोपचार",
+    "commission": "Booking.com, MakeMyTrip व इतर OTA",
+    "taxes_fees": "भरलेला GST, परवाने, पोलीस व स्थानिक शुल्क",
+    "transport": "पेट्रोल, इंधन, प्रवास",
+    "refunds": "डिपॉझिट, मीटर व पाहुण्यांचा परतावा",
+    "admin_other": "देणगी, कचरा संकलन, इतर सर्व"
+  },
+  "paidFrom": {
+    "reception": "रिसेप्शन",
+    "owner": "मालक",
+    "bank": "बँक"
+  },
+  "modes": {
+    "cash": "रोख",
+    "upi": "UPI",
+    "bank": "बँक ट्रान्सफर",
+    "card": "कार्ड",
+    "cheque": "चेक"
+  },
+  "status": {
+    "paid": "दिले",
+    "unpaid": "बाकी"
+  },
+  "csv": {
+    "date": "तारीख",
+    "payee": "कोणाला",
+    "category": "प्रकार",
+    "group": "गट",
+    "note": "नोंद",
+    "paidFrom": "कुठून दिले",
+    "paidBy": "कोणी दिले",
+    "mode": "पद्धत",
+    "reference": "संदर्भ",
+    "status": "स्थिती",
+    "out": "गेले",
+    "in": "आले"
+  },
+  "toast": {
+    "added": "जतन केले: {{payee}}",
+    "updated": "बदलले: {{payee}}",
+    "paid": "पैसे दिले म्हणून नोंद: {{payee}}",
+    "deleted": "काढले: {{payee}}",
+    "failed": "जतन झाले नाही. पुन्हा प्रयत्न करा.",
+    "exportFailed": "डाउनलोड झाले नाही. पुन्हा प्रयत्न करा."
+  },
+  "delete": {
+    "title": "नोंद काढा",
+    "message": "<b>{{payee}}</b> ({{amount}}) काढायचे? ही सर्व बेरजेतून निघून जाईल."
+  },
+  "actions": {
+    "markPaid": "पैसे दिले",
+    "edit": "बदला",
+    "delete": "काढा"
+  },
+  "table": {
+    "date": "तारीख",
+    "particular": "तपशील",
+    "paidFrom": "कुठून दिले",
+    "mode": "पद्धत",
+    "out": "गेले (−)",
+    "in": "आले (+)",
+    "dayTotal": "{{date}} ची बेरीज",
+    "total": "एकूण",
+    "totalNote": "या यादीची सर्व पाने",
+    "net": "निव्वळ",
+    "totalOut": "एकूण गेले",
+    "totalIn": "एकूण आले",
+    "balance": "शिल्लक",
+    "today": "आज"
+  },
+  "empty": {
+    "title": "अजून नोंदी नाहीत",
+    "message": "प्रत्येक पैसे देणे लगेच नोंदवा — बेरीज आणि विश्लेषण आपोआप होते.",
+    "search": "या कालावधीत तुमच्या शोधाशी जुळणारे काही नाही."
+  },
+  "form": {
+    "addTitle": "खर्च जोडा",
+    "editTitle": "नोंद बदला",
+    "saveAnother": "जतन करा व आणखी जोडा",
+    "type": "नोंद",
+    "moneyOut": "पैसे गेले (−)",
+    "moneyIn": "पैसे आले (+)",
+    "payee": "कोणाला दिले",
+    "receivedFrom": "कोणाकडून आले",
+    "payeePlaceholder": "उदा. MSEB, उत्तम, Booking.com",
+    "category": "प्रकार",
+    "chooseCategory": "प्रकार निवडा",
+    "refundHint": "चेक-आउटला परत केलेले डिपॉझिट बिलिंगमध्ये आधीच नोंदलेले आहेत — इथे फक्त ॲपबाहेर दिलेला परतावा जोडा.",
+    "amount": "रक्कम (₹)",
+    "date": "तारीख",
+    "status": "स्थिती",
+    "paid": "दिले",
+    "notPaid": "अजून दिले नाही",
+    "received": "मिळाले",
+    "notReceived": "अजून मिळाले नाही",
+    "paidFrom": "कुठून दिले",
+    "receivedInto": "कुठे आले",
+    "paidBy": "कोणी दिले",
+    "receivedBy": "कोणी घेतले",
+    "paidByPlaceholder": "उदा. रवी",
+    "mode": "पद्धत",
+    "reference": "बिल / इनव्हॉइस / UTR क्रमांक",
+    "referencePlaceholder": "ऐच्छिक",
+    "note": "नोंद",
+    "notePlaceholder": "कशासाठी? (ऐच्छिक)",
+    "errors": {
+      "payee": "कोणाला पैसे दिले ते लिहा.",
+      "category": "प्रकार निवडा.",
+      "amount": "शून्यापेक्षा जास्त रक्कम लिहा.",
+      "date": "तारीख निवडा.",
+      "payer": "कोणी पैसे दिले ते लिहा."
+    },
+    "searchCategory": "श्रेणी शोधा",
+    "noCategory": "जुळणारी श्रेणी नाही"
+  },
+  "analysis": {
+    "moneyOut": "पैसे गेले",
+    "moneyIn": "पैसे आले",
+    "noSpend": "या कालावधीत खर्चाची नोंद नाही.",
+    "budget": "बजेट {{amount}}",
+    "entries_one": "{{count}} नोंद",
+    "entries_other": "{{count}} नोंदी",
+    "overBudget": "बजेटपेक्षा {{amount}} जास्त (बजेट {{budget}})",
+    "budgetLeft": "{{budget}} पैकी {{amount}} शिल्लक",
+    "cpor": "प्रति भरलेल्या खोलीची रात्र खर्च",
+    "cporHelp": "विकलेल्या प्रत्येक खोली-रात्रीमागे प्रॉपर्टी चालवण्याचा खर्च.",
+    "expenseRatio": "खर्च-उत्पन्न गुणोत्तर",
+    "expenseRatioHelp": "पाहुण्यांकडून आलेल्या प्रत्येक ₹100 पैकी किती खर्च झाले.",
+    "netMargin": "निव्वळ मार्जिन",
+    "netMarginHelp": "एकूण उत्पन्नापैकी खर्चानंतर उरलेला भाग.",
+    "roomNights": "भरलेल्या खोली-रात्री",
+    "roomNightsHelp": "या कालावधीत विकलेल्या खोली-रात्री (किंवा बेड).",
+    "byGroup": "गटानुसार खर्च",
+    "byGroupSub": "एकूण खर्च {{amount}} · खूण बजेट दाखवते",
+    "paidFrom": "कोणी पैसे दिले",
+    "topPayees": "सर्वाधिक पैसे दिलेले",
+    "dailyTrend": "रोजचा कल",
+    "monthlyTrend": "महिनावार कल",
+    "trendSub": "फक्त दिलेल्या नोंदी"
+  },
+  "categories": {
+    "intro": "खातेवहीत वापरले जाणारे खर्चाचे प्रकार. विश्लेषणात प्रत्यक्ष खर्चाशी तुलना करण्यासाठी मासिक बजेट ठेवा.",
+    "add": "प्रकार जोडा",
+    "addTo": "{{group}} मध्ये प्रकार जोडा",
+    "addTitle": "प्रकार जोडा",
+    "editTitle": "प्रकार बदला",
+    "name": "नाव",
+    "group": "गट",
+    "budget": "मासिक बजेट (₹)",
+    "budgetHint": "बजेट नसल्यास रिकामे ठेवा.",
+    "budgetValue": "बजेट {{amount}} / महिना",
+    "noBudget": "बजेट नाही",
+    "inactive": "नवीन नोंदींमध्ये दिसणार नाही",
+    "edit": "नाव / बजेट बदला",
+    "activate": "पुन्हा वापरा",
+    "deactivate": "बंद करा",
+    "empty": "अजून प्रकार नाहीत.",
+    "saved": "जतन केले: {{name}}",
+    "activated": "{{name}} पुन्हा वापरात आहे",
+    "deactivated": "{{name}} नवीन नोंदींमध्ये दिसणार नाही",
+    "errors": {
+      "name": "नाव लिहा."
+    }
+  }
+}

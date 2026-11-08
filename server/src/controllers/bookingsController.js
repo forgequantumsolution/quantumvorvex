@@ -21,6 +21,9 @@ const DEMO_TODAY = new Date('2026-06-02')
 // Used for the "Active value" / "Outstanding dues" stat aggregates.
 const ACTIVE_STATUSES = ['Pending', 'Confirmed', 'CheckedIn']
 
+// WHERE clause for the "With dues" tab: live bookings with a balance left to pay.
+const duesWhere = { status: { in: ACTIVE_STATUSES }, balance: { gt: 0 } }
+
 // WHERE clause for the "Upcoming" tab: a future-or-today arrival still pending/confirmed.
 const upcomingWhere = {
   fromDate: { gte: DEMO_TODAY },
@@ -238,6 +241,9 @@ export const getBookings = async (req, res) => {
     const where = { deletedAt: null }
     if (status === 'Upcoming') {
       Object.assign(where, upcomingWhere)
+    } else if (status === 'Dues') {
+      // Live bookings still owing money (the Outstanding dues figure).
+      Object.assign(where, duesWhere)
     } else if (status && status !== 'all') {
       where.status = status
     }
@@ -278,13 +284,14 @@ export const getBookings = async (req, res) => {
 // never has to load every row just to show totals.
 export const getBookingStats = async (req, res) => {
   try {
-    const [grouped, active, upcoming] = await Promise.all([
+    const [grouped, active, upcoming, withDues] = await Promise.all([
       prisma.booking.groupBy({ by: ['status'], where: { deletedAt: null }, _count: { _all: true } }),
       prisma.booking.aggregate({
         where: { status: { in: ACTIVE_STATUSES }, deletedAt: null },
         _sum: { amount: true, balance: true },
       }),
       prisma.booking.count({ where: { ...upcomingWhere, deletedAt: null } }),
+      prisma.booking.count({ where: { ...duesWhere, deletedAt: null } }),
     ])
 
     const byStatus = Object.fromEntries(grouped.map((g) => [g.status, g._count._all]))
@@ -294,7 +301,10 @@ export const getBookingStats = async (req, res) => {
       stats: {
         total,
         confirmed: byStatus.Confirmed || 0,
+        pending: byStatus.Pending || 0,
         checkedIn: byStatus.CheckedIn || 0,
+        upcoming,
+        withDues,
         revenue: active._sum.amount || 0,
         dues: active._sum.balance || 0,
       },
@@ -305,6 +315,7 @@ export const getBookingStats = async (req, res) => {
         CheckedIn: byStatus.CheckedIn || 0,
         CheckedOut: byStatus.CheckedOut || 0,
         Cancelled: byStatus.Cancelled || 0,
+        Dues: withDues,
       },
     })
   } catch (err) {

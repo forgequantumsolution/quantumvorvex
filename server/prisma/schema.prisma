@@ -44,6 +44,8 @@ model Property {
   maintenanceSchedules MaintenanceSchedule[]
   linenRecords         LinenRecord[]
   roomInspections      RoomInspection[]
+  expenseCategories    ExpenseCategory[]
+  expenses             Expense[]
 }
 
 // A non-owner user's membership of one property, with the role they hold there.
@@ -638,6 +640,52 @@ model MaintenanceSchedule {
   nextDue    DateTime
 
   @@index([propertyId])
+}
+
+// ─── EXPENSES (cash book) ────────────────────────────────────────────────────
+// Money out (type "expense") and other money in (type "income") that is not a
+// guest payment. Categories roll up into fixed groups (utilities, staff, …).
+model ExpenseCategory {
+  id            String    @id @default(cuid())
+  propertyId    String
+  property      Property  @relation(fields: [propertyId], references: [id])
+  name          String
+  group         String // utilities | staff | repairs | housekeeping | guest_supplies | commission | taxes_fees | transport | refunds | admin_other
+  monthlyBudget Float?
+  active        Boolean   @default(true)
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  expenses      Expense[]
+
+  @@unique([propertyId, name])
+  @@index([propertyId])
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  propertyId  String
+  property    Property        @relation(fields: [propertyId], references: [id])
+  type        String          @default("expense") // expense (money out) | income (other money in)
+  date        DateTime
+  categoryId  String
+  category    ExpenseCategory @relation(fields: [categoryId], references: [id])
+  payee       String
+  description String?
+  amount      Float // always positive; sign comes from type
+  status      String          @default("paid") // paid | unpaid
+  paymentMode String          @default("cash") // cash | upi | bank | card | cheque
+  paidFrom    String          @default("reception") // reception | owner | bank
+  paidByName  String?
+  reference   String?
+  bookingId   String?
+  createdById String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
+
+  @@index([propertyId, date])
+  @@index([categoryId])
 }
 
 // ─── ADDON 4: STAFF ───────────────────────────────────────────────────────────

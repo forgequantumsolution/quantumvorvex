@@ -26,6 +26,7 @@ import notificationsRoutes from './routes/notifications.js'
 import reportsRoutes from './routes/reports.js'
 import foodPlansRoutes from './routes/foodPlans.js'
 import maintenanceRoutes from './routes/maintenance.js'
+import expensesRoutes from './routes/expenses.js'
 import housekeepingRoutes from './routes/housekeeping.js'
 import rolesRoutes from './routes/roles.js'
 import pricingRoutes from './routes/pricing.js'
@@ -155,6 +156,7 @@ app.use('/api/v1/reports',       apiLimiter, reportsRoutes)
 // router, so it intercepts every /api/v1/* request registered after it — which
 // would 401 the public guest QR routes (/api/v1/maintenance/public/*).
 app.use('/api/v1/maintenance',   apiLimiter, maintenanceRoutes)
+app.use('/api/v1/expenses',      apiLimiter, apiSlowDown, expensesRoutes)
 app.use('/api/v1',               apiLimiter, foodPlansRoutes)
 app.use('/api/v1/housekeeping',  apiLimiter, housekeepingRoutes)
 app.use('/api/v1/roles',         apiLimiter, rolesRoutes)

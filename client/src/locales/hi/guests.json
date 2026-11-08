@@ -33,7 +33,9 @@
     "active": "सक्रिय",
     "due": "देय / अतिदेय",
     "checkedOut": "Check-out हो चुके",
-    "total": "कुल अतिथि"
+    "total": "कुल अतिथि",
+    "inHouseHint_one": "{{count}} अभी ठहरे हुए",
+    "inHouseHint_other": "{{count}} अभी ठहरे हुए"
   },
   "filter": {
     "allStays": "सभी ठहराव",

@@ -33,6 +33,7 @@ const UsersRoles    = lazy(() => import('./components/modules/users/UsersRoles')
 const Guests        = lazy(() => import('./components/modules/guests/Guests'))
 const Rooms         = lazy(() => import('./components/modules/rooms/Rooms'))
 const Billing       = lazy(() => import('./components/modules/billing/Billing'))
+const Expenses      = lazy(() => import('./components/modules/expenses/Expenses'))
 const Documents     = lazy(() => import('./components/modules/documents/Documents'))
 const Food          = lazy(() => import('./components/modules/food/Food'))
 const Reports       = lazy(() => import('./components/modules/reports/Reports'))
@@ -116,6 +117,7 @@ const PANEL_MAP = {
   guests:        Guests,
   rooms:         Rooms,
   billing:       Billing,
+  expenses:      Expenses,
   documents:     Documents,
   food:          Food,
   reports:       Reports,

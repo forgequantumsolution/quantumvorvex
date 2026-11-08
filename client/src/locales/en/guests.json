@@ -33,7 +33,9 @@
     "active": "Active",
     "due": "Due / Overdue",
     "checkedOut": "Checked out",
-    "total": "Total guests"
+    "total": "Total guests",
+    "inHouseHint_one": "{{count}} staying now",
+    "inHouseHint_other": "{{count}} staying now"
   },
   "filter": {
     "allStays": "All stays",

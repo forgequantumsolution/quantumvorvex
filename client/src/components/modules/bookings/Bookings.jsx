@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
-import { LuTable2, LuLayoutGrid, LuCalendarDays, LuCalendarCheck, LuIndianRupee, LuCircleAlert, LuPlus, LuRefreshCw, LuX } from 'react-icons/lu'
+import { LuTable2, LuLayoutGrid, LuCalendarDays, LuCalendarCheck, LuBedDouble, LuCircleAlert, LuPlus, LuRefreshCw, LuX } from 'react-icons/lu'
 import { PageWrapper, StatCard, Card, FilterTabs, Pagination } from '../../ui-tw'
 import BookingsTable from './BookingsTable'
 import BookingForm from './BookingForm'
@@ -22,9 +22,9 @@ import { bedLabel } from '../../../utils/beds'
 import { normalizeBooking as normalize } from '../../../utils/normalizeBooking'
 
 // Labels come from bookings:tabs.<id> at render time.
-const TAB_IDS = ['all', 'Upcoming', 'Confirmed', 'CheckedIn', 'CheckedOut', 'Cancelled']
+const TAB_IDS = ['all', 'Upcoming', 'Confirmed', 'CheckedIn', 'CheckedOut', 'Cancelled', 'Dues']
 const PAGE_SIZE = 8
-const EMPTY_COUNTS = { all: 0, Upcoming: 0, Confirmed: 0, CheckedIn: 0, CheckedOut: 0, Cancelled: 0 }
+const EMPTY_COUNTS = { all: 0, Upcoming: 0, Confirmed: 0, CheckedIn: 0, CheckedOut: 0, Cancelled: 0, Dues: 0 }
 
 const VIEWS = [
   { id: 'table', labelKey: 'page.tableView', icon: <LuTable2 /> },
@@ -301,10 +301,15 @@ export default function Bookings() {
       ]}
       stats={showNew && isPhone ? null : (
         <>
-          <StatCard icon={<LuCalendarDays />} tone="gold" label={t('stats.total')} value={stats.total} />
-          <StatCard icon={<LuCalendarCheck />} tone="blue" label={t('stats.confirmed')} value={stats.confirmed} hint={t('stats.checkedInHint', { count: stats.checkedIn })} />
-          <StatCard icon={<LuIndianRupee />} tone="green" label={t('stats.activeValue')} value={formatCurrency(stats.revenue)} />
-          <StatCard icon={<LuCircleAlert />} tone="amber" label={t('stats.dues')} value={formatCurrency(stats.dues)} />
+          {/* Each card filters the list below to the bookings it counts. */}
+          {[
+            { tab: 'all', icon: <LuCalendarDays />, tone: 'gold', label: t('stats.total'), value: stats.total, hint: t('stats.upcomingHint', { count: stats.upcoming ?? 0 }) },
+            { tab: 'Confirmed', icon: <LuCalendarCheck />, tone: 'blue', label: t('stats.confirmed'), value: stats.confirmed, hint: t('stats.pendingHint', { count: stats.pending ?? 0 }) },
+            { tab: 'CheckedIn', icon: <LuBedDouble />, tone: 'green', label: t('stats.inHouse'), value: stats.checkedIn, hint: t('stats.activeValueHint', { amount: formatCurrency(stats.revenue) }) },
+            { tab: 'Dues', icon: <LuCircleAlert />, tone: 'amber', label: t('stats.dues'), value: formatCurrency(stats.dues), hint: t('stats.duesHint', { count: stats.withDues ?? 0 }) },
+          ].map((k) => (
+            <StatCard key={k.tab} {...k} selected={tab === k.tab} onClick={() => { handleTabChange(k.tab); setShowNew(false) }} />
+          ))}
         </>
       )}
     >

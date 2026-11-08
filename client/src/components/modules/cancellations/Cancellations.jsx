@@ -18,6 +18,7 @@ export default function Cancellations() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
+  const [view, setView] = useState('all')   // all | lost (value lost, largest first)
   const [showCancel, setShowCancel] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
@@ -57,13 +58,18 @@ export default function Cancellations() {
   }, [cancelled, cancellable, bookings])
 
   const filtered = useMemo(() => {
+    let list = cancelled
+    if (view === 'lost') {
+      list = list.filter((b) => Number(b.amount) > 0).sort((a, b) => Number(b.amount) - Number(a.amount))
+    }
     const q = query.trim().toLowerCase()
-    if (!q) return cancelled
-    return cancelled.filter((b) =>
+    if (!q) return list
+    return list.filter((b) =>
       b.guestName?.toLowerCase().includes(q) ||
       b.bookingNo?.toLowerCase().includes(q) ||
       (b.cancelReason || '').toLowerCase().includes(q))
-  }, [cancelled, query])
+  }, [cancelled, query, view])
+  const narrowed = !!query.trim() || view !== 'all'
 
   const handleCancel = async ({ id, reason }) => {
     const b = bookings.find((x) => x.id === id)
@@ -135,16 +141,30 @@ export default function Cancellations() {
       ]}
       stats={
         <>
-          <StatCard icon={<LuBan />} tone="red" label={t('stats.cancelled')} value={stats.cancelled} />
-          <StatCard icon={<LuPercent />} tone="amber" label={t('stats.rate')} value={`${stats.rate}%`} />
-          <StatCard icon={<LuIndianRupee />} tone="grey" label={t('stats.lost')} value={formatCurrency(stats.lostRevenue)} />
-          <StatCard icon={<LuClock />} tone="blue" label={t('stats.cancellable')} value={stats.cancellable} />
+          {/* Cancelled and rate both show the whole list (only the first is marked
+              selected); lost value narrows it to cancellations that cost money,
+              largest first; still cancellable opens the cancel picker, which is
+              the list of those bookings. */}
+          <StatCard icon={<LuBan />} tone="red" label={t('stats.cancelled')} value={stats.cancelled}
+                    selected={view === 'all'} onClick={() => setView('all')} />
+          <StatCard icon={<LuPercent />} tone="amber" label={t('stats.rate')} value={`${stats.rate}%`}
+                    onClick={() => setView('all')} />
+          <StatCard icon={<LuIndianRupee />} tone="grey" label={t('stats.lost')} value={formatCurrency(stats.lostRevenue)}
+                    selected={view === 'lost'} onClick={() => setView('lost')} />
+          <StatCard icon={<LuClock />} tone="blue" label={t('stats.cancellable')} value={stats.cancellable}
+                    onClick={openCancel} />
         </>
       }
     >
       <Card>
-        <div className="px-4 sm:px-5 py-3 border-b border-line">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-line">
           <h3 className="font-display font-semibold text-ink text-[15px] leading-tight">{t('listTitle')}</h3>
+          {view === 'lost' && (
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs text-ink2 truncate">{t('filter.lostOnly')}</span>
+              <Button variant="ghost" size="sm" onClick={() => setView('all')}>{t('filter.showAll')}</Button>
+            </div>
+          )}
         </div>
         {error && <div className="px-5 py-3 text-sm text-danger-text border-b border-line">{error}</div>}
         <DataTable
@@ -154,8 +174,8 @@ export default function Cancellations() {
           empty={
             <EmptyState
               icon="✓"
-              title={loading ? t('common:loading') : query ? t('empty.noMatch') : t('empty.none')}
-              message={loading ? t('empty.fetching') : query ? t('empty.tryAgain') : t('empty.hint')}
+              title={loading ? t('common:loading') : narrowed ? t('empty.noMatch') : t('empty.none')}
+              message={loading ? t('empty.fetching') : narrowed ? t('empty.tryAgain') : t('empty.hint')}
             />
           }
         />

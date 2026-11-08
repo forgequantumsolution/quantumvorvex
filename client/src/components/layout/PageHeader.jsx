@@ -20,8 +20,9 @@ import ActionMenu from '../ui-tw/ActionMenu'
  * The bar sticks to the top of #content and gains a shadow once the page
  * scrolls under it.
  *
- * Phones: the title shares a row with a "⋮" menu (every action except the
- * primary) and the primary as a gold icon button; search gets its own row.
+ * Phones: the title shares a row with Refresh, a "⋮" menu (every other action
+ * except the primary) and the primary as a gold icon button; search gets its
+ * own row.
  * Secondary buttons show their text from lg when there are one or two of them and no search box,
  * from 2xl when there are more; below that they are icon-only.
  */
@@ -187,7 +188,10 @@ export default function PageHeader() {
 
   // Phones: everything but the primary goes in one "⋮" menu (a dropdown action
   // contributes its items, prefixed by its label).
-  const overflow = [...labelled, ...iconOnly].flatMap((a) => {
+  // Refresh stays a visible button on phones too; everything else but the
+  // primary goes in the ⋮ menu there.
+  const phonePinned = iconOnly.filter((a) => a.id === 'refresh')
+  const overflow = [...labelled, ...iconOnly.filter((a) => !phonePinned.includes(a))].flatMap((a) => {
     if (a.menu) {
       return a.menu.map((m) => {
         const k = `${a.id}/${m.id}`
@@ -206,18 +210,21 @@ export default function PageHeader() {
     <div ref={barRef} className={`page-header no-print ${stuck ? 'is-stuck' : ''}`}>
       <div className="flex items-center gap-3 md:gap-4 min-h-9">
         {/* Page identity */}
-        <div className="min-w-0 flex-1 flex items-center gap-3">
+        {/* One line: icon, title, then the subtitle in grey after a dot. The
+            sidebar already shows the section, so the header doesn't repeat it. */}
+        <div className="min-w-0 flex-1 flex items-center gap-2.5">
           {PanelIcon && (
-            <span className="hidden lg:flex w-11 h-11 shrink-0 items-center justify-center rounded-xl bg-gold-bg text-gold border border-gold-border/60" aria-hidden>
-              <PanelIcon size={20} />
+            <span className="hidden lg:flex w-9 h-9 shrink-0 items-center justify-center rounded-lg bg-gold-bg text-gold" aria-hidden>
+              <PanelIcon size={18} />
             </span>
           )}
-          <div className="min-w-0">
-            {meta?.section && (
-              <div className="hidden md:block text-xs font-semibold uppercase tracking-[0.08em] text-gold leading-none mb-1.5">{navLabel(t, meta.sectionKey)}</div>
+          <div className="min-w-0 flex items-baseline gap-2">
+            <h1 className="font-display font-bold text-[20px] md:text-[21px] leading-tight tracking-[-0.02em] text-ink line-clamp-2 break-words shrink-0 max-w-full">{heading}</h1>
+            {subtitle && (
+              <p className="hidden lg:block min-w-0 text-[13px] text-ink3 truncate m-0" title={subtitle}>
+                <span className="text-line2 mr-2" aria-hidden>·</span>{subtitle}
+              </p>
             )}
-            <h1 className="font-display font-bold text-[20px] md:text-[22px] leading-tight tracking-[-0.02em] text-ink line-clamp-2 break-words">{heading}</h1>
-            {subtitle && <p className="hidden md:block text-[13px] text-ink3 mt-0.5 truncate">{subtitle}</p>}
           </div>
         </div>
 
@@ -229,8 +236,15 @@ export default function PageHeader() {
           {primary.map((a) => <LabelledButton key={a.id} owner={owner} a={a} compact={false} />)}
         </div>
 
-        {/* Phones: overflow menu + primary */}
+        {/* Phones: refresh, overflow menu, primary */}
         <div className="flex md:hidden items-center gap-2 shrink-0">
+          {phonePinned.map((a) => (
+            <button key={a.id} type="button" onClick={run(owner, a.id)} disabled={a.disabled} title={a.label} aria-label={a.label}
+              className="w-11 h-11 shrink-0 rounded-lg border border-line2 bg-surface text-ink2 flex items-center justify-center text-[17px]
+                         transition-colors hover:border-gold hover:text-gold disabled:opacity-50">
+              <span className={`flex ${a.disabled ? 'animate-spin' : ''}`} aria-hidden>{getEntry(owner, a.id).icon}</span>
+            </button>
+          ))}
           {overflow.length > 0 && <ActionMenu items={overflow} label={null} className="!w-11 !h-11" />}
           {primary.map((a) => <LabelledButton key={a.id} owner={owner} a={a} compact />)}
         </div>
