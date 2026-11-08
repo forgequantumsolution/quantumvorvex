@@ -33,7 +33,9 @@
     "active": "सक्रिय",
     "due": "देय / थकीत",
     "checkedOut": "Check-out झालेले",
-    "total": "एकूण पाहुणे"
+    "total": "एकूण पाहुणे",
+    "inHouseHint_one": "{{count}} सध्या मुक्कामी",
+    "inHouseHint_other": "{{count}} सध्या मुक्कामी"
   },
   "filter": {
     "allStays": "सर्व मुक्काम",

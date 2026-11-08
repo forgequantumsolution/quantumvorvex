@@ -111,5 +111,11 @@
     "linenFailed": "Could not record linen change",
     "inspectionSaved": "Inspection saved — Score: {{score}}%",
     "inspectionFailed": "Could not save inspection"
+  },
+  "filter": {
+    "status": "Status",
+    "all": "All rooms",
+    "showing": "Showing: {{status}}",
+    "clear": "Clear filter"
   }
 }

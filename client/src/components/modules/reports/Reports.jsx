@@ -4,9 +4,10 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from 'recharts'
 import Tabs from '../../ui/Tabs'
-import { PageWrapper, StatCard, Card, DataTable, Button, EmptyState } from '../../ui-tw'
+import { PageWrapper, StatCard, StatStrip, Card, DataTable, Button, EmptyState } from '../../ui-tw'
 import { useBreakpoint } from '../../../hooks/useMediaQuery'
 import { useToast } from '../../../hooks/useToast'
+import { useAppSelector } from '../../../store/hooks'
 import { reportsApi, roomsApi } from '../../../api/client'
 import { formatCurrency, formatCurrencyCompact } from '../../../utils/format'
 import { useTranslation } from 'react-i18next'
@@ -33,16 +34,16 @@ function ChartTooltip({ active, payload, label, prefix = '' }) {
 // ─── Layout helpers ───────────────────────────────────────────────────────────
 
 /**
- * KPI tiles: 2-up on phones and tablets, 3-up from lg. An odd last tile spans
- * the full row below lg so a 3-tile set doesn't leave a hole.
+ * Each tab's figures: one slim KPI strip, shown at every width because the
+ * figures are the tab's content. From md it is a single row; on phones the
+ * segments wrap (2-up, a third takes the full row) with hairlines between them.
  */
-function StatGrid({ children }) {
-  return (
-    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-3.5 [&>*:last-child:nth-child(odd)]:col-span-2 lg:[&>*:last-child:nth-child(odd)]:col-span-1">
-      {children}
-    </div>
-  )
+function Figures({ children }) {
+  return <StatStrip always className="max-md:divide-x-0 max-md:gap-px max-md:bg-line">{children}</StatStrip>
 }
+// Keeps a segment from squashing; on phones it paints over the hairline background.
+const SEG = 'min-w-[150px] max-md:bg-surface'
+
 
 // Shared axis styling. The Y axis gets a fixed, narrow width so the plot keeps
 // most of a phone's width; X ticks thin out instead of overlapping.
@@ -78,16 +79,16 @@ function ChartCard({ title, emptyText, isEmpty, children }) {
 }
 
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
-function OverviewTab({ dashboard, revenue }) {
+function OverviewTab({ dashboard, revenue, onOpenTab }) {
   const { t } = useTranslation('reports')
   const byDay = (revenue?.byDay || []).map((d) => ({ date: d.date, revenue: d.revenue }))
   return (
     <div className="flex flex-col gap-4 sm:gap-5">
-      <StatGrid>
-        <StatCard icon={<LuIndianRupee />} tone="gold" label={t('overview.revenuePaid')} value={formatCurrencyCompact(dashboard?.revenue || 0)} />
-        <StatCard icon={<LuChartPie />} tone="blue" label={t('overview.occupancyRate')} value={`${dashboard?.occupancyRate ?? 0}%`} />
-        <StatCard icon={<LuUsers />} tone="green" label={t('overview.activeGuests')} value={dashboard?.recentGuests?.length ?? 0} />
-      </StatGrid>
+      <Figures>
+        <StatCard className={SEG} icon={<LuIndianRupee />} tone="gold" label={t('overview.revenuePaid')} value={formatCurrencyCompact(dashboard?.revenue || 0)} onClick={() => onOpenTab('revenue')} />
+        <StatCard className={SEG} icon={<LuChartPie />} tone="blue" label={t('overview.occupancyRate')} value={`${dashboard?.occupancyRate ?? 0}%`} onClick={() => onOpenTab('occupancy')} />
+        <StatCard className={SEG} icon={<LuUsers />} tone="green" label={t('overview.activeGuests')} value={dashboard?.recentGuests?.length ?? 0} />
+      </Figures>
 
       <ChartCard title={t('overview.revenueByDayPaid')} isEmpty={byDay.length === 0} emptyText={t('overview.noPaidInvoices')}>
         <LineChart data={byDay} margin={CHART_MARGIN}>
@@ -108,10 +109,10 @@ function RevenueTab({ revenue }) {
   const byDay = revenue?.byDay || []
   return (
     <div className="flex flex-col gap-4 sm:gap-5">
-      <div className="grid grid-cols-2 gap-3 sm:gap-3.5">
-        <StatCard icon={<LuIndianRupee />} tone="gold" label={t('revenue.total')} value={formatCurrencyCompact(revenue?.totalRevenue || 0)} />
-        <StatCard icon={<LuReceipt />} tone="blue" label={t('revenue.paidInvoices')} value={revenue?.invoices?.length ?? 0} />
-      </div>
+      <Figures>
+        <StatCard className={SEG} icon={<LuIndianRupee />} tone="gold" label={t('revenue.total')} value={formatCurrencyCompact(revenue?.totalRevenue || 0)} />
+        <StatCard className={SEG} icon={<LuReceipt />} tone="blue" label={t('revenue.paidInvoices')} value={revenue?.invoices?.length ?? 0} />
+      </Figures>
 
       <ChartCard title={t('revenue.byDay')} isEmpty={byDay.length === 0} emptyText={t('revenue.empty')}>
         <BarChart data={byDay} margin={CHART_MARGIN}>
@@ -156,10 +157,10 @@ function OccupancyTab({ rooms, occupancy }) {
 
   return (
     <div className="flex flex-col gap-4 sm:gap-5">
-      <div className="grid grid-cols-2 gap-3 sm:gap-3.5">
-        <StatCard icon={<LuChartPie />} tone="blue" label={t('occupancy.avg')} value={`${occupancy?.avgRate ?? 0}%`} />
-        <StatCard icon={<LuBedDouble />} tone="gold" label={t('occupancy.totalRooms')} value={occupancy?.totalRooms ?? rooms.length} />
-      </div>
+      <Figures>
+        <StatCard className={SEG} icon={<LuChartPie />} tone="blue" label={t('occupancy.avg')} value={`${occupancy?.avgRate ?? 0}%`} />
+        <StatCard className={SEG} icon={<LuBedDouble />} tone="gold" label={t('occupancy.totalRooms')} value={occupancy?.totalRooms ?? rooms.length} />
+      </Figures>
 
       {/* Daily occupancy trend */}
       <ChartCard title={t('occupancy.trend')} isEmpty={byDay.length === 0} emptyText={t('occupancy.trendEmpty')}>
@@ -211,11 +212,11 @@ function GSTTab({ gst }) {
   }))
   return (
     <div className="flex flex-col gap-4 sm:gap-5">
-      <StatGrid>
-        <StatCard icon={<LuSigma />} tone="blue" label={t('gst.totalTaxable')} value={formatCurrencyCompact(gst?.totalTaxable || 0)} />
-        <StatCard icon={<LuPercent />} tone="gold" label={t('gst.totalGst')} value={formatCurrencyCompact(gst?.totalGst || 0)} />
-        <StatCard icon={<LuWallet />} tone="green" label={t('gst.totalAmount')} value={formatCurrencyCompact(gst?.totalAmount || 0)} />
-      </StatGrid>
+      <Figures>
+        <StatCard className={SEG} icon={<LuSigma />} tone="blue" label={t('gst.totalTaxable')} value={formatCurrencyCompact(gst?.totalTaxable || 0)} />
+        <StatCard className={SEG} icon={<LuPercent />} tone="gold" label={t('gst.totalGst')} value={formatCurrencyCompact(gst?.totalGst || 0)} />
+        <StatCard className={SEG} icon={<LuWallet />} tone="green" label={t('gst.totalAmount')} value={formatCurrencyCompact(gst?.totalAmount || 0)} />
+      </Figures>
 
       <Card title={t('gst.invoices')} subtitle={t('gst.split')}>
         <DataTable
@@ -306,7 +307,9 @@ export default function Reports() {
   const { t } = useTranslation('reports')
   const addToast = useToast()
   const tabs = TAB_IDS.map((id) => ({ id, label: t(`tabs.${id}`) }))
-  const [activeTab, setActiveTab] = useState('overview')
+  // Other panels (e.g. Portfolio's ADR/RevPAR) can deep-link to a tab via navigateTo.
+  const navTab = useAppSelector((s) => s.ui.activePanelParams?.tab)
+  const [activeTab, setActiveTab] = useState(() => (TAB_IDS.includes(navTab) ? navTab : 'overview'))
   const [dashboard, setDashboard] = useState(null)
   const [revenue, setRevenue] = useState(null)
   const [gst, setGst] = useState(null)
@@ -355,7 +358,7 @@ export default function Reports() {
       )}
 
       <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab}>
-        <div data-tab-id="overview"><OverviewTab dashboard={dashboard} revenue={revenue} /></div>
+        <div data-tab-id="overview"><OverviewTab dashboard={dashboard} revenue={revenue} onOpenTab={setActiveTab} /></div>
         <div data-tab-id="revenue"><RevenueTab revenue={revenue} /></div>
         <div data-tab-id="occupancy"><OccupancyTab rooms={rooms} occupancy={occupancy} /></div>
         <div data-tab-id="gst"><GSTTab gst={gst} /></div>

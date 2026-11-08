@@ -56,5 +56,9 @@
     "payment": "Payment not completed",
     "noShow": "No-show",
     "other": "Other"
+  },
+  "filter": {
+    "lostOnly": "Value lost, largest first",
+    "showAll": "Show all"
   }
 }

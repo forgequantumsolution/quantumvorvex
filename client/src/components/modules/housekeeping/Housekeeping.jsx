@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
-import { LuSparkles, LuSprayCan, LuLoader, LuRefreshCw, LuLayers, LuBrush } from 'react-icons/lu'
+import { LuSparkles, LuSprayCan, LuLoader, LuRefreshCw, LuLayers, LuBrush, LuX } from 'react-icons/lu'
 import { PageWrapper, DataTable, EmptyState, StatCard } from '../../ui-tw'
 import { useToast } from '../../../hooks/useToast'
 import { useAppSelector } from '../../../store/hooks'
@@ -47,6 +47,40 @@ function mapBoardRoom(room) {
     startedAt: hk?.startedAt || null,
     completedAt: hk?.completedAt || null,
   }
+}
+
+// Room-status filter set by the KPI cards (and, below xl, a select). Each one
+// matches exactly the rooms its card counts.
+const STATUS_FILTERS = {
+  clean:    ['clean_available'],
+  dirty:    ['dirty_available', 'checkout_pending'],
+  cleaning: ['cleaning_in_progress'],
+}
+
+// The status filter as the page shows it: a compact select below xl (where the
+// KPI strip is hidden), and from xl a removable chip while a filter is on.
+function StatusFilterControl({ value, onChange, className = '' }) {
+  const { t } = useTranslation('housekeeping')
+  return (
+    <>
+      <div className={`xl:hidden min-w-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-1.5 ${className}`}>
+        <label htmlFor="hk-status-filter" className="form-label whitespace-nowrap">{t('filter.status')}</label>
+        <select id="hk-status-filter" className="form-select w-full sm:w-48" value={value || ''} onChange={e => onChange(e.target.value || null)}>
+          <option value="">{t('filter.all')}</option>
+          {Object.keys(STATUS_FILTERS).map(id => <option key={id} value={id}>{t(`stats.${id}`)}</option>)}
+        </select>
+      </div>
+      {value && (
+        <span className={`hidden xl:inline-flex items-center gap-1.5 self-center rounded-full border border-gold-border bg-gold-bg pl-3 pr-1 py-0.5 text-xs font-medium text-ink ${className}`}>
+          {t('filter.showing', { status: t(`stats.${value}`) })}
+          <button type="button" onClick={() => onChange(null)} aria-label={t('filter.clear')} title={t('filter.clear')}
+            className="w-5 h-5 rounded-full inline-flex items-center justify-center text-ink3 hover:text-ink hover:bg-surface2 cursor-pointer">
+            <LuX size={12} aria-hidden />
+          </button>
+        </span>
+      )}
+    </>
+  )
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -134,24 +168,30 @@ function AssignRoomModal({ room, onClose, onSave, staff }) {
 }
 
 // ─── Board Tab ────────────────────────────────────────────────────────────────
-function BoardTab({ rooms, onRoomClick }) {
+function BoardTab({ rooms, onRoomClick, statusFilter, onStatusFilterChange }) {
   const { t } = useTranslation('housekeeping')
   const floors = [...new Set(rooms.map(r => r.floor))].sort()
+  const shown = statusFilter ? STATUS_FILTERS[statusFilter] : null
 
   return (
     <div>
-      {/* Legend */}
+      <div className={`flex flex-wrap gap-2.5 ${statusFilter ? 'mb-3' : 'mb-3 xl:mb-0'}`}>
+        <StatusFilterControl value={statusFilter} onChange={onStatusFilterChange} />
+      </div>
+
+      {/* Legend — statuses hidden by the filter are dimmed */}
       <div className="flex gap-x-[14px] gap-y-1.5 flex-wrap mb-4 sm:mb-5 px-3 sm:px-[14px] py-2.5 bg-surface2 rounded-lg border border-line">
         {Object.entries(HK_STATUSES).map(([key, val]) => (
-          <div key={key} className="flex items-center gap-[5px]">
+          <div key={key} className={`flex items-center gap-[5px] ${shown && !shown.includes(key) ? 'opacity-35' : ''}`}>
             <span className="w-2.5 h-2.5 rounded-full inline-block shrink-0" style={{ background: val.color }} />
             <span className="text-xs text-ink2">{t(`status.${key}`)}</span>
           </div>
         ))}
       </div>
 
-      {floors.length === 0 && (
-        <EmptyState icon="🧹" title={t('empty.noRooms')} message={t('empty.noRoomsHint')} />
+      {floors.length === 0 && (statusFilter
+        ? <EmptyState icon="🔍" title={t('empty.noMatch')} />
+        : <EmptyState icon="🧹" title={t('empty.noRooms')} message={t('empty.noRoomsHint')} />
       )}
 
       {floors.map(floor => {
@@ -203,7 +243,7 @@ function BoardTab({ rooms, onRoomClick }) {
 }
 
 // ─── Daily List Tab ───────────────────────────────────────────────────────────
-function DailyListTab({ rooms, onUpdateRoom, staff }) {
+function DailyListTab({ rooms, allRooms = rooms, onUpdateRoom, staff, statusFilter, onStatusFilterChange }) {
   const { t } = useTranslation('housekeeping')
   const addToast = useToast()
   const [staffFilter, setStaffFilter] = useState('All')
@@ -236,7 +276,8 @@ function DailyListTab({ rooms, onUpdateRoom, staff }) {
     return t('duration.hm', { h: Math.floor(mins / 60), m: mins % 60 })
   }
 
-  const floors = [...new Set(rooms.map(r => r.floor))].sort()
+  // Every floor stays selectable while the status filter hides some rooms.
+  const floors = [...new Set(allRooms.map(r => r.floor))].sort()
 
   const columns = [
     {
@@ -313,6 +354,7 @@ function DailyListTab({ rooms, onUpdateRoom, staff }) {
             {floors.map(f => <option key={f} value={String(f)}>{t('floorNo', { floor: f })}</option>)}
           </select>
         </div>
+        <StatusFilterControl value={statusFilter} onChange={onStatusFilterChange} className="col-span-2" />
       </div>
 
       <div className="-mx-4 sm:-mx-5 border-t border-line">
@@ -544,6 +586,7 @@ export default function Housekeeping() {
   const [error, setError] = useState(false)
   const [activeTab, setActiveTab] = useState('board')
   const [assignRoomTarget, setAssignRoomTarget] = useState(null)
+  const [statusFilter, setStatusFilter] = useState(null) // null | keyof STATUS_FILTERS
 
   const loadBoard = useCallback(async () => {
     setLoading(true); setError(false)
@@ -595,6 +638,20 @@ export default function Housekeeping() {
   const cleanCount    = rooms.filter(r => r.status === 'clean_available').length
   const dirtyCount    = rooms.filter(r => r.status === 'dirty_available' || r.status === 'checkout_pending').length
   const cleaningCount = rooms.filter(r => r.status === 'cleaning_in_progress').length
+
+  // Rooms the Board and Daily List show under the status filter.
+  const filteredRooms = useMemo(
+    () => (statusFilter ? rooms.filter(r => STATUS_FILTERS[statusFilter].includes(r.status)) : rooms),
+    [rooms, statusFilter],
+  )
+
+  // A card toggles its filter; the filter lives on the Board/Daily List, so
+  // from Linen or Inspection it jumps to the Board.
+  function handleStatCard(id) {
+    const next = statusFilter === id ? null : id
+    setStatusFilter(next)
+    if (next && activeTab !== 'board' && activeTab !== 'daily') setActiveTab('board')
+  }
 
   // Persist a room status/assignment change, with optimistic UI.
   const handleUpdateRoom = useCallback(async (id, patch) => {
@@ -662,6 +719,17 @@ export default function Housekeeping() {
     <PageWrapper
       title={t('title')}
       subtitle={t('subtitle')}
+      stats={(
+        <>
+          {[
+            { id: 'clean', label: t('stats.clean'), value: cleanCount, hint: t('stats.cleanHint'), icon: <LuSparkles />, tone: 'green' },
+            { id: 'dirty', label: t('stats.dirty'), value: dirtyCount, hint: t('stats.dirtyHint'), icon: <LuSprayCan />, tone: 'amber' },
+            { id: 'cleaning', label: t('stats.cleaning'), value: cleaningCount, hint: t('stats.cleaningHint'), icon: <LuLoader />, tone: 'blue' },
+          ].map(({ id, ...st }) => (
+            <StatCard key={id} {...st} selected={statusFilter === id} onClick={() => handleStatCard(id)} />
+          ))}
+        </>
+      )}
       headerActions={[
         { id: 'refresh', label: t('common:refresh'), icon: <LuRefreshCw />, variant: 'icon', disabled: loading, onClick: loadBoard },
         {
@@ -679,15 +747,6 @@ export default function Housekeeping() {
         </div>
       )}
 
-      {/* Stat Cards — 2-up on phones (the third spans the row), three across from sm */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-3.5 mb-4 sm:mb-5">
-        {[
-          { id: 'clean', label: t('stats.clean'), value: cleanCount, hint: t('stats.cleanHint'), icon: <LuSparkles />, tone: 'green' },
-          { id: 'dirty', label: t('stats.dirty'), value: dirtyCount, hint: t('stats.dirtyHint'), icon: <LuSprayCan />, tone: 'amber' },
-          { id: 'cleaning', label: t('stats.cleaning'), value: cleaningCount, hint: t('stats.cleaningHint'), icon: <LuLoader />, tone: 'blue', className: 'col-span-2 sm:col-span-1' },
-        ].map(({ id, ...st }) => <StatCard key={id} {...st} />)}
-      </div>
-
       {/* Tabs */}
       <div className="card">
         <div className="px-4 sm:px-5 pb-4 sm:pb-5">
@@ -695,11 +754,13 @@ export default function Housekeeping() {
             <div data-tab-id="board">
               {loading && rooms.length === 0
                 ? <EmptyState icon="◌" title={t('loadingBoard')} />
-                : <BoardTab rooms={rooms} onRoomClick={setAssignRoomTarget} />}
+                : <BoardTab rooms={filteredRooms} onRoomClick={setAssignRoomTarget}
+                    statusFilter={statusFilter} onStatusFilterChange={setStatusFilter} />}
             </div>
 
             <div data-tab-id="daily">
-              <DailyListTab rooms={rooms} onUpdateRoom={handleUpdateRoom} staff={staff} />
+              <DailyListTab rooms={filteredRooms} allRooms={rooms} onUpdateRoom={handleUpdateRoom} staff={staff}
+                statusFilter={statusFilter} onStatusFilterChange={setStatusFilter} />
             </div>
 
             <div data-tab-id="linen">

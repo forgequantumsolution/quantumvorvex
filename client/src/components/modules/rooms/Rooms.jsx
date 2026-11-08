@@ -3,13 +3,13 @@ import { useTranslation, Trans } from 'react-i18next'
 import { QRCodeSVG } from 'qrcode.react'
 import {
   LuTrash2, LuRefreshCw, LuPlus, LuLayoutGrid, LuColumns3, LuQrCode, LuPencil,
-  LuPrinter, LuDownload, LuDoorClosed, LuX,
+  LuPrinter, LuDownload, LuDoorClosed, LuX, LuLayers, LuCheck, LuBuilding2, LuDoorOpen, LuBedDouble, LuCalendarClock, LuWrench,
 } from 'react-icons/lu'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
 import Button from '../../ui/Button'
-import { Pagination } from '../../ui-tw'
+import { Pagination, StatStrip, StatCard, FilterTabs } from '../../ui-tw'
 import { roomsApi } from '../../../api/client'
 import { useToast } from '../../../hooks/useToast'
 import { usePageHeader } from '../../../store/hooks'
@@ -639,7 +639,6 @@ export default function Rooms() {
   const byFloor = [...new Set(rooms.map(r => r.floor))]
     .sort((a, b) => a - b)
     .map(f => ({ floor: f, rooms: rooms.filter(r => r.floor === f) }))
-  const isFiltered = filter !== 'all' || floor !== 'all' || !!search.trim()
   const clearFilters = () => { setFilter('all'); setFloor('all'); setSearch('') }
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -735,6 +734,11 @@ export default function Rooms() {
     subtitle: roomCount ? `${t('roomsCount', { count: roomCount })} · ${t('floorsCount', { count: floors.length })}` : t('subtitleEmpty'),
     search: { value: search, onChange: setSearch, placeholder: t('searchPlaceholder') },
     actions: [
+      floors.length > 1 && {
+        id: 'floor', label: floor === 'all' ? t('allFloors') : t('floor', { floor }), icon: <LuLayers />,
+        menu: [{ id: 'all', label: t('allFloors') }, ...floors.map(f => ({ id: String(f), label: t('floor', { floor: f }) }))]
+          .map(m => ({ ...m, icon: floor === m.id ? <LuCheck /> : undefined, onClick: () => setFloor(m.id) })),
+      },
       { id: 'view-grid', label: t('view.floor'), icon: <LuLayoutGrid />, variant: 'icon', active: view === 'grid', onClick: () => setView('grid') },
       { id: 'view-kanban', label: t('view.board'), icon: <LuColumns3 />, variant: 'icon', active: view === 'kanban', onClick: () => setView('kanban') },
       { id: 'refresh', label: t('common:refresh'), icon: <LuRefreshCw />, variant: 'icon', disabled: loading, onClick: load },
@@ -752,63 +756,30 @@ export default function Rooms() {
         </div>
       )}
 
-      {/* ── One control bar: occupancy, status filters, floor ── */}
-      <div className="card mb-4">
-        <div className="flex items-center gap-x-4 gap-y-2 px-3 sm:px-3.5 py-2.5 flex-wrap">
-          <div className="flex items-center gap-2.5 min-w-0 flex-wrap" title={t('occupiedTitle', { occupied: counts.occupied, total: roomCount })}>
-            <span className="text-[17px] font-bold text-ink tabular-nums leading-none">{occupancy}%</span>
-            <span className="t-xs text-ink3">{t('occupiedWord')}</span>
-            <div className="flex w-24 h-1.5 rounded-full overflow-hidden bg-surface2 gap-px" role="img"
-              aria-label={STATUSES.map(st => `${counts[st]} ${t(`status.${st}`)}`).join(', ')}>
-              {roomCount > 0 && STATUSES.map(st => counts[st] > 0 && (
-                <span key={st} style={{ width: `${(counts[st] / roomCount) * 100}%`, background: STATUS_COLOR[st] }} />
-              ))}
-            </div>
-            {bedsTotal > 0 && <span className="t-xs text-ink3">· {t('bedsTaken', { taken: bedsTaken, total: bedsTotal })}</span>}
-          </div>
+      {/* ── KPI strip (xl and up): each figure filters the rooms below ── */}
+      <StatStrip className="mb-4">
+        {[
+          { id: 'all', icon: <LuBuilding2 />, tone: 'gold', label: t('common:all'), value: roomCount, hint: `${occupancy}% ${t('occupiedWord')}`, progress: occupancy },
+          { id: 'available', icon: <LuDoorOpen />, tone: 'green' },
+          { id: 'occupied', icon: <LuBedDouble />, tone: 'red', hint: bedsTotal > 0 ? t('bedsTaken', { taken: bedsTaken, total: bedsTotal }) : undefined },
+          { id: 'reserved', icon: <LuCalendarClock />, tone: 'blue' },
+          { id: 'maintenance', icon: <LuWrench />, tone: 'amber' },
+        ].map(k => (
+          <StatCard key={k.id} icon={k.icon} tone={k.tone} label={k.label || t(`status.${k.id}`)}
+            value={k.value ?? counts[k.id]} hint={k.hint} progress={k.progress}
+            selected={filter === k.id} onClick={() => setFilter(filter === k.id && k.id !== 'all' ? 'all' : k.id)} />
+        ))}
+      </StatStrip>
 
-          {/* Status chips — each filters the rooms below. One sideways-scrolling
-              line on phones, wrapping from sm. */}
-          <div className="flex items-center gap-1 w-full sm:w-auto -mx-3 px-3 sm:mx-0 sm:px-0 overflow-x-auto scrollbar-none sm:overflow-visible sm:flex-wrap">
-            {[{ id: 'all', label: t('common:all'), count: roomCount }, ...STATUSES.map(st => ({ id: st, label: t(`status.${st}`), count: counts[st] }))].map(chip => {
-              const active = filter === chip.id
-              return (
-                <button
-                  key={chip.id}
-                  type="button"
-                  onClick={() => setFilter(active && chip.id !== 'all' ? 'all' : chip.id)}
-                  aria-pressed={active}
-                  className={`inline-flex items-center gap-1.5 h-9 sm:h-7 px-2.5 shrink-0 whitespace-nowrap rounded-full border text-[13px] sm:text-[12px] font-medium cursor-pointer transition-colors duration-150 ${
-                    active ? 'border-gold bg-[var(--gold-bg)] text-ink' : 'border-line bg-surface text-ink2 hover:border-line2'
-                  }`}
-                >
-                  {chip.id !== 'all' && <StatusDot status={chip.id} />}
-                  {chip.label}
-                  <span className="tabular-nums text-ink3">{chip.count}</span>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Floor filter */}
-          <div className="flex items-center gap-2 flex-wrap sm:ml-auto">
-            <select className="form-select h-11 md:h-8 md:pointer-coarse:h-11 py-1 text-[13px] w-auto min-w-[120px] focus:ring-gold/20 focus:border-gold"
-              value={floor} onChange={e => setFloor(e.target.value)} aria-label={t('form.floor')}>
-              <option value="all">{t('allFloors')}</option>
-              {floors.map(f => <option key={f} value={String(f)}>{t('floor', { floor: f })}</option>)}
-            </select>
-
-            {isFiltered && (
-              <button type="button" onClick={clearFilters}
-                className="inline-flex items-center gap-1 px-2 py-1 min-h-11 md:min-h-0 bg-transparent border-0 cursor-pointer t-xs font-medium text-ink2 hover:text-ink">
-                <LuX size={13} aria-hidden /> {t('clear')}
-              </button>
-            )}
-
-            {isFiltered && <span className="t-xs text-ink3 hidden sm:inline">{t('nOfTotal', { n: total, total: roomCount })}</span>}
-          </div>
-        </div>
-
+      {/* ── Status tabs below xl, where the strip is hidden (floor is in the header) ── */}
+      <div className="xl:hidden flex items-center gap-3 mb-4 min-w-0">
+        <FilterTabs
+          tabs={[{ id: 'all', label: t('common:all'), count: roomCount }, ...STATUSES.map(st => ({ id: st, label: t(`status.${st}`), count: counts[st] }))]}
+          active={filter} onChange={setFilter} />
+        <span className="hidden md:inline shrink-0 t-xs text-ink3" title={t('occupiedTitle', { occupied: counts.occupied, total: roomCount })}>
+          <b className="text-ink tabular-nums">{occupancy}%</b> {t('occupiedWord')}
+          {bedsTotal > 0 && ` · ${t('bedsTaken', { taken: bedsTaken, total: bedsTotal })}`}
+        </span>
       </div>
 
       {/* ── Empty state ────────────────────────────────────────────────────── */}

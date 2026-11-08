@@ -21,14 +21,22 @@
     "Confirmed": "कन्फर्म",
     "CheckedIn": "चेक-इन हुए",
     "CheckedOut": "चेक-आउट हुए",
-    "Cancelled": "रद्द"
+    "Cancelled": "रद्द",
+    "Dues": "बकाया वाली"
   },
   "stats": {
     "total": "कुल बुकिंग",
     "confirmed": "कन्फर्म",
     "checkedInHint": "{{count}} चेक-इन हुए",
     "activeValue": "सक्रिय मूल्य",
-    "dues": "बकाया राशि"
+    "dues": "बकाया राशि",
+    "inHouse": "ठहरे हुए",
+    "upcomingHint": "{{count}} आने वाली",
+    "pendingHint": "{{count}} पुष्टि बाकी",
+    "activeValueHint": "{{amount}} सक्रिय मूल्य",
+    "duesHint_one": "{{count}} बुकिंग",
+    "duesHint_other": "{{count}} बुकिंग",
+    "showFiltered": "{{label}} दिखाएँ"
   },
   "toast": {
     "created": "{{name}} के लिए बुकिंग {{no}} बनाई गई",
@@ -444,5 +452,18 @@
     "update": "अपडेट करें",
     "generating": "इनवॉइस बन रहा है…",
     "preview": "इनवॉइस पूर्वावलोकन"
+  },
+  "card": {
+    "checkIn": "चेक-इन",
+    "checkOut": "चेक-आउट",
+    "moveIn": "प्रवेश",
+    "untilMoveOut": "खाली करने तक",
+    "nightOf": "{{total}} में से रात {{n}}",
+    "arrivesIn_one": "कल आएँगे",
+    "arrivesIn_other": "{{count}} दिन में आएँगे",
+    "arrivesToday": "आज आएँगे",
+    "leavesToday": "आज जाएँगे",
+    "paid": "{{amount}} भुगतान हुआ",
+    "perMonth": "/ महीना"
   }
 }

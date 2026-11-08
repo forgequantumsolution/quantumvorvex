@@ -21,14 +21,22 @@
     "Confirmed": "Confirmed",
     "CheckedIn": "Checked In",
     "CheckedOut": "Checked Out",
-    "Cancelled": "Cancelled"
+    "Cancelled": "Cancelled",
+    "Dues": "With dues"
   },
   "stats": {
     "total": "Total bookings",
     "confirmed": "Confirmed",
     "checkedInHint": "{{count}} checked in",
     "activeValue": "Active value",
-    "dues": "Outstanding dues"
+    "dues": "Outstanding dues",
+    "inHouse": "In house",
+    "upcomingHint": "{{count}} upcoming",
+    "pendingHint": "{{count}} awaiting confirmation",
+    "activeValueHint": "{{amount}} active value",
+    "duesHint_one": "{{count}} booking",
+    "duesHint_other": "{{count}} bookings",
+    "showFiltered": "Show {{label}}"
   },
   "toast": {
     "created": "Booking {{no}} created for {{name}}",
@@ -444,5 +452,18 @@
     "update": "Update",
     "generating": "Generating invoice…",
     "preview": "Invoice preview"
+  },
+  "card": {
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "moveIn": "Move-in",
+    "untilMoveOut": "Until move-out",
+    "nightOf": "Night {{n}} of {{total}}",
+    "arrivesIn_one": "Arrives tomorrow",
+    "arrivesIn_other": "Arrives in {{count}} days",
+    "arrivesToday": "Arrives today",
+    "leavesToday": "Leaves today",
+    "paid": "{{amount}} paid",
+    "perMonth": "/ month"
   }
 }

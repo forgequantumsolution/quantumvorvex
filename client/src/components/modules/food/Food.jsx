@@ -293,6 +293,14 @@ function RevenueTooltip({ active, payload }) {
   )
 }
 
+// Summary figures shown in the page's KPI strip.
+function foodTotals(orders) {
+  const totalRevenue = orders.reduce((sum, o) => sum + (o.amount || 0), 0)
+  const activeCount  = orders.filter(o => o.status === 'Active' && o.billing !== 'none').length
+  const avgPerGuest  = activeCount > 0 ? Math.round(totalRevenue / activeCount) : 0
+  return { totalRevenue, activeCount, avgPerGuest }
+}
+
 function Revenue({ orders, plans }) {
   const { t } = useTranslation('food')
   // Derive revenue per plan from orders
@@ -309,20 +317,8 @@ function Revenue({ orders, plans }) {
     })
     .filter(d => d.revenue > 0)
 
-  const totalRevenue   = orders.reduce((sum, o) => sum + (o.amount || 0), 0)
-  const activeCount    = orders.filter(o => o.status === 'Active' && o.billing !== 'none').length
-  const avgPerGuest    = activeCount > 0 ? Math.round(totalRevenue / activeCount) : 0
-
   return (
     <div>
-      {/* Stat summary row */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-5">
-        <StatCard icon={<LuIndianRupee />} tone="gold" label={t('revenue.total')} value={formatCurrency(totalRevenue)} hint={t('revenue.thisMonth')} />
-        <StatCard icon={<LuUsers />} tone="blue" label={t('revenue.subscribers')} value={activeCount} hint={t('revenue.subscribersHint')} />
-        <StatCard icon={<LuUtensils />} tone="purple" label={t('revenue.avg')} value={formatCurrency(avgPerGuest)}
-          hint={t('revenue.avgHint')} className="col-span-2 sm:col-span-1" />
-      </div>
-
       {/* Bar chart */}
       <Card title={t('revenue.byPlan')}>
         {revenueByPlan.length === 0 ? (
@@ -420,11 +416,26 @@ export default function Food() {
     }
   }
 
+  const { totalRevenue, activeCount, avgPerGuest } = foodTotals(orders)
+
   return (
     <PageWrapper
       title={t('title')}
       subtitle={t('subtitle')}
       search={null}
+      stats={(
+        <>
+          {/* Each card opens the tab that breaks its figure down. */}
+          {[
+            { id: 'total', tab: 'revenue', icon: <LuIndianRupee />, tone: 'gold', label: t('revenue.total'), value: formatCurrency(totalRevenue), hint: t('revenue.thisMonth') },
+            { id: 'subscribers', tab: 'orders', icon: <LuUsers />, tone: 'blue', label: t('revenue.subscribers'), value: activeCount, hint: t('revenue.subscribersHint') },
+            // Same tab as Food revenue, so only that card shows as selected.
+            { id: 'avg', tab: 'revenue', icon: <LuUtensils />, tone: 'purple', label: t('revenue.avg'), value: formatCurrency(avgPerGuest), hint: t('revenue.avgHint'), primary: false },
+          ].map(({ id, tab, primary = true, ...k }) => (
+            <StatCard key={id} {...k} selected={primary && activeTab === tab} onClick={() => setActiveTab(tab)} />
+          ))}
+        </>
+      )}
       headerActions={[
         { id: 'refresh', label: t('common:refresh'), icon: <LuRefreshCw />, variant: 'icon', disabled: loading, onClick: load },
         // The form lives on the catalog tab, so open it there from any tab.

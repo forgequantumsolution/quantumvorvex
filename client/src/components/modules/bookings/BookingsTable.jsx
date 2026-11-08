@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import {
-  LuTrash2, LuPencil, LuDownload, LuCalendarPlus, LuX, LuCheck, LuReceipt, LuLogOut, LuUndo2,
+  LuTrash2, LuPencil, LuDownload, LuCalendarPlus, LuX, LuCheck, LuReceipt, LuLogOut, LuUndo2, LuArrowRight, LuMoon,
 } from 'react-icons/lu'
 import { StatusBadge, Button, EmptyState, ActionMenu } from '../../ui-tw'
 import { formatCurrency, formatDate } from '../../../utils/format'
@@ -152,7 +152,7 @@ function Status({ b }) {
  * valid action behind a "⋮" menu — five buttons per row was what made the list
  * feel cramped and impossible to fit on a laptop.
  */
-function Actions({ b, busy, h }) {
+function Actions({ b, busy, h, stretch = false }) {
   const { t } = useTranslation('bookings')
   // A monthly tenancy with rent owing: collecting it is the everyday action.
   const rentDue = b.tenancy && b.status === 'CheckedIn' && Number(b.balanceDue) > 0 && h.onRent
@@ -190,12 +190,14 @@ function Actions({ b, busy, h }) {
   ]
 
   return (
-    <div className="flex items-center justify-end gap-2">
+    <div className={`flex items-center gap-2 ${stretch ? '' : 'justify-end'}`}>
       {primary && (
-        <Button size="sm" disabled={busy} onClick={primary.onClick}>
+        <Button size="sm" disabled={busy} onClick={primary.onClick} icon={primary.icon}
+          className={stretch ? 'flex-1 !py-2.5 !text-[13px]' : ''}>
           {busy ? '…' : primary.label}
         </Button>
       )}
+      {stretch && !primary && <span className="flex-1" />}
       <ActionMenu items={menu} disabled={busy} />
     </div>
   )
@@ -216,38 +218,162 @@ function SkeletonRows({ rows = 5 }) {
   ))
 }
 
-/**
- * One booking as a card. `boxed` gives it its own border for the grid layout;
- * without it the cards sit in a divided list (the phone fallback). Guest and
- * status lead, room + stay sit side by side, and the money shares the footer
- * with the actions so the primary button is always on the card's last line.
- */
-function BookingCard({ b, busy, h, boxed }) {
+// Status colours for the card: a strip along the top and the guest's avatar.
+const STATUS_STRIP = {
+  Pending: 'bg-warning', Confirmed: 'bg-info', CheckedIn: 'bg-success',
+  CheckedOut: 'bg-ink3', Cancelled: 'bg-danger', NoShow: 'bg-danger',
+}
+const STATUS_AVATAR = {
+  Pending: 'bg-warning-bg text-warning-text', Confirmed: 'bg-info-bg text-info-text', CheckedIn: 'bg-success-bg text-success-text',
+  CheckedOut: 'bg-surface2 text-ink2', Cancelled: 'bg-danger-bg text-danger-text', NoShow: 'bg-danger-bg text-danger-text',
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x }
+const daysFrom = (a, b) => Math.round((startOfDay(a) - startOfDay(b)) / DAY_MS)
+const shortDate = (d) => (d ? formatDate(d, { weekday: 'short', year: undefined }) : '—')
+
+// Check-in → check-out (or move-in for a tenancy), the length of the stay, and
+// where the stay is now: arriving in N days, night 2 of 3, leaving today.
+function StayPanel({ b }) {
   const { t } = useTranslation('bookings')
+  const today = new Date()
+  const toArrival = daysFrom(b.fromDate, today)
+  const live = ['Pending', 'Confirmed'].includes(b.status)
+  const nights = b.toDate ? Math.max(1, daysFrom(b.toDate, b.fromDate)) : 0
+  const inHouseDaily = b.status === 'CheckedIn' && !b.tenancy && nights > 0
+  const night = inHouseDaily ? Math.min(nights, Math.max(1, daysFrom(today, b.fromDate) + 1)) : 0
+  const leavesToday = inHouseDaily && b.toDate && daysFrom(b.toDate, today) === 0
+
+  const timing = live && toArrival > 0 ? t('card.arrivesIn', { count: toArrival })
+    : live && toArrival === 0 ? t('card.arrivesToday')
+      : leavesToday ? t('card.leavesToday')
+        : null
+
   return (
-    <article className={boxed ? 'rounded-xl border border-line bg-surface p-4 transition-colors hover:border-line2 min-w-0' : 'px-4 py-4 min-w-0'}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0"><Guest b={b} /></div>
-        <div className="shrink-0"><StatusBadge status={b.status} /></div>
+    <div className="rounded-xl bg-surface2 px-3 py-2.5">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+        <div className="min-w-0">
+          <div className="text-xs text-ink3">{b.tenancy ? t('card.moveIn') : t('card.checkIn')}</div>
+          <div className="text-[13px] font-semibold text-ink truncate">{shortDate(b.fromDate)}</div>
+        </div>
+        <LuArrowRight size={14} className="text-ink3 shrink-0" aria-hidden />
+        <div className="min-w-0 text-right">
+          <div className="text-xs text-ink3">{t('card.checkOut')}</div>
+          <div className="text-[13px] font-semibold text-ink truncate">
+            {b.tenancy ? t('card.untilMoveOut') : b.toDate ? shortDate(b.toDate) : '—'}
+          </div>
+        </div>
       </div>
-      <StatusNote b={b} className="mt-1.5 pl-12" />
-
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-3 mt-3">
-        <div className="min-w-0">
-          <dt className="text-xs uppercase tracking-wider text-ink3 mb-1">{t('table.columns.room')}</dt>
-          <dd className="min-w-0"><Room b={b} /></dd>
+      <div className="flex items-center justify-between gap-2 mt-2 text-xs">
+        <span className="inline-flex items-center gap-1 text-ink2 min-w-0 truncate">
+          <LuMoon size={12} className="text-ink3 shrink-0" aria-hidden />
+          {b.tenancy ? stayLabel(b) : nights ? t('common:nightCount', { count: nights }) : stayLabel(b)}
+        </span>
+        {timing && <span className={`font-semibold shrink-0 ${leavesToday ? 'text-warning-text' : 'text-info-text'}`}>{timing}</span>}
+        {inHouseDaily && !leavesToday && <span className="font-semibold text-success-text shrink-0">{t('card.nightOf', { n: night, total: nights })}</span>}
+      </div>
+      {inHouseDaily && (
+        <div className="mt-2 h-1.5 rounded-full bg-surface overflow-hidden" role="presentation">
+          <div className="h-full rounded-full bg-success" style={{ width: `${(night / nights) * 100}%` }} />
         </div>
-        <div className="min-w-0">
-          <dt className="text-xs uppercase tracking-wider text-ink3 mb-1">{t('table.columns.stay')}</dt>
-          <dd className="text-[13px]"><Stay b={b} nowrap={false} /></dd>
-        </div>
-      </dl>
+      )}
+    </div>
+  )
+}
 
-      <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-2 mt-3.5 pt-3 border-t border-line">
-        <div className="min-w-0"><Amount b={b} align="left" /></div>
-        <div className="ml-auto"><Actions b={b} busy={busy} h={h} /></div>
+// What the stay costs and how much is paid, with a bar for the share received.
+function MoneyPanel({ b }) {
+  const { t } = useTranslation('bookings')
+  const due = Number(b.balanceDue) > 0
+  if (b.tenancy) {
+    return (
+      <div className="min-w-0">
+        <div className="flex items-baseline gap-1">
+          <span className="text-[18px] font-bold text-ink tabular-nums">{formatCurrency(b.roomRate)}</span>
+          <span className="text-xs text-ink3">{t('card.perMonth')}</span>
+        </div>
+        <div className={`text-xs mt-0.5 ${b.rentOverdue > 0 ? 'text-danger-text font-semibold' : due ? 'text-warning-text font-medium' : 'text-ink3'}`}>
+          {b.rentOverdue > 0
+            ? t('table.overdue', { amount: formatCurrency(b.rentOverdue), days: b.overdueDays })
+            : due ? t('table.rentDue', { amount: formatCurrency(b.balanceDue) })
+              : b.status === 'CheckedIn' ? t('table.rentUpToDate') : t('table.settled')}
+        </div>
+        <RefundNote b={b} />
+      </div>
+    )
+  }
+  const amount = Number(b.amount) || 0
+  const paid = Math.max(0, Math.min(amount, Number(b.advance) || 0))
+  const pct = amount ? Math.round((paid / amount) * 100) : 0
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[18px] font-bold text-ink tabular-nums">{formatCurrency(amount)}</span>
+        <StatusBadge status={b.paymentStatus} dot={false} />
+      </div>
+      <div className="mt-2 h-1.5 rounded-full bg-surface2 overflow-hidden" role="presentation">
+        <div className={`h-full rounded-full ${pct >= 100 ? 'bg-success' : 'bg-gold'}`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className="flex items-center justify-between gap-2 mt-1.5 text-xs">
+        <span className="text-ink3">{t('card.paid', { amount: formatCurrency(paid) })}</span>
+        <span className={due ? 'text-warning-text font-semibold' : 'text-success-text font-medium'}>
+          {due ? t('table.due', { amount: formatCurrency(b.balanceDue) }) : t('table.fullyPaid')}
+        </span>
+      </div>
+      <RefundNote b={b} />
+    </div>
+  )
+}
+
+/**
+ * One booking as a card (phones, tablets, and the Cards view everywhere): a
+ * status strip, the guest and status, room, a dates panel that says where the
+ * stay is now, a payment bar, and the main action as a full-width button.
+ */
+function BookingCard({ b, busy, h }) {
+  const names = splitNames(b.guestName)
+  const phones = splitPhones(b.guestPhone)
+  return (
+    <article className="relative min-w-0 flex flex-col rounded-2xl border border-line bg-surface shadow-soft overflow-hidden
+                        transition-[box-shadow,border-color] duration-150 hover:shadow-lift hover:border-line2">
+      <span className={`absolute inset-x-0 top-0 h-1 ${STATUS_STRIP[b.status] || 'bg-line2'}`} aria-hidden />
+      <div className="p-4 pt-5 flex flex-col gap-3.5 flex-1">
+        <div className="flex items-start gap-3">
+          <span className={`shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-[13px] font-bold ${STATUS_AVATAR[b.status] || 'bg-surface2 text-ink2'}`}>
+            {initials(b.guestName)}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold text-[15px] text-ink truncate" title={names.join(', ')}>
+              {names[0] || b.guestName}
+              {names.length > 1 && <span className="ml-1 text-xs font-normal text-ink3">+{names.length - 1}</span>}
+            </div>
+            <div className="text-xs text-ink3 truncate mt-0.5">
+              <span className="font-mono">{b.bookingNo}</span>{phones[0] ? ` · ${phones[0]}` : ''}
+            </div>
+          </div>
+          <div className="shrink-0"><StatusBadge status={b.status} /></div>
+        </div>
+        <StatusNote b={b} className="-mt-2 pl-14" />
+
+        <Room b={b} />
+        <StayPanel b={b} />
+        <MoneyPanel b={b} />
+      </div>
+      <div className="px-4 pb-4 pt-0 mt-auto">
+        <Actions b={b} busy={busy} h={h} stretch />
       </div>
     </article>
+  )
+}
+
+function CardGrid({ bookings, loading, busyId, h, className = '' }) {
+  return (
+    <div className={`grid gap-3 sm:gap-4 p-3 sm:p-4 grid-cols-1 md:grid-cols-2 ${className}`}>
+      {loading
+        ? <CardSkeletons count={4} />
+        : bookings.map((b) => <BookingCard key={b.id} b={b} busy={busyId === b.id} h={h} />)}
+    </div>
   )
 }
 
@@ -275,9 +401,9 @@ function BookingRow({ b, busy, h }) {
   )
 }
 
-function CardSkeletons({ count, boxed }) {
+function CardSkeletons({ count }) {
   return Array.from({ length: count }, (_, i) => (
-    <div key={i} className={`space-y-2.5 p-4 ${boxed ? 'rounded-xl border border-line' : ''}`}>
+    <div key={i} className="space-y-2.5 p-4 rounded-2xl border border-line">
       <div className="h-4 w-1/2 rounded bg-surface2 animate-pulse" />
       <div className="h-3 w-3/4 rounded bg-surface2 animate-pulse" />
       <div className="h-3 w-2/3 rounded bg-surface2 animate-pulse" />
@@ -289,11 +415,9 @@ function CardSkeletons({ count, boxed }) {
  * Bookings list (API-backed). Shows guest, room, stay, pricing + payment, status,
  * and the lifecycle actions valid for each row's status.
  *
- * One set of cell components feeds both layouts. `view` picks between them, but
- * the table is only ever used from 2xl (1536px) up — its six columns need ~1100px,
- * which a 1280–1440 laptop with the full sidebar doesn't have, and a sideways-
- * scrolling table hides the actions. Narrower screens fall back to cards
- * (phones) or three-column rows (tablets and laptops).
+ * Layouts: phones and tablets (below xl) always get booking cards — one column,
+ * two from md. From xl the List view shows three-column rows, and the full table
+ * from 2xl (its six columns need ~1100px). The Cards view shows cards at any width.
  */
 export default function BookingsTable({
   bookings, loading, busyId, view = 'table',
@@ -343,28 +467,16 @@ export default function BookingsTable({
         </div>
       )}
 
-      {/* ── Cards: the chosen view at any width ── */}
-      {asCards && (
-        <div className="grid gap-3 p-3 sm:p-4 sm:grid-cols-2 xl:grid-cols-3">
-          {loading
-            ? <CardSkeletons count={6} boxed />
-            : bookings.map((b) => (
-                <BookingCard key={b.id} b={b} busy={busyId === b.id} h={h} boxed />
-              ))}
-        </div>
-      )}
+      {/* ── Cards: phones and tablets always; any width in the Cards view ── */}
+      <CardGrid bookings={bookings} loading={loading} busyId={busyId} h={h}
+        className={asCards ? 'xl:grid-cols-3' : 'xl:hidden'} />
 
-      {/* ── Table view below 2xl: cards on phones, three-column rows from sm ── */}
+      {/* ── List view on laptops (xl → 2xl): three-column rows ── */}
       {!asCards && (
-        <div className="2xl:hidden divide-y divide-line">
+        <div className="hidden xl:block 2xl:hidden divide-y divide-line">
           {loading
             ? <CardSkeletons count={4} />
-            : bookings.map((b) => (
-                <div key={b.id}>
-                  <div className="sm:hidden"><BookingCard b={b} busy={busyId === b.id} h={h} /></div>
-                  <div className="hidden sm:block"><BookingRow b={b} busy={busyId === b.id} h={h} /></div>
-                </div>
-              ))}
+            : bookings.map((b) => <BookingRow key={b.id} b={b} busy={busyId === b.id} h={h} />)}
         </div>
       )}
     </>

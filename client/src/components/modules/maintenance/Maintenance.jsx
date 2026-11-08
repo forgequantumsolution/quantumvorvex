@@ -9,8 +9,11 @@ import { useToast } from '../../../hooks/useToast'
 import { usePrimaryAction } from '../../../store/hooks'
 import { maintenanceApi } from '../../../api/client'
 
-// Tab ids are the ticket status values; labels are translated at render.
-const TABS = ['all', 'Open', 'In Progress', 'Resolved']
+// Tab ids are the ticket status values, plus 'urgent' (urgent and not yet
+// resolved, in any status); labels are translated at render.
+const TABS = ['all', 'Open', 'In Progress', 'Resolved', 'urgent']
+const isUrgent = (t) => t.priority === 'Urgent' && t.status !== 'Resolved'
+const tabLabel = (t, id) => (id === 'all' ? t('common:all') : id === 'urgent' ? t('tabs.urgent') : t(`status.${id}`))
 
 const normalize = (t) => ({ ...t, roomNumber: t.room?.number || t.room || '' })
 
@@ -49,16 +52,13 @@ export default function Maintenance() {
     Open: tickets.filter((t) => t.status === 'Open').length,
     'In Progress': tickets.filter((t) => t.status === 'In Progress').length,
     Resolved: tickets.filter((t) => t.status === 'Resolved').length,
+    urgent: tickets.filter(isUrgent).length,
   }), [tickets])
-
-  const urgent = useMemo(
-    () => tickets.filter((t) => t.priority === 'Urgent' && t.status !== 'Resolved').length,
-    [tickets],
-  )
 
   const filtered = useMemo(() => {
     let list = tickets
-    if (tab !== 'all') list = list.filter((t) => t.status === tab)
+    if (tab === 'urgent') list = list.filter(isUrgent)
+    else if (tab !== 'all') list = list.filter((t) => t.status === tab)
     const q = query.trim().toLowerCase()
     if (q) {
       list = list.filter((t) =>
@@ -120,17 +120,22 @@ export default function Maintenance() {
       ]}
       stats={
         <>
-          <StatCard icon={<LuWrench />} tone="gold" label={t('stats.total')} value={counts.all} />
-          <StatCard icon={<LuCircleDot />} tone="amber" label={t('status.Open')} value={counts.Open} />
-          <StatCard icon={<LuLoader />} tone="blue" label={t('status.In Progress')} value={counts['In Progress']} />
-          <StatCard icon={<LuTriangleAlert />} tone="red" label={t('stats.urgent')} value={urgent} />
+          {/* Each card picks the matching tab below. */}
+          {[
+            { id: 'all', icon: <LuWrench />, tone: 'gold', label: t('stats.total'), value: counts.all },
+            { id: 'Open', icon: <LuCircleDot />, tone: 'amber', label: t('status.Open'), value: counts.Open },
+            { id: 'In Progress', icon: <LuLoader />, tone: 'blue', label: t('status.In Progress'), value: counts['In Progress'] },
+            { id: 'urgent', icon: <LuTriangleAlert />, tone: 'red', label: t('stats.urgent'), value: counts.urgent },
+          ].map(({ id, ...k }) => (
+            <StatCard key={id} {...k} selected={tab === id} onClick={() => setTab(id)} />
+          ))}
         </>
       }
     >
       <Card title={t('tickets')} subtitle={t('shown', { count: filtered.length, total: tickets.length })}>
         {/* Status tabs scroll sideways on phones */}
         <div className="min-w-0 px-4 sm:px-5 py-3 border-b border-line">
-          <FilterTabs tabs={TABS.map((id) => ({ id, label: id === 'all' ? t('common:all') : t(`status.${id}`), count: counts[id] }))} active={tab} onChange={setTab} />
+          <FilterTabs tabs={TABS.map((id) => ({ id, label: tabLabel(t, id), count: counts[id] }))} active={tab} onChange={setTab} />
         </div>
 
         <div className="p-3 sm:p-4">

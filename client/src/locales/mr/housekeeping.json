@@ -111,5 +111,11 @@
     "linenFailed": "लिनन बदल नोंदवता आला नाही",
     "inspectionSaved": "तपासणी सेव्ह झाली — गुण: {{score}}%",
     "inspectionFailed": "तपासणी सेव्ह झाली नाही"
+  },
+  "filter": {
+    "status": "स्थिती",
+    "all": "सर्व खोल्या",
+    "showing": "दाखवत आहे: {{status}}",
+    "clear": "फिल्टर काढा"
   }
 }

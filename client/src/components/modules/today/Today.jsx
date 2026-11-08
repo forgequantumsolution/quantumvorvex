@@ -4,6 +4,7 @@ import {
   LuTriangleAlert, LuArrowRight, LuBedDouble,
 } from 'react-icons/lu'
 import StatCard from '../../ui-tw/StatCard'
+import { StatStrip } from '../../ui-tw'
 import { usePageHeader, useUiActions } from '../../../store/hooks'
 import { bookingsApi, guestsApi, maintenanceApi } from '../../../api/client'
 import { useTranslation } from 'react-i18next'
@@ -75,13 +76,14 @@ export default function Today() {
 
   return (
     <div className="flex flex-col gap-4 sm:gap-5">
-      {/* KPI strip — 2-up on phones, a single row from lg. Each tile deep-links. */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      {/* KPI strip from xl; each segment deep-links. Below xl the columns
+          underneath carry the same counts. */}
+      <StatStrip>
         {kpis.map(k => (
           <StatCard key={k.id} label={k.label} value={k.value} hint={k.hint} icon={<k.Icon />}
             tone={k.tone} loading={loading} onClick={k.onClick} />
         ))}
-      </div>
+      </StatStrip>
 
       {/* Action columns: stacked on phones, two-up on tablets (Needs Attention
           spans the row), three across from xl. */}
@@ -103,7 +105,8 @@ export default function Today() {
         </Column>
 
         {/* Departures */}
-        <Column title={t('departures')} Icon={LuLogOut} count={departures.length} onView={() => goBookings('CheckedIn')} viewLabel={t('viewBookings')}>
+        <Column title={t('departures')} Icon={LuLogOut} count={departures.length} onView={() => goBookings('CheckedIn')} viewLabel={t('viewBookings')}
+          note={`${t('kpi.inHouse')}: ${inHouse.length}`}>
           {departures.length === 0
             ? <Empty text={t('noCheckouts')} />
             : departures.slice(0, 6).map(g => {
@@ -165,7 +168,8 @@ export default function Today() {
 }
 
 // ── Building blocks ───────────────────────────────────────────────────────────
-function Column({ title, Icon: ColumnIcon, count, children, onView, viewLabel, accent, className = '' }) {
+// `note` is a line shown below xl, where the KPI strip (and its figures) is hidden.
+function Column({ title, Icon: ColumnIcon, count, children, onView, viewLabel, accent, note, className = '' }) {
   // Capitalised local so it renders as a component (and counts as used for eslint).
   const Icon = ColumnIcon
   const { t } = useTranslation('today')
@@ -190,6 +194,7 @@ function Column({ title, Icon: ColumnIcon, count, children, onView, viewLabel, a
         )}
       </div>
       <div className="card-body pt-1 pb-2">
+        {note && <div className="xl:hidden text-xs font-medium text-ink3 pt-1.5 pb-1">{note}</div>}
         {children}
       </div>
     </div>

@@ -94,5 +94,8 @@
     "sending": "Sending…",
     "submit": "Submit Request",
     "footer": "No login needed · Your room staff will be notified"
+  },
+  "tabs": {
+    "urgent": "Urgent"
   }
 }

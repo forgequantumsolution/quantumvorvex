@@ -753,10 +753,15 @@ export default function Guests() {
       ]}
       stats={
         <>
-          <StatCard icon={<LuUserCheck />} tone="green" label={t('stats.active')} value={stats.active} />
-          <StatCard icon={<LuCircleAlert />} tone="amber" label={t('stats.due')} value={stats.due} />
-          <StatCard icon={<LuLogOut />} tone="grey" label={t('stats.checkedOut')} value={stats.checkedOut} />
-          <StatCard icon={<LuUsers />} tone="blue" label={t('stats.total')} value={stats.total} />
+          {/* Each card filters the list below to the guests it counts; Total clears the status filter. */}
+          {[
+            { filter: 'Active', icon: <LuUserCheck />, tone: 'green', label: t('stats.active'), value: stats.active },
+            { filter: 'Due', icon: <LuCircleAlert />, tone: 'amber', label: t('stats.due'), value: stats.due },
+            { filter: 'Checked Out', icon: <LuLogOut />, tone: 'grey', label: t('stats.checkedOut'), value: stats.checkedOut },
+            { filter: 'All', icon: <LuUsers />, tone: 'blue', label: t('stats.total'), value: stats.total, hint: t('stats.inHouseHint', { count: stats.active + stats.due }) },
+          ].map(({ filter, ...k }) => (
+            <StatCard key={filter} {...k} selected={statusFilter === filter} onClick={() => handleStatusChange(filter)} />
+          ))}
         </>
       }
     >

@@ -1,4 +1,6 @@
+import { useContext } from 'react'
 import { LuChevronRight, LuTrendingDown, LuTrendingUp, LuMinus } from 'react-icons/lu'
+import { StatStripContext } from './statStripContext'
 
 /**
  * KPI card, the one design used for every figure tile in the app. Compact,
@@ -18,6 +20,7 @@ import { LuChevronRight, LuTrendingDown, LuTrendingUp, LuMinus } from 'react-ico
  *   trendGoodWhenDown  flip the trend colours for figures that should fall (dues, overdue)
  *   progress           0–100; draws a thin bar in the tone colour along the bottom
  *   onClick            makes the whole card a button that links somewhere
+ *   selected           marks it as the active filter (gold outline, aria-pressed)
  *   loading            shows a placeholder instead of the value
  *   children           extra content at the bottom
  *
@@ -61,17 +64,56 @@ function Trend({ value, goodWhenDown }) {
 }
 
 export default function StatCard({
-  icon, label, value, hint, tone = 'gold', trend, trendGoodWhenDown, progress, onClick, loading, children, className = '',
+  icon, label, value, hint, tone = 'gold', trend, trendGoodWhenDown, progress, onClick, selected, loading, children, className = '',
 }) {
   const Comp = onClick ? 'button' : 'div'
   const pct = progress == null ? null : Math.max(0, Math.min(100, Number(progress) || 0))
+  const inStrip = useContext(StatStripContext)
+
+  // One segment of PageWrapper's KPI strip: icon, label, value and hint on two
+  // short lines; the active filter gets a gold underline.
+  if (inStrip) {
+    return (
+      <Comp
+        type={onClick ? 'button' : undefined}
+        onClick={onClick}
+        aria-pressed={onClick && selected !== undefined ? !!selected : undefined}
+        title={typeof label === 'string' ? label : undefined}
+        className={`group relative flex-1 min-w-0 flex items-center gap-3 px-4 py-3 text-left bg-transparent border-0 ${
+          onClick ? 'cursor-pointer transition-colors hover:bg-surface2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-gold' : ''
+        } ${selected ? 'bg-surface2' : ''} ${className}`}
+      >
+        {icon && (
+          <span className={`w-9 h-9 rounded-lg shrink-0 flex items-center justify-center text-[16px] ${CHIP[tone] || CHIP.gold}`} aria-hidden>
+            {icon}
+          </span>
+        )}
+        <span className="min-w-0 flex-1">
+          <span className={`block text-xs font-medium truncate ${selected ? 'text-gold' : 'text-ink3'}`}>{label}</span>
+          <span className="flex items-baseline gap-2 min-w-0 mt-0.5">
+            <span className="font-display font-bold text-[19px] leading-none tracking-[-0.02em] tabular-nums text-ink shrink-0">
+              {loading ? <span className="inline-block h-[0.85em] w-12 rounded bg-surface2 animate-pulse align-middle" /> : value}
+            </span>
+            {trend != null && <Trend value={trend} goodWhenDown={trendGoodWhenDown} />}
+            {hint && <span className="text-xs text-ink3 truncate min-w-0">{hint}</span>}
+          </span>
+        </span>
+        {(selected || pct != null) && (
+          <span className={`absolute left-3 right-3 bottom-0 h-[3px] rounded-full ${selected ? 'bg-gold' : BAR[tone] || BAR.gold}`}
+            style={!selected && pct != null ? { width: `calc((100% - 1.5rem) * ${pct / 100})`, right: 'auto' } : undefined} aria-hidden />
+        )}
+      </Comp>
+    )
+  }
 
   return (
     <Comp
       type={onClick ? 'button' : undefined}
+      aria-pressed={onClick && selected !== undefined ? !!selected : undefined}
       onClick={onClick}
       title={typeof label === 'string' ? label : undefined}
-      className={`group relative min-w-0 w-full text-left bg-surface border border-line rounded-xl shadow-soft overflow-hidden ${
+      className={`group relative min-w-0 w-full text-left bg-surface border rounded-xl shadow-soft overflow-hidden ${
+        selected ? 'border-gold ring-2 ring-gold/25 bg-gold-bg/40' : 'border-line'} ${
         onClick
           ? 'cursor-pointer transition-[border-color,box-shadow] duration-150 hover:border-gold-border hover:shadow-lift focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold'
           : ''
