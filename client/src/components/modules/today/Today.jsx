@@ -4,12 +4,14 @@ import {
   LuTriangleAlert, LuArrowRight, LuBedDouble,
 } from 'react-icons/lu'
 import StatCard from '../../ui-tw/StatCard'
-import { StatStrip } from '../../ui-tw'
+import { StatStrip, WhatsAppButton, useWhatsAppComposer } from '../../ui-tw'
 import { usePageHeader, useUiActions } from '../../../store/hooks'
 import { bookingsApi, guestsApi, maintenanceApi } from '../../../api/client'
 import { useTranslation } from 'react-i18next'
 import { formatDate } from '../../../utils/format'
 import { appLocale } from '../../../i18n'
+import { normalizeBooking } from '../../../utils/normalizeBooking'
+import { splitNames } from '../../../utils/booking'
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() }
@@ -38,6 +40,23 @@ export default function Today() {
   const [guests,   setGuests]   = useState([])
   const [tickets,  setTickets]  = useState([])
   const [loading,  setLoading]  = useState(true)
+  const wa = useWhatsAppComposer()
+
+  // Arrival reminder for an expected booking; check-out reminder (settle dues) for a departure.
+  const remindArrival = (raw) => {
+    const b = normalizeBooking(raw)
+    wa.open({
+      phone: b.guestPhone, guestId: b.guestId, name: `${b.guestName} · ${b.bookingNo || ''}`, template: 'arrival',
+      vars: {
+        name: splitNames(b.guestName)[0] || b.guestName, bookingNo: b.bookingNo, room: b.roomNumber,
+        fromDate: b.fromDate || b.checkIn, amount: b.amount, paid: b.advance, due: b.balanceDue,
+      },
+    })
+  }
+  const remindDeparture = (g) => wa.open({
+    phone: g.phone, guestId: g.id, name: g.name, template: 'departure',
+    vars: { name: g.name, room: g.roomNumber || g.room?.number },
+  })
 
   useEffect(() => {
     let alive = true
@@ -100,6 +119,7 @@ export default function Today() {
                 meta={`${t('roomNo', { number: b.roomNumber || '—' })} · ${b.roomType || ''}`}
                 right={<DateChip label={isToday(b.checkIn) ? t('common:today') : formatDate(b.checkIn, { month: 'short', day: 'numeric' })} tone={isToday(b.checkIn) ? 'gold' : 'grey'} />}
                 action={{ label: t('checkIn'), onClick: () => goBookings('Upcoming') }}
+                wa={<WhatsAppButton iconOnly phone={b.guestPhone} label={t('whatsapp:actions.arrival')} onClick={() => remindArrival(b)} />}
               />
             ))}
         </Column>
@@ -118,6 +138,7 @@ export default function Today() {
                   meta={t('roomNo', { number: g.roomNumber || '—' })}
                   right={<DateChip label={overdue ? t('common:overdue') : t('common:today')} tone={overdue ? 'red' : 'amber'} />}
                   action={{ label: t('checkOut'), onClick: () => goBookings('CheckedIn') }}
+                  wa={<WhatsAppButton iconOnly phone={g.phone} label={t('whatsapp:actions.departure')} onClick={() => remindDeparture(g)} />}
                 />
               )
             })}
@@ -163,6 +184,7 @@ export default function Today() {
             ))}
         </Column>
       </div>
+      {wa.composer}
     </div>
   )
 }
@@ -201,7 +223,7 @@ function Column({ title, Icon: ColumnIcon, count, children, onView, viewLabel, a
   )
 }
 
-function Row({ name, meta, right, action }) {
+function Row({ name, meta, right, action, wa }) {
   return (
     <div className="flex items-center gap-2.5 py-2.5 border-b border-line last:border-b-0">
       <div className="hidden min-[400px]:flex w-[30px] h-[30px] rounded-lg bg-surface2 text-ink3 items-center justify-center shrink-0">
@@ -214,6 +236,7 @@ function Row({ name, meta, right, action }) {
           {right}
         </div>
       </div>
+      {wa}
       {action && (
         <button onClick={action.onClick} className="btn btn-outline btn-sm shrink-0">{action.label}</button>
       )}

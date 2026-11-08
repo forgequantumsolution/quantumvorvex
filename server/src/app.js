@@ -33,6 +33,8 @@ import pricingRoutes from './routes/pricing.js'
 import remindersRoutes from './routes/reminders.js'
 import usersRoutes from './routes/users.js'
 import propertiesRoutes from './routes/properties.js'
+import publicRoutes from './routes/public.js'
+import paymentClaimsRoutes from './routes/paymentClaims.js'
 
 import logger, { requestLogger } from './utils/logger.js'
 import prisma from './utils/prisma.js'
@@ -156,7 +158,9 @@ app.use('/api/v1/reports',       apiLimiter, reportsRoutes)
 // router, so it intercepts every /api/v1/* request registered after it — which
 // would 401 the public guest QR routes (/api/v1/maintenance/public/*).
 app.use('/api/v1/maintenance',   apiLimiter, maintenanceRoutes)
+app.use('/api/v1/public',        apiLimiter, publicRoutes)   // no auth; also before foodPlansRoutes
 app.use('/api/v1/expenses',      apiLimiter, apiSlowDown, expensesRoutes)
+app.use('/api/v1/payment-claims', apiLimiter, paymentClaimsRoutes)
 app.use('/api/v1',               apiLimiter, foodPlansRoutes)
 app.use('/api/v1/housekeeping',  apiLimiter, housekeepingRoutes)
 app.use('/api/v1/roles',         apiLimiter, rolesRoutes)

@@ -12,6 +12,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import SetupWizard from './components/modules/setup/SetupWizard'
 import GuestPortal from './components/modules/portal/GuestPortal'
 import GuestMaintenanceForm from './components/modules/maintenance/GuestMaintenanceForm'
+import PublicInvoice from './components/modules/billing/PublicInvoice'
 import LoginPage from './components/auth/LoginPage'
 import ResetPasswordPage from './components/auth/ResetPasswordPage'
 // import LandingPage from './components/auth/LandingPage'
@@ -143,6 +144,10 @@ export default function App() {
   const [reportRoute] = useState(
     () => typeof window !== 'undefined' && window.location.pathname === '/report'
   )
+  // True when a guest opened an invoice link sent on WhatsApp (/invoice?t=…) — public, no login.
+  const [invoiceRoute] = useState(
+    () => typeof window !== 'undefined' && window.location.pathname === '/invoice'
+  )
   const exitResetRoute = () => {
     window.history.replaceState({}, '', '/')
     setResetRoute(false)
@@ -211,7 +216,7 @@ export default function App() {
   // State → URL: keep the path at /<panel> so every page is addressable and a
   // refresh restores it (activePanel itself initializes from the URL in uiSlice).
   useEffect(() => {
-    if (!isAuthed || resetRoute) return
+    if (!isAuthed || resetRoute || reportRoute || invoiceRoute) return
     const path = `/${activePanel}`
     if (window.location.pathname === path) return
     if (panelFromUrl(null) === null) {
@@ -221,7 +226,7 @@ export default function App() {
     } else {
       window.history.pushState({ panel: activePanel }, '', path)
     }
-  }, [activePanel, isAuthed, resetRoute])
+  }, [activePanel, isAuthed, resetRoute, reportRoute, invoiceRoute])
 
   // URL → state: browser back/forward.
   useEffect(() => {
@@ -235,6 +240,16 @@ export default function App() {
     return (
       <>
         <GuestMaintenanceForm />
+        <Toast />
+      </>
+    )
+  }
+
+  // ── Guest invoice link (WhatsApp) — public, shown before any auth gate ───────
+  if (invoiceRoute) {
+    return (
+      <>
+        <PublicInvoice />
         <Toast />
       </>
     )

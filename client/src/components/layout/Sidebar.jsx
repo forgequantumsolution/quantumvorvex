@@ -5,6 +5,7 @@ import { useAppSelector, useUiActions, useAuthActions } from '../../store/hooks'
 import { getAllowedPanels } from '../../utils/permissions'
 import { NAV_SECTIONS, navLabel } from '../../utils/navigation'
 import { useBreakpoint } from '../../hooks/useMediaQuery'
+import { usePendingClaims } from '../../utils/paymentClaims'
 
 function getInitials(name = '') {
   return name
@@ -45,6 +46,8 @@ export default function Sidebar() {
   const { logout } = useAuthActions()
   const { isPhone, isTablet, isDesktop } = useBreakpoint()
   const { t } = useTranslation('shell')
+  // UPI payments guests reported, waiting to be confirmed in Billing.
+  const { pending: pendingClaims } = usePendingClaims()
 
   // Labels visible? Phone drawer: always. Tablet: only while expanded. Desktop: unless collapsed.
   const expanded = isPhone || (isTablet ? sidebarOpen : !sidebarCollapsed)
@@ -172,6 +175,7 @@ export default function Sidebar() {
                   key={item.id}
                   item={{ ...item, label: navLabel(t, item.id) }}
                   isActive={activePanel === item.id}
+                  badge={item.id === 'billing' ? pendingClaims : 0}
                   collapsed={collapsed}
                   onClick={() => handleNavClick(item.id)}
                 />
@@ -242,7 +246,7 @@ function CollapseButton({ collapsed, onClick }) {
   )
 }
 
-function NavItem({ item, isActive, collapsed, onClick }) {
+function NavItem({ item, isActive, badge = 0, collapsed, onClick }) {
   const [hovered, setHovered] = useState(false)
   const itemRef = useRef(null)
   // Viewport coords for the tooltip — fixed positioning escapes the
@@ -273,11 +277,17 @@ function NavItem({ item, isActive, collapsed, onClick }) {
       }`}
     >
       <span
-        className={`w-5 flex items-center justify-center shrink-0 transition-[color] duration-[120ms] ${isActive || hovered ? 'text-[#c9a84c]' : 'text-[#8a857a]'}`}
+        className={`relative w-5 flex items-center justify-center shrink-0 transition-[color] duration-[120ms] ${isActive || hovered ? 'text-[#c9a84c]' : 'text-[#8a857a]'}`}
       >
         <item.Icon size={17} strokeWidth={isActive ? 2.3 : 1.9} />
+        {collapsed && badge > 0 && (
+          <span className="absolute -top-1.5 -right-2 min-w-4 h-4 px-1 rounded-full bg-[#c9a84c] text-black text-[10px] font-bold leading-4 text-center">{badge}</span>
+        )}
       </span>
       {!collapsed && <span className="flex-1">{item.label}</span>}
+      {!collapsed && badge > 0 && (
+        <span className="shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-[#c9a84c] text-black text-[11px] font-bold leading-5 text-center">{badge}</span>
+      )}
 
       {/* Tooltip — collapsed state only */}
       {collapsed && hovered && (

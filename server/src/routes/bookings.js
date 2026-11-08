@@ -1,5 +1,6 @@
 import express from 'express'
 import {
+  shareBookingInvoiceLink,
   getBookings,
   getBookingStats,
   getBooking,
@@ -42,6 +43,8 @@ router.get('/:id',   getBooking)
 
 // Tax invoice (HTML, print-ready) generated from a completed booking
 router.get('/:id/invoice', getBookingInvoice)
+// Signed guest link to that invoice (sent on WhatsApp)
+router.get('/:id/share-link', shareBookingInvoiceLink)
 // Override the tax-invoice serial number for a booking
 router.patch('/:id/invoice-no', updateInvoiceNo)
 router.post('/',   validate(schemas.createBooking), createBooking)

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { LuTrash2, LuReceipt, LuBell, LuWallet, LuClock, LuCircleAlert, LuPercent, LuRefreshCw, LuDownload, LuCalendarClock, LuPlus } from 'react-icons/lu'
-import { PageWrapper, StatCard, Card, DataTable, FilterTabs, Pagination, EmptyState } from '../../ui-tw'
+import { PageWrapper, StatCard, Card, DataTable, FilterTabs, Pagination, EmptyState, useWhatsAppComposer, waMenuItem } from '../../ui-tw'
 import ActionMenu from '../../ui-tw/ActionMenu'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
@@ -10,6 +10,7 @@ import { useToast } from '../../../hooks/useToast'
 import { useAppSelector } from '../../../store/hooks'
 import { billingApi, guestsApi, remindersApi } from '../../../api/client'
 import { formatCurrency, formatDate } from '../../../utils/format'
+import { PaymentClaimsBanner } from './PaymentClaims'
 
 // Flatten an API invoice (guest is a relation) to the flat shape the UI renders.
 function normalizeInvoice(inv) {
@@ -18,6 +19,7 @@ function normalizeInvoice(inv) {
     invoiceNo: inv.invoiceNo,
     guestId: inv.guestId || inv.guest?.id,
     guest: inv.guest?.name || '—',
+    phone: inv.guest?.phone || '',
     room: inv.guest?.room?.number || '—',
     period: inv.period,
     rent: inv.rent || 0,
@@ -26,9 +28,26 @@ function normalizeInvoice(inv) {
     gstRate: inv.gstRate || 12,
     gstAmount: inv.gstAmount || 0,
     total: inv.total || 0,
+    amountPaid: inv.amountPaid || 0,
     status: inv.status,
     createdAt: inv.createdAt,
     paidAt: inv.paidAt || null,
+  }
+}
+
+// WhatsApp composer request for an invoice: the message plus its public link.
+function invoiceMessage(inv, template, text) {
+  return {
+    phone: inv.phone,
+    guestId: inv.guestId,
+    name: `${inv.guest} · ${inv.invoiceNo}`,
+    template: text ? undefined : template,
+    text,
+    invoiceId: inv.id,
+    vars: {
+      name: inv.guest, room: inv.room, invoiceNo: inv.invoiceNo, period: inv.period,
+      amount: inv.total, due: Math.max(0, inv.total - inv.amountPaid),
+    },
   }
 }
 
@@ -790,6 +809,7 @@ export default function Billing() {
   const [invoiceModal, setInvoiceModal]     = useState(null)   // invoice obj
   const [collectModal, setCollectModal]     = useState(null)   // invoice obj
   const [remindModal, setRemindModal]       = useState(null)   // invoice obj
+  const wa = useWhatsAppComposer()
   const [deleteModal, setDeleteModal]       = useState(null)   // invoice obj
   const [deleting, setDeleting]             = useState(false)
   const [showGenerate, setShowGenerate]     = useState(false)
@@ -863,6 +883,13 @@ export default function Billing() {
 
   const handleRemind = async (channel, message) => {
     if (!remindModal) return
+    // WhatsApp goes through the composer (number + message, opens wa.me); the
+    // composer records the reminder itself once it's opened.
+    if (channel === 'WhatsApp') {
+      wa.open(invoiceMessage(remindModal, null, message))
+      setRemindModal(null)
+      return
+    }
     try {
       if (remindModal.guestId) {
         await remindersApi.send({ guestId: remindModal.guestId, channel, message })
@@ -1001,6 +1028,8 @@ export default function Billing() {
           <ActionMenu
             items={[
               inv.status === 'Pending' && { label: t('actions.viewInvoice'), icon: <LuReceipt size={14} />, onClick: () => setInvoiceModal(inv) },
+              waMenuItem(t('whatsapp:actions.invoice'), inv.phone, () => wa.open(invoiceMessage(inv, 'invoice'))),
+              ['Pending', 'Overdue'].includes(inv.status) && waMenuItem(t('whatsapp:actions.invoiceReminder'), inv.phone, () => wa.open(invoiceMessage(inv, 'invoiceReminder'))),
               inv.status !== 'Paid' && { label: t('actions.sendReminder'), icon: <LuBell size={14} />, onClick: () => setRemindModal(inv) },
               { label: t('actions.deleteInvoice'), icon: <LuTrash2 size={14} />, danger: true, onClick: () => setDeleteModal(inv) },
             ]}
@@ -1048,6 +1077,9 @@ export default function Billing() {
       }
       toolbar={<FilterTabs tabs={BILLING_TABS.map(tab => ({ id: tab.id, label: t(tab.labelKey) }))} active={activeTab} onChange={setActiveTab} wrap={false} />}
     >
+      {/* UPI payments guests reported from the pay page, waiting for staff */}
+      <PaymentClaimsBanner onConfirmed={reload} />
+
       {error && (
         <div className="t-sm mb-4 px-[14px] py-2.5 rounded-lg bg-danger-bg text-danger-text">
           {error}
@@ -1138,6 +1170,7 @@ export default function Billing() {
         danger
         busy={deleting}
       />
+      {wa.composer}
     </PageWrapper>
   )
 }
