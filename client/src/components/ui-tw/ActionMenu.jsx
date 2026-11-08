@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 
 /**
  * Overflow menu for secondary actions — a row's "⋮" or a page header's "More".
- * `items` = [{ label, icon?, onClick, danger?, disabled? } | null | false]; falsy
+ * `items` = [{ label, icon?, onClick, danger?, disabled?, title? } | null | false]; falsy
  * entries are skipped so callers can inline conditions.
  *
  * The list is `position: fixed` and anchored to the trigger so it escapes any
@@ -92,6 +92,7 @@ export default function ActionMenu({ items, label, disabled = false, className =
               type="button"
               role="menuitem"
               disabled={it.disabled}
+              title={it.title}
               onClick={() => { setOpen(false); it.onClick() }}
               className={`w-full flex items-center gap-2.5 px-3 py-2 pointer-coarse:min-h-11 text-[13px] text-left transition-colors
                           disabled:opacity-50 disabled:cursor-not-allowed ${

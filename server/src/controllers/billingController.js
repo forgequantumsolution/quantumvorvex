@@ -1,6 +1,10 @@
 import prisma from '../utils/prisma.js'
-import { runRentBilling, tenancyTotals } from '../utils/pgRent.js'
+import { runRentBilling } from '../utils/pgRent.js'
+import { recordInvoicePayment } from '../utils/payments.js'
 import { hotelLogo, inlineUploadAsset } from '../utils/invoiceTemplate.js'
+import { runUnscoped, runWithProperty } from '../utils/propertyContext.js'
+import { isUpiId } from '../utils/upi.js'
+import { invoiceShareUrl, signInvoiceToken, verifyInvoiceToken } from '../utils/invoiceLink.js'
 
 // GET /billing?status=&search=&page=&pageSize=
 // Pagination is opt-in: with no page/pageSize the full matching set is returned.
@@ -150,38 +154,12 @@ export const collectPayment = async (req, res) => {
     const invoice = await prisma.$transaction(async (tx) => {
       const before = await tx.invoice.findUnique({ where: { id } })
       if (!before) throw Object.assign(new Error('not found'), { code: 'P2025' })
-      const collected = +(before.total - (before.amountPaid || 0)).toFixed(2)
-
-      const updated = await tx.invoice.update({
+      // Settles what's left; a PG rent invoice also credits its tenancy.
+      await recordInvoicePayment(tx, before, { method: req.body?.method || 'cash', logStandalone: false })
+      return tx.invoice.findUnique({
         where: { id },
-        data: {
-          status: 'Paid',
-          paidAt: new Date(),
-          amountPaid: before.total,
-        },
-        include: {
-          guest: { select: { id: true, name: true, docId: true } },
-        },
+        include: { guest: { select: { id: true, name: true, docId: true } } },
       })
-
-      // A PG rent invoice also settles that much of the tenancy's running account.
-      if (before.bookingId && collected > 0) {
-        const booking = await tx.booking.findUnique({ where: { id: before.bookingId } })
-        if (booking) {
-          await tx.payment.create({
-            data: { guestId: before.guestId, invoiceId: id, amount: collected, method: req.body?.method || 'cash', type: 'collection' },
-          })
-          const advance = booking.advance + collected
-          await tx.booking.update({
-            where: { id: booking.id },
-            data: {
-              advanceApplied: +(booking.advanceApplied + collected).toFixed(2),
-              ...tenancyTotals({ amount: booking.amount, advance }),
-            },
-          })
-        }
-      }
-      return updated
     })
 
     return res.status(200).json({ invoice, message: 'Payment collected successfully.' })
@@ -352,6 +330,75 @@ export const getInvoicePdf = async (req, res) => {
     return res.status(200).json({ invoice, hotel })
   } catch (err) {
     console.error('getInvoicePdf error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// POST /billing/:id/share-link — a signed link to this invoice that a guest can
+// open without logging in (sent over WhatsApp). Scoped: staff can only share
+// invoices of the property they're acting on.
+export const shareInvoiceLink = async (req, res) => {
+  try {
+    const invoice = await prisma.invoice.findUnique({ where: { id: req.params.id }, select: { id: true, deletedAt: true } })
+    if (!invoice || invoice.deletedAt) return res.status(404).json({ message: 'Invoice not found.' })
+    const hotel = await prisma.hotel.findFirst({ select: { publicUrl: true } })
+    return res.status(200).json({ url: invoiceShareUrl(req, invoice.id, hotel), token: signInvoiceToken(invoice.id) })
+  } catch (err) {
+    console.error('shareInvoiceLink error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /public/invoice/:token (NO auth) — what the printed invoice shows, nothing
+// more: no guest ID/phone/notes, no internal fields. The token is verified first;
+// the invoice is then looked up unscoped by id and the letterhead is read inside
+// the invoice's own property.
+export const getPublicInvoice = async (req, res) => {
+  try {
+    const invoiceId = verifyInvoiceToken(req.params.token)
+    const notFound = () => res.status(404).json({ message: 'Invoice not found.', code: 'ERR_NOT_FOUND' })
+    if (!invoiceId) return notFound()
+
+    const found = await runUnscoped(() => prisma.invoice.findUnique({ where: { id: invoiceId }, select: { propertyId: true, deletedAt: true } }))
+    if (!found || found.deletedAt) return notFound()
+
+    const { invoice, hotel } = await runWithProperty(found.propertyId, async () => ({
+      invoice: await prisma.invoice.findUnique({
+        where: { id: invoiceId },
+        select: {
+          id: true, invoiceNo: true, period: true, rent: true, food: true, amenities: true,
+          gstRate: true, gstAmount: true, total: true, amountPaid: true, hsnCode: true,
+          status: true, createdAt: true, paidAt: true,
+          guest: {
+            select: {
+              name: true, checkInDate: true, checkOutDate: true, bedNo: true,
+              room: { select: { number: true, type: { select: { name: true } } } },
+            },
+          },
+        },
+      }),
+      hotel: await prisma.hotel.findFirst(),
+    }))
+    if (!invoice) return notFound()
+
+    return res.status(200).json({
+      invoice,
+      hotel: {
+        name: hotel?.name || '',
+        address: hotel?.address || null,
+        phone: hotel?.phone || null,
+        email: hotel?.email || null,
+        gstin: hotel?.gstin || null,
+        logoUrl: inlineUploadAsset(hotelLogo(hotel)),
+        bank: hotel?.bankName
+          ? { name: hotel.bankAccountName || hotel.name, bankName: hotel.bankName, accountNo: hotel.bankAccountNo, ifsc: hotel.bankIfsc }
+          : null,
+        // The page draws the pay-by-UPI QR and button from these.
+        upi: isUpiId(hotel?.upiId) ? { id: hotel.upiId.trim(), name: hotel.upiName || hotel.name } : null,
+      },
+    })
+  } catch (err) {
+    console.error('getPublicInvoice error:', err)
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }

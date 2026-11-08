@@ -43,6 +43,13 @@ export const inlineUploadAsset = (url) => {
   }
 }
 
+// The property's uploaded payment QR as a data URI, or null (none set, or the
+// file is gone).
+export const uploadedQr = (hotel) => {
+  const v = inlineUploadAsset(hotel?.upiQrUrl)
+  return typeof v === 'string' && v.startsWith('data:image/') ? v : null
+}
+
 // Default SAC for hotel room accommodation services (GST).
 const DEFAULT_SAC = '996311'
 
@@ -202,6 +209,10 @@ export const buildInvoiceData = (booking, hotel = {}) => {
             bankName: hotel.bankName,
           }
         : null,
+      // Uploaded QR image (upiQrImage, a data URI) wins over the one generated from the UPI ID.
+      upi: hotel.upiId || hotel.upiQrImage
+        ? { id: hotel.upiId || null, name: hotel.upiName || hotel.name, qrSvg: hotel.upiQrSvg || null, qrImage: hotel.upiQrImage || null }
+        : null,
       terms: hotel.termsAndConditions || null,
     },
     guest: {
@@ -303,6 +314,11 @@ export const renderInvoiceHtml = (booking, hotel = {}, opts = {}) => {
            font-weight: 700; letter-spacing: .4px; text-transform: uppercase; }
   .badge.paid { color: var(--green); background: var(--green-bg); }
   .badge.part { color: var(--amber); background: var(--amber-bg); }
+  .sec.upi { display: flex; gap: 14px; align-items: center; }
+  .upi-qr { width: 112px; height: 112px; flex: none; padding: 4px; border: 1px solid #e5e0d5; border-radius: 8px; background: #fff; }
+  .upi-qr svg, .upi-qr img { width: 100%; height: 100%; display: block; object-fit: contain; }
+  .upi-id { font-weight: 700; font-size: 13px; margin-top: 2px; word-break: break-all; }
+  .upi-note { font-size: 11px; color: #7a7466; margin-top: 3px; }
   .badge.due  { color: var(--red);   background: var(--red-bg); }
 
   /* Parties */
@@ -458,6 +474,15 @@ export const renderInvoiceHtml = (booking, hotel = {}, opts = {}) => {
             ${d.payments.map((p) => `
             <tr><td>${esc(p.date)}</td><td>${esc(p.method)}</td><td>${esc(p.reference || '—')}</td><td class="r">${money(p.amount)}</td></tr>`).join('')}
           </table>
+        </div>` : ''}
+        ${h.upi && (h.upi.qrImage || h.upi.qrSvg) && t.balance > 0 ? `
+        <div class="sec upi">
+          <div class="upi-qr">${h.upi.qrImage ? `<img src="${esc(h.upi.qrImage)}" alt="UPI QR">` : h.upi.qrSvg}</div>
+          <div>
+            <div class="lbl">Scan to pay ${money(t.balance)}</div>
+            ${h.upi.id ? `<div class="upi-id">${esc(h.upi.id)}</div>` : ''}
+            <div class="upi-note">Any UPI app — GPay, PhonePe, Paytm, BHIM. Pays ${esc(h.upi.name)}.</div>
+          </div>
         </div>` : ''}
         ${h.bank ? `
         <div class="sec">

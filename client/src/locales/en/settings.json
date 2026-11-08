@@ -7,19 +7,58 @@
     "system": "System"
   },
   "tabs": {
-    "profile": { "label": "Hotel Profile", "description": "Name, contact details, logo and stamp printed on documents" },
-    "properties": { "label": "Properties", "description": "Every property you run, and who has access to each" },
-    "branding": { "label": "Branding", "description": "Logo, identity and brand text shown across the app" },
-    "rooms": { "label": "Room Config", "description": "Hotel capacity and the room types you sell" },
-    "facilities": { "label": "Facilities", "description": "In-room facilities and chargeable amenities" },
-    "food": { "label": "Food Plans", "description": "Meal plans and their one-time, weekly and monthly rates" },
-    "pricing": { "label": "Pricing Rules", "description": "Dynamic pricing rules and competitor rates" },
-    "tax": { "label": "Tax & Pricing", "description": "GST, late fees and seasonal pricing" },
-    "invoice": { "label": "Invoice", "description": "Invoice numbering, bank details and terms" },
-    "documents": { "label": "Documents", "description": "KYC documents collected at check-in and expiry reminders" },
-    "notifications": { "label": "Notifications", "description": "Automated guest message templates and schedule" },
-    "appearance": { "label": "Appearance", "description": "Theme, accent colour and layout density" },
-    "preferences": { "label": "Preferences", "description": "Regional formats, notifications and session" }
+    "profile": {
+      "label": "Hotel Profile",
+      "description": "Name, contact details, logo and stamp printed on documents"
+    },
+    "properties": {
+      "label": "Properties",
+      "description": "Every property you run, and who has access to each"
+    },
+    "branding": {
+      "label": "Branding",
+      "description": "Logo, identity and brand text shown across the app"
+    },
+    "rooms": {
+      "label": "Room Config",
+      "description": "Hotel capacity and the room types you sell"
+    },
+    "facilities": {
+      "label": "Facilities",
+      "description": "In-room facilities and chargeable amenities"
+    },
+    "food": {
+      "label": "Food Plans",
+      "description": "Meal plans and their one-time, weekly and monthly rates"
+    },
+    "pricing": {
+      "label": "Pricing Rules",
+      "description": "Dynamic pricing rules and competitor rates"
+    },
+    "tax": {
+      "label": "Tax & Pricing",
+      "description": "GST, late fees and seasonal pricing"
+    },
+    "invoice": {
+      "label": "Invoice",
+      "description": "Invoice numbering, bank details and terms"
+    },
+    "documents": {
+      "label": "Documents",
+      "description": "KYC documents collected at check-in and expiry reminders"
+    },
+    "notifications": {
+      "label": "Notifications",
+      "description": "Automated guest message templates and schedule"
+    },
+    "appearance": {
+      "label": "Appearance",
+      "description": "Theme, accent colour and layout density"
+    },
+    "preferences": {
+      "label": "Preferences",
+      "description": "Regional formats, notifications and session"
+    }
   },
   "nav": {
     "section": "Settings section",
@@ -350,7 +389,33 @@
     "ifsc": "IFSC",
     "termsTitle": "Terms & conditions",
     "termsLabel": "Printed in the invoice footer",
-    "termsPlaceholder": "e.g. Check-out by 11 AM. Taxes as applicable."
+    "termsPlaceholder": "e.g. Check-out by 11 AM. Taxes as applicable.",
+    "upiTitle": "UPI payment",
+    "upiSubtitle": "Guests see a QR code on the invoice and pay straight to this UPI ID from GPay, PhonePe or Paytm. Free — no payment gateway.",
+    "upiId": "UPI ID",
+    "upiName": "Payee name (shown in the UPI app)",
+    "upiInvalid": "This doesn't look like a UPI ID (for example name@okicici).",
+    "publicUrlTitle": "Link address for guests",
+    "publicUrlSubtitle": "Invoice links sent on WhatsApp open on this address.",
+    "publicUrl": "Website address",
+    "publicUrlHelp": "Use the address where this app is live, for example https://myhotel.com. A localhost address only works on this computer. To test on a phone on the same Wi-Fi, use this computer's network address, for example http://192.168.1.5:5173.",
+    "upiQrLabel": "Payment QR image (optional)",
+    "upiQrHint": "Upload the QR from your PhonePe/Paytm/GPay business app — guests will scan this. Leave empty to use one made from your UPI ID.",
+    "upiQrUpload": "Upload QR",
+    "upiQrReplace": "Replace QR",
+    "upiQrRemove": "Remove",
+    "upiQrWorking": "Please wait…",
+    "upiQrUploaded": "Payment QR uploaded",
+    "upiQrRemoved": "Payment QR removed — the QR from your UPI ID will be used",
+    "upiQrFailed": "Couldn't update the payment QR",
+    "upiQrType": "Choose a PNG, JPG or WebP image",
+    "upiQrTooBig": "The image must be 2 MB or smaller",
+    "upiQrPreview": "QR guests will see",
+    "upiQrNone": "Add a UPI ID or upload a QR",
+    "upiQrFromImage": "Guests see your uploaded QR",
+    "upiQrFromId": "Guests see this QR, made from your UPI ID",
+    "linkPreview": "Links will look like:",
+    "linkLocal": "This address works only on this computer or your Wi-Fi. Set your website address above so guests can open links anywhere."
   },
   "propertyManager": {
     "nameError": "Enter a name (at least 2 characters).",

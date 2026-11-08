@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { LuTable2, LuLayoutGrid, LuCalendarDays, LuCalendarCheck, LuBedDouble, LuCircleAlert, LuPlus, LuRefreshCw, LuX } from 'react-icons/lu'
-import { PageWrapper, StatCard, Card, FilterTabs, Pagination } from '../../ui-tw'
+import { PageWrapper, StatCard, Card, FilterTabs, Pagination, WhatsAppOffer, useWhatsAppComposer } from '../../ui-tw'
 import BookingsTable from './BookingsTable'
 import BookingForm from './BookingForm'
 import CancelModal from '../cancellations/CancelModal'
@@ -16,7 +16,7 @@ import { useToast } from '../../../hooks/useToast'
 import { useAppSelector, usePrimaryAction } from '../../../store/hooks'
 import { bookingsApi } from '../../../api/client'
 import { formatCurrency, formatDate } from '../../../utils/format'
-import { stayLabel } from '../../../utils/booking'
+import { splitNames, stayLabel } from '../../../utils/booking'
 import { useBreakpoint, useMinWidth } from '../../../hooks/useMediaQuery'
 import { bedLabel } from '../../../utils/beds'
 import { normalizeBooking as normalize } from '../../../utils/normalizeBooking'
@@ -52,6 +52,47 @@ function updateErrorMessage(t, err, fallback) {
   return data?.message || fallback
 }
 
+// The composer request for a WhatsApp message about booking `b` (normalized).
+// A tenancy links its rent month (billing invoice): the oldest unpaid month when
+// asking for money, else the latest. A day booking links its own tax invoice.
+function bookingMessage(b, template) {
+  // A confirmation with money still owed also carries the pay link.
+  const wantsLink = ['payment', 'invoice', 'thanks'].includes(template) || (template === 'confirmation' && Number(b.balanceDue) > 0)
+  const invoiceLink = !b.tenancy && wantsLink
+    && ['Confirmed', 'CheckedIn', 'CheckedOut'].includes(b.status)
+    ? () => bookingsApi.shareLink(b.id).then(({ data }) => data.url)
+    : undefined
+  const invoiceId = b.tenancy && wantsLink
+    ? async () => {
+      const { data } = await bookingsApi.rentAccount(b.id)
+      const list = data.invoices || []
+      const unpaid = list.find((i) => i.status !== 'Paid')
+      return (['payment', 'confirmation'].includes(template) && unpaid ? unpaid : list[list.length - 1])?.id || null
+    }
+    : undefined
+  return {
+    phone: b.guestPhone,
+    guestId: b.guestId || b.guest?.id,
+    name: `${b.guestName} · ${b.bookingNo}`,
+    template,
+    invoiceId,
+    invoiceLink,
+    vars: {
+      name: splitNames(b.guestName)[0] || b.guestName,
+      bookingNo: b.bookingNo,
+      room: `${b.roomNumber || ''}${b.bed ? ` (${b.bed})` : ''}`,
+      fromDate: b.fromDate,
+      toDate: b.tenancy ? null : b.toDate,
+      nights: b.stayType === 'monthly' ? 0 : b.nights,
+      months: b.tenancy ? 0 : b.stayType === 'monthly' ? b.months : 0,
+      tenancy: b.tenancy,
+      amount: b.tenancy ? b.roomRate : b.amount,
+      paid: b.advance,
+      due: b.balanceDue,
+    },
+  }
+}
+
 export default function Bookings() {
   const { t } = useTranslation('bookings')
   const toast = useToast()
@@ -81,6 +122,10 @@ export default function Bookings() {
   const [invoiceTarget, setInvoiceTarget] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [busyId, setBusyId] = useState(null)
+  // WhatsApp: the composer, and a follow-up offered after a create / check-out.
+  const wa = useWhatsAppComposer()
+  const [waOffer, setWaOffer] = useState(null) // { message, actionLabel, booking, template }
+  const openWhatsApp = (b, template) => wa.open(bookingMessage(b, template))
   const [view, setView] = useState(storedView)
   // On a phone the four stat tiles fill the first screen — while the New
   // Booking form is open they only push it down, so they step aside.
@@ -168,8 +213,15 @@ export default function Bookings() {
       toast(n === 1
         ? t('toast.created', { no: booking.bookings[0].bookingNo, name: booking.bookings[0].guestName })
         : t('toast.groupCreated', { count: n, room: booking.roomNumber }))
+      const first = normalize(booking.bookings[0])
+      if (first) setWaOffer({
+        message: n === 1 ? t('whatsapp:offer.created', { no: first.bookingNo, name: first.guestName }) : t('whatsapp:offer.createdGroup', { count: n, room: booking.roomNumber }),
+        actionLabel: t('whatsapp:offer.sendConfirmation'), booking: first, template: 'confirmation',
+      })
     } else {
       toast(t('toast.created', { no: booking.bookingNo, name: booking.guestName }))
+      const nb = normalize(booking)
+      setWaOffer({ message: t('whatsapp:offer.created', { no: nb.bookingNo, name: nb.guestName }), actionLabel: t('whatsapp:offer.sendConfirmation'), booking: nb, template: 'confirmation' })
     }
     setShowNew(false)
     reload()
@@ -231,6 +283,9 @@ export default function Bookings() {
       // Money to hand back: go straight to the refund (it can also wait).
       const left = normalize(data.booking)
       if (left?.refundable > 0) setRefundTarget(left)
+      // Offer the invoice & thank-you message on WhatsApp.
+      const gone = left || b
+      setWaOffer({ message: t('whatsapp:offer.checkedOut', { name: gone.guestName || t('common:guest') }), actionLabel: t('whatsapp:offer.sendThanks'), booking: { ...b, ...gone, roomNumber: gone.roomNumber || b.roomNumber }, template: 'thanks' })
       reload()
     } catch (err) {
       toast(err.response?.data?.message || t('toast.checkOutFailed'), 'error')
@@ -313,6 +368,15 @@ export default function Bookings() {
         </>
       )}
     >
+      {waOffer && !showNew && (
+        <WhatsAppOffer
+          message={waOffer.message}
+          actionLabel={waOffer.actionLabel}
+          phone={waOffer.booking.guestPhone}
+          onSend={() => { openWhatsApp(waOffer.booking, waOffer.template); setWaOffer(null) }}
+          onDismiss={() => setWaOffer(null)}
+        />
+      )}
       {showNew ? (
         <Card
           // The form's summary rail is sticky, which an overflow-hidden ancestor breaks.
@@ -347,6 +411,7 @@ export default function Bookings() {
             onInvoice={setInvoiceTarget}
             onEdit={setEditTarget}
             onDelete={setDeleteTarget}
+            onWhatsApp={openWhatsApp}
             view={view}
             emptyMessage={debouncedQuery ? t('page.emptySearch') : t('page.emptyStart')}
           />
@@ -446,6 +511,7 @@ export default function Bookings() {
         danger
         busy={busyId === deleteTarget?.id}
       />
+      {wa.composer}
     </PageWrapper>
   )
 }

@@ -1,0 +1,62 @@
+{
+  "title": "Send on WhatsApp",
+  "sendOnWhatsApp": "WhatsApp",
+  "noPhone": "No valid phone number for this guest",
+  "number": "WhatsApp number",
+  "numberHint": "10-digit mobile, or with country code",
+  "invalidNumber": "Enter a valid mobile number",
+  "language": "Language",
+  "message": "Message",
+  "preparing": "Preparing message…",
+  "noLink": "Invoice link unavailable — the message goes without it.",
+  "openWhatsApp": "Open WhatsApp",
+  "opened": "WhatsApp opened — press Send there",
+  "actions": {
+    "confirmation": "Send booking confirmation",
+    "arrival": "Arrival reminder",
+    "payment": "Ask for payment",
+    "invoice": "Send invoice",
+    "thanks": "Send invoice & thank-you",
+    "invoiceReminder": "Payment reminder",
+    "rentReminder": "Rent reminder",
+    "departure": "Check-out reminder",
+    "chat": "Chat on WhatsApp",
+    "receipt": "Send payment receipt"
+  },
+  "offer": {
+    "created": "Booking {{no}} created for {{name}}.",
+    "createdGroup": "{{count}} bed bookings created in room {{room}}.",
+    "sendConfirmation": "Send confirmation",
+    "checkedOut": "{{name}} has checked out.",
+    "sendThanks": "Send invoice & thank-you"
+  },
+  "guest": "Guest",
+  "untilMoveOut": "until you move out",
+  "monthlyStay": "monthly stay",
+  "nights_one": "{{count}} night",
+  "nights_other": "{{count}} nights",
+  "months_one": "{{count}} month",
+  "months_other": "{{count}} months",
+  "signoff": "— Team {{hotel}}",
+  "line": {
+    "paymentDue": "Paid: {{paid}} · Balance due: {{due}}",
+    "paidInFull": "Payment: fully paid ✅",
+    "link": "\n\n🧾 View / download your invoice:\n{{link}}",
+    "address": "\n\n📍 {{address}}\n{{map}}",
+    "upi": "\n\n💳 Pay by UPI: {{upi}}",
+    "payLink": "\n\n💳 Pay & view invoice:\n{{link}}",
+    "updatedLink": "\n\n🧾 Your updated invoice:\n{{link}}"
+  },
+  "msg": {
+    "confirmation": "Hello {{name}} 👋\n\nThank you for booking with {{hotel}}! Your booking is confirmed.\n\n🔖 Booking no: {{bookingNo}}\n🛏 Room: {{room}}\n📅 Check-in: {{checkIn}}\n📅 Check-out: {{checkOut}}{{stay}}\n💰 Total: {{amount}}\n{{payment}}{{linkLine}}\n\nWe look forward to welcoming you!",
+    "arrival": "Hello {{name}} 👋\n\nJust a reminder that your stay at {{hotel}} begins on {{checkIn}}. Room {{room}} will be ready for you.\n\n🔖 Booking no: {{bookingNo}}\n{{payment}}{{address}}\n\nSafe travels — see you soon!",
+    "payment": "Hello {{name}},\n\nA gentle reminder from {{hotel}}: {{due}} is pending for booking {{bookingNo}} (room {{room}}).{{linkLine}}\n\nPlease let us know once it's paid. Thank you!",
+    "invoice": "Hello {{name}},\n\nThank you for choosing {{hotel}}. Here is your invoice for {{amount}}.{{linkLine}}\n\nDo reach out if you have any questions.",
+    "thanks": "Hello {{name}},\n\nThank you for staying with us at {{hotel}}! We hope you had a comfortable stay.{{linkLine}}\n\nIf you enjoyed your stay, a short review would mean a lot to us. Hope to welcome you again soon! 🙏",
+    "invoiceReminder": "Hello {{name}},\n\nA gentle reminder from {{hotel}}: invoice {{invoiceNo}} ({{period}}) for {{due}} is pending.{{linkLine}}\n\nPlease let us know once it's paid. Thank you!",
+    "rentReminder": "Hello {{name}},\n\nA friendly reminder from {{hotel}}: your rent for room {{room}} was due on {{dueDate}}.{{linkLine}}\n\nPlease pay at your earliest convenience and let us know. Thank you!",
+    "departure": "Hello {{name}},\n\nWe hope you enjoyed your stay at {{hotel}}. Your check-out from room {{room}} is due today. Please settle any pending balance at the front desk before you leave.\n\nThank you!",
+    "chat": "Hello {{name}},\n\n",
+    "receipt": "Hello {{name}},\n\nPayment of {{amount}} received for invoice {{invoiceNo}} — thank you! ✅{{linkLine}}"
+  }
+}

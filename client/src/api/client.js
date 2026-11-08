@@ -113,6 +113,28 @@ export const billingApi = {
   getLetterhead:   ()        => api.get('/billing/letterhead'),
   getLedger:       (guestId) => api.get('/billing/ledger', { params: { guestId } }),
   getCashRegister: (date)    => api.get('/billing/cash-register', { params: { date } }),
+  // Signed no-login link to the invoice for the guest → { url, token }
+  shareLink:       (id)      => api.post(`/billing/${id}/share-link`),
+}
+
+// Public, no-login endpoints authorised by a signed token (guest-facing links).
+export const publicApi = {
+  invoice: (token) => api.get(`/public/invoice/${encodeURIComponent(token)}`), // → { invoice, hotel }
+}
+
+// Guest pay page (no login). kind 'b' = booking token, 'i' = billing invoice token.
+export const payApi = {
+  // → { kind, invoiceNo, guestName, total, paid, due, status, hotel: { name, logoUrl, upi, qrImage }, invoiceUrl, pendingClaim }
+  get:   (kind, token)       => api.get(`/public/pay/${kind}/${encodeURIComponent(token)}`),
+  // "I've paid": { utr, amount, payerName? } → { ok }
+  claim: (kind, token, body) => api.post(`/public/pay/${kind}/${encodeURIComponent(token)}/claim`, body),
+}
+
+// UPI payments guests reported, for staff to check in their UPI app and confirm.
+export const claimsApi = {
+  list:    (params)   => api.get('/payment-claims', { params }),             // { status } → { claims, counts: { pending } }
+  confirm: (id, data) => api.post(`/payment-claims/${id}/confirm`, data || {}), // { amount? } → { claim, shareUrl }
+  reject:  (id, data) => api.post(`/payment-claims/${id}/reject`, data || {}),  // { reason? }
 }
 
 // Cash book: money out (expenses) and other money in, with a period summary.
@@ -131,6 +153,8 @@ export const expensesApi = {
 }
 
 export const bookingsApi = {
+  // Guest link to the booking's tax invoice → { data: { url, token } }
+  shareLink: (id) => api.get(`/bookings/${id}/share-link`),
   getAll:   (params)   => api.get('/bookings', { params }),
   getStats: (params)   => api.get('/bookings/stats', { params }),
   getOne:   (id)       => api.get(`/bookings/${id}`),
@@ -194,6 +218,15 @@ export const settingsApi = {
   update:     (data) => api.put('/settings', data),
   uploadLogo: (form) => api.post('/settings/logo', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
   uploadStamp: (form) => api.post('/settings/stamp', form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  // The property's own payment QR image (PhonePe/Paytm/GPay business QR) → { upiQrUrl }
+  uploadUpiQr: (file) => {
+    const form = new FormData()
+    form.append('upiQr', file, file.name || 'upi-qr.png')
+    return api.post('/settings/upi-qr', form, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
+  deleteUpiQr: () => api.delete('/settings/upi-qr'),
+  // Where guest links point → { origin, isLocal, lan }
+  linkOrigin:  () => api.get('/settings/link-origin'),
 }
 
 export const notificationsApi = {

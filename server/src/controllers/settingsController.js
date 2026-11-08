@@ -2,6 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import multer from 'multer'
 import prisma from '../utils/prisma.js'
+import { linkOrigin } from '../utils/invoiceLink.js'
 
 // Multer config for logo uploads
 const uploadDir = path.resolve('uploads')
@@ -176,6 +177,67 @@ export const uploadStamp = async (req, res) => {
     return res.status(200).json({ stampUrl, hotel })
   } catch (err) {
     console.error('uploadStamp error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// Payment-QR upload: one raster image (the owner's PhonePe/Paytm/GPay business
+// QR), any field name, 2MB max.
+export const uploadQr = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase()
+    if (['.jpg', '.jpeg', '.png', '.webp'].includes(ext) && /^image\//.test(file.mimetype)) cb(null, true)
+    else cb(Object.assign(new Error('Only PNG, JPG or WebP images are allowed.'), { status: 400 }))
+  },
+}).any()
+
+// Remove a previous upload from disk (best effort; only our own /uploads files).
+const removeUpload = (url) => {
+  if (typeof url !== 'string' || !url.startsWith('/uploads/')) return
+  fs.promises.unlink(path.join(uploadDir, path.basename(url))).catch(() => {})
+}
+
+// POST /settings/upi-qr — the payment QR guests scan (wins over the generated one).
+export const uploadUpiQr = async (req, res) => {
+  try {
+    const file = req.files?.[0]
+    if (!file) return res.status(400).json({ message: 'No file uploaded.' })
+    const upiQrUrl = `/uploads/${file.filename}`
+    const existing = await prisma.hotel.findFirst()
+    const hotel = existing
+      ? await prisma.hotel.update({ where: { id: existing.id }, data: { upiQrUrl } })
+      : await prisma.hotel.create({ data: { upiQrUrl } })
+    if (existing?.upiQrUrl && existing.upiQrUrl !== upiQrUrl) removeUpload(existing.upiQrUrl)
+    return res.status(200).json({ upiQrUrl, hotel })
+  } catch (err) {
+    console.error('uploadUpiQr error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// DELETE /settings/upi-qr — back to the QR generated from the UPI ID.
+export const deleteUpiQr = async (req, res) => {
+  try {
+    const existing = await prisma.hotel.findFirst()
+    if (!existing) return res.status(200).json({ upiQrUrl: null, hotel: null })
+    const hotel = await prisma.hotel.update({ where: { id: existing.id }, data: { upiQrUrl: null } })
+    removeUpload(existing.upiQrUrl)
+    return res.status(200).json({ upiQrUrl: null, hotel })
+  } catch (err) {
+    console.error('deleteUpiQr error:', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /settings/link-origin — what guest links (invoice / pay) will start with.
+export const getLinkOrigin = async (req, res) => {
+  try {
+    const hotel = await prisma.hotel.findFirst({ select: { publicUrl: true } })
+    return res.status(200).json(linkOrigin(req, hotel))
+  } catch (err) {
+    console.error('getLinkOrigin error:', err)
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }

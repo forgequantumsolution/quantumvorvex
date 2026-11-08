@@ -46,6 +46,7 @@ model Property {
   roomInspections      RoomInspection[]
   expenseCategories    ExpenseCategory[]
   expenses             Expense[]
+  paymentClaims        PaymentClaim[]
 }
 
 // A non-owner user's membership of one property, with the role they hold there.
@@ -104,6 +105,10 @@ model Hotel {
   bankName           String?
   bankAccountNo      String?
   bankIfsc           String?
+  upiId              String? // e.g. ravi@okicici — shown as a pay-by-UPI QR on invoices
+  upiName            String? // payee name shown in the UPI app
+  publicUrl          String? // web address guests open links on (invoice links in WhatsApp)
+  upiQrUrl           String? // uploaded payment QR (PhonePe/Paytm/GPay business QR); wins over the generated one
   // JSON-encoded config blobs for Settings tabs that have no dedicated table.
   documentsConfig    String? // { kycDocs:[{id,label,required,maxMB,enabled}], expiryReminderDays }
   branding           String? // { tagline, loginTitle, footerNote, logoUrl }
@@ -335,23 +340,23 @@ model Booking {
   nights   Int?
 
   // ── Pricing breakdown ──
-  roomRate      Float  @default(0)
-  subtotal      Float  @default(0)
-  discount      Float  @default(0)
-  taxRate       Float  @default(0)
-  taxAmount     Float  @default(0)
-  extraCharges  Float  @default(0)
-  amount        Float // grand total
-  advance       Float  @default(0)
-  balance       Float  @default(0)
-  paymentStatus String @default("unpaid") // unpaid | partial | paid
+  roomRate        Float     @default(0)
+  subtotal        Float     @default(0)
+  discount        Float     @default(0)
+  taxRate         Float     @default(0)
+  taxAmount       Float     @default(0)
+  extraCharges    Float     @default(0)
+  amount          Float // grand total
+  advance         Float     @default(0)
+  balance         Float     @default(0)
+  paymentStatus   String    @default("unpaid") // unpaid | partial | paid
   // Refundable security deposit (PG). Held, not revenue: kept out of amount/balance.
-  securityDeposit Float @default(0)
+  securityDeposit Float     @default(0)
   // Settlement after move-out: the part of the deposit set against dues, and the
   // money handed back (deposit left + rent credit). Each refund is also a Payment.
-  depositUsed  Float     @default(0)
-  refundAmount Float     @default(0)
-  refundedAt   DateTime?
+  depositUsed     Float     @default(0)
+  refundAmount    Float     @default(0)
+  refundedAt      DateTime?
   // PG tenancy (bed + monthly): rent is billed as one Invoice per month. amount is
   // the rent billed so far, advance all money received; rentBilledUntil is the end
   // of the last billed month (NULL until move-in) and advanceApplied the part of
@@ -401,6 +406,31 @@ model BookingDocument {
   uploadedAt DateTime @default(now())
 
   @@index([bookingId])
+}
+
+// A guest's "I've paid by UPI" report from the public pay page (UTR = the UPI
+// transaction ID). Staff check it in their UPI app and confirm (records the
+// payment) or reject it. refId is a Booking id (kind 'booking') or an Invoice id
+// (kind 'invoice'); at most one pending claim per ref.
+model PaymentClaim {
+  id           String    @id @default(cuid())
+  propertyId   String
+  property     Property  @relation(fields: [propertyId], references: [id])
+  kind         String // booking | invoice
+  refId        String
+  guestName    String?
+  amount       Float
+  utr          String
+  payerName    String?
+  note         String?
+  status       String    @default("pending") // pending | confirmed | rejected
+  createdAt    DateTime  @default(now())
+  reviewedAt   DateTime?
+  reviewedById String?
+  paymentId    String?
+
+  @@index([propertyId, status])
+  @@index([refId])
 }
 
 model Notification {

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { Formik, Form } from 'formik'
 import { LuTrash2, LuUserCheck, LuCircleAlert, LuLogOut, LuUsers, LuRefreshCw, LuDownload, LuUserPlus } from 'react-icons/lu'
-import { PageWrapper, StatCard, Card, DataTable, Pagination, EmptyState } from '../../ui-tw'
+import { PageWrapper, StatCard, Card, DataTable, Pagination, EmptyState, WhatsAppOffer, useWhatsAppComposer, waMenuItem } from '../../ui-tw'
 import ActionMenu from '../../ui-tw/ActionMenu'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
@@ -521,6 +521,14 @@ export default function Guests() {
   const [editGuest,     setEditGuest]     = useState(null)
   const [deleteGuest,   setDeleteGuest]   = useState(null)
   const [deleting,      setDeleting]      = useState(false)
+  // WhatsApp: the composer, and the thank-you offered after a check-out.
+  const wa = useWhatsAppComposer()
+  const [waOffer, setWaOffer] = useState(null) // { guest, invoiceId }
+  const messageGuest = (guest, template, extra = {}) => wa.open({
+    phone: guest.phone, guestId: guest.id, name: guest.name, template,
+    vars: { name: guest.name, room: guest.room, dueDate: getDueDate(guest) },
+    ...extra,
+  })
 
   // Query params shared by the list fetch and the "export all" action.
   const listParams = useCallback((extra = {}) => ({
@@ -593,7 +601,7 @@ export default function Guests() {
         form.append('docTypes', JSON.stringify(attachments.map(([label]) => label)))
         await guestsApi.uploadDocuments(guest.id, form)
       }
-      await guestsApi.checkout(guest.id, {
+      const { data } = await guestsApi.checkout(guest.id, {
         notes,
         paymentMethod,
         paymentReference,
@@ -603,6 +611,7 @@ export default function Guests() {
       setCheckoutGuest(null)
       setCheckoutBill(null)
       addToast(t('toast.checkedOut', { name: guest.name }), 'success')
+      setWaOffer({ guest, invoiceId: data?.invoice?.id })
       reload()
     } catch (err) {
       addToast(err.response?.data?.message || t('toast.checkoutFailed'), 'error')
@@ -731,7 +740,10 @@ export default function Guests() {
             <ActionMenu
               items={[
                 canCheckout && { label: t('actions.viewProfile'), icon: '◉', onClick: () => openProfile(guest) },
-                { label: t('actions.editGuest'), icon: '✎', onClick: () => openEdit(guest) },
+                waMenuItem(t('whatsapp:actions.chat'), guest.phone, () => messageGuest(guest, 'chat')),
+                guest.stayType === 'monthly' && guest.status === 'Due' &&
+                  waMenuItem(t('whatsapp:actions.rentReminder'), guest.phone, () => messageGuest(guest, 'rentReminder')),
+                                { label: t('actions.editGuest'), icon: '✎', onClick: () => openEdit(guest) },
                 { label: t('actions.deleteGuest'), icon: <LuTrash2 size={14} />, danger: true, onClick: () => setDeleteGuest(guest) },
               ]}
             />
@@ -771,6 +783,15 @@ export default function Guests() {
         </div>
       )}
 
+      {waOffer && (
+        <WhatsAppOffer
+          message={t('whatsapp:offer.checkedOut', { name: waOffer.guest.name })}
+          actionLabel={t('whatsapp:offer.sendThanks')}
+          phone={waOffer.guest.phone}
+          onSend={() => { messageGuest(waOffer.guest, 'thanks', { invoiceId: waOffer.invoiceId }); setWaOffer(null) }}
+          onDismiss={() => setWaOffer(null)}
+        />
+      )}
       <Card>
         {/* Filters: the two selects side by side */}
         <div className="grid grid-cols-2 sm:flex gap-2.5 px-4 sm:px-5 py-3 border-b border-line">
@@ -826,6 +847,7 @@ export default function Guests() {
         danger
         busy={deleting}
       />
+      {wa.composer}
     </PageWrapper>
   )
 }

@@ -2,6 +2,7 @@ import Sidebar from './Sidebar'
 import Topbar from './Topbar'
 import BottomNav from './BottomNav'
 import PageHeader from './PageHeader'
+import { PaymentClaimsWatcher } from '../modules/billing/PaymentClaims'
 
 // App shell. #content is the one vertical scroller; its padding (index.css)
 // adapts per breakpoint and reserves room for the phone bottom bar.
@@ -26,6 +27,8 @@ export default function Layout({ children }) {
       </div>
 
       <BottomNav />
+      {/* Polls UPI payments guests reported (Billing badge + toast) */}
+      <PaymentClaimsWatcher />
     </div>
   )
 }

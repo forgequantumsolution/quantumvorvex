@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Cropper from 'react-easy-crop'
+import { QRCodeSVG } from 'qrcode.react'
 import { useTranslation, Trans } from 'react-i18next'
 import { LANGUAGES } from '../../../i18n'
 import { Modal, Button, EmptyState } from '../../ui-tw'
@@ -47,6 +48,9 @@ const initSettings = {
   bankName:          '',
   bankAccountNo:     '',
   bankIfsc:          '',
+  upiId:             '',
+  upiName:           '',
+  publicUrl:         '',
   termsAndConditions:'',
 }
 
@@ -2201,10 +2205,14 @@ function InvoiceConfigTab({ settings, setSettings, addToast }) {
           bankName:           settings.bankName ?? '',
           bankAccountNo:      settings.bankAccountNo ?? '',
           bankIfsc:           settings.bankIfsc ?? '',
+          upiId:              settings.upiId?.trim() || null,
+          upiName:            settings.upiName?.trim() || null,
+          publicUrl:          settings.publicUrl?.trim().replace(/\/+$/, '') || null,
           termsAndConditions: settings.termsAndConditions ?? '',
         },
       })
       addToast(t('invoice.saved'), 'success')
+      loadLinkOrigin() // the website address may have changed
     } catch (e) {
       addToast(e.response?.data?.message || t('invoice.saveFailed'), 'error')
     } finally {
@@ -2213,6 +2221,51 @@ function InvoiceConfigTab({ settings, setSettings, addToast }) {
   }
 
   const set = (field) => (e) => setSettings(s => ({ ...s, [field]: e.target.value }))
+
+  // Where guest links point (publicUrl → server's CLIENT_URL → this machine).
+  const [linkOrigin, setLinkOrigin] = useState(null) // { origin, isLocal, lan }
+  const loadLinkOrigin = useCallback(() => {
+    settingsApi.linkOrigin().then(({ data }) => setLinkOrigin(data?.origin ? data : null)).catch(() => setLinkOrigin(null))
+  }, [])
+  useEffect(() => { loadLinkOrigin() }, [loadLinkOrigin])
+
+  // The property's own payment QR (its PhonePe/Paytm/GPay business QR). Wins
+  // over the QR made from the UPI ID when set.
+  const qrFileRef = useRef(null)
+  const [qrBusy, setQrBusy] = useState(false)
+  async function handleQrSelect(e) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // allow re-selecting the same file
+    if (!file) return
+    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) { addToast(t('invoice.upiQrType'), 'error'); return }
+    if (file.size > 2 * 1024 * 1024) { addToast(t('invoice.upiQrTooBig'), 'error'); return }
+    setQrBusy(true)
+    try {
+      const { data } = await settingsApi.uploadUpiQr(file)
+      setSettings(s => ({ ...s, upiQrUrl: data.upiQrUrl ?? data.hotel?.upiQrUrl ?? null }))
+      addToast(t('invoice.upiQrUploaded'), 'success')
+    } catch (err) {
+      addToast(err.response?.data?.message || t('invoice.upiQrFailed'), 'error')
+    } finally {
+      setQrBusy(false)
+    }
+  }
+  async function handleQrRemove() {
+    setQrBusy(true)
+    try {
+      await settingsApi.deleteUpiQr()
+      setSettings(s => ({ ...s, upiQrUrl: null }))
+      addToast(t('invoice.upiQrRemoved'), 'success')
+    } catch (err) {
+      addToast(err.response?.data?.message || t('invoice.upiQrFailed'), 'error')
+    } finally {
+      setQrBusy(false)
+    }
+  }
+  const upiValid = !!settings.upiId && /^[\w.-]{2,256}@[a-zA-Z][\w.-]{1,64}$/.test(settings.upiId.trim())
+  const previewUri = upiValid
+    ? `upi://pay?${new URLSearchParams({ pa: settings.upiId.trim(), pn: (settings.upiName || settings.name || '').slice(0, 50), cu: 'INR' })}`.replace(/%40/g, '@')
+    : null
 
   useSettingsHeader('invoice', { onSave: handleSave, saving })
 
@@ -2277,6 +2330,73 @@ function InvoiceConfigTab({ settings, setSettings, addToast }) {
               onChange={set('bankIfsc')} />
           </Field>
         </div>
+      </Section>
+
+      {/* UPI — QR on invoices so guests can pay from any UPI app */}
+      <Section title={t('invoice.upiTitle')} subtitle={t('invoice.upiSubtitle')}>
+        <div className={FORM_GRID}>
+          <Field label={t('invoice.upiId')}>
+            <input className="form-input" value={settings.upiId ?? ''} onChange={set('upiId')}
+              placeholder="hotelname@okicici" autoCapitalize="off" spellCheck={false} />
+          </Field>
+          <Field label={t('invoice.upiName')}>
+            <input className="form-input" value={settings.upiName ?? ''} onChange={set('upiName')}
+              placeholder={t('invoice.accountNamePlaceholder')} />
+          </Field>
+        </div>
+        {settings.upiId && !upiValid && (
+          <p className="t-xs mt-2 mb-0 text-danger">{t('invoice.upiInvalid')}</p>
+        )}
+
+        {/* Payment QR: uploaded image, else made from the UPI ID — live preview */}
+        <div className="mt-5 grid grid-cols-1 sm:grid-cols-[auto_minmax(0,1fr)] gap-4 items-start">
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="w-[152px] h-[152px] rounded-lg border border-line bg-white p-2 flex items-center justify-center">
+              {settings.upiQrUrl
+                ? <img src={settings.upiQrUrl} alt={t('invoice.upiQrPreview')} className="max-w-full max-h-full object-contain" />
+                : previewUri
+                  ? <QRCodeSVG value={previewUri} size={134} level="M" aria-label={t('invoice.upiQrPreview')} />
+                  : <span className="t-xs text-ink3 text-center px-2">{t('invoice.upiQrNone')}</span>}
+            </div>
+            <span className="t-xs text-ink3 text-center max-w-[152px]">
+              {settings.upiQrUrl ? t('invoice.upiQrFromImage') : previewUri ? t('invoice.upiQrFromId') : ''}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-ink m-0">{t('invoice.upiQrLabel')}</p>
+            <p className="t-xs text-ink3 mt-1 mb-3">{t('invoice.upiQrHint')}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" size="sm" icon={<LuUpload />} disabled={qrBusy} onClick={() => qrFileRef.current?.click()}>
+                {qrBusy ? t('invoice.upiQrWorking') : settings.upiQrUrl ? t('invoice.upiQrReplace') : t('invoice.upiQrUpload')}
+              </Button>
+              {settings.upiQrUrl && (
+                <Button variant="danger" size="sm" icon={<LuTrash2 />} disabled={qrBusy} onClick={handleQrRemove}>
+                  {t('invoice.upiQrRemove')}
+                </Button>
+              )}
+            </div>
+            <input ref={qrFileRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={handleQrSelect}
+              aria-label={t('invoice.upiQrLabel')} />
+          </div>
+        </div>
+      </Section>
+
+      {/* Public web address for links sent to guests */}
+      <Section title={t('invoice.publicUrlTitle')} subtitle={t('invoice.publicUrlSubtitle')}>
+        <Field label={t('invoice.publicUrl')}>
+          <input className="form-input" type="url" value={settings.publicUrl ?? ''} onChange={set('publicUrl')}
+            placeholder="https://myhotel.com" autoCapitalize="off" spellCheck={false} />
+        </Field>
+        <p className="t-xs mt-2 mb-0 text-ink3">{t('invoice.publicUrlHelp')}</p>
+        {linkOrigin && (
+          <div className={`mt-3 rounded-lg border px-3.5 py-2.5 ${linkOrigin.isLocal ? 'border-warning/40 bg-warning-bg' : 'border-line bg-surface2'}`}>
+            <span className="t-xs text-ink3">{t('invoice.linkPreview')}</span>
+            <div className="font-mono text-sm text-ink mt-0.5 break-all">{linkOrigin.origin}/invoice?…</div>
+            {linkOrigin.isLocal && (
+              <p className="t-xs mt-1.5 mb-0 text-warning-text">{t('invoice.linkLocal')}</p>
+            )}
+          </div>
+        )}
       </Section>
 
       {/* Terms */}

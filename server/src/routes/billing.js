@@ -10,10 +10,15 @@ import {
   getLedger,
   getCashRegister,
   deleteInvoice,
+  shareInvoiceLink,
 } from '../controllers/billingController.js'
 import { verifyToken, requirePermission } from '../middleware/auth.js'
 
 const router = express.Router()
+
+// Sharing a link is a read (anyone who can view the invoice may send it), so it
+// is registered before the router-wide guard, which would demand MANAGE for POST.
+router.post('/:id/share-link', verifyToken, requirePermission('billing', 'VIEW'), shareInvoiceLink)
 
 router.use(verifyToken, requirePermission('billing'))
 

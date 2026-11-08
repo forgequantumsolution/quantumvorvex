@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import {
   LuTrash2, LuPencil, LuDownload, LuCalendarPlus, LuX, LuCheck, LuReceipt, LuLogOut, LuUndo2, LuArrowRight, LuMoon,
 } from 'react-icons/lu'
-import { StatusBadge, Button, EmptyState, ActionMenu } from '../../ui-tw'
+import { StatusBadge, Button, EmptyState, ActionMenu, waMenuItem } from '../../ui-tw'
 import { formatCurrency, formatDate } from '../../../utils/format'
 import { dateRangeLabel, splitNames, splitPhones, stayLabel } from '../../../utils/booking'
 
@@ -167,6 +167,9 @@ function Actions({ b, busy, h, stretch = false }) {
           ? { label: t('actions.refund'), icon: <LuUndo2 size={14} />, onClick: () => h.onRefund(b) }
           : null
 
+  // WhatsApp messages to the guest (see Bookings → openWhatsApp).
+  const wa = h.onWhatsApp && ((key) => waMenuItem(t(`whatsapp:actions.${key}`), b.guestPhone, () => h.onWhatsApp(b, key)))
+  const arrivingSoon = b.status === 'Confirmed' && b.fromDate && daysFrom(b.fromDate, new Date()) >= 0 && daysFrom(b.fromDate, new Date()) <= 2
   const menu = [
     // Rent is collected while the tenant lives here; after move-out the invoice says it all.
     b.tenancy && h.onRent && b.status === 'CheckedIn' && !rentDue &&
@@ -183,6 +186,12 @@ function Actions({ b, busy, h, stretch = false }) {
     // A tenancy's invoice lists each rent month billed (once it has been billed).
     h.onInvoice && (b.tenancy ? ['CheckedIn', 'CheckedOut'] : ['Confirmed', 'CheckedIn', 'CheckedOut']).includes(b.status) &&
       { label: t('actions.invoice'), icon: <LuDownload size={14} />, onClick: () => h.onInvoice(b) },
+    wa && ['Pending', 'Confirmed'].includes(b.status) && wa('confirmation'),
+    wa && arrivingSoon && wa('arrival'),
+    wa && !['Cancelled', 'NoShow'].includes(b.status) && Number(b.balanceDue) > 0 && wa('payment'),
+    // Only a tenancy's rent months are billing invoices with a shareable link.
+    wa && (b.tenancy ? ['CheckedIn', 'CheckedOut'] : ['Confirmed', 'CheckedIn', 'CheckedOut']).includes(b.status) && wa('invoice'),
+    wa && b.status === 'CheckedOut' && wa('thanks'),
     h.onCancel && ['Pending', 'Confirmed'].includes(b.status) &&
       { label: t('actions.cancel'), icon: <LuX size={14} />, onClick: () => h.onCancel(b), danger: true },
     h.onDelete &&
@@ -421,10 +430,10 @@ function CardSkeletons({ count }) {
  */
 export default function BookingsTable({
   bookings, loading, busyId, view = 'table',
-  onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent, onRefund, emptyMessage,
+  onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent, onRefund, onWhatsApp, emptyMessage,
 }) {
   const { t } = useTranslation('bookings')
-  const h = { onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent, onRefund }
+  const h = { onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent, onRefund, onWhatsApp }
   const asCards = view === 'cards'
 
   if (!loading && !bookings.length) {

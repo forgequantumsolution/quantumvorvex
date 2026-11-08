@@ -1,0 +1,62 @@
+{
+  "title": "WhatsApp पर भेजें",
+  "sendOnWhatsApp": "WhatsApp",
+  "noPhone": "इस मेहमान का कोई मान्य फ़ोन नंबर नहीं है",
+  "number": "WhatsApp नंबर",
+  "numberHint": "10 अंकों का मोबाइल, या देश कोड के साथ",
+  "invalidNumber": "मान्य मोबाइल नंबर दर्ज करें",
+  "language": "भाषा",
+  "message": "संदेश",
+  "preparing": "संदेश तैयार हो रहा है…",
+  "noLink": "इनवॉइस लिंक उपलब्ध नहीं — संदेश बिना लिंक के जाएगा।",
+  "openWhatsApp": "WhatsApp खोलें",
+  "opened": "WhatsApp खुल गया — वहाँ Send दबाएँ",
+  "actions": {
+    "confirmation": "बुकिंग पुष्टि भेजें",
+    "arrival": "आगमन रिमाइंडर",
+    "payment": "भुगतान माँगें",
+    "invoice": "इनवॉइस भेजें",
+    "thanks": "इनवॉइस और धन्यवाद भेजें",
+    "invoiceReminder": "भुगतान रिमाइंडर",
+    "rentReminder": "किराया रिमाइंडर",
+    "departure": "चेक-आउट रिमाइंडर",
+    "chat": "WhatsApp पर चैट करें",
+    "receipt": "भुगतान रसीद भेजें"
+  },
+  "offer": {
+    "created": "{{name}} के लिए बुकिंग {{no}} बन गई।",
+    "createdGroup": "कमरा {{room}} में {{count}} बेड बुकिंग बन गईं।",
+    "sendConfirmation": "पुष्टि भेजें",
+    "checkedOut": "{{name}} ने चेक-आउट कर लिया।",
+    "sendThanks": "इनवॉइस और धन्यवाद भेजें"
+  },
+  "guest": "मेहमान",
+  "untilMoveOut": "आपके जाने तक",
+  "monthlyStay": "मासिक ठहराव",
+  "nights_one": "{{count}} रात",
+  "nights_other": "{{count}} रातें",
+  "months_one": "{{count}} महीना",
+  "months_other": "{{count}} महीने",
+  "signoff": "— टीम {{hotel}}",
+  "line": {
+    "paymentDue": "भुगतान किया: {{paid}} · बकाया: {{due}}",
+    "paidInFull": "भुगतान: पूरा हो गया ✅",
+    "link": "\n\n🧾 अपना इनवॉइस देखें / डाउनलोड करें:\n{{link}}",
+    "address": "\n\n📍 {{address}}\n{{map}}",
+    "upi": "\n\n💳 UPI से भुगतान करें: {{upi}}",
+    "payLink": "\n\n💳 भुगतान करें और इनवॉइस देखें:\n{{link}}",
+    "updatedLink": "\n\n🧾 आपका अपडेट किया गया इनवॉइस:\n{{link}}"
+  },
+  "msg": {
+    "confirmation": "नमस्ते {{name}} 👋\n\n{{hotel}} में बुकिंग के लिए धन्यवाद! आपकी बुकिंग पक्की हो गई है।\n\n🔖 बुकिंग नं.: {{bookingNo}}\n🛏 कमरा: {{room}}\n📅 चेक-इन: {{checkIn}}\n📅 चेक-आउट: {{checkOut}}{{stay}}\n💰 कुल: {{amount}}\n{{payment}}{{linkLine}}\n\nआपके स्वागत की प्रतीक्षा है!",
+    "arrival": "नमस्ते {{name}} 👋\n\nयाद दिला दें कि {{hotel}} में आपका ठहराव {{checkIn}} से शुरू हो रहा है। कमरा {{room}} आपके लिए तैयार रहेगा।\n\n🔖 बुकिंग नं.: {{bookingNo}}\n{{payment}}{{address}}\n\nसुरक्षित यात्रा — जल्द मिलते हैं!",
+    "payment": "नमस्ते {{name}},\n\n{{hotel}} की ओर से विनम्र याद: बुकिंग {{bookingNo}} (कमरा {{room}}) का {{due}} बकाया है।{{linkLine}}\n\nभुगतान होने पर कृपया हमें बताएँ। धन्यवाद!",
+    "invoice": "नमस्ते {{name}},\n\n{{hotel}} चुनने के लिए धन्यवाद। {{amount}} का आपका इनवॉइस यह रहा।{{linkLine}}\n\nकोई प्रश्न हो तो ज़रूर बताएँ।",
+    "thanks": "नमस्ते {{name}},\n\n{{hotel}} में ठहरने के लिए धन्यवाद! आशा है आपका ठहराव आरामदायक रहा।{{linkLine}}\n\nअगर आपको हमारा ठहराव पसंद आया हो, तो एक छोटा-सा रिव्यू हमारे लिए बहुत मायने रखेगा। फिर से आपका स्वागत करने की आशा है! 🙏",
+    "invoiceReminder": "नमस्ते {{name}},\n\n{{hotel}} की ओर से विनम्र याद: इनवॉइस {{invoiceNo}} ({{period}}) का {{due}} बकाया है।{{linkLine}}\n\nभुगतान होने पर कृपया हमें बताएँ। धन्यवाद!",
+    "rentReminder": "नमस्ते {{name}},\n\n{{hotel}} की ओर से याद: कमरा {{room}} का आपका किराया {{dueDate}} को देय था।{{linkLine}}\n\nकृपया जल्द भुगतान करके हमें बताएँ। धन्यवाद!",
+    "departure": "नमस्ते {{name}},\n\nआशा है {{hotel}} में आपका ठहराव अच्छा रहा। कमरा {{room}} से आपका चेक-आउट आज है। जाने से पहले कृपया फ़्रंट डेस्क पर बकाया राशि चुका दें।\n\nधन्यवाद!",
+    "chat": "नमस्ते {{name}},\n\n",
+    "receipt": "नमस्ते {{name}},\n\nइनवॉइस {{invoiceNo}} के लिए {{amount}} का भुगतान मिल गया — धन्यवाद! ✅{{linkLine}}"
+  }
+}

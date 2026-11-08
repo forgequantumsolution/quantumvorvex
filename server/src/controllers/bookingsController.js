@@ -4,8 +4,12 @@ import fs from 'fs'
 import multer from 'multer'
 import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
-import { renderInvoiceHtml, buildInvoiceData, hotelLogo, inlineUploadAsset } from '../utils/invoiceTemplate.js'
+import { renderInvoiceHtml, buildInvoiceData, hotelLogo, inlineUploadAsset, uploadedQr } from '../utils/invoiceTemplate.js'
 import { htmlToPdf } from '../utils/pdf.js'
+import { signBookingToken, verifyBookingToken, clientOrigin } from '../utils/invoiceLink.js'
+import { runUnscoped, runWithProperty } from '../utils/propertyContext.js'
+import { upiQrSvg } from '../utils/upi.js'
+import { recordBookingPayment } from '../utils/payments.js'
 import {
   isTenancy, OPEN_END, tenancyTotals, billDueRent, invoiceTenancy, payTenancyInvoices, rentStartDay,
   settleMoveOutRent, moveOutPreview, canRefund, settleRefund,
@@ -1032,22 +1036,8 @@ export const collectRent = async (req, res) => {
     const method = req.body.method || 'cash'
     const reference = req.body.reference || null
 
-    const updated = await prisma.$transaction(async (tx) => {
-      const applied = await payTenancyInvoices(tx, booking, amount, method, reference)
-      if (amount > applied) {
-        await tx.payment.create({
-          data: { guestId: booking.guestId, amount: +(amount - applied).toFixed(2), method, reference, type: 'advance' },
-        })
-      }
-      return tx.booking.update({
-        where: { id: booking.id },
-        data: {
-          advanceApplied: +(booking.advanceApplied + applied).toFixed(2),
-          ...tenancyTotals({ amount: booking.amount, advance: booking.advance + amount }),
-        },
-        include: bookingInclude,
-      })
-    })
+    const updated = await prisma.$transaction(async (tx) =>
+      (await recordBookingPayment(tx, booking, { amount, method, reference, include: bookingInclude })).booking)
     logger.info('Rent collected', { event: 'BOOKING', bookingNo: booking.bookingNo, amount })
     return res.status(200).json({ booking: updated })
   } catch (err) {
@@ -1254,10 +1244,18 @@ export const getBookingInvoice = async (req, res) => {
 
     // Inline the logo/stamp as data URIs so they render regardless of how the
     // document is loaded (blob: preview, PDF renderer, direct tab).
+    const due = buildInvoiceData(booking, hotel).totals.balance
+    const qrImage = due > 0 ? uploadedQr(hotel) : null
     const renderHotel = {
       ...hotel,
       logoUrl: inlineUploadAsset(hotelLogo(hotel)),
       stampUrl: inlineUploadAsset(hotel.stampUrl),
+      // Pay-by-UPI QR for what's still owed: the uploaded QR image if there is
+      // one, else one generated from the UPI ID with the amount filled in.
+      upiQrImage: qrImage,
+      upiQrSvg: due > 0 && hotel.upiId && !qrImage
+        ? await upiQrSvg({ upiId: hotel.upiId, name: hotel.upiName || hotel.name, amount: due, note: `Invoice ${booking.invoiceNo || booking.bookingNo}` })
+        : null,
     }
 
     if (format === 'pdf') {
@@ -1392,6 +1390,46 @@ export const deleteBooking = async (req, res) => {
   } catch (err) {
     if (err.code === 'P2025') return res.status(404).json({ message: 'Booking not found.' })
     logger.error('deleteBooking error', { error: err.message })
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// ── Guest-facing invoice link (WhatsApp) ──────────────────────────────────────
+
+// GET /bookings/:id/share-link → { url, token }. The link opens the site's
+// /invoice?b=<token> page, which forwards to the printable invoice.
+export const shareBookingInvoiceLink = async (req, res) => {
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id: req.params.id }, select: { id: true, status: true } })
+    if (!booking) return res.status(404).json({ message: 'Booking not found.' })
+    if (!['Confirmed', 'CheckedIn', 'CheckedOut'].includes(booking.status)) {
+      return res.status(400).json({ message: 'An invoice is available once the booking is confirmed.' })
+    }
+    const token = signBookingToken(booking.id)
+    const hotel = await prisma.hotel.findFirst({ select: { publicUrl: true } })
+    return res.status(200).json({ url: `${clientOrigin(req, hotel)}/invoice?b=${encodeURIComponent(token)}`, token })
+  } catch (err) {
+    logger.error('shareBookingInvoiceLink error', err)
+    return res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /public/booking-invoice/:token[?format=pdf] (NO auth) — the same printable
+// tax invoice staff see, inside the booking's own property.
+export const getPublicBookingInvoice = async (req, res) => {
+  try {
+    const bookingId = verifyBookingToken(req.params.token)
+    if (!bookingId) return res.status(404).json({ message: 'Invoice not found.' })
+    const found = await runUnscoped(() => prisma.booking.findUnique({ where: { id: bookingId }, select: { propertyId: true } }))
+    if (!found) return res.status(404).json({ message: 'Invoice not found.' })
+    const format = req.query.format === 'pdf' ? 'pdf' : 'html'
+    return runWithProperty(found.propertyId, () =>
+      // A view of req with this booking's id (Express 5's req.query is read-only).
+      getBookingInvoice(Object.create(req, {
+        params: { value: { id: bookingId } }, query: { value: { format } }, propertyId: { value: found.propertyId },
+      }), res))
+  } catch (err) {
+    logger.error('getPublicBookingInvoice error', err)
     return res.status(500).json({ message: 'Internal server error.' })
   }
 }
