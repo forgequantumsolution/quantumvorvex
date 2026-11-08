@@ -1,13 +1,16 @@
 import { useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 // Props: label, accept, onFile, preview (url), maxSizeMB (default 5)
 export default function FileUpload({
-  label = 'Upload File',
+  label,
   accept = 'image/*,.pdf',
   onFile,
   preview,
   maxSizeMB = 5,
 }) {
+  const { t } = useTranslation('shell')
+  label = label ?? t('upload.file')
   const inputRef = useRef(null)
   const [dragOver, setDragOver] = useState(false)
   const [localPreview, setLocalPreview] = useState(preview ?? null)
@@ -32,14 +35,14 @@ export default function FileUpload({
     })
 
     if (!matchesType) {
-      setError(`Invalid file type. Accepted: ${accept}`)
+      setError(t('upload.badType', { accept }))
       return
     }
 
     // Validate size
     const maxBytes = maxSizeMB * 1024 * 1024
     if (file.size > maxBytes) {
-      setError(`File too large. Maximum size is ${maxSizeMB}MB.`)
+      setError(t('upload.tooLarge', { size: maxSizeMB }))
       return
     }
 
@@ -112,7 +115,7 @@ export default function FileUpload({
           <div className="flex flex-col items-center gap-2.5">
             <img
               src={localPreview}
-              alt="Preview"
+              alt={t('upload.preview')}
               className="max-h-[100px] max-w-full rounded-md object-cover border border-line"
             />
             {fileName && (
@@ -123,7 +126,7 @@ export default function FileUpload({
               onClick={handleClear}
               className="btn btn-danger btn-xs"
             >
-              Remove
+              {t('common:remove')}
             </button>
           </div>
         ) : fileName ? (
@@ -138,7 +141,7 @@ export default function FileUpload({
               onClick={handleClear}
               className="btn btn-danger btn-xs"
             >
-              Remove
+              {t('common:remove')}
             </button>
           </div>
         ) : (
@@ -148,19 +151,19 @@ export default function FileUpload({
             <span className="text-[13px] font-medium text-ink2">
               {label}
             </span>
-            <span className="text-[11.5px] text-ink3">
+            <span className="text-xs text-ink3">
               {accept
                 .split(',')
                 .map((t) => t.trim().replace('.', '').toUpperCase())
                 .join(' / ')}{' '}
-              · max {maxSizeMB}MB
+              · {t('upload.max', { size: maxSizeMB })}
             </span>
           </div>
         )}
       </div>
 
       {error && (
-        <span className="block mt-[5px] text-[11.5px] text-danger-text font-medium">
+        <span className="block mt-[5px] text-xs text-danger-text font-medium">
           {error}
         </span>
       )}

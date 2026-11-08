@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm create:*)"
+      "Bash(npm create:*)",
+      "Bash(curl -s -o /dev/null -w \"api %{http_code}\\\\n\" http://localhost:5001/api/health)",
+      "Bash(curl -s http://localhost:5001/health)",
+      "Bash(curl -s http://localhost:5001/health/ready)",
+      "Bash(curl -s -i \"http://localhost:5001/api/v1/bookings?status=all&page=1&pageSize=20\")",
+      "Bash(lsof -ti:5001 -ti:5173)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -X POST http://localhost:5001/api/v1/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"owner@quantumvorvex.com\",\"password\":\"owner123\"}')"
     ]
   }
 }

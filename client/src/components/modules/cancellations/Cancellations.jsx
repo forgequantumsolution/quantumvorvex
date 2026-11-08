@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { LuTrash2 } from 'react-icons/lu'
-import { PageWrapper, StatCard, Card, DataTable, SearchInput, Button, EmptyState } from '../../ui-tw'
+import { useTranslation, Trans } from 'react-i18next'
+import { LuTrash2, LuBan, LuPercent, LuIndianRupee, LuClock, LuRefreshCw } from 'react-icons/lu'
+import { PageWrapper, StatCard, Card, DataTable, Button, EmptyState } from '../../ui-tw'
 import ConfirmModal from '../../ui/ConfirmModal'
 import CancelModal from './CancelModal'
 import { useToast } from '../../../hooks/useToast'
@@ -11,11 +12,13 @@ import { formatCurrency, formatDate } from '../../../utils/format'
 import { dateRangeLabel } from '../../../utils/booking'
 
 export default function Cancellations() {
+  const { t } = useTranslation('cancellations')
   const toast = useToast()
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
+  const [view, setView] = useState('all')   // all | lost (value lost, largest first)
   const [showCancel, setShowCancel] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [deleting, setDeleting] = useState(false)
@@ -26,11 +29,11 @@ export default function Cancellations() {
       const { data } = await bookingsApi.getAll()
       setBookings((data.bookings || []).map(normalizeBooking))
     } catch {
-      setError('Could not load bookings. Make sure the backend is running.')
+      setError(t('loadError'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => { load() }, [load])
 
@@ -40,11 +43,13 @@ export default function Cancellations() {
     [bookings],
   )
 
-  // Header "Cancel Booking" button
-  usePrimaryAction('cancellations', () => {
+  // Opens the cancel dialog: the header's primary button, and any other page
+  // that triggers the 'cancellations' primary action remotely.
+  const openCancel = () => {
     if (cancellable.length) setShowCancel(true)
-    else toast('No bookings are eligible to cancel', 'error')
-  })
+    else toast(t('noneEligible'), 'error')
+  }
+  usePrimaryAction('cancellations', openCancel)
 
   const stats = useMemo(() => {
     const lostRevenue = cancelled.reduce((s, b) => s + (Number(b.amount) || 0), 0)
@@ -53,23 +58,28 @@ export default function Cancellations() {
   }, [cancelled, cancellable, bookings])
 
   const filtered = useMemo(() => {
+    let list = cancelled
+    if (view === 'lost') {
+      list = list.filter((b) => Number(b.amount) > 0).sort((a, b) => Number(b.amount) - Number(a.amount))
+    }
     const q = query.trim().toLowerCase()
-    if (!q) return cancelled
-    return cancelled.filter((b) =>
+    if (!q) return list
+    return list.filter((b) =>
       b.guestName?.toLowerCase().includes(q) ||
       b.bookingNo?.toLowerCase().includes(q) ||
       (b.cancelReason || '').toLowerCase().includes(q))
-  }, [cancelled, query])
+  }, [cancelled, query, view])
+  const narrowed = !!query.trim() || view !== 'all'
 
   const handleCancel = async ({ id, reason }) => {
     const b = bookings.find((x) => x.id === id)
     try {
       const { data } = await bookingsApi.cancel(id, { reason })
       setBookings((prev) => prev.map((x) => (x.id === id ? normalizeBooking(data.booking) : x)))
-      toast(`Booking ${b?.bookingNo || ''} cancelled`, 'error')
+      toast(t('toast.cancelled', { no: b?.bookingNo || '' }), 'error')
       setShowCancel(false)
     } catch (err) {
-      toast(err.response?.data?.message || 'Cancellation failed', 'error')
+      toast(err.response?.data?.message || t('toast.cancelFailed'), 'error')
     }
   }
 
@@ -79,10 +89,10 @@ export default function Cancellations() {
     try {
       await bookingsApi.remove(deleteTarget.id)
       setBookings((prev) => prev.filter((b) => b.id !== deleteTarget.id))
-      toast(`Booking ${deleteTarget.bookingNo} deleted`)
+      toast(t('toast.deleted', { no: deleteTarget.bookingNo }))
       setDeleteTarget(null)
     } catch (err) {
-      toast(err.response?.data?.message || 'Could not delete booking', 'error')
+      toast(err.response?.data?.message || t('toast.deleteFailed'), 'error')
     } finally {
       setDeleting(false)
     }
@@ -90,31 +100,31 @@ export default function Cancellations() {
 
   const columns = [
     {
-      key: 'booking', header: 'Booking',
+      key: 'booking', header: t('columns.booking'),
       render: (b) => (
-        <div>
-          <div className="font-medium text-ink">{b.guestName}</div>
+        <div className="min-w-0">
+          <div className="font-medium text-ink truncate">{b.guestName}</div>
           <div className="text-xs text-ink3 font-mono mt-0.5">{b.bookingNo}</div>
         </div>
       ),
     },
-    { key: 'room', header: 'Room', render: (b) => `${b.roomNumber} · ${b.roomType}` },
-    { key: 'stay', header: 'Planned stay', render: (b) => dateRangeLabel(b) },
-    { key: 'reason', header: 'Reason', render: (b) => <span className="text-ink2">{b.cancelReason || '—'}</span> },
+    { key: 'room', header: t('common:room'), render: (b) => `${b.roomNumber} · ${b.roomType}` },
+    { key: 'stay', header: t('columns.plannedStay'), render: (b) => dateRangeLabel(b) },
+    { key: 'reason', header: t('columns.reason'), className: 'md:whitespace-normal md:min-w-[160px]', render: (b) => <span className="text-ink2">{b.cancelReason || '—'}</span> },
     {
-      key: 'cancelledAt', header: 'Cancelled', align: 'right',
+      key: 'cancelledAt', header: t('columns.cancelled'), align: 'right', primary: true,
       render: (b) => (
-        <div>
+        <div className="text-right">
           <div className="text-ink">{formatDate(b.cancelledAt)}</div>
-          <div className="text-xs text-ink3 mt-0.5">{formatCurrency(b.amount)} value</div>
+          <div className="text-xs text-ink3 mt-0.5">{t('value', { amount: formatCurrency(b.amount) })}</div>
         </div>
       ),
     },
     {
       key: 'actions', header: '', align: 'right',
       render: (b) => (
-        <Button variant="danger" size="sm" title="Delete cancellation" onClick={() => setDeleteTarget(b)}>
-          <LuTrash2 size={14} />
+        <Button variant="danger" size="sm" title={t('deleteOne')} aria-label={t('deleteOne')} onClick={() => setDeleteTarget(b)}>
+          <LuTrash2 size={14} /><span className="lg:hidden">{t('common:delete')}</span>
         </Button>
       ),
     },
@@ -122,36 +132,50 @@ export default function Cancellations() {
 
   return (
     <PageWrapper
-      actions={
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
-          <Button variant="danger" icon="✕" onClick={() => setShowCancel(true)} disabled={!cancellable.length}>
-            Cancel a Booking
-          </Button>
-        </div>
-      }
+      title={t('title')}
+      subtitle={t('subtitle')}
+      search={{ value: query, onChange: setQuery, placeholder: t('searchPlaceholder') }}
+      headerActions={[
+        { id: 'refresh', label: t('common:refresh'), icon: <LuRefreshCw />, variant: 'icon', disabled: loading, onClick: load },
+        { id: 'cancel', label: t('cancelBooking'), icon: <LuBan />, variant: 'primary', disabled: !cancellable.length, onClick: openCancel },
+      ]}
       stats={
         <>
-          <StatCard icon="✕" tone="red" label="Cancelled bookings" value={stats.cancelled} />
-          <StatCard icon="%" tone="amber" label="Cancellation rate" value={`${stats.rate}%`} />
-          <StatCard icon="₹" tone="grey" label="Lost value" value={formatCurrency(stats.lostRevenue)} />
-          <StatCard icon="◷" tone="blue" label="Still cancellable" value={stats.cancellable} />
+          {/* Cancelled and rate both show the whole list (only the first is marked
+              selected); lost value narrows it to cancellations that cost money,
+              largest first; still cancellable opens the cancel picker, which is
+              the list of those bookings. */}
+          <StatCard icon={<LuBan />} tone="red" label={t('stats.cancelled')} value={stats.cancelled}
+                    selected={view === 'all'} onClick={() => setView('all')} />
+          <StatCard icon={<LuPercent />} tone="amber" label={t('stats.rate')} value={`${stats.rate}%`}
+                    onClick={() => setView('all')} />
+          <StatCard icon={<LuIndianRupee />} tone="grey" label={t('stats.lost')} value={formatCurrency(stats.lostRevenue)}
+                    selected={view === 'lost'} onClick={() => setView('lost')} />
+          <StatCard icon={<LuClock />} tone="blue" label={t('stats.cancellable')} value={stats.cancellable}
+                    onClick={openCancel} />
         </>
       }
     >
-      <Card
-        title="Cancelled Bookings"
-        actions={<SearchInput value={query} onChange={setQuery} placeholder="Search name, no. or reason" className="w-60" />}
-      >
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-line">
+          <h3 className="font-display font-semibold text-ink text-[15px] leading-tight">{t('listTitle')}</h3>
+          {view === 'lost' && (
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs text-ink2 truncate">{t('filter.lostOnly')}</span>
+              <Button variant="ghost" size="sm" onClick={() => setView('all')}>{t('filter.showAll')}</Button>
+            </div>
+          )}
+        </div>
         {error && <div className="px-5 py-3 text-sm text-danger-text border-b border-line">{error}</div>}
         <DataTable
           columns={columns}
           rows={filtered}
+          tableFrom="lg"
           empty={
             <EmptyState
               icon="✓"
-              title={loading ? 'Loading…' : query ? 'No matching cancellations' : 'No cancellations'}
-              message={loading ? 'Fetching bookings.' : query ? 'Try a different search.' : 'Cancelled bookings will appear here.'}
+              title={loading ? t('common:loading') : narrowed ? t('empty.noMatch') : t('empty.none')}
+              message={loading ? t('empty.fetching') : narrowed ? t('empty.tryAgain') : t('empty.hint')}
             />
           }
         />
@@ -168,9 +192,13 @@ export default function Cancellations() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Delete Cancellation"
-        message={deleteTarget ? <>Permanently delete the cancelled booking <b>{deleteTarget.bookingNo}</b> for <b>{deleteTarget.guestName}</b>? It will be removed from this list. This cannot be undone.</> : null}
-        confirmLabel="Delete"
+        title={t('delete.title')}
+        message={deleteTarget ? (
+          <Trans t={t} i18nKey="delete.message" values={{ no: deleteTarget.bookingNo, name: deleteTarget.guestName }}
+                 components={{ b: <b /> }} />
+        ) : null}
+        confirmLabel={t('common:delete')}
+        cancelLabel={t('common:cancel')}
         danger
         busy={deleting}
       />

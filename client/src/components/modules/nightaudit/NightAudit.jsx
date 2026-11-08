@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useToast } from '../../../hooks/useToast'
 import { formatCurrency, formatDate } from '../../../utils/format'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
+import { LuChartPie, LuIndianRupee, LuLogIn, LuLogOut, LuLock } from 'react-icons/lu'
+import { PageWrapper, StatCard } from '../../ui-tw'
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────────
 
@@ -58,135 +61,121 @@ const CASH_REGISTER = [
   { time: '20:00', desc: 'Food Order — Room 104',      type: 'in',  amount: 680   },
 ]
 
+// Task text comes from t(`checklist.<key>`) at render time.
 const AUDIT_CHECKLIST = [
-  { id: 1, task: 'Verify all room statuses are accurate' },
-  { id: 2, task: 'Confirm all check-outs are settled' },
-  { id: 3, task: 'Run end-of-day revenue report' },
-  { id: 4, task: 'Reconcile cash register balance' },
-  { id: 5, task: 'Check housekeeping completion for vacant rooms' },
-  { id: 6, task: 'Confirm tomorrow\'s arrivals and send reminders' },
-  { id: 7, task: 'Back up daily transaction log' },
-  { id: 8, task: 'Lock the day & post closing balance' },
+  { id: 1, key: 'roomStatuses' },
+  { id: 2, key: 'checkoutsSettled' },
+  { id: 3, key: 'revenueReport' },
+  { id: 4, key: 'reconcileCash' },
+  { id: 5, key: 'housekeeping' },
+  { id: 6, key: 'arrivals' },
+  { id: 7, key: 'backup' },
+  { id: 8, key: 'lockDay' },
 ]
 
+const HK_BADGE = { clean: 'green', dirty: 'red', inspecting: 'amber', blocked: 'grey' }
+
 function HKBadge({ status }) {
-  const map = {
-    clean:      { type: 'green',  label: 'Clean' },
-    dirty:      { type: 'red',    label: 'Dirty' },
-    inspecting: { type: 'amber',  label: 'Inspecting' },
-    blocked:    { type: 'grey',   label: 'Blocked' },
-  }
-  const s = map[status] || { type: 'grey', label: status }
-  return <Badge type={s.type}>{s.label}</Badge>
+  const { t } = useTranslation('nightaudit')
+  return <Badge type={HK_BADGE[status] || 'grey'}>{t(`hk.${status}`, { defaultValue: status })}</Badge>
 }
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function NightAudit() {
+  const { t } = useTranslation('nightaudit')
   const addToast = useToast()
-  const [checklist, setChecklist] = useState(AUDIT_CHECKLIST.map(t => ({ ...t, done: false })))
+  const [checklist, setChecklist] = useState(AUDIT_CHECKLIST.map(task => ({ ...task, done: false })))
   const [locked, setLocked] = useState(false)
   const [showLockConfirm, setShowLockConfirm] = useState(false)
 
-  const completedCount = checklist.filter(t => t.done).length
+  const completedCount = checklist.filter(task => task.done).length
   const allDone = completedCount === checklist.length
   const progress = Math.round((completedCount / checklist.length) * 100)
 
   const toggleTask = (id) => {
     if (locked) return
-    setChecklist(ts => ts.map(t => t.id === id ? { ...t, done: !t.done } : t))
+    setChecklist(ts => ts.map(task => task.id === id ? { ...task, done: !task.done } : task))
   }
 
   const handleLock = () => {
     setLocked(true)
     setShowLockConfirm(false)
-    addToast('Night audit locked. Day closed successfully.', 'success')
+    addToast(t('toast.locked'), 'success')
   }
 
-  const cashIn  = CASH_REGISTER.filter(t => t.type === 'in').reduce((s, t) => s + t.amount, 0)
-  const cashOut = CASH_REGISTER.filter(t => t.type === 'out').reduce((s, t) => s + t.amount, 0)
+  const cashIn  = CASH_REGISTER.filter(tx => tx.type === 'in').reduce((s, tx) => s + tx.amount, 0)
+  const cashOut = CASH_REGISTER.filter(tx => tx.type === 'out').reduce((s, tx) => s + tx.amount, 0)
 
   return (
-    <div className="p-6 max-w-[1200px]">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-6 flex-wrap gap-3">
-        <div>
-          <h1 className="t-h1 m-0 tracking-[-0.03em]">Night Audit</h1>
-          <p className="t-sm mt-1 mb-0 mx-0 text-ink3">End-of-day close — {formatDate(TODAY)}</p>
-        </div>
-        <div className="flex gap-2 items-center">
-          {locked && (
-            <span className="t-xs px-3.5 py-1.5 rounded-[20px] bg-success-bg text-success-text">
-              🔒 DAY LOCKED
-            </span>
-          )}
-          <button
-            className={`btn ${allDone && !locked ? 'btn-primary' : 'btn-outline'} btn-sm ${allDone && !locked ? 'bg-gold text-black border-none font-bold' : ''}`}
-            disabled={locked || !allDone}
-            onClick={() => setShowLockConfirm(true)}
-          >
-            🔒 Lock & Close Day
-          </button>
-        </div>
-      </div>
-
+    <PageWrapper
+      title={t('title')}
+      subtitle={`${t('subtitle', { date: formatDate(TODAY) })}${locked ? ` · ${t('dayLocked')}` : ''}`}
+      search={null}
+      headerActions={[
+        {
+          id: 'lock',
+          label: locked ? t('dayLocked') : t('lockAction'),
+          icon: <LuLock />,
+          variant: 'primary',
+          disabled: locked || !allDone,
+          onClick: () => setShowLockConfirm(true),
+        },
+      ]}
+    >
       {/* Summary stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-3.5 mb-4 sm:mb-5">
         {[
-          { label: 'Occupancy',       value: `${Math.round((AUDIT_SUMMARY.occupiedRooms / AUDIT_SUMMARY.totalRooms) * 100)}%`, color: 'var(--blue-text)', bar: 'stat-bar-blue' },
-          { label: "Today's Revenue", value: formatCurrency(REVENUE_TODAY.total), color: 'var(--gold)', bar: 'stat-bar-amber' },
-          { label: 'Check-Ins',       value: AUDIT_SUMMARY.checkInsToday,  color: 'var(--green-text)', bar: 'stat-bar-green' },
-          { label: 'Check-Outs',      value: AUDIT_SUMMARY.checkOutsToday, color: 'var(--red-text)',   bar: 'stat-bar-red' },
-        ].map(s => (
-          <div key={s.label} className={`stat-card ${s.bar}`}>
-            <div className="text-[10.5px] font-semibold text-ink3 uppercase tracking-[0.05em] mb-1.5">{s.label}</div>
-            <div className="t-h1" style={{ fontFamily: 'var(--font-mono)', color: s.color }}>{s.value}</div>
-          </div>
-        ))}
+          { id: 'occupancy', label: t('stats.occupancy'), value: `${Math.round((AUDIT_SUMMARY.occupiedRooms / AUDIT_SUMMARY.totalRooms) * 100)}%`, icon: <LuChartPie />, tone: 'blue',
+            progress: Math.round((AUDIT_SUMMARY.occupiedRooms / AUDIT_SUMMARY.totalRooms) * 100) },
+          { id: 'revenue', label: t('stats.revenue'), value: formatCurrency(REVENUE_TODAY.total), icon: <LuIndianRupee />, tone: 'gold' },
+          { id: 'checkins', label: t('stats.checkIns'), value: AUDIT_SUMMARY.checkInsToday, icon: <LuLogIn />, tone: 'green' },
+          { id: 'checkouts', label: t('stats.checkOuts'), value: AUDIT_SUMMARY.checkOutsToday, icon: <LuLogOut />, tone: 'red' },
+        ].map(({ id, ...s }) => <StatCard key={id} {...s} />)}
       </div>
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 lg:gap-5 mb-4 lg:mb-5">
 
         {/* Revenue Breakdown */}
         <div className="card">
-          <div className="t-title px-[18px] py-3.5 border-b border-line">Revenue Breakdown</div>
-          <div className="px-[18px] py-3.5">
+          <div className="t-title px-4 sm:px-[18px] py-3.5 border-b border-line">{t('revenue.title')}</div>
+          <div className="px-4 sm:px-[18px] py-3.5">
             {[
-              ['Room Rent',    REVENUE_TODAY.roomRent,  'var(--text)'],
-              ['Food Orders',  REVENUE_TODAY.foodOrders,'var(--text)'],
-              ['Amenities',    REVENUE_TODAY.amenities,  'var(--text)'],
-              ['Advances',     REVENUE_TODAY.advances,   'var(--blue-text)'],
-              ['Refunds',     -REVENUE_TODAY.refunds,    'var(--red-text)'],
-              ['GST Collected', REVENUE_TODAY.gst,       'var(--text3)'],
+              [t('revenue.roomRent'),     REVENUE_TODAY.roomRent,  'var(--text)'],
+              [t('revenue.foodOrders'),   REVENUE_TODAY.foodOrders,'var(--text)'],
+              [t('revenue.amenities'),    REVENUE_TODAY.amenities,  'var(--text)'],
+              [t('revenue.advances'),     REVENUE_TODAY.advances,   'var(--blue-text)'],
+              [t('revenue.refunds'),     -REVENUE_TODAY.refunds,    'var(--red-text)'],
+              [t('revenue.gstCollected'), REVENUE_TODAY.gst,       'var(--text3)'],
             ].map(([label, val, color]) => (
-              <div key={label} className="flex justify-between py-[7px] border-b border-line">
+              <div key={label} className="flex justify-between gap-3 py-[7px] border-b border-line">
                 <span className="t-sm text-ink2">{label}</span>
-                <span className="t-title" style={{ fontFamily: 'var(--font-mono)', color }}>{val < 0 ? `−${formatCurrency(-val)}` : formatCurrency(val)}</span>
+                <span className="t-title font-mono" style={{ color }}>{val < 0 ? `−${formatCurrency(-val)}` : formatCurrency(val)}</span>
               </div>
             ))}
             <div className="t-h3 flex justify-between py-2.5">
-              <span className="text-ink">Net Total</span>
-              <span className="text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(REVENUE_TODAY.total)}</span>
+              <span className="text-ink">{t('revenue.netTotal')}</span>
+              <span className="text-gold font-mono">{formatCurrency(REVENUE_TODAY.total)}</span>
             </div>
           </div>
         </div>
 
         {/* Checklist */}
         <div className="card">
-          <div className="px-[18px] py-3.5 border-b border-line flex justify-between items-center">
-            <span className="t-title">Audit Checklist</span>
-            <span className="text-[11.5px] text-ink3 font-semibold">{completedCount}/{checklist.length} done</span>
+          <div className="px-4 sm:px-[18px] py-3.5 border-b border-line flex justify-between items-center gap-3">
+            <span className="t-title">{t('checklist.title')}</span>
+            <span className="text-xs text-ink3 font-semibold shrink-0">{t('checklist.done', { done: completedCount, total: checklist.length })}</span>
           </div>
           {/* Progress bar */}
           <div className="h-[3px] bg-line">
             <div className={`h-[3px] transition-all duration-300 ${allDone ? 'bg-success' : 'bg-gold'}`} style={{ width: `${progress}%` }} />
           </div>
-          <div className="px-[18px] py-2.5">
+          <div className="px-4 sm:px-[18px] py-1.5">
             {checklist.map(task => (
-              <label key={task.id} className={`flex items-center gap-2.5 py-2 border-b border-line ${locked ? 'cursor-default' : 'cursor-pointer'}`}>
-                <input type="checkbox" checked={task.done} onChange={() => toggleTask(task.id)} className="w-3.5 h-3.5" style={{ accentColor: 'var(--gold)' }} />
-                <span className={`t-sm flex-1 ${task.done ? 'text-ink3 line-through' : 'text-ink'}`}>{task.task}</span>
+              <label key={task.id} className={`flex items-center gap-3 py-2 min-h-11 last:border-0 border-b border-line ${locked ? 'cursor-default' : 'cursor-pointer'}`}>
+                <input type="checkbox" checked={task.done} onChange={() => toggleTask(task.id)} className="w-4 h-4 shrink-0 rounded focus:ring-gold/20" style={{ accentColor: 'var(--gold)' }} />
+                <span className={`t-sm flex-1 ${task.done ? 'text-ink3 line-through' : 'text-ink'}`}>{t(`checklist.${task.key}`)}</span>
                 {task.done && <span className="t-xs text-success-text">✓</span>}
               </label>
             ))}
@@ -195,26 +184,26 @@ export default function NightAudit() {
       </div>
 
       {/* Three-column second row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 lg:gap-5 mb-4 lg:mb-5">
 
         {/* Pending Checkouts */}
         <div className="card">
-          <div className="t-title px-[18px] py-3.5 border-b border-line">
-            Pending Checkouts
+          <div className="t-title px-4 sm:px-[18px] py-3.5 border-b border-line">
+            {t('pendingCheckouts')}
             {PENDING_CHECKOUTS.length > 0 && (
-              <span className="ml-2 bg-danger-bg text-danger-text text-[10.5px] font-bold px-2 py-0.5 rounded-[10px]">{PENDING_CHECKOUTS.length}</span>
+              <span className="ml-2 bg-danger-bg text-danger-text text-xs font-bold px-2 py-0.5 rounded-[10px]">{PENDING_CHECKOUTS.length}</span>
             )}
           </div>
-          <div className="px-[18px] py-2.5">
+          <div className="px-4 sm:px-[18px] py-2.5">
             {PENDING_CHECKOUTS.length === 0 ? (
-              <div className="t-sm py-5 text-center text-ink3">All clear ✓</div>
+              <div className="t-sm py-5 text-center text-ink3">{t('allClear')} ✓</div>
             ) : PENDING_CHECKOUTS.map(c => (
-              <div key={c.room} className="flex justify-between items-center py-[9px] border-b border-line">
-                <div>
-                  <div className="t-title">{c.guest}</div>
-                  <div className="text-[11px] text-ink3 mt-0.5">Room {c.room} · {c.stayType}</div>
+              <div key={c.room} className="flex justify-between items-center gap-3 py-[9px] border-b border-line">
+                <div className="min-w-0">
+                  <div className="t-title truncate">{c.guest}</div>
+                  <div className="text-xs text-ink3 mt-0.5">{t('roomN', { number: c.room })} · {c.stayType}</div>
                 </div>
-                <span className="text-[12.5px] font-bold text-danger-text" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(c.balance)}</span>
+                <span className="text-[12.5px] font-bold text-danger-text font-mono shrink-0">{formatCurrency(c.balance)}</span>
               </div>
             ))}
           </div>
@@ -222,15 +211,15 @@ export default function NightAudit() {
 
         {/* Today's Check-Ins */}
         <div className="card">
-          <div className="t-title px-[18px] py-3.5 border-b border-line">Today's Check-Ins</div>
-          <div className="px-[18px] py-2.5">
+          <div className="t-title px-4 sm:px-[18px] py-3.5 border-b border-line">{t('todaysCheckIns')}</div>
+          <div className="px-4 sm:px-[18px] py-2.5">
             {TODAYS_CHECKINS.map(c => (
-              <div key={c.room} className="flex justify-between items-center py-[9px] border-b border-line">
-                <div>
-                  <div className="t-title">{c.guest}</div>
-                  <div className="text-[11px] text-ink3 mt-0.5">Room {c.room} · {c.source}</div>
+              <div key={c.room} className="flex justify-between items-center gap-3 py-[9px] border-b border-line">
+                <div className="min-w-0">
+                  <div className="t-title truncate">{c.guest}</div>
+                  <div className="text-xs text-ink3 mt-0.5">{t('roomN', { number: c.room })} · {c.source}</div>
                 </div>
-                <Badge type="green">Checked In</Badge>
+                <span className="shrink-0"><Badge type="green">{t('checkedIn')}</Badge></span>
               </div>
             ))}
           </div>
@@ -238,36 +227,36 @@ export default function NightAudit() {
 
         {/* Cash Register Summary */}
         <div className="card">
-          <div className="t-title px-[18px] py-3.5 border-b border-line">Cash Register</div>
-          <div className="px-[18px] py-2.5">
-            {CASH_REGISTER.slice(0, 4).map((t, i) => (
+          <div className="t-title px-4 sm:px-[18px] py-3.5 border-b border-line">{t('cash.title')}</div>
+          <div className="px-4 sm:px-[18px] py-2.5">
+            {CASH_REGISTER.slice(0, 4).map((tx, i) => (
               <div key={i} className="flex justify-between items-center py-[7px] border-b border-line">
                 <div className="flex-1 min-w-0">
-                  <div className="text-[11.5px] text-ink overflow-hidden text-ellipsis whitespace-nowrap">{t.desc}</div>
-                  <div className="text-[10px] text-ink3">{t.time}</div>
+                  <div className="text-[12.5px] text-ink truncate">{tx.desc}</div>
+                  <div className="text-xs text-ink3">{tx.time}</div>
                 </div>
-                <span className="t-xs ml-2 shrink-0" style={{ fontFamily: 'var(--font-mono)', color: t.type === 'in' ? 'var(--green-text)' : 'var(--red-text)' }}>
-                  {t.type === 'in' ? '+' : '−'}{formatCurrency(t.amount)}
+                <span className="t-xs ml-2 shrink-0 font-mono" style={{ color: tx.type === 'in' ? 'var(--green-text)' : 'var(--red-text)' }}>
+                  {tx.type === 'in' ? '+' : '−'}{formatCurrency(tx.amount)}
                 </span>
               </div>
             ))}
             <div className="flex justify-between py-2.5 font-bold border-t border-line mt-1">
-              <span className="t-xs">Net Cash</span>
-              <span className="t-sm text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(cashIn - cashOut)}</span>
+              <span className="t-xs">{t('cash.net')}</span>
+              <span className="t-sm text-gold font-mono">{formatCurrency(cashIn - cashOut)}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Housekeeping Status */}
-      <div className="card mb-5">
-        <div className="t-title px-[18px] py-3.5 border-b border-line">Housekeeping Status</div>
-        <div className="px-[18px] py-3.5 flex flex-wrap gap-2.5">
+      <div className="card">
+        <div className="t-title px-4 sm:px-[18px] py-3.5 border-b border-line">{t('hk.title')}</div>
+        <div className="px-4 sm:px-[18px] py-3.5 grid grid-cols-2 min-[400px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2.5">
           {HOUSEKEEPING_STATUS.map(r => (
-            <div key={r.room} className="px-3.5 py-2.5 rounded-lg min-w-[110px] bg-surface2 border border-line text-center">
-              <div className="t-title text-gold mb-1" style={{ fontFamily: 'var(--font-mono)' }}>{r.room}</div>
+            <div key={r.room} className="min-w-0 px-3 py-2.5 rounded-lg bg-surface2 border border-line text-center">
+              <div className="t-title text-gold mb-1 font-mono">{r.room}</div>
               <HKBadge status={r.status} />
-              <div className="text-[10.5px] text-ink3 mt-1">{r.assignee}</div>
+              <div className="text-xs text-ink3 mt-1 truncate">{r.assignee}</div>
             </div>
           ))}
         </div>
@@ -277,25 +266,25 @@ export default function NightAudit() {
       <Modal
         isOpen={showLockConfirm}
         onClose={() => setShowLockConfirm(false)}
-        title="Lock Day & Close Audit"
+        title={t('lock.title')}
         maxWidth="400px"
         footer={
           <>
-            <button className="btn btn-outline btn-sm" onClick={() => setShowLockConfirm(false)}>Cancel</button>
-            <button className="btn btn-primary btn-sm bg-gold text-black border-none" onClick={handleLock}>
-              🔒 Confirm Lock
+            <button className="btn btn-outline btn-sm" onClick={() => setShowLockConfirm(false)}>{t('common:cancel')}</button>
+            <button className="btn btn-primary btn-sm bg-gold text-black border-none inline-flex items-center gap-1.5" onClick={handleLock}>
+              <LuLock size={14} /> {t('lock.confirm')}
             </button>
           </>
         }
       >
         <p className="text-[13.5px] text-ink2 leading-[1.8] m-0">
-          This will lock the current day's transactions and mark the audit as complete. The date will be closed for further edits.
+          {t('lock.body')}
         </p>
-        <div className="mt-4 px-3.5 py-3 bg-[var(--gold-bg)] rounded-lg flex justify-between">
-          <span className="t-title text-gold">Net Revenue Today</span>
-          <span className="font-bold text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(REVENUE_TODAY.total)}</span>
+        <div className="mt-4 px-3.5 py-3 bg-[var(--gold-bg)] rounded-lg flex flex-wrap justify-between gap-x-3 gap-y-1">
+          <span className="t-title text-gold">{t('lock.netRevenue')}</span>
+          <span className="font-bold text-gold font-mono">{formatCurrency(REVENUE_TODAY.total)}</span>
         </div>
       </Modal>
-    </div>
+    </PageWrapper>
   )
 }

@@ -5,6 +5,179 @@ Paths below are relative to `server/`.
 
 ---
 
+# Session — 2026-11-05 · Portfolio summary: correct figures, periods, property filter
+
+## `src/controllers/propertiesController.js`
+- Collected / collections trend are money received **less refunds**; payments on deleted invoices are left out
+  (as in the cash register). Payment methods count money received only.
+- Outstanding adds what hotel stays still owe (billed on the booking, no invoice row) to unpaid invoices;
+  tenancies stay invoice-only.
+- A room with anyone checked in counts as occupied (a PG room with some beds let).
+- `GET /properties/summary` accepts `forecast=7|14|30`, `trend=7|30|90|month` and `properties=id,id` (narrows to
+  properties the caller can already open; others are ignored). Response includes `period`.
+
+---
+
+# Session — 2026-11-01 · PG rent on calendar months
+
+- `src/utils/pgRent.js` — rent follows calendar months: a part month is charged by the day (25 Oct → 7/31
+  of the rent), then full rent from each 1st. Mid-month tenancies line up at their next period; invoices
+  already raised are unchanged. No migration.
+- `src/controllers/bookingsController.js` — check-in bills from the booking's move-in date (or today if
+  arriving early) instead of always today, catching up months already passed.
+- Rent always starts on the booking's move-in date, even if check-in is clicked earlier; the first period is
+  billed at check-in. `src/utils/invoiceTemplate.js` shows a part month's days and the real move-in date.
+- Refund after move-out: migration `20261101000000_pg_refund` (`Booking.depositUsed`, `refundAmount`, `refundedAt`; new
+  columns only). `POST /bookings/:id/refund` raises any deduction, takes dues from the deposit, and logs the money
+  handed back as a `refund` Payment (Cash Register + ledger). Check-in now logs the deposit as received. The invoice
+  shows the deposit and refund. The app records refunds; it doesn't send money.
+- Move-out: `settleMoveOutRent` cuts the current month's invoice to the days stayed (10 Nov = 10/30), first
+  billing any period not yet raised. Overpaid rent stays on the booking as credit to refund; the refund
+  itself isn't recorded. `GET /bookings/:id/rent` adds `moveOut` (`amount`, `due`, `credit`) for the check-out screen.
+
+---
+
+# Session — 2026-10-31 · Organization logo on invoices
+
+- `src/utils/invoiceTemplate.js` — new `hotelLogo(hotel)`: uses `Hotel.logoUrl` (Hotel Profile), else the
+  logo inside `Hotel.branding` (Branding tab), which invoices previously ignored. `inlineUploadAsset`
+  moved here from `bookingsController.js`.
+- `src/controllers/bookingsController.js` — the booking tax invoice uses `hotelLogo`.
+- `src/controllers/billingController.js` + `src/routes/billing.js` — `GET /billing/letterhead` returns the
+  property's name, address, phone, email, GSTIN and logo (as a data URI) under the `billing` permission.
+
+---
+
+# Session — 2026-10-31 · PG / per-bed booking
+
+A room can now be let **whole** (hotel) or **by bed** (PG / hostel). A bed booking is an ordinary
+booking with `bedNo`, so invoices, payments, dues and check-in/out work per occupant unchanged.
+
+## `prisma/schema.prisma` + migration `20261031000000_pg_beds`
+- `Room.rentMode` (`room` | `bed`, default `room`), `Room.bedCount` (default 1),
+  `Room.bedDailyRate` / `Room.bedMonthlyRate` (default per-bed rents, nullable).
+- `Booking.bedNo` (1-based; NULL = whole room), `Booking.groupId` (bookings created together),
+  `Booking.securityDeposit` (refundable — held, **not** part of `amount`/`balance`). `Guest.bedNo`.
+
+## `src/controllers/bookingsController.js`
+- Availability is per bed: a bed booking clashes only with the same bed or a whole-room stay; a
+  whole-room booking clashes with any stay in the room. Conflict messages name the bed.
+- `POST /bookings` / `PUT /bookings/:id` accept `bedNo` and `securityDeposit` (bed validated
+  against the room; moving bed re-checks availability). Default rate = the bed rate for a bed.
+- `POST /bookings/group` — `{ roomId, stayType, fromDate, toDate|months, taxRate, source, notes,
+  occupants: [{ bedNo, guestName, guestPhone, guestEmail, idType, idNumber, roomRate, advance,
+  securityDeposit }] }` → one booking per occupant (own booking no. + invoice serial) sharing a
+  `groupId`. All-or-nothing: validated up front, created rows removed if one insert fails.
+- `GET /bookings/bed-availability?roomId=&from=&to=` — per-bed `{ bedNo, label, free, heldBy }`.
+- Room status on check-in/out/cancel: a bed room is `occupied` only when every bed (or the whole
+  room) is checked in, so a PG room with a free bed stays bookable. Whole-room rooms unchanged.
+
+## `src/controllers/roomsController.js`
+- Create/update accept `rentMode`, `bedCount`, `bedDailyRate`, `bedMonthlyRate`. Update refuses
+  (409) to drop beds or switch to whole-room while a live booking holds a bed that would vanish.
+- `GET /rooms` includes each room's live stays (`bookings`: bedNo, guest, status, dates, balance).
+
+## `src/utils/invoiceTemplate.js`
+- A bed booking's invoice line reads e.g. `DOUBLE · BED B`.
+
+---
+
+# Session — 2026-10-25 · Per-property member endpoints
+
+- `PUT /properties/:id/members/:userId` *(owner)* `{ roleId }` — give a person access to one property
+  with a role there, or change that role. Rejects owner accounts / the Owner role (org-wide).
+- `DELETE /properties/:id/members/:userId` *(owner)* — remove access to that property only.
+- Both bust the user's access cache and write audit entries.
+
+---
+
+# Session — 2026-10-24 · Portfolio KPIs + forecast
+
+## `src/controllers/propertiesController.js`
+- `GET /properties/summary` stats per property now include: `rooms.sellable` / `rooms.outOfOrder`,
+  occupancy against **sellable** rooms, `adr`, `revpar`, `roomRevenueTonight` (nightly rate of
+  checked-in stays; monthly rates ÷ 30), `departuresToday`, `collectedToday`, and `forecast` — rooms on
+  the books for the next 14 nights (live bookings + in-house guests, de-duplicated per room; night 0 =
+  tonight's room status). Forecast dates are local calendar dates (not UTC).
+- Totals cover active properties only and add ADR, RevPAR, departures, collected today, out-of-order
+  and the portfolio forecast; response carries `generatedAt`.
+
+---
+
+# Session — 2026-10-24 · Multi-property support with per-property access control (backend)
+
+## Summary
+One owner can now run several properties from one install. Every operational record belongs to a
+`Property`; each property has its own settings (GST, invoice series, logo, bank details), catalog
+(room types, food plans, amenities, pricing) and numbering (room numbers, `BKG-`, `MT-`, invoice
+serials, guest doc IDs). Owners see every property; everyone else is assigned per property **with a
+role at that property** (e.g. Manager at one, Staff at another). Existing data was migrated into the
+existing property, and existing non-owner users keep access to it with their current role, so the
+current frontend works unchanged.
+
+## How scoping works
+- `src/utils/propertyContext.js` *(new)* — AsyncLocalStorage "current property" per request;
+  `runWithProperty(id, fn)` / `runUnscoped(fn)` for cron, seeds and public routes.
+- `src/utils/prisma.js` — tenant-aware client (Prisma extension). Inside a property context it ANDs
+  `propertyId` into every read/update/delete (findUnique by id included → other properties' ids
+  are simply not found), stamps `propertyId` on creates, and strips `propertyId` from update
+  payloads so a record can't be moved. Child tables (documents, notes, housekeeping status,
+  reminders, communications) are scoped through their parent relation. Logs a `TENANCY` warning
+  if a property model is queried with no context at all.
+- `src/middleware/auth.js` — `requirePermission(module)` now resolves the property from
+  `X-Property-Id` (or `?propertyId=` for new-tab links such as invoice PDFs; else the user's first
+  property), checks the module level **against the role at that property**, and runs the rest of
+  the request inside that property's context. New `requireProperty` (no module check) used by
+  notifications. Errors: `ERR_PROPERTY_FORBIDDEN`, `ERR_NO_PROPERTY`, `ERR_PROPERTY_ARCHIVED`.
+- `src/utils/permissionCache.js` — caches memberships and the property list; new
+  `getPropertyAccess`, `listPropertyAccess`, `bustProperties`.
+
+## Schema — migration `20261024000000_multi_property`
+- `Property` is identity only (`name`, unique `code`, `status` active|archived); profile fields moved
+  to its `Hotel` settings row (`Hotel.propertyId` unique).
+- New `PropertyAccess (userId, propertyId, roleId)`, unique per user + property.
+- Required `propertyId` (FK, indexed) on Room, RoomType, Guest, Booking, Invoice, Payment,
+  Notification, FoodPlan, Amenity, PricingRule, CompetitorRate, MessageTemplate, MaintenanceRequest,
+  MaintenanceSchedule, LinenRecord, RoomInspection.
+- Global unique keys became per-property: room number (partial index on live rooms), bookingNo,
+  booking/invoice invoiceNo, guest docId, ticketNo, room type / food plan / amenity names, template
+  trigger.
+
+## New API — `src/routes/properties.js`, `src/controllers/propertiesController.js`
+- `GET /properties` — properties the caller can open, with their role + permissions at each.
+- `GET /properties/summary` — portfolio view: rooms, occupancy, in-house, arrivals, collections this
+  month, outstanding — per property and totals.
+- `POST /properties` *(owner)* — create; `copyFromPropertyId` clones catalog + tax/invoice settings.
+- `PUT /properties/:id` *(owner)* — rename / change code / archive / restore (the last active
+  property cannot be archived; archived = read-only, hidden from non-owners).
+- `GET /properties/:id/members` *(owner)*.
+- `src/utils/properties.js` *(new)* — `createProperty` (atomic: property + settings + starter
+  catalog) and the boot-time `ensureProperties` self-heal.
+
+## Users & roles
+- `GET /users` — owners see everyone; property admins see the current property's team. Each user
+  carries `access: [{ propertyId, propertyName, roleId, roleName }]`; `roleId`/`roleRef` describe
+  the role at the current property.
+- `POST /users` assigns the new user to the current property; `PUT /users/:id` role changes apply
+  to the current property (Owner stays org-wide).
+- `PUT /users/:id/access` *(owner, new)* — set all of a user's properties + roles at once.
+- `DELETE /users/:id` — owners delete the account; property admins only remove the user from the
+  current property.
+- Roles: `userCount` counts per-property holders; a role held at any property can't be deleted.
+- `/auth/login` and `/auth/me` return `user.properties`.
+
+## Other fixes made along the way
+- Settings / room-type upserts use the per-property `(propertyId, name)` keys.
+- `PUT /rooms/:id` rejects a `typeId` from another property; housekeeping writes check the room
+  belongs to the current property.
+- Guest QR maintenance (public) writes the ticket + notification into the room's own property.
+- The midnight cron runs once per active property.
+- `seed.js` / `seedDemo.js` work against the first property (`seedDemo --reset` no longer deletes
+  properties).
+- CORS allows the `X-Property-Id` header.
+
+---
+
 # Session — 2026-06-23 · Assign invoice number at booking creation (auto + editable)
 
 ## Summary

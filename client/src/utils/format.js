@@ -1,9 +1,14 @@
+import i18n, { appLocale } from '../i18n'
+const MONEY_LOCALE = 'en-IN-u-nu-latn'
+
 // Indian currency formatting (₹X,XX,XXX)
 export function formatCurrency(amount) {
   if (amount === null || amount === undefined) return '₹0'
   const num = Number(amount)
   if (isNaN(num)) return '₹0'
-  const formatted = new Intl.NumberFormat('en-IN', {
+  // Money always uses Indian grouping (₹4,44,000) and 0–9 digits, whatever the
+  // language: mr-IN would group it the Western way. Only dates follow appLocale().
+  const formatted = new Intl.NumberFormat(MONEY_LOCALE, {
     style: 'currency',
     currency: 'INR',
     maximumFractionDigits: 0,
@@ -25,7 +30,7 @@ export function formatDate(date, opts = {}) {
   if (!date) return '—'
   const d = new Date(date)
   if (isNaN(d)) return '—'
-  return d.toLocaleDateString('en-IN', {
+  return d.toLocaleDateString(appLocale(), {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -36,7 +41,7 @@ export function formatDate(date, opts = {}) {
 export function formatDateTime(date) {
   if (!date) return '—'
   const d = new Date(date)
-  return d.toLocaleString('en-IN', {
+  return d.toLocaleString(appLocale(), {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -50,10 +55,10 @@ export function timeAgo(date) {
   const d = new Date(date)
   const now = new Date()
   const diff = Math.floor((now - d) / 1000)
-  if (diff < 60) return `${diff}s ago`
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-  return `${Math.floor(diff / 86400)}d ago`
+  if (diff < 60) return i18n.t('shell:ago.seconds', { count: diff })
+  if (diff < 3600) return i18n.t('shell:ago.minutes', { count: Math.floor(diff / 60) })
+  if (diff < 86400) return i18n.t('shell:ago.hours', { count: Math.floor(diff / 3600) })
+  return i18n.t('shell:ago.days', { count: Math.floor(diff / 86400) })
 }
 
 // ID generation

@@ -1,0 +1,123 @@
+{
+  "title": "బిల్లింగ్ & చెల్లింపులు",
+  "subtitle": "GST నిబంధనలతో ఇన్‌వాయిస్ నిర్వహణ",
+  "searchPlaceholder": "అతిథి లేదా ఇన్‌వాయిస్ వెతకండి…",
+  "records_one": "{{count}} రికార్డ్",
+  "records_other": "{{count}} రికార్డ్‌లు",
+  "roomNo": "గది {{room}}",
+  "tabs": { "invoices": "ఇన్‌వాయిస్‌లు", "ledger": "లెడ్జర్", "cashRegister": "నగదు రిజిస్టర్" },
+  "status": { "Paid": "చెల్లించబడింది", "Pending": "పెండింగ్", "Overdue": "బకాయి", "Cancelled": "రద్దు చేయబడింది", "Partial": "పాక్షికం" },
+  "stats": {
+    "collected": "ఈ నెల వసూలైనది",
+    "invoicesPaid_one": "{{count}} ఇన్‌వాయిస్ చెల్లించబడింది",
+    "invoicesPaid_other": "{{count}} ఇన్‌వాయిస్‌లు చెల్లించబడ్డాయి",
+    "invoices_one": "{{count}} ఇన్‌వాయిస్",
+    "invoices_other": "{{count}} ఇన్‌వాయిస్‌లు",
+    "gstCollected": "వసూలైన GST",
+    "fromPaid": "చెల్లించిన ఇన్‌వాయిస్‌ల నుండి"
+  },
+  "actions": {
+    "billing": "బిల్ చేస్తోంది…",
+    "billPgRent": "PG అద్దె ఇప్పుడే బిల్ చేయండి",
+    "generateInvoice": "ఇన్‌వాయిస్ రూపొందించండి",
+    "collect": "వసూలు చేయండి",
+    "invoice": "ఇన్‌వాయిస్",
+    "viewInvoice": "ఇన్‌వాయిస్ చూడండి",
+    "sendReminder": "రిమైండర్ పంపండి",
+    "deleteInvoice": "ఇన్‌వాయిస్ తొలగించండి"
+  },
+  "col": { "type": "రకం", "rent": "అద్దె", "food": "ఆహారం", "amenities": "సౌకర్యాలు", "charges": "ఛార్జీలు" },
+  "empty": { "loading": "ఇన్‌వాయిస్‌లు లోడ్ అవుతున్నాయి…", "title": "ఇన్‌వాయిస్‌లు కనుగొనబడలేదు", "message": "ఇన్‌వాయిస్ రూపొందించండి లేదా ఫిల్టర్లను మార్చండి" },
+  "errors": { "loadInvoices": "ఇన్‌వాయిస్‌లను లోడ్ చేయలేకపోయాము. బ్యాకెండ్ నడుస్తోందో లేదో తనిఖీ చేయండి." },
+  "invoice": {
+    "title": "ఇన్‌వాయిస్ — {{no}}",
+    "print": "ఇన్‌వాయిస్ ప్రింట్ చేయండి",
+    "taxInvoice": "పన్ను ఇన్‌వాయిస్",
+    "invoiceNo": "ఇన్‌వాయిస్ నం.",
+    "period": "వ్యవధి",
+    "description": "వివరణ",
+    "roomRent": "గది అద్దె",
+    "foodPlan": "ఆహార ప్లాన్",
+    "amenities": "సౌకర్యాలు",
+    "taxableValue": "పన్ను విధించదగిన విలువ",
+    "grandTotal": "మొత్తం చెల్లించవలసినది",
+    "paymentStatus": "చెల్లింపు స్థితి:",
+    "paidOn": "{{date}}న చెల్లించబడింది",
+    "poweredBy": "Quantum Vorvex ఆధారితం · Forge Quantum Solutions"
+  },
+  "collect": {
+    "title": "చెల్లింపు నమోదు చేయండి",
+    "confirm": "చెల్లింపు నిర్ధారించండి",
+    "amountDue": "బాకీ మొత్తం",
+    "paymentMethod": "చెల్లింపు విధానం",
+    "method": { "cash": "నగదు", "upi": "UPI", "card": "కార్డ్", "bank": "బ్యాంక్ బదిలీ" },
+    "reference": "రిఫరెన్స్ / లావాదేవీ ID (ఐచ్ఛికం)",
+    "referencePlaceholder": "UPI రిఫ్, చెక్ నం., మొదలైనవి"
+  },
+  "remind": {
+    "title": "చెల్లింపు రిమైండర్ పంపండి",
+    "send": "రిమైండర్ పంపండి",
+    "recipient": "స్వీకర్త",
+    "channel": "మాధ్యమం",
+    "message": "సందేశం",
+    "defaultMessage": "ప్రియమైన {{guest}}, గది {{room}} కోసం మీ {{amount}} చెల్లింపు బాకీ ఉంది. దయచేసి వీలైనంత త్వరగా మమ్మల్ని సంప్రదించండి."
+  },
+  "generate": {
+    "title": "ఇన్‌వాయిస్ రూపొందించండి",
+    "submit": "రూపొందించండి",
+    "noGuests": "అతిథులు అందుబాటులో లేరు",
+    "periodPlaceholder": "ఉదా. Apr 2026",
+    "gstRate": "GST రేటు (%)"
+  },
+  "ledger": {
+    "loadFailed": "లెడ్జర్ లోడ్ కాలేదు",
+    "runningBalance": "ప్రస్తుత నిల్వ",
+    "balance": "నిల్వ",
+    "entryType": { "Credit": "జమ", "Debit": "ఖర్చు" },
+    "selectGuest": "అతిథిని ఎంచుకోండి",
+    "searchGuest": "అతిథిని వెతకండి…",
+    "loading": "లెడ్జర్ లోడ్ అవుతోంది…",
+    "noEntries": "{{guest}} కోసం లెడ్జర్ ఎంట్రీలు లేవు",
+    "closingBalanceFor": "ముగింపు నిల్వ — {{guest}}",
+    "print": "లెడ్జర్ ప్రింట్ చేయండి",
+    "noGuestTitle": "అతిథి ఎంచుకోబడలేదు",
+    "noGuestMessage": "ఖాతా లెడ్జర్ చూడటానికి అతిథిని ఎంచుకోండి"
+  },
+  "cash": {
+    "loadFailed": "నగదు రిజిస్టర్ లోడ్ కాలేదు",
+    "exported": "నగదు రిజిస్టర్ CSV గా ఎగుమతి అయింది",
+    "time": "సమయం",
+    "type": { "collection": "వసూలు", "advance": "అడ్వాన్స్", "refund": "రీఫండ్" },
+    "cashIn": "నగదు జమ",
+    "cashOut": "నగదు చెల్లింపు",
+    "openingBalance": "ప్రారంభ నిల్వ",
+    "empty": "ఈ తేదీకి నగదు లావాదేవీలు లేవు",
+    "totals": "మొత్తాలు",
+    "in": "జమ",
+    "out": "ఖర్చు",
+    "totalIn": "మొత్తం జమ",
+    "totalOut": "మొత్తం ఖర్చు",
+    "closingBalance": "ముగింపు నిల్వ",
+    "print": "రిజిస్టర్ ప్రింట్ చేయండి"
+  },
+  "toast": {
+    "collected": "{{guest}} నుండి {{method}} ద్వారా {{amount}} వసూలైంది",
+    "collectFailed": "చెల్లింపును నమోదు చేయలేకపోయాము",
+    "reminderSent": "{{channel}} ద్వారా రిమైండర్ పంపబడింది",
+    "reminderFailed": "రిమైండర్ పంపలేకపోయాము",
+    "deleted": "ఇన్‌వాయిస్ {{no}} తొలగించబడింది",
+    "deleteFailed": "ఇన్‌వాయిస్‌ను తొలగించలేకపోయాము",
+    "pgRentCreated_one": "{{count}} PG అద్దె ఇన్‌వాయిస్ రూపొందించబడింది",
+    "pgRentCreated_other": "{{count}} PG అద్దె ఇన్‌వాయిస్‌లు రూపొందించబడ్డాయి",
+    "pgRentUpToDate": "PG అద్దె ఇప్పటికే ఈరోజు వరకు బిల్ చేయబడింది",
+    "pgRentFailed": "PG అద్దెను బిల్ చేయలేకపోయాము",
+    "generated": "ఇన్‌వాయిస్ {{no}} రూపొందించబడింది",
+    "generateFailed": "ఇన్‌వాయిస్ రూపొందించలేకపోయాము",
+    "exportFailed": "ఇన్‌వాయిస్‌లను ఎగుమతి చేయలేకపోయాము",
+    "exported": "ఇన్‌వాయిస్ CSV ఎగుమతి అయింది"
+  },
+  "delete": {
+    "title": "ఇన్‌వాయిస్ తొలగించండి",
+    "message": "<b>{{guest}}</b> కోసం ఇన్‌వాయిస్ <b>{{no}}</b> ({{amount}}) తొలగించాలా? ఇది బిల్లింగ్, లెడ్జర్, నగదు రిజిస్టర్ మరియు ఆదాయ నివేదికల నుండి తీసివేయబడుతుంది. దీన్ని రద్దు చేయలేము."
+  }
+}

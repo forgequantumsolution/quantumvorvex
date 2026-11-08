@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   BarChart,
   Bar,
@@ -9,11 +10,13 @@ import {
   LineChart,
   Line,
 } from 'recharts'
-import { useAppSelector, useUiActions } from '../../../store/hooks'
+import { useAppSelector, usePageHeader, useUiActions } from '../../../store/hooks'
 import { useToast } from '../../../hooks/useToast'
 import { formatCurrency, formatCurrencyCompact, statusColor } from '../../../utils/format'
+import { LuBedDouble, LuDoorOpen, LuUserCheck, LuWrench, LuIndianRupee, LuChartPie, LuKeyboard, LuPrinter } from 'react-icons/lu'
 import StatCard from '../../ui/StatCard'
 import Modal from '../../ui/Modal'
+import { appLocale } from '../../../i18n'
 
 // ─── Mock data (replace with React Query) ────────────────────────────────────
 const mockStats = {
@@ -31,45 +34,48 @@ const mockGuests = [
   { id: '3', name: 'Ankit Singh',   room: '312', type: 'Monthly', tags: [],             status: 'Due',    checkIn: '2026-03-15' },
 ]
 
+// date: 'today' | 'tomorrow' | an ISO date.
 const mockCheckouts = [
-  { name: 'Sneha Rao',    room: '118', date: 'Today' },
-  { name: 'Arjun Patel',  room: '312', date: 'Tomorrow' },
-  { name: 'Vijay Kumar',  room: '221', date: 'Apr 8' },
+  { name: 'Sneha Rao',    room: '118', date: 'today' },
+  { name: 'Arjun Patel',  room: '312', date: 'tomorrow' },
+  { name: 'Vijay Kumar',  room: '221', date: '2026-04-08' },
 ]
 
 const mockRevenue = [
-  { month: 'Nov', amount: 120000 },
-  { month: 'Dec', amount: 145000 },
-  { month: 'Jan', amount: 98000 },
-  { month: 'Feb', amount: 165000 },
-  { month: 'Mar', amount: 152000 },
-  { month: 'Apr', amount: 180000 },
+  { month: 10, amount: 120000 },
+  { month: 11, amount: 145000 },
+  { month: 0, amount: 98000 },
+  { month: 1, amount: 165000 },
+  { month: 2, amount: 152000 },
+  { month: 3, amount: 180000 },
 ]
 
 const mockOccupancy = [
-  { month: 'Nov', rate: 62 },
-  { month: 'Dec', rate: 71 },
-  { month: 'Jan', rate: 54 },
-  { month: 'Feb', rate: 80 },
-  { month: 'Mar', rate: 73 },
-  { month: 'Apr', rate: 75 },
+  { month: 10, rate: 62 },
+  { month: 11, rate: 71 },
+  { month: 0, rate: 54 },
+  { month: 1, rate: 80 },
+  { month: 2, rate: 73 },
+  { month: 3, rate: 75 },
 ]
 
+// msg / event are keys in locales/<lang>/dashboard.json; params fill them in.
+// hoursAgo: null means "yesterday".
 const mockNotifs = [
-  { id: 1, type: 'warn',    icon: '⚠', msg: 'Room 312 payment due in 3 days',              time: '2 hrs ago' },
-  { id: 2, type: 'info',    icon: 'ℹ', msg: 'Room 207 maintenance scheduled tomorrow',      time: '4 hrs ago' },
-  { id: 3, type: 'success', icon: '✓', msg: 'New check-in: Room 405 — Kavita Joshi',        time: '6 hrs ago' },
-  { id: 4, type: 'danger',  icon: '!', msg: 'ID verification pending for Room 110',          time: 'Yesterday' },
+  { id: 1, type: 'warn',    icon: '⚠', msg: 'notif.paymentDue',      params: { room: '312', count: 3 },           hoursAgo: 2 },
+  { id: 2, type: 'info',    icon: 'ℹ', msg: 'notif.maintTomorrow',   params: { room: '207' },                     hoursAgo: 4 },
+  { id: 3, type: 'success', icon: '✓', msg: 'notif.newCheckIn',      params: { room: '405', name: 'Kavita Joshi' }, hoursAgo: 6 },
+  { id: 4, type: 'danger',  icon: '!', msg: 'notif.idPending',       params: { room: '110' },                     hoursAgo: null },
 ]
 
 const todayTimeline = [
-  { time: '07:30', event: 'Housekeeping shift started',        type: 'hk',      icon: '🧹', done: true  },
-  { time: '09:15', event: 'Anjali Singh checked in — Room 103', type: 'checkin', icon: '↗',  done: true  },
-  { time: '11:00', event: 'INV-002 — Priya Patel paid ₹9,016', type: 'billing', icon: '◑',  done: true  },
-  { time: '12:00', event: 'Sneha Rao checkout due — Room 118',  type: 'urgent',  icon: '⚠',  done: false },
-  { time: '14:00', event: 'Farhan Ahmed arriving — Room 201',   type: 'checkin', icon: '↗',  done: false },
-  { time: '16:00', event: 'Maintenance: Room 105 AC check',    type: 'maint',   icon: '🔧', done: false },
-  { time: '20:00', event: 'Night Audit due',                   type: 'audit',   icon: '🌙', done: false },
+  { time: '07:30', event: 'timeline.hkShift',     params: {},                                                         type: 'hk',      icon: '🧹', done: true  },
+  { time: '09:15', event: 'timeline.checkedIn',   params: { name: 'Anjali Singh', room: '103' },                      type: 'checkin', icon: '↗',  done: true  },
+  { time: '11:00', event: 'timeline.paid',        params: { invoice: 'INV-002', name: 'Priya Patel', amount: '₹9,016' }, type: 'billing', icon: '◑',  done: true  },
+  { time: '12:00', event: 'timeline.checkoutDue', params: { name: 'Sneha Rao', room: '118' },                         type: 'urgent',  icon: '⚠',  done: false },
+  { time: '14:00', event: 'timeline.arriving',    params: { name: 'Farhan Ahmed', room: '201' },                      type: 'checkin', icon: '↗',  done: false },
+  { time: '16:00', event: 'timeline.acCheck',     params: { room: '105' },                                            type: 'maint',   icon: '🔧', done: false },
+  { time: '20:00', event: 'timeline.nightAudit',  params: {},                                                         type: 'audit',   icon: '🌙', done: false },
 ]
 
 const TIMELINE_COLORS = {
@@ -112,36 +118,44 @@ function GuestTag({ tag }) {
 }
 
 // ─── Shortcuts Modal ──────────────────────────────────────────────────────────
+// labelKey: a key in dashboard.json (translated at render time).
 const SHORTCUTS = [
-  { key: 'D', label: 'Dashboard' },
-  { key: 'R', label: 'Rooms' },
-  { key: 'F', label: 'Floor Plan' },
-  { key: 'T', label: 'Reports' },
-  { key: 'C', label: 'Check-In' },
-  { key: 'G', label: 'Guests' },
-  { key: 'B', label: 'Billing' },
-  { key: 'S', label: 'Settings' },
-  { key: 'M', label: 'Toggle Dark Mode' },
-  { key: 'Esc', label: 'Close modal' },
-  { key: '?', label: 'Open shortcuts' },
+  { key: 'D', labelKey: 'shortcuts.dashboard' },
+  { key: 'R', labelKey: 'shortcuts.rooms' },
+  { key: 'F', labelKey: 'shortcuts.floorPlan' },
+  { key: 'T', labelKey: 'shortcuts.reports' },
+  { key: 'C', labelKey: 'shortcuts.checkIn' },
+  { key: 'G', labelKey: 'shortcuts.guests' },
+  { key: 'B', labelKey: 'shortcuts.billing' },
+  { key: 'S', labelKey: 'shortcuts.settings' },
+  { key: 'M', labelKey: 'shortcuts.darkMode' },
+  { key: 'Esc', labelKey: 'shortcuts.closeModal' },
+  { key: '?', labelKey: 'shortcuts.openShortcuts' },
 ]
+
+// Display labels for stay types / statuses (the values stay in English).
+const TYPE_KEYS   = { Monthly: 'type.monthly', Daily: 'type.daily' }
+const STATUS_KEYS = { Active: 'status.active', Due: 'status.due' }
+
+const monthLabel = (m) => new Date(2026, m, 1).toLocaleDateString(appLocale(), { month: 'short' })
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const hotelName    = useAppSelector((s) => s.hotel.hotelName)
   const { setActivePanel } = useUiActions()
   const addToast     = useToast()
+  const { t } = useTranslation('dashboard')
 
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const stats = mockStats
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   function handleCheckout(guest) {
-    addToast(`Checkout initiated for ${guest.name} — Room ${guest.room}`, 'success')
+    addToast(t('toast.checkout', { name: guest.name, room: guest.room }), 'success')
   }
 
   function handleExtend(guest) {
-    addToast(`Stay extended for ${guest.name} — Room ${guest.room}`, 'info')
+    addToast(t('toast.extended', { name: guest.name, room: guest.room }), 'info')
   }
 
   function handlePrint() {
@@ -151,78 +165,54 @@ export default function Dashboard() {
   // ── Computed ─────────────────────────────────────────────────────────────────
   const availablePct    = Math.round((stats.available   / stats.total) * 100)
   const occupiedPct     = Math.round((stats.occupied    / stats.total) * 100)
+  const revenueData     = mockRevenue.map((d) => ({ ...d, month: monthLabel(d.month) }))
+  const occupancyData   = mockOccupancy.map((d) => ({ ...d, month: monthLabel(d.month) }))
+  const typeLabel   = (v) => (TYPE_KEYS[v] ? t(TYPE_KEYS[v]) : v)
+  const statusLabel = (v) => (STATUS_KEYS[v] ? t(STATUS_KEYS[v]) : v)
+  const dateLabel   = (d) =>
+    d === 'today' ? t('common:today') :
+    d === 'tomorrow' ? t('common:tomorrow') :
+    new Date(`${d}T00:00:00`).toLocaleDateString(appLocale(), { day: 'numeric', month: 'short' })
+  const since = (d) => t('since', { date: new Date(`${d}T00:00:00`).toLocaleDateString(appLocale(), { day: 'numeric', month: 'short', year: 'numeric' }) })
+
+  usePageHeader({
+    title: t('title'),
+    subtitle: t('subtitle', { hotel: hotelName }),
+    actions: [
+      { id: 'shortcuts', label: t('shortcutsBtn'), icon: <LuKeyboard />, onClick: () => setShortcutsOpen(true) },
+      { id: 'print', label: t('common:print'), icon: <LuPrinter />, variant: 'icon', onClick: handlePrint },
+    ],
+  })
 
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col gap-[22px]">
-
-      {/* ── Page Header ── */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1
-            className="t-h1 tracking-[-0.03em] m-0 leading-[1.2]"
-          >
-            Dashboard
-          </h1>
-          <p
-            className="t-sm text-ink3 mt-[3px] mx-0 mb-0"
-          >
-            {hotelName} — Overview
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            className="btn btn-outline btn-sm"
-            onClick={() => setShortcutsOpen(true)}
-          >
-            ⌨ Shortcuts
-          </button>
-          <button
-            className="btn btn-outline btn-sm no-print"
-            onClick={handlePrint}
-          >
-            ⎙ Print
-          </button>
-        </div>
-      </div>
+    <div className="flex flex-col gap-4 sm:gap-[22px]">
 
       {/* ── Stats Row ── */}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(165px,1fr))] gap-3.5">
-        <StatCard label="Total Rooms" value={stats.total} color="gold" sub="All room inventory" />
+      {/* 2-up on phones, 3-up on tablets, one row of six on wide screens. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 2xl:grid-cols-6 gap-3 sm:gap-3.5">
+        <StatCard icon={<LuBedDouble />} label={t('stats.totalRooms')} value={stats.total} color="gold" sub={t('stats.allInventory')} />
 
-        <StatCard label="Available" value={stats.available} color="green" sub={`${availablePct}% of total`}>
-          <div className="prog-bar">
-            <div
-              className="prog-fill bg-success"
-              style={{ width: `${availablePct}%` }}
-            />
-          </div>
-        </StatCard>
+        <StatCard icon={<LuDoorOpen />} label={t('stats.available')} value={stats.available} color="green" sub={t('stats.pctOfTotal', { pct: availablePct })} progress={availablePct} />
 
-        <StatCard label="Occupied" value={stats.occupied} color="red" sub={`${occupiedPct}% of total`}>
-          <div className="prog-bar">
-            <div
-              className="prog-fill bg-danger"
-              style={{ width: `${occupiedPct}%` }}
-            />
-          </div>
-        </StatCard>
+        <StatCard icon={<LuUserCheck />} label={t('stats.occupied')} value={stats.occupied} color="red" sub={t('stats.pctOfTotal', { pct: occupiedPct })} progress={occupiedPct} />
 
-        <StatCard label="Maintenance" value={stats.maintenance} color="amber" sub="Under service" />
+        <StatCard icon={<LuWrench />} label={t('stats.maintenance')} value={stats.maintenance} color="amber" sub={t('stats.underService')} />
 
         <StatCard
-          label="Monthly Revenue ₹"
+          icon={<LuIndianRupee />}
+          label={t('stats.monthlyRevenue')}
           value={formatCurrencyCompact(stats.revenue)}
           color="blue"
           sub={formatCurrency(stats.revenue)}
         />
 
         <StatCard
-          label="Occupancy Rate %"
+          icon={<LuChartPie />}
+          label={t('stats.occupancyRate')}
           value={`${stats.occupancyRate}%`}
           color="purple"
-          sub="This month"
+          sub={t('stats.thisMonth')}
         />
       </div>
 
@@ -234,13 +224,13 @@ export default function Dashboard() {
           {/* Revenue Bar Chart */}
           <div className="card">
             <div className="card-header">
-              <span className="card-title">Monthly Revenue</span>
-              <span className="text-[11.5px] text-ink3">Last 6 months</span>
+              <span className="card-title">{t('charts.monthlyRevenue')}</span>
+              <span className="text-xs text-ink3">{t('charts.last6Months')}</span>
             </div>
             <div className="card-body pt-2">
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart
-                  data={mockRevenue}
+                  data={revenueData}
                   margin={{ top: 4, right: 4, left: -16, bottom: 0 }}
                   barCategoryGap="30%"
                 >
@@ -272,13 +262,13 @@ export default function Dashboard() {
           {/* Occupancy Trend Line Chart */}
           <div className="card">
             <div className="card-header">
-              <span className="card-title">Occupancy Trend</span>
-              <span className="text-[11.5px] text-ink3">Last 6 months</span>
+              <span className="card-title">{t('charts.occupancyTrend')}</span>
+              <span className="text-xs text-ink3">{t('charts.last6Months')}</span>
             </div>
             <div className="card-body pt-2">
               <ResponsiveContainer width="100%" height={150}>
                 <LineChart
-                  data={mockOccupancy}
+                  data={occupancyData}
                   margin={{ top: 4, right: 4, left: -16, bottom: 0 }}
                 >
                   <XAxis
@@ -321,16 +311,16 @@ export default function Dashboard() {
           {/* Notifications */}
           <div className="card">
             <div className="card-header">
-              <span className="card-title">Notifications</span>
-              <span className="text-[11px] font-semibold text-gold bg-[var(--gold-bg)] border border-[var(--gold-border)] rounded-[20px] px-2 py-0.5">
-                {mockNotifs.length} new
+              <span className="card-title">{t('common:notifications')}</span>
+              <span className="text-xs font-semibold text-gold bg-[var(--gold-bg)] border border-[var(--gold-border)] rounded-[20px] px-2 py-0.5">
+                {t('newCount', { count: mockNotifs.length })}
               </span>
             </div>
             <div className="card-body flex flex-col gap-2 pt-3.5">
               {mockNotifs.map((n) => (
                 <div key={n.id} className={`notif notif-${n.type}`}>
                   <span
-                    className={`w-[22px] h-[22px] rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
+                    className={`w-[22px] h-[22px] rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
                       n.type === 'warn'    ? 'bg-warning-bg text-warning-text' :
                       n.type === 'info'    ? 'bg-info-bg text-info-text'       :
                       n.type === 'success' ? 'bg-success-bg text-success-text' :
@@ -340,11 +330,11 @@ export default function Dashboard() {
                     {n.icon}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[12.5px] text-ink leading-[1.4]">
-                      {n.msg}
+                    <div className="text-[13px] text-ink leading-[1.4]">
+                      {t(n.msg, n.params)}
                     </div>
-                    <div className="text-[11px] text-ink3 mt-0.5">
-                      {n.time}
+                    <div className="text-xs text-ink3 mt-0.5">
+                      {n.hoursAgo == null ? t('common:yesterday') : t('hoursAgo', { count: n.hoursAgo })}
                     </div>
                   </div>
                 </div>
@@ -355,7 +345,7 @@ export default function Dashboard() {
           {/* Occupancy by Room Type */}
           <div className="card">
             <div className="card-header">
-              <span className="card-title">Occupancy by Room Type</span>
+              <span className="card-title">{t('occupancyByType')}</span>
             </div>
             <div className="card-body flex flex-col gap-3.5">
               {mockRoomTypes.map((rt) => {
@@ -370,7 +360,7 @@ export default function Dashboard() {
                       <span className="text-[12.5px] text-ink font-medium">
                         {rt.label}
                       </span>
-                      <span className="text-[11.5px] text-ink3">
+                      <span className="text-xs text-ink3">
                         {rt.occupied}/{rt.total} &nbsp;
                         <span className="font-semibold" style={{ color: barColor }}>{pct}%</span>
                       </span>
@@ -394,23 +384,45 @@ export default function Dashboard() {
         {/* Recent Check-Ins */}
         <div className="card">
           <div className="card-header">
-            <span className="card-title">Recent Check-Ins</span>
+            <span className="card-title">{t('recentCheckIns')}</span>
             <button
               className="btn btn-outline btn-xs"
               onClick={() => setActivePanel('guests')}
             >
-              View all
+              {t('common:viewAll')}
             </button>
           </div>
-          <div className="overflow-x-auto">
+          {/* Phones: one compact row per guest instead of a six-column table. */}
+          <ul className="sm:hidden m-0 p-0 list-none divide-y divide-line">
+            {mockGuests.map((g) => (
+              <li key={g.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="t-sm text-ink font-medium truncate">{g.name}</span>
+                    <span className="text-[13px] font-medium text-ink2 shrink-0" style={{ fontFamily: 'var(--font-mono)' }}>{g.room}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1 mt-1">
+                    <span className={`badge ${g.type === 'Monthly' ? 'badge-purple' : 'badge-blue'}`}>{typeLabel(g.type)}</span>
+                    <span className={`badge ${statusColor(g.status)}`}>{statusLabel(g.status)}</span>
+                    {g.tags.map((tag) => <GuestTag key={tag} tag={tag} />)}
+                  </div>
+                  <div className="text-xs text-ink3 mt-1">{since(g.checkIn)}</div>
+                </div>
+                <button className="btn btn-outline btn-sm shrink-0" onClick={() => handleCheckout(g)}>
+                  {t('checkout')}
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden sm:block overflow-x-auto">
             <table>
               <thead>
                 <tr>
-                  <th>Guest</th>
-                  <th>Room</th>
-                  <th>Type</th>
-                  <th>Tags</th>
-                  <th>Status</th>
+                  <th>{t('common:guest')}</th>
+                  <th>{t('common:room')}</th>
+                  <th>{t('table.type')}</th>
+                  <th>{t('table.tags')}</th>
+                  <th>{t('common:status')}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -421,8 +433,8 @@ export default function Dashboard() {
                       <div className="t-sm text-ink whitespace-nowrap">
                         {g.name}
                       </div>
-                      <div className="text-[11px] text-ink3 mt-px">
-                        Since {g.checkIn}
+                      <div className="text-xs text-ink3 mt-px">
+                        {since(g.checkIn)}
                       </div>
                     </td>
                     <td>
@@ -437,26 +449,26 @@ export default function Dashboard() {
                       <span
                         className={`badge ${g.type === 'Monthly' ? 'badge-purple' : 'badge-blue'}`}
                       >
-                        {g.type}
+                        {typeLabel(g.type)}
                       </span>
                     </td>
                     <td>
                       <div className="flex gap-1 flex-wrap">
                         {g.tags.length > 0
-                          ? g.tags.map((t) => <GuestTag key={t} tag={t} />)
-                          : <span className="text-ink3 text-[11px]">—</span>
+                          ? g.tags.map((tag) => <GuestTag key={tag} tag={tag} />)
+                          : <span className="text-ink3 text-xs">—</span>
                         }
                       </div>
                     </td>
                     <td>
-                      <span className={`badge ${statusColor(g.status)}`}>{g.status}</span>
+                      <span className={`badge ${statusColor(g.status)}`}>{statusLabel(g.status)}</span>
                     </td>
                     <td>
                       <button
                         className="btn btn-outline btn-xs whitespace-nowrap"
                         onClick={() => handleCheckout(g)}
                       >
-                        Checkout
+                        {t('checkout')}
                       </button>
                     </td>
                   </tr>
@@ -469,21 +481,40 @@ export default function Dashboard() {
         {/* Upcoming Checkouts */}
         <div className="card">
           <div className="card-header">
-            <span className="card-title">Upcoming Checkouts</span>
+            <span className="card-title">{t('upcomingCheckouts')}</span>
             <button
               className="btn btn-outline btn-xs"
               onClick={() => setActivePanel('rooms')}
             >
-              View all
+              {t('common:viewAll')}
             </button>
           </div>
-          <div className="overflow-x-auto">
+          <ul className="sm:hidden m-0 p-0 list-none divide-y divide-line">
+            {mockCheckouts.map((c, i) => (
+              <li key={i} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <div className="t-sm text-ink font-medium truncate">{c.name}</div>
+                  <div className="text-xs text-ink3 mt-0.5">
+                    {t('common:room')} <span style={{ fontFamily: 'var(--font-mono)' }}>{c.room}</span> ·{' '}
+                    <span className={`font-medium ${
+                      c.date === 'today' ? 'text-danger-text' : c.date === 'tomorrow' ? 'text-warning-text' : 'text-ink2'
+                    }`}>{dateLabel(c.date)}</span>
+                  </div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button className="btn btn-outline btn-sm" onClick={() => handleCheckout(c)}>{t('checkout')}</button>
+                  <button className="btn btn-outline btn-sm" onClick={() => handleExtend(c)}>{t('extend')}</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden sm:block overflow-x-auto">
             <table>
               <thead>
                 <tr>
-                  <th>Guest</th>
-                  <th>Room</th>
-                  <th>Date</th>
+                  <th>{t('common:guest')}</th>
+                  <th>{t('common:room')}</th>
+                  <th>{t('common:date')}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -506,12 +537,12 @@ export default function Dashboard() {
                     <td>
                       <span
                         className={`text-[12.5px] font-medium ${
-                          c.date === 'Today'    ? 'text-danger-text'  :
-                          c.date === 'Tomorrow' ? 'text-warning-text' :
+                          c.date === 'today'    ? 'text-danger-text'  :
+                          c.date === 'tomorrow' ? 'text-warning-text' :
                                                   'text-ink2'
                         }`}
                       >
-                        {c.date}
+                        {dateLabel(c.date)}
                       </span>
                     </td>
                     <td>
@@ -520,13 +551,13 @@ export default function Dashboard() {
                           className="btn btn-outline btn-xs"
                           onClick={() => handleCheckout(c)}
                         >
-                          Checkout
+                          {t('checkout')}
                         </button>
                         <button
                           className="btn btn-outline btn-xs"
                           onClick={() => handleExtend(c)}
                         >
-                          Extend
+                          {t('extend')}
                         </button>
                       </div>
                     </td>
@@ -539,22 +570,22 @@ export default function Dashboard() {
       </div>
 
       {/* ── Today's Timeline ── */}
-      <div className="card mt-5">
+      <div className="card">
         <div className="card-header">
-          <span className="card-title">Today's Timeline</span>
-          <span className="text-[11.5px] text-ink3">
-            {todayTimeline.filter(t => t.done).length}/{todayTimeline.length} events done
+          <span className="card-title">{t('timeline.title')}</span>
+          <span className="text-xs text-ink3">
+            {t('timeline.doneCount', { done: todayTimeline.filter((e) => e.done).length, total: todayTimeline.length })}
           </span>
         </div>
         <div className="pt-2 px-4 pb-4 relative">
           {/* Vertical line */}
-          <div className="absolute left-10 top-2 bottom-2 w-px bg-line" />
+          <div className="absolute left-[74px] top-2 bottom-2 w-px bg-line" />
           {todayTimeline.map((item, i) => {
             const colors = TIMELINE_COLORS[item.type] || TIMELINE_COLORS.audit
             return (
               <div key={i} className="flex gap-3.5 mb-3 items-start relative">
                 {/* Time */}
-                <div className="w-[34px] shrink-0 text-right text-[10.5px] font-semibold text-ink3 pt-1.5" style={{ fontFamily: 'var(--font-mono)' }}>
+                <div className="w-[38px] shrink-0 text-right text-xs font-semibold text-ink3 pt-1.5" style={{ fontFamily: 'var(--font-mono)' }}>
                   {item.time}
                 </div>
                 {/* Dot */}
@@ -567,20 +598,20 @@ export default function Dashboard() {
                 />
                 {/* Event */}
                 <div
-                  className={`flex-1 px-2.5 py-1.5 rounded-[7px] transition-all duration-[150ms] ${item.done ? 'opacity-[0.65]' : 'opacity-100'}`}
+                  className={`flex-1 min-w-0 px-2.5 py-1.5 rounded-[7px] transition-all duration-[150ms] ${item.done ? 'opacity-[0.65]' : 'opacity-100'}`}
                   style={{
                     background: item.done ? 'var(--surface2)' : colors.bg,
                     border: `1px solid ${item.done ? 'var(--border)' : colors.text + '33'}`,
                   }}
                 >
-                  <div className="flex items-center gap-[7px]">
-                    <span className="t-sm">{item.icon}</span>
+                  <div className="flex items-start gap-[7px]">
+                    <span className="t-sm shrink-0">{item.icon}</span>
                     <span
-                      className={`text-[12.5px] ${item.done ? 'font-normal line-through' : 'font-semibold no-underline'}`}
+                      className={`text-[13px] min-w-0 ${item.done ? 'font-normal line-through' : 'font-semibold no-underline'}`}
                       style={{ color: item.done ? 'var(--text3)' : colors.text }}
-                    >{item.event}</span>
-                    {item.done && <span className="ml-auto text-[11px] text-success-text font-semibold">✓</span>}
-                    {!item.done && item.type === 'urgent' && <span className="ml-auto text-[10px] bg-danger-bg text-danger-text px-1.5 py-0.5 rounded-md font-bold">URGENT</span>}
+                    >{t(item.event, item.params)}</span>
+                    {item.done && <span className="ml-auto text-xs text-success-text font-semibold shrink-0">✓</span>}
+                    {!item.done && item.type === 'urgent' && <span className="ml-auto shrink-0 text-xs bg-danger-bg text-danger-text px-1.5 py-0.5 rounded-md font-bold">{t('timeline.urgent')}</span>}
                   </div>
                 </div>
               </div>
@@ -593,7 +624,7 @@ export default function Dashboard() {
       <Modal
         isOpen={shortcutsOpen}
         onClose={() => setShortcutsOpen(false)}
-        title="Keyboard Shortcuts"
+        title={t('shortcuts.title')}
         maxWidth="440px"
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-2.5">
@@ -602,13 +633,13 @@ export default function Dashboard() {
               key={s.key}
               className="flex items-center justify-between px-2.5 py-2 rounded-md bg-surface2 border border-line"
             >
-              <span className="text-[12.5px] text-ink2">{s.label}</span>
+              <span className="text-[13px] text-ink2">{t(s.labelKey)}</span>
               <kbd className="kbd">{s.key}</kbd>
             </div>
           ))}
         </div>
-        <p className="mt-4 text-[11.5px] text-ink3 text-center">
-          Shortcuts only fire when not focused on an input field.
+        <p className="mt-4 text-xs text-ink3 text-center">
+          {t('shortcuts.hint')}
         </p>
       </Modal>
     </div>

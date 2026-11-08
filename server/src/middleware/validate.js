@@ -41,6 +41,25 @@ export function validate(schema) {
 
 // ─── Shared schemas ────────────────────────────────────────────────────────────
 
+export const EXPENSE_GROUPS = ['utilities', 'staff', 'repairs', 'housekeeping', 'guest_supplies', 'commission', 'taxes_fees', 'transport', 'refunds', 'admin_other']
+const EXPENSE_MODES     = ['cash', 'upi', 'bank', 'card', 'cheque']
+const EXPENSE_PAID_FROM = ['reception', 'owner', 'bank']
+
+// YYYY-MM-DD (or a full ISO timestamp); the controller turns it into a local day.
+const expenseDate = z.string().trim().refine((v) => !Number.isNaN(Date.parse(v)), 'Enter a valid date')
+
+// Optional fields shared by create/update expense.
+const expenseFields = z.object({
+  type:        z.enum(['expense', 'income']).optional(),
+  description: z.string().max(500).trim().optional().nullable(),
+  status:      z.enum(['paid', 'unpaid']).optional(),
+  paymentMode: z.enum(EXPENSE_MODES).optional(),
+  paidFrom:    z.enum(EXPENSE_PAID_FROM).optional(),
+  paidByName:  z.string().max(80).trim().optional().nullable(),
+  reference:   z.string().max(80).trim().optional().nullable(),
+  bookingId:   z.string().max(40).optional().nullable(),
+})
+
 export const schemas = {
   // Auth
   login: z.object({
@@ -107,6 +126,35 @@ export const schemas = {
     phone:    z.string().max(20).optional().nullable(),
     status:   z.enum(['active', 'inactive']).optional(),
   }),
+  // Owner-only: the full set of properties a non-owner user can open, with the
+  // role they hold at each. Replaces the user's existing assignments.
+  setUserAccess: z.object({
+    access: z.array(z.object({
+      propertyId: z.string().min(1),
+      roleId:     z.string().cuid('Invalid role'),
+    })).max(200),
+  }),
+
+  // Properties (owner-only)
+  setPropertyMember: z.object({
+    roleId: z.string().cuid('Invalid role'),
+  }),
+  createProperty: z.object({
+    name:    z.string().min(2).max(100).trim(),
+    code:    z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{2,10}$/, 'Code must be 2–10 letters, digits or dashes').optional(),
+    address: z.string().max(300).optional().nullable(),
+    phone:   z.string().max(20).optional().nullable(),
+    email:   z.string().email().optional().nullable(),
+    gstin:   z.string().max(20).optional().nullable(),
+    // Copy room types, food plans, amenities and tax/invoice settings from an
+    // existing property so a new branch starts configured.
+    copyFromPropertyId: z.string().min(1).optional().nullable(),
+  }),
+  updateProperty: z.object({
+    name:   z.string().min(2).max(100).trim().optional(),
+    code:   z.string().trim().toUpperCase().regex(/^[A-Z0-9-]{2,10}$/, 'Code must be 2–10 letters, digits or dashes').optional(),
+    status: z.enum(['active', 'archived']).optional(),
+  }),
 
   // Roles (RBAC). Module/level pairs are additionally validated against the central
   // MODULES list in the controller. permissions may be an array or a {module:level} map.
@@ -136,7 +184,6 @@ export const schemas = {
     status:      z.enum(['available', 'occupied', 'maintenance', 'reserved']).default('available'),
     dailyRate:   z.number().positive().max(100000),
     monthlyRate: z.number().positive().max(3000000),
-    propertyId:  z.string().cuid().optional().nullable(),
   }),
 
   // Guests
@@ -174,8 +221,9 @@ export const schemas = {
   // Booking — create. The server computes subtotal/tax/total/balance from these inputs.
   createBooking: z.object({
     // Guest
-    guestName:    z.string().min(2, 'Guest name is required').max(100).trim(),
-    guestPhone:   z.string().max(20).optional().nullable(),
+    guestName:    z.string().min(2, 'Guest name is required').max(200).trim(),  // may list several occupants, e.g. "Ravi Kumar, Sita Kumar"
+    // At least one number is required; may list several, e.g. "9876543210, 9123456780".
+    guestPhone:   z.string({ error: 'A phone number is required' }).min(10, 'A phone number is required').max(200).trim(),
     guestEmail:   z.preprocess(v => (v === '' ? undefined : v),
                     z.string().email('Invalid email').max(120).optional().nullable()),
     guestAddress: z.string().max(300).optional().nullable(),
@@ -202,12 +250,45 @@ export const schemas = {
     source:          z.enum(['walk_in', 'phone', 'website', 'ota', 'referral', 'corporate']).default('walk_in'),
     // Tax-invoice serial — optional; auto-assigned when blank, editable here.
     invoiceNo:       z.string().max(60).trim().optional().nullable(),
+    // PG: one bed of a room let by bed (1-based), and its refundable deposit.
+    bedNo:           z.coerce.number().int().min(1).max(50).optional().nullable(),
+    securityDeposit: z.coerce.number().min(0).max(1000000).default(0),
+  }),
+
+  // Booking — several occupants into one room let by bed (PG). Stay fields are
+  // shared; each occupant becomes their own booking on their own bed.
+  createBookingGroup: z.object({
+    roomId:       z.string().cuid('Select a valid room'),
+    stayType:     z.enum(['daily', 'monthly']),
+    fromDate:     z.string().datetime(),
+    toDate:       z.string().datetime().optional().nullable(),
+    months:       z.coerce.number().int().min(1).max(36).optional().nullable(),
+    taxRate:      z.coerce.number().min(0).max(30).optional(),
+    nationality:  z.string().max(50).optional().nullable(),
+    notes:           z.string().max(1000).optional().nullable(),
+    specialRequests: z.string().max(1000).optional().nullable(),
+    source:       z.enum(['walk_in', 'phone', 'website', 'ota', 'referral', 'corporate']).default('walk_in'),
+    occupants: z.array(z.object({
+      bedNo:        z.coerce.number().int().min(1).max(50),
+      guestName:    z.string().min(2, 'Occupant name is required').max(200).trim(),
+      guestPhone:   z.string({ error: 'A phone number is required' }).min(10, 'A phone number is required').max(200).trim(),
+      guestEmail:   z.preprocess(v => (v === '' ? undefined : v),
+                      z.string().email('Invalid email').max(120).optional().nullable()),
+      guestAddress: z.string().max(300).optional().nullable(),
+      idType:       z.string().max(200).optional().nullable(),
+      idNumber:     z.string().max(50).optional().nullable(),
+      roomRate:     z.coerce.number().min(0).max(1000000).optional(),
+      discount:     z.coerce.number().min(0).max(1000000).default(0),
+      extraCharges: z.coerce.number().min(0).max(1000000).default(0),
+      advance:      z.coerce.number().min(0).max(1000000).default(0),
+      securityDeposit: z.coerce.number().min(0).max(1000000).default(0),
+    })).min(1, 'Add at least one occupant').max(50),
   }),
 
   // Booking — general edit (all optional)
   updateBooking: z.object({
-    guestName:       z.string().min(2).max(100).trim().optional(),
-    guestPhone:      z.string().max(20).optional().nullable(),
+    guestName:       z.string().min(2).max(200).trim().optional(),  // may list several occupants
+    guestPhone:      z.string().max(200).optional().nullable(),  // may list multiple, e.g. "9876543210, 9123456780"
     guestEmail:      z.preprocess(v => (v === '' ? undefined : v),
                        z.string().email('Invalid email').max(120).optional().nullable()),
     guestAddress:    z.string().max(300).optional().nullable(),
@@ -227,6 +308,8 @@ export const schemas = {
     notes:           z.string().max(1000).optional().nullable(),
     specialRequests: z.string().max(1000).optional().nullable(),
     source:          z.enum(['walk_in', 'phone', 'website', 'ota', 'referral', 'corporate']).optional(),
+    bedNo:           z.coerce.number().int().min(1).max(50).optional().nullable(),
+    securityDeposit: z.coerce.number().min(0).max(1000000).optional(),
   }),
 
   // Booking — cancel
@@ -331,6 +414,40 @@ export const schemas = {
   addMaintenanceNote: z.object({
     author:  z.string().max(100).optional().nullable(),
     content: z.string().min(1, 'Note cannot be empty').max(1000).trim(),
+  }),
+
+  // Expenses (cash book)
+  createExpenseCategory: z.object({
+    name:          z.string().min(1, 'Name is required').max(80).trim(),
+    group:         z.enum(EXPENSE_GROUPS),
+    monthlyBudget: z.number().min(0).max(100000000).optional().nullable(),
+  }),
+
+  updateExpenseCategory: z.object({
+    name:          z.string().min(1).max(80).trim().optional(),
+    group:         z.enum(EXPENSE_GROUPS).optional(),
+    monthlyBudget: z.number().min(0).max(100000000).optional().nullable(),
+    active:        z.boolean().optional(),
+  }),
+
+  createExpense: expenseFields.extend({
+    date:       expenseDate,
+    categoryId: z.string().min(1, 'Choose a category'),
+    payee:      z.string().min(1, 'Payee is required').max(120).trim(),
+    amount:     z.number({ message: 'Enter an amount' }).positive('Amount must be more than 0').max(100000000),
+  }),
+
+  updateExpense: expenseFields.extend({
+    date:       expenseDate.optional(),
+    categoryId: z.string().min(1).optional(),
+    payee:      z.string().min(1).max(120).trim().optional(),
+    amount:     z.number().positive('Amount must be more than 0').max(100000000).optional(),
+  }),
+
+  payExpense: z.object({
+    date:        expenseDate.optional(),
+    paymentMode: z.enum(EXPENSE_MODES).optional(),
+    paidFrom:    z.enum(EXPENSE_PAID_FROM).optional(),
   }),
 
   // Food plan

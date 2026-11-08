@@ -18,6 +18,7 @@ export const MODULES = [
   'food',
   'housekeeping',
   'billing',
+  'expenses', // cash book: money out / other money in
   'reports',
   'settings',
   'users', // Users & Roles management (user CRUD + role management)

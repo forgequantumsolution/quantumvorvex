@@ -1,0 +1,77 @@
+{
+  "title": "बुकिंग चैनल",
+  "subtitle": "OTA और डायरेक्ट बुकिंग संभालें",
+  "tabs": {
+    "overview": "सारांश",
+    "parity": "रेट पैरिटी",
+    "import": "इम्पोर्ट",
+    "revenue": "स्रोत के अनुसार आय"
+  },
+  "stats": {
+    "totalBookings": "कुल Booking",
+    "totalRevenue": "कुल आय",
+    "connected": "जुड़े चैनल",
+    "thisMonth": "इस महीने",
+    "ofChannels_one": "{{count}} चैनल में से",
+    "ofChannels_other": "{{count}} चैनलों में से"
+  },
+  "status": {
+    "connected": "जुड़ा हुआ",
+    "manual": "मैनुअल",
+    "disconnected": "डिस्कनेक्टेड"
+  },
+  "card": {
+    "bookings": "Booking",
+    "revenue": "आय",
+    "avgRate": "औसत रेट",
+    "configureApi": "API सेट करें",
+    "markManual": "मैनुअल चिह्नित करें"
+  },
+  "parity": {
+    "intro": "अपने रेट की तुलना OTA प्लेटफ़ॉर्म से करें। बदलने के लिए प्रतिस्पर्धी रेट पर क्लिक करें।",
+    "cheapest": "✓ आप सबसे सस्ते हैं",
+    "issue": "⚠ पैरिटी समस्या",
+    "ok": "✓ पैरिटी",
+    "yourRate": "आपका रेट",
+    "roomType": "रूम प्रकार",
+    "status": "पैरिटी स्थिति",
+    "chartTitle": "रेट तुलना चार्ट"
+  },
+  "importTab": {
+    "drop": "अपनी CSV फ़ाइल यहाँ छोड़ें, या चुनने के लिए क्लिक करें",
+    "fileReady": "✓ फ़ाइल लोड हुई — कॉलम मैप करने के लिए तैयार",
+    "supports": ".csv फ़ाइलें · अधिकतम 5 MB",
+    "downloadTemplate": "टेम्पलेट CSV डाउनलोड करें",
+    "templateHint": "इम्पोर्ट से पहले अपना Booking डेटा सही फ़ॉर्मेट में रखने के लिए यह टेम्पलेट इस्तेमाल करें।",
+    "columnMapping": "कॉलम मैपिंग",
+    "systemField": "सिस्टम फ़ील्ड",
+    "csvColumn": "आपका CSV कॉलम",
+    "preview_one": "CSV प्रीव्यू ({{count}} पंक्ति)",
+    "preview_other": "CSV प्रीव्यू ({{count}} पंक्तियाँ)",
+    "importBtn": "Booking इम्पोर्ट करें",
+    "fields": {
+      "guestName": "मेहमान का नाम",
+      "roomNumber": "रूम नंबर",
+      "checkIn": "Check-in तारीख",
+      "checkOut": "Check-out तारीख",
+      "amount": "राशि",
+      "channel": "चैनल"
+    }
+  },
+  "revenue": {
+    "byChannel": "चैनल के अनुसार आय",
+    "source": "स्रोत",
+    "avgStay": "औसत स्टे",
+    "share": "कुल का %",
+    "bookingsCount_one": "{{count}} Booking",
+    "bookingsCount_other": "{{count}} Booking"
+  },
+  "toast": {
+    "apiSoon": "{{name}} के लिए API सेटअप जल्द आ रहा है।",
+    "markedManual": "{{name}} को मैनुअल चिह्नित किया गया।",
+    "fileLoaded": "फ़ाइल \"{{name}}\" लोड हुई।",
+    "imported_one": "{{count}} Booking सफलतापूर्वक इम्पोर्ट हुई।",
+    "imported_other": "{{count}} Booking सफलतापूर्वक इम्पोर्ट हुईं।",
+    "templateStarted": "टेम्पलेट CSV डाउनलोड शुरू हुआ।"
+  }
+}

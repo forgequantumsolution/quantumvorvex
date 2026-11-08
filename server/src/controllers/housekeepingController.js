@@ -1,5 +1,10 @@
 import prisma from '../utils/prisma.js'
 
+// The room must belong to the current property (the scoped lookup hides others).
+// Guards writes that only reference a room by id.
+const roomInProperty = (roomId) =>
+  roomId ? prisma.room.findUnique({ where: { id: String(roomId) }, select: { id: true } }) : null
+
 export const getBoard = async (req, res) => {
   try {
     const rooms = await prisma.room.findMany({
@@ -15,6 +20,7 @@ export const updateRoomStatus = async (req, res) => {
   try {
     const { roomId } = req.params
     const { status, assignedTo, startedAt, completedAt } = req.body
+    if (!(await roomInProperty(roomId))) return res.status(404).json({ error: 'Room not found.' })
     const hk = await prisma.housekeepingStatus.upsert({
       where: { roomId }, update: { status, assignedTo, startedAt, completedAt },
       create: { roomId, status, assignedTo }
@@ -44,6 +50,7 @@ export const markLinenChanged = async (req, res) => {
   try {
     const { roomId } = req.params
     const { changedBy, frequency = 7 } = req.body
+    if (!(await roomInProperty(roomId))) return res.status(404).json({ error: 'Room not found.' })
     const lastChanged = new Date()
     const nextDue = new Date(lastChanged)
     nextDue.setDate(nextDue.getDate() + frequency)
@@ -55,6 +62,7 @@ export const markLinenChanged = async (req, res) => {
 export const submitInspection = async (req, res) => {
   try {
     const { roomId, staffId, checklist } = req.body
+    if (!(await roomInProperty(roomId))) return res.status(404).json({ error: 'Room not found.' })
     const inspection = await prisma.roomInspection.create({ data: { roomId, staffId, checklist } })
     res.status(201).json(inspection)
   } catch (e) { res.status(500).json({ error: e.message }) }

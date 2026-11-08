@@ -15,6 +15,7 @@ import authReducer, { clearCredentials } from './slices/authSlice'
 import hotelReducer from './slices/hotelSlice'
 import toastReducer from './slices/toastSlice'
 import opsReducer from './slices/opsSlice'
+import pageHeaderReducer from './slices/pageHeaderSlice'
 
 // localStorage-backed storage for redux-persist. Defined inline (instead of
 // importing `redux-persist/lib/storage`) to avoid a CJS/ESM interop issue where
@@ -42,6 +43,7 @@ const rootReducer = combineReducers({
   hotel: hotelReducer,
   toast: toastReducer, // never persisted
   ops: opsReducer,
+  pageHeader: pageHeaderReducer, // never persisted
 })
 
 // Persist auth (token, currentUser) and hotel (name, owner) — matches the old
@@ -69,5 +71,17 @@ if (typeof window !== 'undefined') {
   window.addEventListener('auth:unauthorized', () => {
     const { token, currentUser } = store.getState().auth
     if (token || currentUser) store.dispatch(clearCredentials())
+  })
+
+  // Mirror the active property into localStorage, where the axios client reads it
+  // for the X-Property-Id header (same pattern as the token; avoids a store ↔ api
+  // import cycle). Covers login, switching, and rehydration on reload.
+  let lastPropertyId
+  store.subscribe(() => {
+    const id = store.getState().auth.activePropertyId
+    if (id === lastPropertyId) return
+    lastPropertyId = id
+    if (id) localStorage.setItem('qv_property', id)
+    else localStorage.removeItem('qv_property')
   })
 }

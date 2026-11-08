@@ -5,20 +5,26 @@ import prisma from '../utils/prisma.js'
 import logger, { securityLog } from '../utils/logger.js'
 import { sendPasswordResetEmail, sendOtpEmail } from '../utils/email.js'
 import { audit } from '../utils/audit.js'
-import { getUserAccess } from '../utils/permissionCache.js'
+import { getUserAccess, listPropertyAccess } from '../utils/permissionCache.js'
+import { shapePropertyAccess } from './propertiesController.js'
 
-// Build the client-facing user object, including the resolved RBAC permission map so
-// the frontend can drive sidebar visibility + action gating without a second request.
+// Build the client-facing user object, including the properties the user can open
+// (each with the role + permission map they hold there) so the frontend can drive
+// the property switcher, sidebar visibility and action gating without a second request.
+// roleName/permissions at the top level describe the default (first) property.
 async function authUserPayload(user) {
   const access = await getUserAccess(user.id)
+  const properties = (await listPropertyAccess(access)).map(shapePropertyAccess)
+  const primary = properties.find((p) => p.status === 'active') || properties[0]
   return {
     id: user.id,
     name: user.name,
     email: user.email,
     phone: user.phone,
-    roleName: access?.roleName || null,   // display label (Role.name)
+    roleName: primary?.roleName || access?.roleName || null,   // display label (Role.name)
     isOwner: access?.isOwner || false,
-    permissions: access?.perms || {},
+    permissions: primary?.permissions || {},
+    properties,
   }
 }
 

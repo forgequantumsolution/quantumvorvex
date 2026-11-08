@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, lazy, Suspense } from 'react'
+import { useTranslation, Trans } from 'react-i18next'
 import { useAppSelector, useAuthActions, useUiActions, useHotelActions } from './store/hooks'
 import { panelFromUrl } from './store/slices/uiSlice'
 import Layout from './components/layout/Layout'
@@ -15,6 +16,8 @@ import LoginPage from './components/auth/LoginPage'
 import ResetPasswordPage from './components/auth/ResetPasswordPage'
 // import LandingPage from './components/auth/LandingPage'
 import { canAccess } from './utils/permissions'
+import { navLabel } from './utils/navigation'
+import { selectActiveProperty } from './store/slices/authSlice'
 import { authApi, settingsApi } from './api/client'
 import { MOCK_USER, MOCK_TOKEN } from './api/mockData.js'
 
@@ -30,19 +33,21 @@ const UsersRoles    = lazy(() => import('./components/modules/users/UsersRoles')
 const Guests        = lazy(() => import('./components/modules/guests/Guests'))
 const Rooms         = lazy(() => import('./components/modules/rooms/Rooms'))
 const Billing       = lazy(() => import('./components/modules/billing/Billing'))
+const Expenses      = lazy(() => import('./components/modules/expenses/Expenses'))
 const Documents     = lazy(() => import('./components/modules/documents/Documents'))
 const Food          = lazy(() => import('./components/modules/food/Food'))
 const Reports       = lazy(() => import('./components/modules/reports/Reports'))
 const Settings      = lazy(() => import('./components/modules/settings/Settings'))
+const Portfolio     = lazy(() => import('./components/modules/portfolio/Portfolio'))
 
 function PanelSkeleton() {
   return (
-    <div className="p-6">
+    <div>
       <div
-        className="h-[28px] w-[180px] rounded-md bg-line mb-5"
+        className="h-[28px] w-[180px] max-w-full rounded-md bg-line mb-5"
         style={{ animation: 'pulse 1.5s ease-in-out infinite' }}
       />
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(165px,1fr))] gap-[13px] mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(165px,1fr))] gap-3 sm:gap-[13px] mb-5">
         {[...Array(6)].map((_, i) => (
           <div key={i}
             className="h-[90px] rounded-[10px] bg-line"
@@ -52,7 +57,7 @@ function PanelSkeleton() {
             }} />
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-[15px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-[15px]">
         {[0, 1].map(i => (
           <div key={i}
             className="h-[200px] rounded-[10px] bg-line"
@@ -67,20 +72,42 @@ function PanelSkeleton() {
 }
 
 function AccessDenied({ panel }) {
+  const { t } = useTranslation('shell')
   return (
-    <div className="p-12 text-center">
+    <div className="py-12 px-4 sm:p-12 text-center">
       <div className="t-display mb-4">🔒</div>
       <h2 className="m-0 mb-2 text-ink">
-        Access Restricted
+        {t('accessDenied.title')}
       </h2>
       <p className="t-body text-ink3">
-        Your role doesn't have permission to access <strong>{panel}</strong>.
+        <Trans t={t} i18nKey="accessDenied.message" values={{ panel: navLabel(t, panel) }} components={{ b: <strong /> }} />
       </p>
     </div>
   )
 }
 
+// Signed in, but not assigned to any (active) property yet — nothing to show
+// until an owner grants access.
+function NoPropertyAssigned({ onSignOut }) {
+  const { t } = useTranslation('shell')
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6 bg-canvas">
+      <div className="card max-w-[420px] w-full text-center">
+        <div className="card-body py-10 px-7">
+          <div className="t-display mb-3">🏨</div>
+          <h2 className="m-0 mb-2 text-ink t-h2">{t('noProperty.title')}</h2>
+          <p className="t-body text-ink3 m-0 mb-6">
+            {t('noProperty.message')}
+          </p>
+          <button className="btn btn-outline" onClick={onSignOut}>{t('common:signOut')}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 const PANEL_MAP = {
+  portfolio:     Portfolio,
   today:         Today,
   bookings:      Bookings,
   cancellations: Cancellations,
@@ -90,6 +117,7 @@ const PANEL_MAP = {
   guests:        Guests,
   rooms:         Rooms,
   billing:       Billing,
+  expenses:      Expenses,
   documents:     Documents,
   food:          Food,
   reports:       Reports,
@@ -101,7 +129,9 @@ export default function App() {
   const darkMode    = useAppSelector((s) => s.ui.darkMode)
   const currentUser = useAppSelector((s) => s.auth.currentUser)
   const token       = useAppSelector((s) => s.auth.token)
-  const { login, setCurrentUser } = useAuthActions()
+  const activePropertyId = useAppSelector((s) => s.auth.activePropertyId)
+  const activePropertyName = useAppSelector((s) => selectActiveProperty(s)?.name)
+  const { login, logout, setCurrentUser } = useAuthActions()
   const { setActivePanel } = useUiActions()
   const { setHotelName, setOwnerName } = useHotelActions()
   const [showSetup, setShowSetup] = useState(false)
@@ -154,9 +184,9 @@ export default function App() {
     return () => window.removeEventListener('auth:forbidden', resync)
   }, [token, setCurrentUser])
 
-  // Hydrate the hotel name/owner into the store on boot so the sidebar shows the
-  // saved name after a fresh login — otherwise it stays on the hardcoded default
-  // until the user opens the Settings page.
+  // Hydrate the hotel name/owner into the store on boot (and whenever the active
+  // property changes) so the sidebar shows that property's saved name — otherwise it
+  // stays on the hardcoded default until the user opens the Settings page.
   useEffect(() => {
     if (!token) return
     let cancelled = false
@@ -166,9 +196,11 @@ export default function App() {
         if (data.hotel.name)      setHotelName(data.hotel.name)
         if (data.hotel.ownerName) setOwnerName(data.hotel.ownerName)
       })
-      .catch(() => { /* keep defaults */ })
+      // No settings access (e.g. front-desk staff): show the property's own name
+      // rather than whatever name was cached from a previous session / property.
+      .catch(() => { if (!cancelled && activePropertyName) setHotelName(activePropertyName) })
     return () => { cancelled = true }
-  }, [token, setHotelName, setOwnerName])
+  }, [token, activePropertyId, activePropertyName, setHotelName, setOwnerName])
 
   // Keyboard shortcuts
   useKeyboardShortcuts({})
@@ -236,6 +268,17 @@ export default function App() {
     )
   }
 
+  // Non-owner with no property access (properties is undefined only for mock /
+  // pre-multi-property payloads, which keep the old single-property behaviour).
+  if (currentUser.properties && !activePropertyId) {
+    return (
+      <>
+        <NoPropertyAssigned onSignOut={logout} />
+        <Toast />
+      </>
+    )
+  }
+
   const ActivePanel = PANEL_MAP[activePanel] || Today
 
   // Check if current user can access the active panel (driven by live permissions)
@@ -245,8 +288,10 @@ export default function App() {
     <>
       <Layout>
         <Suspense fallback={<PanelSkeleton />}>
+          {/* Keyed on the property: switching remounts the panel so it reloads
+              the new property's data (every request carries X-Property-Id). */}
           {hasAccess
-            ? <ActivePanel onRunSetup={() => setShowSetup(true)} />
+            ? <ActivePanel key={activePropertyId || 'default'} onRunSetup={() => setShowSetup(true)} />
             : <AccessDenied panel={activePanel} />
           }
         </Suspense>

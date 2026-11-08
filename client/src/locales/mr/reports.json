@@ -1,0 +1,74 @@
+{
+  "title": "अहवाल आणि विश्लेषण",
+  "subtitle": "आर्थिक माहिती, ऑक्युपन्सी डेटा आणि GST सारांश",
+  "loadError": "अहवाल लोड झाले नाहीत. सर्व्हर सुरू आहे का ते तपासा.",
+  "tabs": {
+    "overview": "आढावा",
+    "revenue": "महसूल",
+    "occupancy": "ऑक्युपन्सी",
+    "gst": "GST",
+    "export": "निर्यात"
+  },
+  "overview": {
+    "revenuePaid": "महसूल (भरलेले Invoice)",
+    "occupancyRate": "ऑक्युपन्सी दर",
+    "activeGuests": "सक्रिय पाहुणे",
+    "revenueByDayPaid": "दैनिक महसूल (भरलेले Invoice)",
+    "noPaidInvoices": "अद्याप भरलेले Invoice नाहीत"
+  },
+  "revenue": {
+    "total": "एकूण महसूल",
+    "paidInvoices": "भरलेले Invoice",
+    "byDay": "दैनिक महसूल",
+    "empty": "अद्याप महसूल नोंदवलेला नाही",
+    "series": "महसूल"
+  },
+  "occupancy": {
+    "other": "इतर",
+    "avg": "सरासरी ऑक्युपन्सी (कालावधी)",
+    "totalRooms": "एकूण खोल्या",
+    "trend": "ऑक्युपन्सी कल (दैनिक %)",
+    "trendEmpty": "या कालावधीचा ऑक्युपन्सी डेटा नाही",
+    "series": "ऑक्युपन्सी %",
+    "byType": "खोली प्रकारानुसार सध्याची ऑक्युपन्सी",
+    "noRooms": "खोल्या सापडल्या नाहीत",
+    "col": {
+      "type": "खोली प्रकार",
+      "total": "एकूण खोल्या",
+      "occupied": "भरलेल्या",
+      "rate": "दर",
+      "occupancy": "ऑक्युपन्सी"
+    }
+  },
+  "gst": {
+    "totalTaxable": "एकूण करपात्र",
+    "totalGst": "एकूण GST",
+    "totalAmount": "एकूण रक्कम",
+    "invoices": "GST Invoice",
+    "split": "GST चे CGST + SGST (अर्धे-अर्धे) विभाजन.",
+    "empty": "या कालावधीत Invoice नाहीत",
+    "col": {
+      "invoice": "Invoice #",
+      "period": "कालावधी",
+      "taxable": "करपात्र"
+    }
+  },
+  "export": {
+    "done": "{{report}} अहवाल निर्यात झाला ({{format}})",
+    "failed": "निर्यात अयशस्वी",
+    "exporting": "निर्यात होत आहे…",
+    "pdf": "PDF निर्यात करा",
+    "guests": {
+      "label": "पाहुणे",
+      "desc": "सर्व तपशीलांसह पाहुणे नोंदवही"
+    },
+    "billing": {
+      "label": "बिलिंग",
+      "desc": "सर्व Invoice आणि पेमेंट"
+    },
+    "gst": {
+      "label": "GST अहवाल",
+      "desc": "CA फायलिंगसाठी GST तपशील"
+    }
+  }
+}

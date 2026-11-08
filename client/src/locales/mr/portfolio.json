@@ -1,0 +1,200 @@
+{
+  "title": "पोर्टफोलिओ",
+  "dashboard": "डॅशबोर्ड",
+  "subtitle": "आज रात्री प्रत्येक प्रॉपर्टीची स्थिती",
+  "loadError": "तुमच्या प्रॉपर्टीज लोड झाल्या नाहीत. कनेक्शन तपासा आणि पुन्हा प्रयत्न करा.",
+  "loading": "पोर्टफोलिओ लोड होत आहे",
+  "thisProperty": "या प्रॉपर्टी",
+  "tonight": "आज रात्री",
+  "searchProperties": "प्रॉपर्टी शोधा",
+  "addProperty": "प्रॉपर्टी जोडा",
+  "keyFigures": "मुख्य आकडे",
+  "liveUpdated": "लाइव्ह, {{time}} ला अपडेट",
+  "activeProperties_one": "{{count}} सक्रिय प्रॉपर्टी",
+  "activeProperties_other": "{{count}} सक्रिय प्रॉपर्टीज",
+  "activePropertiesOf_one": "{{total}} पैकी {{count}} सक्रिय प्रॉपर्टी",
+  "activePropertiesOf_other": "{{total}} पैकी {{count}} सक्रिय प्रॉपर्टीज",
+  "roomsCount_one": "{{count}} खोली",
+  "roomsCount_other": "{{count}} खोल्या",
+  "noRoomsYet": "अद्याप खोल्या नाहीत",
+  "outOfOrder_one": "{{count}} बंद",
+  "outOfOrder_other": "{{count}} बंद",
+  "propertiesCount_one": "{{count}} प्रॉपर्टी",
+  "propertiesCount_other": "{{count}} प्रॉपर्टीज",
+  "openProperty": "{{name}} उघडा",
+  "addRoomsToStart": "सुरू करण्यासाठी खोल्या जोडा",
+  "occupiedOfSellable": "{{sellable}} विक्रीयोग्य खोल्यांपैकी {{occupied}} भरलेल्या",
+  "arrivalsToday": "आजचे आगमन",
+  "departuresToday": "आजचे प्रस्थान",
+  "scope": {
+    "selected_one": "{{count}} निवडलेली प्रॉपर्टी",
+    "selected_other": "{{count}} निवडलेल्या प्रॉपर्टीज",
+    "allActive": "सर्व सक्रिय प्रॉपर्टीज"
+  },
+  "period": {
+    "nights": "{{n}} रात्री",
+    "days": "{{n}} दिवस",
+    "month": "महिना"
+  },
+  "mini": {
+    "aria": "पुढील 7 रात्री: {{list}}",
+    "booked": "{{sellable}} पैकी {{booked}} खोल्या"
+  },
+  "hero": {
+    "title": "आज रात्रीची ऑक्युपन्सी",
+    "occupied": "{{sellable}} विक्रीयोग्य खोल्यांपैकी <b>{{occupied}}</b> भरलेल्या"
+  },
+  "kpi": {
+    "adrSub": "विकलेल्या प्रति खोलीचा सरासरी दर",
+    "revparSub": "प्रति उपलब्ध खोली महसूल",
+    "inHouse": "मुक्कामी",
+    "inHouseSub_one": "{{count}} खोली भरलेली",
+    "inHouseSub_other": "{{count}} खोल्या भरलेल्या",
+    "arrivals": "आगमन",
+    "arrivalsSub_one": "आज {{count}} प्रस्थान",
+    "arrivalsSub_other": "आज {{count}} प्रस्थान",
+    "collected": "वसुली",
+    "collectedSub": "या महिन्यात · आज {{amount}}",
+    "outstandingSub": "न भरलेले Invoice आणि मुक्काम",
+    "nothingDue": "काहीही थकीत नाही"
+  },
+  "forecast": {
+    "title_one": "बुक झालेले · पुढील {{count}} रात्र",
+    "title_other": "बुक झालेले · पुढील {{count}} रात्री",
+    "periodLabel": "अंदाज रात्री",
+    "sub": "बुक झालेल्या विक्रीयोग्य खोल्यांचा वाटा, {{scope}}",
+    "peak": "सर्वाधिक",
+    "tipOccupied": "{{pct}}% भरलेले",
+    "tipBooked": "{{sellable}} पैकी {{booked}} खोल्या बुक",
+    "noRoomsTitle": "अद्याप खोल्या सेट केल्या नाहीत",
+    "noBookingsTitle": "अद्याप बुकिंग नाही",
+    "noRoomsText": "ऑक्युपन्सी आणि महसूल येथे पाहण्यासाठी प्रॉपर्टीमध्ये खोल्या जोडा.",
+    "noBookingsText": "बुकिंग येताच ऑक्युपन्सी, महसूल आणि {{count}} रात्रींचा अंदाज येथे दिसेल.",
+    "setUpRooms": "खोल्या सेट करा",
+    "newBooking": "नवीन बुकिंग",
+    "newBookingAt": "{{name}} येथे नवीन बुकिंग"
+  },
+  "roomState": {
+    "occupied": "भरलेल्या",
+    "reserved": "आरक्षित",
+    "available": "उपलब्ध",
+    "outOfOrder": "बंद"
+  },
+  "roomStatus": {
+    "title": "खोल्यांची स्थिती",
+    "sub_one": "सध्या {{count}} खोली",
+    "sub_other": "सध्या {{count}} खोल्या",
+    "emptyText": "खोल्यांचा वापर पाहण्यासाठी खोल्या जोडा.",
+    "segment": "{{label}}: {{total}} पैकी {{count}}",
+    "stays": "सध्याचे मुक्काम",
+    "stayMix": "<b>{{daily}}</b> दैनिक · <b>{{monthly}}</b> मासिक"
+  },
+  "collections": {
+    "collected": "वसूल",
+    "titleMonth": "वसुली · या महिन्यात",
+    "titleDays_one": "वसुली · मागील {{count}} दिवस",
+    "titleDays_other": "वसुली · मागील {{count}} दिवस",
+    "subTotal": "परतावा वजा करून मिळालेले · एकूण",
+    "sub": "परतावा वजा करून मिळालेले, प्रति दिवस",
+    "periodLabel": "वसुली कालावधी",
+    "emptyTitle": "अद्याप पेमेंट नाही",
+    "emptyMonth": "या महिन्यात काहीही वसूल झाले नाही. बुकिंगवर नोंदवलेली पेमेंट येथे दिसतात.",
+    "emptyDays_one": "मागील {{count}} दिवसात काहीही वसूल झाले नाही. बुकिंगवर नोंदवलेली पेमेंट येथे दिसतात.",
+    "emptyDays_other": "मागील {{count}} दिवसांत काहीही वसूल झाले नाही. बुकिंगवर नोंदवलेली पेमेंट येथे दिसतात.",
+    "avgDay": "सरासरी / दिवस",
+    "daysWithPayments": "पेमेंटचे दिवस",
+    "bestDay": "सर्वोत्तम दिवस"
+  },
+  "method": {
+    "cash": "रोख",
+    "upi": "UPI",
+    "card": "कार्ड",
+    "bank": "बँक ट्रान्सफर",
+    "bank_transfer": "बँक ट्रान्सफर",
+    "cheque": "चेक",
+    "online": "ऑनलाइन",
+    "other": "इतर"
+  },
+  "methods": {
+    "title": "पेमेंट पद्धती",
+    "sub": "या महिन्यात वसूल",
+    "emptyTitle": "या महिन्यात पेमेंट नाही",
+    "emptyText": "रोख, UPI, कार्ड इत्यादींचे विभाजन येथे दिसेल."
+  },
+  "roomTypes": {
+    "title": "खोली प्रकारानुसार ऑक्युपन्सी",
+    "sub": "आज रात्री प्रत्येक प्रकारच्या भरलेल्या खोल्या",
+    "emptyTitle": "अद्याप खोली प्रकार नाहीत",
+    "emptyText": "खोल्या जोडल्यावर कोणते प्रकार आधी भरतात ते पहा."
+  },
+  "severity": {
+    "critical": "गंभीर",
+    "warning": "इशारा",
+    "info": "माहिती"
+  },
+  "attention": {
+    "title": "लक्ष द्या",
+    "allClear": "सर्व ठीक",
+    "allClearText": "थकबाकी, बंद खोल्या किंवा ओव्हरबुकिंगचा धोका नाही.",
+    "overbooked": "आज {{arrivals}} आगमन, पण फक्त {{available}} खोल्या उपलब्ध",
+    "outOfOrder_one": "{{count}} खोली बंद",
+    "outOfOrder_other": "{{count}} खोल्या बंद",
+    "outstanding": "{{amount}} थकबाकी",
+    "soldOut": "{{date}} रोजी पूर्ण बुक"
+  },
+  "col": {
+    "name": "प्रॉपर्टी",
+    "occupancy": "ऑक्युपन्सी",
+    "adr": "ADR",
+    "adrHint": "सरासरी दैनिक दर — खोली महसूल ÷ आज रात्री विकलेल्या खोल्या",
+    "revpar": "RevPAR",
+    "revparHint": "प्रति उपलब्ध खोली महसूल — खोली महसूल ÷ विक्रीयोग्य खोल्या",
+    "movements": "आगमन / प्रस्थान",
+    "movementsHint": "आजचे आगमन आणि प्रस्थान",
+    "collected": "महिन्याची वसुली",
+    "outstanding": "थकबाकी",
+    "forecast": "पुढील 7 रात्री"
+  },
+  "band": {
+    "all": "कोणतीही",
+    "low": "50% पेक्षा कमी",
+    "mid": "50–80%",
+    "high": "80% पेक्षा जास्त"
+  },
+  "filters": {
+    "aria": "डॅशबोर्ड फिल्टर",
+    "nOfM": "{{m}} पैकी {{n}}",
+    "propertiesNote": "डॅशबोर्डवरील प्रत्येक आकडा निवडलेल्या प्रॉपर्टीजचा आहे.",
+    "propertyList": "प्रॉपर्टी यादी",
+    "attentionOnly": "फक्त लक्ष देण्याजोग्या",
+    "attentionSub": "ओव्हरबुक, बंद खोल्या, थकबाकी, पूर्ण भरलेल्या रात्री",
+    "showArchived": "संग्रहित प्रॉपर्टीज दाखवा",
+    "archivedSub": "संदर्भासाठी; एकूणात समाविष्ट नाही",
+    "active": "लागू फिल्टर",
+    "remove": "फिल्टर काढा: {{label}}"
+  },
+  "chips": {
+    "properties": "{{m}} पैकी {{n}} प्रॉपर्टीज",
+    "occupancy": "ऑक्युपन्सी {{band}}",
+    "attention": "लक्ष द्या",
+    "archived": "संग्रहित दाखवल्या"
+  },
+  "noAccess": {
+    "title": "या प्रॉपर्टीचा डॅशबोर्ड नाही",
+    "text": "याचे आकडे पाहण्यासाठी {{name}} येथे अहवाल ॲक्सेस आवश्यक आहे.",
+    "viewAll": "सर्व प्रॉपर्टीज पहा"
+  },
+  "comparison": {
+    "aria": "प्रॉपर्टी तुलना",
+    "sub": "आज रात्रीचे आकडे · उघडण्यासाठी प्रॉपर्टी निवडा",
+    "sortLabel": "प्रॉपर्टी क्रमाने लावा",
+    "sortBy": "क्रम: {{label}}",
+    "asc": "चढत्या क्रमाने",
+    "desc": "उतरत्या क्रमाने",
+    "ascSwitch": "चढता क्रम — उतरत्या क्रमावर बदला",
+    "descSwitch": "उतरता क्रम — चढत्या क्रमावर बदला",
+    "noMatchQuery": "“{{query}}” शी जुळणारी प्रॉपर्टी नाही.",
+    "noMatchFilters": "या फिल्टरशी जुळणारी प्रॉपर्टी नाही.",
+    "clearFilters": "फिल्टर काढा"
+  }
+}

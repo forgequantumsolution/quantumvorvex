@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { PageWrapper, StatCard, Card, FilterTabs, SearchInput, Button, EmptyState } from '../../ui-tw'
+import { useTranslation } from 'react-i18next'
+import { LuWrench, LuCircleDot, LuLoader, LuTriangleAlert, LuPlus, LuRefreshCw } from 'react-icons/lu'
+import { PageWrapper, StatCard, Card, FilterTabs, EmptyState } from '../../ui-tw'
 import TicketCard from './TicketCard'
 import NewTicketModal from './NewTicketModal'
 import ConfirmModal from '../../ui/ConfirmModal'
@@ -7,20 +9,20 @@ import { useToast } from '../../../hooks/useToast'
 import { usePrimaryAction } from '../../../store/hooks'
 import { maintenanceApi } from '../../../api/client'
 
-const TABS = [
-  { id: 'all', label: 'All' },
-  { id: 'Open', label: 'Open' },
-  { id: 'In Progress', label: 'In Progress' },
-  { id: 'Resolved', label: 'Resolved' },
-]
+// Tab ids are the ticket status values, plus 'urgent' (urgent and not yet
+// resolved, in any status); labels are translated at render.
+const TABS = ['all', 'Open', 'In Progress', 'Resolved', 'urgent']
+const isUrgent = (t) => t.priority === 'Urgent' && t.status !== 'Resolved'
+const tabLabel = (t, id) => (id === 'all' ? t('common:all') : id === 'urgent' ? t('tabs.urgent') : t(`status.${id}`))
 
 const normalize = (t) => ({ ...t, roomNumber: t.room?.number || t.room || '' })
 
 export default function Maintenance() {
+  const { t } = useTranslation('maintenance')
   const toast = useToast()
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(false)
   const [tab, setTab] = useState('all')
   const [query, setQuery] = useState('')
   const [showNew, setShowNew] = useState(false)
@@ -29,12 +31,12 @@ export default function Maintenance() {
   const [deleting, setDeleting] = useState(false)
 
   const load = useCallback(async () => {
-    setLoading(true); setError('')
+    setLoading(true); setError(false)
     try {
       const { data } = await maintenanceApi.getAll()
       setTickets((data.requests || []).map(normalize))
     } catch {
-      setError('Could not load tickets. Make sure the backend is running.')
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -42,7 +44,7 @@ export default function Maintenance() {
 
   useEffect(() => { load() }, [load])
 
-  // Header "New Ticket" button
+  // Lets other pages open the new-ticket dialog remotely
   usePrimaryAction('maintenance', () => setShowNew(true))
 
   const counts = useMemo(() => ({
@@ -50,16 +52,13 @@ export default function Maintenance() {
     Open: tickets.filter((t) => t.status === 'Open').length,
     'In Progress': tickets.filter((t) => t.status === 'In Progress').length,
     Resolved: tickets.filter((t) => t.status === 'Resolved').length,
+    urgent: tickets.filter(isUrgent).length,
   }), [tickets])
-
-  const urgent = useMemo(
-    () => tickets.filter((t) => t.priority === 'Urgent' && t.status !== 'Resolved').length,
-    [tickets],
-  )
 
   const filtered = useMemo(() => {
     let list = tickets
-    if (tab !== 'all') list = list.filter((t) => t.status === tab)
+    if (tab === 'urgent') list = list.filter(isUrgent)
+    else if (tab !== 'all') list = list.filter((t) => t.status === tab)
     const q = query.trim().toLowerCase()
     if (q) {
       list = list.filter((t) =>
@@ -75,10 +74,10 @@ export default function Maintenance() {
     try {
       const { data } = await maintenanceApi.create(payload)
       setTickets((prev) => [normalize(data.request), ...prev])
-      toast(`Ticket ${data.request.ticketNo} created for Room ${data.request.room?.number}`)
+      toast(t('toast.created', { ticketNo: data.request.ticketNo, room: data.request.room?.number }))
       setShowNew(false)
     } catch (err) {
-      toast(err.response?.data?.message || err.response?.data?.error || 'Could not create ticket', 'error')
+      toast(err.response?.data?.message || err.response?.data?.error || t('toast.createFailed'), 'error')
     }
   }
 
@@ -87,9 +86,9 @@ export default function Maintenance() {
     try {
       const { data } = await maintenanceApi.update(id, { status })
       setTickets((prev) => prev.map((t) => (t.id === id ? normalize(data.request) : t)))
-      toast(`Ticket marked ${status}`, status === 'Resolved' ? 'success' : 'info')
+      toast(t('toast.marked', { status: t(`status.${status}`, status) }), status === 'Resolved' ? 'success' : 'info')
     } catch (err) {
-      toast(err.response?.data?.message || 'Update failed', 'error')
+      toast(err.response?.data?.message || t('toast.updateFailed'), 'error')
     } finally {
       setBusyId(null)
     }
@@ -101,10 +100,10 @@ export default function Maintenance() {
     try {
       await maintenanceApi.remove(deleteTarget.id)
       setTickets((prev) => prev.filter((t) => t.id !== deleteTarget.id))
-      toast(`Ticket ${deleteTarget.ticketNo} deleted`)
+      toast(t('toast.deleted', { ticketNo: deleteTarget.ticketNo }))
       setDeleteTarget(null)
     } catch (err) {
-      toast(err.response?.data?.message || 'Could not delete ticket', 'error')
+      toast(err.response?.data?.message || t('toast.deleteFailed'), 'error')
     } finally {
       setDeleting(false)
     }
@@ -112,39 +111,43 @@ export default function Maintenance() {
 
   return (
     <PageWrapper
-      actions={
-        <div className="flex items-center gap-2">
-          <Button icon="＋" onClick={() => setShowNew(true)}>New Ticket</Button>
-          <Button variant="ghost" onClick={load} disabled={loading}>↻ Refresh</Button>
-        </div>
-      }
+      title={t('title')}
+      subtitle={t('subtitle')}
+      search={{ value: query, onChange: setQuery, placeholder: t('searchPlaceholder') }}
+      headerActions={[
+        { id: 'refresh', label: t('common:refresh'), icon: <LuRefreshCw />, variant: 'icon', disabled: loading, onClick: load },
+        { id: 'new', label: t('newTicket'), icon: <LuPlus />, variant: 'primary', onClick: () => setShowNew(true) },
+      ]}
       stats={
         <>
-          <StatCard icon="🔧" tone="gold" label="Total tickets" value={counts.all} />
-          <StatCard icon="●" tone="amber" label="Open" value={counts.Open} />
-          <StatCard icon="◐" tone="blue" label="In progress" value={counts['In Progress']} />
-          <StatCard icon="!" tone="red" label="Urgent unresolved" value={urgent} />
+          {/* Each card picks the matching tab below. */}
+          {[
+            { id: 'all', icon: <LuWrench />, tone: 'gold', label: t('stats.total'), value: counts.all },
+            { id: 'Open', icon: <LuCircleDot />, tone: 'amber', label: t('status.Open'), value: counts.Open },
+            { id: 'In Progress', icon: <LuLoader />, tone: 'blue', label: t('status.In Progress'), value: counts['In Progress'] },
+            { id: 'urgent', icon: <LuTriangleAlert />, tone: 'red', label: t('stats.urgent'), value: counts.urgent },
+          ].map(({ id, ...k }) => (
+            <StatCard key={id} {...k} selected={tab === id} onClick={() => setTab(id)} />
+          ))}
         </>
       }
     >
-      <Card
-        title="Tickets"
-        actions={<SearchInput value={query} onChange={setQuery} placeholder="Search room, title, category" className="w-60" />}
-      >
-        <div className="px-5 py-3 border-b border-line">
-          <FilterTabs tabs={TABS.map((t) => ({ ...t, count: counts[t.id] }))} active={tab} onChange={setTab} />
+      <Card title={t('tickets')} subtitle={t('shown', { count: filtered.length, total: tickets.length })}>
+        {/* Status tabs scroll sideways on phones */}
+        <div className="min-w-0 px-4 sm:px-5 py-3 border-b border-line">
+          <FilterTabs tabs={TABS.map((id) => ({ id, label: tabLabel(t, id), count: counts[id] }))} active={tab} onChange={setTab} />
         </div>
 
-        <div className="p-4">
-          {error && <div className="text-sm text-danger-text mb-3">{error}</div>}
+        <div className="p-3 sm:p-4">
+          {error && <div className="text-sm text-danger-text mb-3">{t('loadFailed')}</div>}
           {filtered.length === 0 ? (
             <EmptyState
               icon="🔧"
-              title={loading ? 'Loading…' : query ? 'No matching tickets' : 'No tickets here'}
-              message={loading ? 'Fetching tickets.' : query ? 'Try a different search.' : 'Create a ticket to track an issue.'}
+              title={loading ? t('common:loading') : query ? t('empty.noMatch') : t('empty.none')}
+              message={loading ? t('empty.fetching') : query ? t('empty.tryDifferent') : t('empty.createHint')}
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
               {filtered.map((t) => (
                 <TicketCard key={t.id} ticket={t} busy={busyId === t.id} onStatusChange={handleStatus} onDelete={setDeleteTarget} />
               ))}
@@ -158,9 +161,9 @@ export default function Maintenance() {
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title="Delete Ticket"
-        message={deleteTarget ? <>Permanently delete ticket <b>{deleteTarget.ticketNo}</b> ({deleteTarget.title})? This cannot be undone.</> : null}
-        confirmLabel="Delete"
+        title={t('delete.title')}
+        message={deleteTarget ? <>{t('delete.before')} <b>{deleteTarget.ticketNo}</b> ({deleteTarget.title}){t('delete.after')}</> : null}
+        confirmLabel={t('common:delete')}
         danger
         busy={deleting}
       />

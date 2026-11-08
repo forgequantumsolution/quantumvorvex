@@ -3,8 +3,10 @@ import {
   getInvoices,
   getInvoiceStats,
   generateInvoice,
+  billPgRent,
   collectPayment,
   getInvoicePdf,
+  getLetterhead,
   getLedger,
   getCashRegister,
   deleteInvoice,
@@ -20,7 +22,10 @@ router.get('/', getInvoices)
 router.get('/stats', getInvoiceStats)
 router.get('/ledger', getLedger)
 router.get('/cash-register', getCashRegister)
+router.get('/letterhead', getLetterhead)
 router.post('/generate', generateInvoice)
+// Bill PG rent that has fallen due now (the daily job does this automatically).
+router.post('/pg-rent', billPgRent)
 router.put('/:id/collect', collectPayment)
 router.get('/:id/pdf', getInvoicePdf)
 router.delete('/:id', deleteInvoice)

@@ -1,0 +1,121 @@
+{
+  "title": "హౌస్‌కీపింగ్",
+  "subtitle": "గది స్థితి, సిబ్బంది కేటాయింపులు మరియు తనిఖీలను నిర్వహించండి",
+  "loadFailed": "హౌస్‌కీపింగ్ బోర్డును లోడ్ చేయడం సాధ్యం కాలేదు. బ్యాకెండ్ నడుస్తోందో లేదో చూడండి.",
+  "loadingBoard": "బోర్డు లోడ్ అవుతోంది…",
+  "roomNo": "గది {{number}}",
+  "floorNo": "అంతస్తు {{floor}}",
+  "floorShort": "అం{{floor}}",
+  "unassigned": "కేటాయించలేదు",
+  "days_one": "{{count}}రో",
+  "days_other": "{{count}}రో",
+  "duration": {
+    "m": "{{m}}ని",
+    "hm": "{{h}}గం {{m}}ని"
+  },
+  "tabs": {
+    "board": "బోర్డు",
+    "daily": "రోజువారీ జాబితా",
+    "linen": "లినెన్ ట్రాకర్",
+    "inspection": "తనిఖీ"
+  },
+  "status": {
+    "clean_available": "శుభ్రంగా ఉంది",
+    "dirty_available": "మురికిగా ఉంది",
+    "occupied": "ఆక్రమించబడింది",
+    "checkout_pending": "చెక్-అవుట్",
+    "cleaning_in_progress": "శుభ్రం చేస్తున్నారు",
+    "maintenance": "నిర్వహణ"
+  },
+  "stats": {
+    "clean": "శుభ్రంగా & అందుబాటులో ఉంది",
+    "cleanHint": "చెక్-ఇన్‌కు సిద్ధంగా ఉంది",
+    "dirty": "మురికి / శుభ్రం చేయాలి",
+    "dirtyHint": "మురికి + చెక్-అవుట్ పెండింగ్",
+    "cleaning": "శుభ్రం చేయడం జరుగుతోంది",
+    "cleaningHint": "ప్రస్తుతం శుభ్రం చేస్తున్నారు"
+  },
+  "bulk": {
+    "label": "బల్క్ అప్‌డేట్",
+    "checkoutsDirty": "చెక్-అవుట్‌లను మురికిగా గుర్తించండి",
+    "dirtyInProgress": "మురికి గదులన్నీ → జరుగుతోందిగా గుర్తించండి"
+  },
+  "assign": {
+    "title": "గది {{number}} — అప్‌డేట్",
+    "staff": "సిబ్బందిని కేటాయించండి"
+  },
+  "empty": {
+    "noRooms": "ఇంకా గదులు లేవు",
+    "noRoomsHint": "సెట్టింగ్‌లలో గదులు జోడించిన తర్వాత ఇక్కడ కనిపిస్తాయి.",
+    "noMatch": "ఫిల్టర్లకు సరిపోయే గదులు లేవు"
+  },
+  "daily": {
+    "assignedTo": "కేటాయించినది",
+    "assignAria": "గది {{number}}కు సిబ్బందిని కేటాయించండి",
+    "startedAt": "ప్రారంభ సమయం",
+    "completedAt": "పూర్తయిన సమయం",
+    "duration": "వ్యవధి",
+    "timing": "ప్రారంభం · పూర్తి",
+    "start": "ప్రారంభించండి",
+    "done": "పూర్తయింది",
+    "staff": "సిబ్బంది",
+    "allStaff": "అందరు సిబ్బంది",
+    "floor": "అంతస్తు",
+    "allFloors": "అన్ని అంతస్తులు"
+  },
+  "linen": {
+    "lastChanged": "చివరిగా మార్చినది",
+    "nextDue": "తదుపరి గడువు",
+    "daysUntilDue": "గడువుకు రోజులు",
+    "daysOverdue_one": "{{count}}రో బకాయి",
+    "daysOverdue_other": "{{count}}రో బకాయి",
+    "overdue": "బకాయి",
+    "dueToday": "ఈరోజు గడువు",
+    "changedBy": "మార్చినవారు",
+    "markChanged": "మార్చినట్లు గుర్తించండి"
+  },
+  "inspection": {
+    "selectRoom": "గదిని ఎంచుకోండి",
+    "checklistTitle": "తనిఖీ చెక్‌లిస్ట్ — గది {{number}}",
+    "historyTitle": "తనిఖీ చరిత్ర — గది {{number}}",
+    "pass": "పాస్",
+    "fail": "ఫెయిల్",
+    "unchecked": "తనిఖీ చేయలేదు",
+    "score": "స్కోర్",
+    "you": "మీరు",
+    "submit": "తనిఖీని సమర్పించండి",
+    "checkAll": "సమర్పించే ముందు అన్ని అంశాలను తనిఖీ చేయండి",
+    "emptyTitle": "ఇంకా తనిఖీలు లేవు",
+    "emptyMessage": "ఈ సెషన్‌లో తనిఖీలు ఏవీ సమర్పించలేదు."
+  },
+  "checklist": {
+    "Minibar stocked": "మినీబార్ నింపబడింది",
+    "Toiletries refilled": "టాయిలెట్రీలు నింపబడ్డాయి",
+    "AC functional": "AC పనిచేస్తోంది",
+    "TV functional": "TV పనిచేస్తోంది",
+    "Bathroom clean": "బాత్‌రూమ్ శుభ్రంగా ఉంది",
+    "Bed made": "మంచం సర్దబడింది",
+    "Fresh towels": "కొత్త టవల్స్",
+    "Floor mopped": "నేల తుడవబడింది",
+    "Dustbin emptied": "చెత్తబుట్ట ఖాళీ చేయబడింది"
+  },
+  "toast": {
+    "cleaningStarted": "గది {{number}} శుభ్రపరచడం ప్రారంభమైంది",
+    "markedClean": "గది {{number}} శుభ్రంగా గుర్తించబడింది",
+    "saveFailed": "గది అప్‌డేట్‌ను సేవ్ చేయడం సాధ్యం కాలేదు",
+    "roomUpdated": "గది {{number}} అప్‌డేట్ చేయబడింది",
+    "noMatching": "సరిపోయే గదులు ఏవీ కనబడలేదు",
+    "bulkMarked_one": "{{count}} గది {{status}}గా గుర్తించబడింది",
+    "bulkMarked_other": "{{count}} గదులు {{status}}గా గుర్తించబడ్డాయి",
+    "linenChanged": "గది {{number}}కు లినెన్ మార్చబడింది",
+    "linenFailed": "లినెన్ మార్పును నమోదు చేయడం సాధ్యం కాలేదు",
+    "inspectionSaved": "తనిఖీ సేవ్ చేయబడింది — స్కోర్: {{score}}%",
+    "inspectionFailed": "తనిఖీని సేవ్ చేయడం సాధ్యం కాలేదు"
+  },
+  "filter": {
+    "status": "స్థితి",
+    "all": "అన్ని గదులు",
+    "showing": "చూపిస్తోంది: {{status}}",
+    "clear": "ఫిల్టర్ తొలగించు"
+  }
+}

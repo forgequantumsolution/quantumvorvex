@@ -1,7 +1,10 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import { appLocale } from '../../../i18n'
 import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Button from '../../ui/Button'
+import { PageWrapper } from '../../ui-tw'
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 const mockRooms = [
@@ -27,14 +30,7 @@ const STATUS_BADGE = {
   reserved:    'blue',
 }
 
-const STATUS_LABEL = {
-  available:   'Available',
-  occupied:    'Occupied',
-  maintenance: 'Maintenance',
-  reserved:    'Reserved',
-}
-
-// Short abbreviation for room type
+// Short abbreviation for room type (room types are data, so these stay as-is)
 const TYPE_ABBR = {
   Single: 'Sgl',
   Double: 'Dbl',
@@ -42,33 +38,35 @@ const TYPE_ABBR = {
   Deluxe: 'Dlx',
 }
 
+// Labels come from t(`status.<status>`) at render time.
 const LEGEND = [
-  { status: 'available',   label: 'Available',   bg: 'var(--green-bg)',  color: 'var(--green-text)',  dot: 'var(--green)'  },
-  { status: 'occupied',    label: 'Occupied',    bg: 'var(--red-bg)',    color: 'var(--red-text)',    dot: 'var(--red)'    },
-  { status: 'maintenance', label: 'Maintenance', bg: 'var(--amber-bg)',  color: 'var(--amber-text)',  dot: 'var(--amber)'  },
-  { status: 'reserved',    label: 'Reserved',    bg: 'var(--blue-bg)',   color: 'var(--blue-text)',   dot: 'var(--blue)'   },
+  { status: 'available',   bg: 'var(--green-bg)',  color: 'var(--green-text)',  dot: 'var(--green)'  },
+  { status: 'occupied',    bg: 'var(--red-bg)',    color: 'var(--red-text)',    dot: 'var(--red)'    },
+  { status: 'maintenance', bg: 'var(--amber-bg)',  color: 'var(--amber-text)',  dot: 'var(--amber)'  },
+  { status: 'reserved',    bg: 'var(--blue-bg)',   color: 'var(--blue-text)',   dot: 'var(--blue)'   },
 ]
 
 // ─── Room Detail Modal Content ────────────────────────────────────────────────
 function FloorPlanRoomDetail({ room, onClose }) {
+  const { t } = useTranslation('floorplan')
   if (!room) return null
   const badgeType = STATUS_BADGE[room.status] || 'grey'
 
   return (
     <>
       {/* Info grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-[18px]">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-3 mb-4 sm:mb-[18px]">
         {[
-          ['Room Number', room.number],
-          ['Floor',       `Floor ${room.floor}`],
-          ['Type',        room.type],
-          ['Daily Rate',  `₹${room.dailyRate?.toLocaleString()}`],
+          [t('detail.roomNumber'), room.number],
+          [t('detail.floor'),      t('floorN', { n: room.floor })],
+          [t('detail.type'),       room.type],
+          [t('detail.dailyRate'),  `₹${room.dailyRate?.toLocaleString(appLocale())}`],
         ].map(([label, value]) => (
-          <div key={label} className="bg-surface2 border border-line rounded-lg px-[14px] py-2.5">
+          <div key={label} className="min-w-0 bg-surface2 border border-line rounded-lg px-3 sm:px-[14px] py-2.5">
             <p className="t-label m-0">
               {label}
             </p>
-            <p className="t-title mt-1">
+            <p className="t-title mt-1 truncate">
               {value}
             </p>
           </div>
@@ -77,9 +75,9 @@ function FloorPlanRoomDetail({ room, onClose }) {
         {/* Status spans full width */}
         <div className="bg-surface2 border border-line rounded-lg px-[14px] py-2.5 col-[1/-1]">
           <p className="t-label mb-1.5">
-            Status
+            {t('common:status')}
           </p>
-          <Badge type={badgeType}>{STATUS_LABEL[room.status]}</Badge>
+          <Badge type={badgeType}>{t(`status.${room.status}`, { defaultValue: room.status })}</Badge>
         </div>
       </div>
 
@@ -87,22 +85,22 @@ function FloorPlanRoomDetail({ room, onClose }) {
       {room.status === 'occupied' && room.guest && (
         <div className="bg-danger-bg rounded-lg px-4 py-[13px] mb-[18px]">
           <p className="t-label mb-2 text-danger-text">
-            Current Occupant
+            {t('detail.currentOccupant')}
           </p>
           <div className="flex items-center gap-3">
             <div className="t-title w-9 h-9 rounded-full bg-danger-text text-white flex items-center justify-center shrink-0">
               {room.guest.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
             </div>
-            <div>
-              <p className="t-title m-0">{room.guest.name}</p>
+            <div className="min-w-0">
+              <p className="t-title m-0 truncate">{room.guest.name}</p>
               <p className="t-xs mt-0.5">{room.guest.phone}</p>
             </div>
           </div>
         </div>
       )}
 
-      <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
+      <div className="flex justify-end [&>*]:w-full [&>*]:justify-center sm:[&>*]:w-auto">
+        <Button variant="outline" size="sm" onClick={onClose}>{t('common:close')}</Button>
       </div>
     </>
   )
@@ -110,26 +108,26 @@ function FloorPlanRoomDetail({ room, onClose }) {
 
 // ─── Floor Section ────────────────────────────────────────────────────────────
 function FloorSection({ floorNum, rooms, onRoomClick }) {
+  const { t } = useTranslation('floorplan')
   return (
-    <div className="mb-8">
+    <div className="mb-6 sm:mb-8">
       {/* Floor label + rule */}
       <div className="flex items-center gap-3 mb-[14px]">
         <span className="t-label whitespace-nowrap shrink-0">
-          Floor {floorNum}
+          {t('floorN', { n: floorNum })}
         </span>
         <hr className="flex-1 border-none border-t border-t-line m-0" />
         <span className="t-label shrink-0">
-          {rooms.length} room{rooms.length !== 1 ? 's' : ''}
+          {t('roomCount', { count: rooms.length })}
         </span>
       </div>
 
-      {/* Room grid */}
-      <div className="overflow-x-auto">
-        <div className="grid grid-cols-[repeat(8,minmax(70px,1fr))] gap-2">
-          {rooms.map(room => (
-            <FloorRoomCell key={room.id} room={room} onClick={() => onRoomClick(room)} />
-          ))}
-        </div>
+      {/* Room grid — as many ~72px tiles per row as fit, wrapping onto more
+          rows on narrow screens instead of scrolling sideways. */}
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(72px,1fr))] gap-2">
+        {rooms.map(room => (
+          <FloorRoomCell key={room.id} room={room} onClick={() => onRoomClick(room)} />
+        ))}
       </div>
     </div>
   )
@@ -137,13 +135,17 @@ function FloorSection({ floorNum, rooms, onRoomClick }) {
 
 // ─── Individual Floor Room Cell ───────────────────────────────────────────────
 function FloorRoomCell({ room, onClick }) {
+  const { t } = useTranslation('floorplan')
   const abbr = TYPE_ABBR[room.type] || room.type.slice(0, 3).toUpperCase()
 
   return (
     <div
-      className={`fp-room ${room.status}`}
+      className={`fp-room ${room.status} min-h-11`}
+      role="button"
+      tabIndex={0}
       onClick={onClick}
-      title={`Room ${room.number} — ${room.type} — ${STATUS_LABEL[room.status]}${room.guest ? ` — ${room.guest.name}` : ''}`}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick() } }}
+      title={`${t('roomN', { number: room.number })} — ${room.type} — ${t(`status.${room.status}`, { defaultValue: room.status })}${room.guest ? ` — ${room.guest.name}` : ''}`}
     >
       {/* Room number */}
       <p className="t-title m-0 leading-[1.1] tracking-[-0.02em]">
@@ -151,7 +153,7 @@ function FloorRoomCell({ room, onClick }) {
       </p>
 
       {/* Type abbreviation */}
-      <p className="mt-[3px] text-[9px] font-medium opacity-70 uppercase tracking-[0.04em] leading-none">
+      <p className="mt-[3px] text-[10px] font-medium opacity-70 uppercase tracking-[0.04em] leading-none">
         {abbr}
       </p>
 
@@ -165,6 +167,7 @@ function FloorRoomCell({ room, onClick }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function FloorPlan({ rooms: propRooms }) {
+  const { t } = useTranslation('floorplan')
   const rooms = propRooms ?? mockRooms
 
   const [selectedRoom, setSelectedRoom] = useState(null)
@@ -192,32 +195,22 @@ export default function FloorPlan({ rooms: propRooms }) {
   }), [rooms])
 
   return (
-    <div className="px-7 py-6 max-w-[1400px] mx-auto">
-
-      {/* ── Page Header ────────────────────────────────────────────────────── */}
-      <div className="mb-[22px]">
-        <h1 className="text-[26px] font-extrabold m-0 text-ink tracking-[-0.03em]">
-          Floor Plan
-        </h1>
-        <p className="t-sm mt-[3px] text-ink3">
-          Visual room layout by floor
-        </p>
-      </div>
+    <PageWrapper title={t('title')} subtitle={t('subtitle')}>
 
       {/* ── Legend + Summary Bar ────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between flex-wrap gap-3 mb-7 bg-surface border border-line rounded-[var(--radius)] px-[18px] py-[13px]">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 sm:mb-5 bg-surface border border-line rounded-[var(--radius)] px-4 sm:px-[18px] py-3 sm:py-[13px]">
         {/* Legend */}
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex items-center gap-x-4 gap-y-2 flex-wrap">
           <span className="t-label">
-            Legend
+            {t('legend')}
           </span>
-          {LEGEND.map(({ status, label, bg, color, dot }) => (
+          {LEGEND.map(({ status, bg, dot }) => (
             <div key={status} className="flex items-center gap-1.5">
               <div
                 className="w-[14px] h-[14px] rounded-[3px] shrink-0"
                 style={{ background: bg, border: `1.5px solid ${dot}` }}
               />
-              <span className="t-xs">{label}</span>
+              <span className="t-xs">{t(`status.${status}`)}</span>
             </div>
           ))}
         </div>
@@ -225,10 +218,10 @@ export default function FloorPlan({ rooms: propRooms }) {
         {/* Occupancy summary */}
         <div className="flex items-center gap-2.5 flex-wrap">
           <span className="t-label">
-            {counts.occupied}/{counts.total} occupied
+            {t('occupiedOf', { occupied: counts.occupied, total: counts.total })}
           </span>
           {/* Mini progress bar */}
-          <div className="w-[100px] h-1.5 bg-surface2 rounded-[3px] overflow-hidden">
+          <div className="flex-1 sm:flex-none min-w-[60px] sm:w-[100px] h-1.5 bg-surface2 rounded-[3px] overflow-hidden">
             <div
               className="h-full bg-danger rounded-[3px] transition-all duration-[400ms] ease-[ease]"
               style={{ width: `${Math.round((counts.occupied / counts.total) * 100)}%` }}
@@ -241,8 +234,8 @@ export default function FloorPlan({ rooms: propRooms }) {
       </div>
 
       {/* ── Quick stat chips ────────────────────────────────────────────────── */}
-      <div className="flex gap-2 flex-wrap mb-7">
-        {LEGEND.map(({ status, label, bg, color }) => (
+      <div className="flex gap-2 flex-wrap mb-5 sm:mb-7">
+        {LEGEND.map(({ status, bg, color }) => (
           <div
             key={status}
             className="flex items-center gap-1.5 px-3 py-[5px] rounded-[20px] text-[12px] font-semibold"
@@ -251,7 +244,7 @@ export default function FloorPlan({ rooms: propRooms }) {
             <span className="t-h3">
               {counts[status]}
             </span>
-            <span className="font-medium opacity-85">{label}</span>
+            <span className="font-medium opacity-85">{t(`status.${status}`)}</span>
           </div>
         ))}
       </div>
@@ -260,7 +253,7 @@ export default function FloorPlan({ rooms: propRooms }) {
       {floors.length === 0 ? (
         <div className="empty-state">
           <p className="t-display mb-2">🏨</p>
-          <p className="m-0 font-semibold text-ink2">No rooms found</p>
+          <p className="m-0 font-semibold text-ink2">{t('noRooms')}</p>
         </div>
       ) : (
         floors.map(({ floorNum, rooms: floorRooms }) => (
@@ -277,7 +270,7 @@ export default function FloorPlan({ rooms: propRooms }) {
       <Modal
         isOpen={!!selectedRoom}
         onClose={() => setSelectedRoom(null)}
-        title={selectedRoom ? `Room ${selectedRoom.number} — Floor ${selectedRoom.floor}` : ''}
+        title={selectedRoom ? `${t('roomN', { number: selectedRoom.number })} — ${t('floorN', { n: selectedRoom.floor })}` : ''}
         maxWidth="480px"
       >
         <FloorPlanRoomDetail
@@ -285,6 +278,6 @@ export default function FloorPlan({ rooms: propRooms }) {
           onClose={() => setSelectedRoom(null)}
         />
       </Modal>
-    </div>
+    </PageWrapper>
   )
 }

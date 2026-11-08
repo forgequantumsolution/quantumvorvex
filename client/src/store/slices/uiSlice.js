@@ -11,13 +11,16 @@ export function panelFromUrl(fallback = 'today') {
 
 const initialState = {
   darkMode: false,
-  sidebarOpen: false,       // mobile drawer open/closed
+  sidebarOpen: false,       // phone drawer / tablet rail expanded
   sidebarCollapsed: false,  // desktop icon-rail collapse
   // Deep links / refreshes land on the panel in the URL, not always 'today'.
   activePanel: panelFromUrl('today'),
   // Optional params handed to the incoming panel (e.g. a target sub-tab when
   // Today deep-links into Bookings). Cleared on any plain setActivePanel.
   activePanelParams: null,
+  // What the Portfolio dashboard shows: every property combined ('all') or just
+  // the active property ('property'). Driven by the topbar property switcher.
+  dashboardScope: 'all',
   searchOpen: false,
   // Generic "primary action" trigger fired by the contextual header button.
   // A page listens for its own panel name + a changing nonce, then runs its action.
@@ -32,6 +35,7 @@ const uiSlice = createSlice({
     setDarkMode: (state, { payload }) => { state.darkMode = payload },
     toggleDarkMode: (state) => { state.darkMode = !state.darkMode },
     toggleSidebar: (state) => { state.sidebarOpen = !state.sidebarOpen },
+    openSidebar: (state) => { state.sidebarOpen = true },
     closeSidebar: (state) => { state.sidebarOpen = false },
     toggleSidebarCollapsed: (state) => { state.sidebarCollapsed = !state.sidebarCollapsed },
     setSidebarCollapsed: (state, { payload }) => { state.sidebarCollapsed = payload },
@@ -42,6 +46,7 @@ const uiSlice = createSlice({
       state.activePanelParams = payload.params || null
     },
     setSearchOpen: (state, { payload }) => { state.searchOpen = payload },
+    setDashboardScope: (state, { payload }) => { state.dashboardScope = payload },
     // Navigate to the target panel and bump the nonce so that page runs its primary action.
     requestPrimaryAction: (state, { payload }) => {
       state.activePanel = payload
@@ -55,12 +60,14 @@ export const {
   setDarkMode,
   toggleDarkMode,
   toggleSidebar,
+  openSidebar,
   closeSidebar,
   toggleSidebarCollapsed,
   setSidebarCollapsed,
   setActivePanel,
   navigateTo,
   setSearchOpen,
+  setDashboardScope,
   requestPrimaryAction,
 } = uiSlice.actions
 

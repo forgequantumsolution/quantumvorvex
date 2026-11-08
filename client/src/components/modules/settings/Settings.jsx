@@ -1,13 +1,22 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Cropper from 'react-easy-crop'
-import Tabs from '../../ui/Tabs'
-import Modal from '../../ui/Modal'
+import { useTranslation, Trans } from 'react-i18next'
+import { LANGUAGES } from '../../../i18n'
+import { Modal, Button, EmptyState } from '../../ui-tw'
+import { Section, AddButton, ActionButton, RowDelete, TablePager } from './settingsUi'
+import { usePaged } from './usePaged'
 import { getCroppedBlob, blobToDataUrl } from '../../../utils/cropImage'
-import { useAppSelector, useHotelActions, useUiActions } from '../../../store/hooks'
+import { useAppSelector, useHotelActions, useUiActions, usePageHeader } from '../../../store/hooks'
 import { useToast } from '../../../hooks/useToast'
 import api, { settingsApi, pricingApi, remindersApi } from '../../../api/client'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { canAccessSettingsTab } from '../../../utils/permissions'
+import PropertyManager from '../properties/PropertyManager'
+import {
+  LuHotel, LuBuilding2, LuStamp, LuBedDouble, LuSparkles, LuUtensils, LuTrendingUp,
+  LuPercent, LuReceipt, LuFileText, LuBell, LuPalette, LuSlidersHorizontal,
+  LuMapPin, LuPencil, LuChevronDown, LuUpload, LuTrash2, LuRotateCcw, LuSun, LuMoon, LuSave, LuEllipsis, LuX, LuPlus, LuTag,
+} from 'react-icons/lu'
 import {
   ACCENT_PRESETS, RADIUS_PRESETS, getAppearance, saveAppearance, applyAppearance,
 } from '../../../utils/theme'
@@ -92,42 +101,135 @@ const initKycDocs = [
 function Field({ label, children, fullWidth }) {
   return (
     <div className={`flex flex-col gap-[5px] ${fullWidth ? 'col-[1/-1]' : ''}`}>
-      <label className="form-label text-[12px] font-semibold">{label}</label>
+      <label className="form-label">{label}</label>
       {children}
     </div>
   )
 }
 
-function InlineInput({ value, onChange, type = 'text', min, style }) {
+// Compact cell input for the editable tables. `w` is the column width from lg up;
+// on phones, where rows stack as cards, the input fills its cell.
+const CELL_INPUT = 'w-full lg:w-[var(--w)] px-2.5 py-2 lg:px-1.5 lg:py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink focus:ring-gold/20 focus:border-gold'
+
+function InlineInput({ value, onChange, type = 'text', min, w = 80, className = '', style }) {
   return (
     <input
       type={type}
       value={value}
       onChange={e => onChange(type === 'number' ? Number(e.target.value) : e.target.value)}
       min={min}
-      className="w-20 px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
-      style={style}
+      className={`${CELL_INPUT} ${className}`}
+      style={{ '--w': `${w}px`, ...style }}
     />
   )
 }
 
-function SaveButton({ onClick, saving }) {
+// Layout shared by every tab: sections stacked in a column, and forms inside a
+// section 1-up on phones, 2-up from md.
+const TAB_STACK = 'flex flex-col gap-5'
+const FORM_GRID = 'grid grid-cols-1 md:grid-cols-2 gap-4'
+
+// Editable tables sit full-bleed in a <Section bodyClassName="p-0">: a normal
+// table from lg up; below lg (phones and portrait tablets, where 6–8 input
+// columns don't fit) every row becomes a card — the first cell (the row's
+// name) spans the card, the rest sit 2-up under small labels, and the delete
+// button pins to the card's top-right.
+// The [&_td] overrides beat the global td padding / border / nowrap.
+const STACK_TABLE =
+  'w-full border-collapse max-lg:block max-lg:[&_thead]:hidden max-lg:[&_tbody]:block max-lg:[&_td]:p-0 max-lg:[&_td]:border-0 max-lg:[&_td]:whitespace-normal ' +
+  'lg:[&_th:first-child]:pl-5 lg:[&_td:first-child]:pl-5 lg:[&_th:last-child]:pr-5 lg:[&_td:last-child]:pr-5'
+const STACK_ROW_BASE = 'border-b border-line max-lg:relative max-lg:grid max-lg:gap-x-3 max-lg:gap-y-3 max-lg:px-4 sm:max-lg:px-5 max-lg:py-4 max-lg:last:border-b-0'
+// 2-up on phones, 4-up on portrait tablets.
+const STACK_ROW   = `${STACK_ROW_BASE} max-lg:grid-cols-2 sm:max-lg:grid-cols-4`
+const STACK_CELL  = 'px-2.5 py-2 max-lg:p-0 max-lg:min-w-0'
+const STACK_TITLE = `${STACK_CELL} max-lg:col-span-full`
+// The row's name input leaves room for the pinned delete button.
+const TITLE_INPUT = 'max-lg:font-semibold max-lg:w-[calc(100%-3.25rem)]'
+const STACK_WIDE  = `${STACK_CELL} max-lg:col-span-2`
+const STACK_DEL   = `${STACK_CELL} lg:w-px lg:text-right max-lg:absolute max-lg:right-4 sm:max-lg:right-5 max-lg:top-[37px] pointer-coarse:max-lg:top-[31px]`
+// Column heading (lg+ only; stacked rows label each cell with CellLabel).
+const TH = 'px-2.5 py-2.5 border-b border-line text-ink3 font-semibold text-xs whitespace-nowrap text-left'
+
+// Field label shown above a stacked cell below lg (the table header carries it on lg+).
+function CellLabel({ children }) {
+  return <span className="lg:hidden block text-xs font-semibold uppercase tracking-[0.05em] text-ink3 mb-1">{children}</span>
+}
+
+// Table header row from a list of column names ('' for the actions column).
+function TableHead({ cols }) {
   return (
-    <div className="pt-4 border-t border-line mt-2">
-      <button className="btn btn-primary" onClick={onClick} disabled={saving}>
-        {saving ? 'Saving…' : 'Save Changes'}
-      </button>
+    <thead>
+      <tr>
+        {cols.map((h, i) => <th key={h || `col-${i}`} className={TH}>{h}</th>)}
+      </tr>
+    </thead>
+  )
+}
+
+// A full-bleed editable table inside a Section: the table (or an empty state)
+// and the pager under it. Bump `reveal` when a row is added (from the page
+// header): once the new row arrives — at once, or after an API round-trip — it
+// is scrolled into view and its first input focused. usePaged has already
+// moved to the last page by then.
+function EditableTable({ pager, empty, reveal = 0, children }) {
+  const wrapRef = useRef(null)
+  const seen = useRef({ reveal, total: pager.total, wantFrom: null })
+  useEffect(() => {
+    const s = seen.current
+    if (reveal !== s.reveal) { s.reveal = reveal; s.wantFrom = s.total }
+    if (s.wantFrom != null && pager.total > s.wantFrom) {
+      s.wantFrom = null
+      const row = wrapRef.current?.querySelector('tbody tr:last-child')
+      if (row) {
+        row.scrollIntoView({ block: 'center', behavior: 'smooth' })
+        row.querySelector('input, select')?.focus({ preventScroll: true })
+      }
+    }
+    s.total = pager.total
+  })
+  return (
+    <div ref={wrapRef}>
+      {pager.total === 0 ? empty : (
+        <>
+          <div className="lg:overflow-x-auto">{children}</div>
+          <TablePager pager={pager} />
+        </>
+      )}
     </div>
   )
+}
+
+// Every tab owns the page header bar: "Settings", the tab's name, its section
+// actions (add / reset / upload… — the first two as buttons, any more under
+// "More") and one gold "Save changes" when the tab has something to save.
+const MAX_HEADER_ACTIONS = 2
+function useSettingsHeader(tabId, { actions = [], onSave, saving = false } = {}) {
+  const { t } = useTranslation('settings')
+  const list = actions.filter(Boolean)
+  const shown = list.slice(0, MAX_HEADER_ACTIONS)
+  const extra = list.slice(MAX_HEADER_ACTIONS)
+  usePageHeader({
+    title: t('common:settings'),
+    subtitle: t(`tabs.${tabId}.label`),
+    actions: [
+      ...shown,
+      extra.length > 0 && { id: 'more', label: t('common:more'), icon: <LuEllipsis />, menu: extra },
+      onSave && {
+        id: 'save', label: saving ? t('common:saving') : t('common:saveChanges'), icon: <LuSave />,
+        variant: 'primary', disabled: saving, onClick: onSave,
+      },
+    ],
+  })
 }
 
 // Reusable crop modal: pan + zoom a picked image to a 1:1 square, then hand the
 // cropped Blob to `onComplete`. Open when `src` (a data URL) is set.
 function LogoCropModal({
   src, onCancel, onComplete, busy = false,
-  title = 'Crop image', cropShape = 'round',
-  confirmLabel = 'Crop & Save', busyLabel = 'Saving…',
+  title, cropShape = 'round',
+  confirmLabel, busyLabel,
 }) {
+  const { t } = useTranslation('settings')
   // Callers pass key={src} so this remounts (resetting pan/zoom) per image.
   const [crop, setCrop] = useState({ x: 0, y: 0 })
   const [zoom, setZoom] = useState(1)
@@ -145,13 +247,13 @@ function LogoCropModal({
     <Modal
       isOpen={!!src}
       onClose={busy ? () => {} : onCancel}
-      title={title}
+      title={title || t('crop.title')}
       footer={
         <>
-          <button className="btn btn-outline" onClick={onCancel} disabled={busy}>Cancel</button>
-          <button className="btn btn-primary" onClick={confirm} disabled={busy || !areaPixels}>
-            {busy ? busyLabel : confirmLabel}
-          </button>
+          <Button variant="ghost" onClick={onCancel} disabled={busy}>{t('common:cancel')}</Button>
+          <Button onClick={confirm} disabled={busy || !areaPixels}>
+            {busy ? (busyLabel || t('common:saving')) : (confirmLabel || t('crop.confirm'))}
+          </Button>
         </>
       }
     >
@@ -172,7 +274,7 @@ function LogoCropModal({
           )}
         </div>
         <label className="flex items-center gap-3">
-          <span className="t-sm text-ink3 shrink-0">Zoom</span>
+          <span className="t-sm text-ink3 shrink-0">{t('crop.zoom')}</span>
           <input
             type="range" min={1} max={3} step={0.01}
             value={zoom}
@@ -187,6 +289,7 @@ function LogoCropModal({
 
 // ─── Tab 1: Hotel Profile ─────────────────────────────────────────────────────
 function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwnerName }) {
+  const { t } = useTranslation('settings')
   const [logoPreview, setLogoPreview] = useState(null)
   const [saving, setSaving] = useState(false)
   const fileRef = useRef(null)
@@ -220,9 +323,9 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
         setStampPreview(data.stampUrl)
         setSettings(s => ({ ...s, stampUrl: data.stampUrl }))
       }
-      addToast('Stamp & signature uploaded', 'success')
+      addToast(t('profile.stampUploaded'), 'success')
     } catch {
-      addToast('Stamp upload failed', 'error')
+      addToast(t('profile.stampFailed'), 'error')
     } finally {
       setStampUploading(false)
     }
@@ -247,10 +350,10 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
         setLogoPreview(data.logoUrl)
         setSettings(s => ({ ...s, logoUrl: data.logoUrl }))
       }
-      addToast('Logo uploaded', 'success')
+      addToast(t('profile.logoUploaded'), 'success')
       setCropSrc(null)
     } catch {
-      addToast('Logo upload failed', 'error')
+      addToast(t('profile.logoFailed'), 'error')
     } finally {
       setUploading(false)
     }
@@ -272,9 +375,9 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
       })
       setHotelName(settings.name)
       setOwnerName(settings.ownerName)
-      addToast('Settings saved successfully', 'success')
+      addToast(t('toast.saved'), 'success')
     } catch {
-      addToast('Failed to save settings', 'error')
+      addToast(t('toast.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
@@ -284,106 +387,115 @@ function HotelProfileTab({ settings, setSettings, addToast, setHotelName, setOwn
     ? settings.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
     : 'HM'
 
+  useSettingsHeader('profile', {
+    actions: [
+      { id: 'logo', label: uploading ? t('profile.uploadingLogo') : t('profile.uploadLogo'), icon: <LuUpload />, disabled: uploading, onClick: () => fileRef.current?.click() },
+      { id: 'stamp', label: stampUploading ? t('profile.uploadingStamp') : t('profile.uploadStamp'), icon: <LuStamp />, disabled: stampUploading, onClick: () => stampFileRef.current?.click() },
+    ],
+    onSave: handleSave,
+    saving,
+  })
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* Logo */}
-      <div className="flex items-center gap-4">
-        <div
-          onClick={() => fileRef.current?.click()}
-          className="w-20 h-20 rounded-full border-2 border-gold flex items-center justify-center cursor-pointer overflow-hidden shrink-0"
-          style={{ background: logoSrc ? 'transparent' : 'var(--gold-bg, #3a2e0a)' }}
-          title="Click to upload logo"
-        >
-          {logoSrc ? (
-            <img src={logoSrc} alt="Logo" className="w-full h-full object-cover" />
-          ) : (
-            <span className="t-h1 text-gold">
-              {initials}
-            </span>
-          )}
+    <div className={TAB_STACK}>
+      {/* Brand assets: logo + stamp side by side. Each uploads as soon as it's picked. */}
+      <Section title={t('profile.assetsTitle')} subtitle={t('profile.assetsSubtitle')}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="flex items-center gap-4">
+            <div
+              onClick={() => fileRef.current?.click()}
+              className="w-16 h-16 rounded-full border-2 border-gold flex items-center justify-center cursor-pointer overflow-hidden shrink-0"
+              style={{ background: logoSrc ? 'transparent' : 'var(--gold-bg, #3a2e0a)' }}
+              title={t('profile.clickLogo')}
+            >
+              {logoSrc ? (
+                <img src={logoSrc} alt={t('profile.logoAlt')} className="w-full h-full object-cover" />
+              ) : (
+                <span className="t-h2 text-gold">{initials}</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="t-title mb-0.5">{t('profile.hotelLogo')}</div>
+              <p className="t-xs text-ink3 m-0">{t('profile.logoHint')}</p>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+            </div>
+          </div>
+
+          {/* Stamp & signature (printed on tax invoices) */}
+          <div className="flex items-center gap-4">
+            <div
+              onClick={() => stampFileRef.current?.click()}
+              className="w-24 h-16 rounded-lg border-2 border-dashed border-line2 flex items-center justify-center cursor-pointer overflow-hidden shrink-0 bg-surface2"
+              title={t('profile.clickStamp')}
+            >
+              {stampSrc ? (
+                <img src={stampSrc} alt={t('profile.stamp')} className="w-full h-full object-contain" />
+              ) : (
+                <span className="text-xs text-ink3 text-center px-1.5 leading-tight">{t('profile.noStamp')}</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <div className="t-title mb-0.5">{t('profile.stamp')}</div>
+              <p className="t-xs text-ink3 m-0">
+                {t('profile.stampHint')} {stampUploading ? t('profile.uploading') : t('profile.clickBox')}
+              </p>
+              <input ref={stampFileRef} type="file" accept="image/*" className="hidden" onChange={handleStampSelect} />
+            </div>
+          </div>
         </div>
-        <div>
-          <button className="btn btn-outline text-[12px]" onClick={() => fileRef.current?.click()}>
-            Upload Logo
-          </button>
-          <p className="mt-1 mb-0 text-[11px] text-ink3">PNG, JPG up to 2MB · you can crop after selecting</p>
-          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-        </div>
-      </div>
+      </Section>
 
       <LogoCropModal
         key={cropSrc || 'closed'}
         src={cropSrc}
         busy={uploading}
-        title="Crop logo"
+        title={t('crop.cropLogo')}
         cropShape="round"
-        confirmLabel="Crop & Upload"
-        busyLabel="Uploading…"
+        confirmLabel={t('crop.cropUpload')}
+        busyLabel={t('crop.uploading')}
         onCancel={() => setCropSrc(null)}
         onComplete={uploadCropped}
       />
 
-      {/* Stamp & signature (printed on tax invoices) */}
-      <div className="flex items-center gap-4">
-        <div
-          onClick={() => stampFileRef.current?.click()}
-          className="w-32 h-20 rounded-lg border-2 border-dashed border-line flex items-center justify-center cursor-pointer overflow-hidden shrink-0 bg-surface2"
-          title="Click to upload stamp & signature"
-        >
-          {stampSrc ? (
-            <img src={stampSrc} alt="Stamp & signature" className="w-full h-full object-contain" />
-          ) : (
-            <span className="t-xs text-ink3 text-center px-1.5 leading-tight">Stamp &amp; Signature</span>
-          )}
+      <Section title={t('profile.businessTitle')} subtitle={t('profile.businessSubtitle')}>
+        <div className={FORM_GRID}>
+          <Field label={t('fields.hotelName')}>
+            <input className="form-input" value={settings.name}
+              onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
+          </Field>
+          <Field label={t('fields.ownerName')}>
+            <input className="form-input" value={settings.ownerName}
+              onChange={e => setSettings(s => ({ ...s, ownerName: e.target.value }))} />
+          </Field>
+          <Field label={t('fields.phone')}>
+            <input className="form-input" value={settings.phone}
+              onChange={e => setSettings(s => ({ ...s, phone: e.target.value }))} />
+          </Field>
+          <Field label={t('fields.email')}>
+            <input className="form-input" type="email" value={settings.email}
+              onChange={e => setSettings(s => ({ ...s, email: e.target.value }))} />
+          </Field>
+          <Field label={t('fields.gstin')}>
+            <input className="form-input t-mono" value={settings.gstin}
+              onChange={e => setSettings(s => ({ ...s, gstin: e.target.value }))} />
+          </Field>
+          <Field label={t('fields.licenseNo')}>
+            <input className="form-input" value={settings.licenseNo}
+              onChange={e => setSettings(s => ({ ...s, licenseNo: e.target.value }))} />
+          </Field>
+          <Field label={t('fields.address')} fullWidth>
+            <textarea className="form-textarea resize-y" rows={2} value={settings.address}
+              onChange={e => setSettings(s => ({ ...s, address: e.target.value }))} />
+          </Field>
         </div>
-        <div>
-          <button className="btn btn-outline text-[12px]" onClick={() => stampFileRef.current?.click()} disabled={stampUploading}>
-            {stampUploading ? 'Uploading…' : 'Upload Stamp & Signature'}
-          </button>
-          <p className="mt-1 mb-0 text-[11px] text-ink3">Printed in the signature area of tax invoices · PNG, JPG up to 5MB</p>
-          <input ref={stampFileRef} type="file" accept="image/*" className="hidden" onChange={handleStampSelect} />
-        </div>
-      </div>
-
-      {/* Form grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Field label="Hotel Name">
-          <input className="form-input" value={settings.name}
-            onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
-        </Field>
-        <Field label="Owner Name">
-          <input className="form-input" value={settings.ownerName}
-            onChange={e => setSettings(s => ({ ...s, ownerName: e.target.value }))} />
-        </Field>
-        <Field label="Phone">
-          <input className="form-input" value={settings.phone}
-            onChange={e => setSettings(s => ({ ...s, phone: e.target.value }))} />
-        </Field>
-        <Field label="Email" fullWidth>
-          <input className="form-input" type="email" value={settings.email}
-            onChange={e => setSettings(s => ({ ...s, email: e.target.value }))} />
-        </Field>
-        <Field label="GSTIN">
-          <input className="form-input" value={settings.gstin}
-            onChange={e => setSettings(s => ({ ...s, gstin: e.target.value }))} />
-        </Field>
-        <Field label="License No.">
-          <input className="form-input" value={settings.licenseNo}
-            onChange={e => setSettings(s => ({ ...s, licenseNo: e.target.value }))} />
-        </Field>
-        <Field label="Address" fullWidth>
-          <textarea className="form-textarea resize-y" rows={3} value={settings.address}
-            onChange={e => setSettings(s => ({ ...s, address: e.target.value }))} />
-        </Field>
-      </div>
-
-      <SaveButton onClick={handleSave} saving={saving} />
+      </Section>
     </div>
   )
 }
 
 // ─── Tab 2: Room Config ───────────────────────────────────────────────────────
 function RoomConfigTab({ settings, setSettings, roomTypes, setRoomTypes, addToast }) {
+  const { t } = useTranslation('settings')
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [saving, setSaving] = useState(false)
 
@@ -391,9 +503,11 @@ function RoomConfigTab({ settings, setSettings, roomTypes, setRoomTypes, addToas
     setRoomTypes(rows => rows.map(r => r.id === id ? { ...r, [field]: value } : r))
   }
 
+  const [reveal, setReveal] = useState(0)
   function addRoom() {
+    setReveal(n => n + 1)
     setRoomTypes(rows => [...rows, {
-      id: newRowId(), name: 'New Type', dailyRate: 500, monthlyRate: 9000,
+      id: newRowId(), name: t('rooms.newType'), dailyRate: 500, monthlyRate: 9000,
       peakDailyRate: 700, peakMonthlyRate: 13000, count: 1, maxOccupancy: 1,
     }])
   }
@@ -408,123 +522,115 @@ function RoomConfigTab({ settings, setSettings, roomTypes, setRoomTypes, addToas
     try {
       // `count` has no DB column — strip it (and temp ids) before sending.
       await settingsApi.update({ roomTypes: roomTypes.map(r => stripForSave(r, ['count'])) })
-      addToast('Settings saved successfully', 'success')
+      addToast(t('toast.saved'), 'success')
     } catch {
-      addToast('Failed to save room types', 'error')
+      addToast(t('rooms.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
   }
 
-  const thStyle = {
-    padding: '8px 10px',
-    borderBottom: '1px solid var(--border)',
-    color: 'var(--text3)',
-    fontWeight: 600,
-    fontSize: 11,
-    whiteSpace: 'nowrap',
-  }
+  const pager = usePaged(roomTypes)
+  useSettingsHeader('rooms', {
+    actions: [{ id: 'add-room', label: t('rooms.addType'), icon: <LuPlus />, onClick: addRoom }],
+    onSave: handleSave,
+    saving,
+  })
 
   return (
-    <div className="flex flex-col gap-5">
-      {/* Capacity row */}
-      <div className="card">
-        <div className="card-header"><span className="card-title">Hotel Capacity</span></div>
-        <div className="card-body">
-          <div className="flex gap-6 flex-wrap">
-            <Field label="Total Rooms">
-              <input className="form-input w-[100px]" type="number" min={1}
-                value={settings.totalRooms}
-                onChange={e => setSettings(s => ({ ...s, totalRooms: Number(e.target.value) }))} />
-            </Field>
-            <Field label="Number of Floors">
-              <input className="form-input w-[100px]" type="number" min={1}
-                value={settings.floors}
-                onChange={e => setSettings(s => ({ ...s, floors: Number(e.target.value) }))} />
-            </Field>
-          </div>
+    <div className={TAB_STACK}>
+      <Section title={t('rooms.capacityTitle')} subtitle={t('rooms.capacitySubtitle')}>
+        <div className="grid grid-cols-2 gap-4 md:max-w-md">
+          <Field label={t('fields.totalRooms')}>
+            <input className="form-input" type="number" min={1}
+              value={settings.totalRooms}
+              onChange={e => setSettings(s => ({ ...s, totalRooms: Number(e.target.value) }))} />
+          </Field>
+          <Field label={t('rooms.floors')}>
+            <input className="form-input" type="number" min={1}
+              value={settings.floors}
+              onChange={e => setSettings(s => ({ ...s, floors: Number(e.target.value) }))} />
+          </Field>
         </div>
-      </div>
+      </Section>
 
-      {/* Room types table */}
-      <div className="card">
-        <div className="card-header flex items-center justify-between">
-          <span className="card-title">Room Types</span>
-          <button className="btn btn-primary text-[12px] px-[14px] py-[5px]" onClick={addRoom}>
-            + Add Room Type
-          </button>
-        </div>
-        <div className="card-body overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                {['Name', 'Daily ₹', 'Monthly ₹', 'Peak Daily ₹', 'Peak Monthly ₹', 'Count', 'Max Occ.', ''].map(h => (
-                  <th key={h} style={thStyle}>{h}</th>
-                ))}
-              </tr>
-            </thead>
+      <Section
+        title={t('rooms.typesTitle')}
+        subtitle={t('rooms.typesSubtitle')}
+        bodyClassName="p-0"
+      >
+        <EditableTable
+          pager={pager}
+          reveal={reveal}
+          empty={
+            <EmptyState icon={<LuBedDouble />} title={t('rooms.emptyTitle')} message={t('rooms.emptyMessage')}
+              action={<AddButton onClick={addRoom}>{t('rooms.addType')}</AddButton>} />
+          }
+        >
+          <table className={STACK_TABLE}>
+            <TableHead cols={[t('rooms.colName'), t('rooms.colDaily'), t('rooms.colMonthly'), t('rooms.colPeakDaily'), t('rooms.colPeakMonthly'), t('rooms.colCount'), t('rooms.colMaxOcc'), '']} />
             <tbody>
-              {roomTypes.map(row => (
-                <tr key={row.id} className="border-b border-line">
+              {pager.rows.map(row => (
+                <tr key={row.id} className={STACK_ROW}>
                   {[
-                    { field: 'name',         val: row.name,         type: 'text',   w: 100 },
-                    { field: 'dailyRate',     val: row.dailyRate,     type: 'number', w: 75 },
-                    { field: 'monthlyRate',   val: row.monthlyRate,   type: 'number', w: 80 },
-                    { field: 'peakDailyRate',   val: row.peakDailyRate,   type: 'number', w: 80 },
-                    { field: 'peakMonthlyRate', val: row.peakMonthlyRate, type: 'number', w: 90 },
-                    { field: 'count',         val: row.count ?? 0,    type: 'number', w: 60 },
-                    { field: 'maxOccupancy',  val: row.maxOccupancy,  type: 'number', w: 60 },
-                  ].map(({ field, val, type, w }) => (
-                    <td key={field} className="px-2.5 py-[7px]">
+                    { field: 'name',            label: t('rooms.colName'),        val: row.name,            type: 'text',   w: 100 },
+                    { field: 'dailyRate',       label: t('rooms.colDaily'),       val: row.dailyRate,       type: 'number', w: 75 },
+                    { field: 'monthlyRate',     label: t('rooms.colMonthly'),     val: row.monthlyRate,     type: 'number', w: 80 },
+                    { field: 'peakDailyRate',   label: t('rooms.colPeakDaily'),   val: row.peakDailyRate,   type: 'number', w: 80 },
+                    { field: 'peakMonthlyRate', label: t('rooms.colPeakMonthly'), val: row.peakMonthlyRate, type: 'number', w: 90 },
+                    { field: 'count',           label: t('rooms.colCount'),       val: row.count ?? 0,      type: 'number', w: 60 },
+                    { field: 'maxOccupancy',    label: t('rooms.colMaxOcc'),      val: row.maxOccupancy,    type: 'number', w: 60 },
+                  ].map(({ field, label, val, type, w }) => (
+                    <td key={field} className={field === 'name' ? STACK_TITLE : STACK_CELL}>
+                      <CellLabel>{label}</CellLabel>
                       <InlineInput
                         value={val}
                         type={type}
                         min={type === 'number' ? 0 : undefined}
-                        style={{ width: w }}
+                        w={w}
+                        className={field === 'name' ? TITLE_INPUT : ''}
                         onChange={v => updateRoom(row.id, field, v)}
                       />
                     </td>
                   ))}
-                  <td className="px-2.5 py-[7px]">
+                  <td className={STACK_DEL}>
                     {confirmDelete === row.id ? (
-                      <span className="flex gap-1.5">
-                        <button className="text-[11px] text-[#ef4444] bg-none border-none cursor-pointer"
-                          onClick={() => deleteRoom(row.id)}>Confirm</button>
-                        <button className="text-[11px] text-ink3 bg-none border-none cursor-pointer"
-                          onClick={() => setConfirmDelete(null)}>Cancel</button>
+                      <span className="inline-flex gap-1.5 max-lg:bg-surface max-lg:pl-2">
+                        <Button size="sm" variant="danger" onClick={() => deleteRoom(row.id)}>{t('common:delete')}</Button>
+                        <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(null)}>{t('common:cancel')}</Button>
                       </span>
                     ) : (
-                      <button
-                        className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
-                        onClick={() => setConfirmDelete(row.id)}
-                        title="Delete room type"
-                      >
-                        ×
-                      </button>
+                      <RowDelete onClick={() => setConfirmDelete(row.id)} label={t('row.delete', { name: row.name })} />
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      <SaveButton onClick={handleSave} saving={saving} />
+        </EditableTable>
+      </Section>
     </div>
   )
 }
 
 // ─── Tab 3: Facilities ────────────────────────────────────────────────────────
 function FacilitiesTab({ amenities, setAmenities, addToast }) {
+  const { t } = useTranslation('settings')
   // Free-text facility chips stay client-side — there is no DB model for them.
   const [facilities, setFacilities] = useState(initFacilities)
   const [newFacility, setNewFacility]   = useState('')
   const [saving, setSaving] = useState(false)
 
+  const newFacilityRef = useRef(null)
   function addFacility() {
     const trimmed = newFacility.trim()
-    if (!trimmed || facilities.includes(trimmed)) return
+    // From the header with nothing typed: point at the box to type in.
+    if (!trimmed) {
+      newFacilityRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      newFacilityRef.current?.focus({ preventScroll: true })
+      return
+    }
+    if (facilities.includes(trimmed)) return
     setFacilities(f => [...f, trimmed])
     setNewFacility('')
   }
@@ -537,8 +643,10 @@ function FacilitiesTab({ amenities, setAmenities, addToast }) {
     setAmenities(rows => rows.map(r => r.id === id ? { ...r, [field]: value } : r))
   }
 
+  const [reveal, setReveal] = useState(0)
   function addAmenity() {
-    setAmenities(rows => [...rows, { id: newRowId(), name: 'New Amenity', dailyRate: 0, monthlyRate: 0 }])
+    setReveal(n => n + 1)
+    setAmenities(rows => [...rows, { id: newRowId(), name: t('facilities.newAmenity'), dailyRate: 0, monthlyRate: 0 }])
   }
 
   function removeAmenity(id) {
@@ -549,113 +657,121 @@ function FacilitiesTab({ amenities, setAmenities, addToast }) {
     setSaving(true)
     try {
       await settingsApi.update({ amenities: amenities.map(r => stripForSave(r)) })
-      addToast('Settings saved successfully', 'success')
+      addToast(t('toast.saved'), 'success')
     } catch {
-      addToast('Failed to save amenities', 'error')
+      addToast(t('facilities.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
   }
 
+  const pager = usePaged(amenities)
+  useSettingsHeader('facilities', {
+    actions: [
+      { id: 'add-facility', label: t('facilities.addFacility'), icon: <LuTag />, onClick: addFacility },
+      { id: 'add-amenity', label: t('facilities.addAmenity'), icon: <LuPlus />, onClick: addAmenity },
+    ],
+    onSave: handleSave,
+    saving,
+  })
+
   return (
-    <div className="flex flex-col gap-6">
-      {/* Standard facilities */}
-      <div className="card">
-        <div className="card-header"><span className="card-title">Standard Facilities</span></div>
-        <div className="card-body">
-          <div className="flex flex-wrap gap-2 mb-[14px]">
+    <div className={TAB_STACK}>
+      <Section title={t('facilities.standardTitle')} subtitle={t('facilities.standardSubtitle')}>
+        {facilities.length > 0 ? (
+          <div className="flex flex-wrap gap-2 mb-4">
             {facilities.map(f => (
               <span
                 key={f}
-                className="t-xs inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[20px] bg-[var(--gold-bg,#3a2e0a)] border border-gold text-gold"
+                className="t-xs inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-full bg-gold-bg border border-gold-border text-gold font-medium"
               >
                 {f}
                 <button
+                  type="button"
                   onClick={() => removeFacility(f)}
-                  className="t-body bg-none border-none cursor-pointer text-gold leading-[1] p-0 ml-0.5"
-                  title={`Remove ${f}`}
+                  className="bg-transparent border-none cursor-pointer text-gold inline-flex items-center justify-center w-6 h-6 pointer-coarse:w-8 pointer-coarse:h-8 rounded-full hover:bg-gold/20"
+                  title={t('row.remove', { name: f })}
+                  aria-label={t('row.remove', { name: f })}
                 >
-                  ×
+                  <LuX size={12} aria-hidden />
                 </button>
               </span>
             ))}
           </div>
-          <div className="flex gap-2">
-            <input
-              className="form-input max-w-[200px]"
-              placeholder="Add facility..."
-              value={newFacility}
-              onChange={e => setNewFacility(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addFacility()}
-            />
-            <button className="btn btn-outline text-[12px]" onClick={addFacility}>
-              + Add
-            </button>
-          </div>
+        ) : (
+          <p className="t-sm text-ink3 mt-0 mb-4">{t('facilities.noFacilities')}</p>
+        )}
+        <div className="flex gap-2">
+          <label htmlFor="new-facility" className="sr-only">{t('facilities.newFacility')}</label>
+          <input
+            id="new-facility"
+            ref={newFacilityRef}
+            className="form-input flex-1 min-w-0 sm:flex-none sm:w-[300px]"
+            placeholder={t('facilities.newFacilityPlaceholder')}
+            enterKeyHint="done"
+            value={newFacility}
+            onChange={e => setNewFacility(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addFacility()}
+          />
         </div>
-      </div>
+      </Section>
 
-      {/* Chargeable amenities */}
-      <div className="card">
-        <div className="card-header flex items-center justify-between">
-          <span className="card-title">Chargeable Amenities</span>
-          <button className="btn btn-primary text-[12px] px-[14px] py-[5px]" onClick={addAmenity}>
-            + Add Amenity
-          </button>
-        </div>
-        <div className="card-body overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                {['Amenity', 'Daily Rate ₹', 'Monthly Rate ₹', ''].map(h => (
-                  <th key={h} className={`px-3 py-2 border-b border-line text-ink3 font-semibold text-[11px] ${h === 'Amenity' ? 'text-left' : 'text-center'}`}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+      <Section
+        title={t('facilities.amenitiesTitle')}
+        subtitle={t('facilities.amenitiesSubtitle')}
+        bodyClassName="p-0"
+      >
+        <EditableTable
+          pager={pager}
+          reveal={reveal}
+          empty={
+            <EmptyState icon={<LuSparkles />} title={t('facilities.emptyTitle')} message={t('facilities.emptyMessage')}
+              action={<AddButton onClick={addAmenity}>{t('facilities.addAmenity')}</AddButton>} />
+          }
+        >
+          <table className={STACK_TABLE}>
+            <TableHead cols={[t('facilities.colAmenity'), t('facilities.colDaily'), t('facilities.colMonthly'), '']} />
             <tbody>
-              {amenities.map(row => (
-                <tr key={row.id} className="border-b border-line">
-                  <td className="px-3 py-[7px]">
-                    <InlineInput value={row.name} type="text" style={{ width: 160 }} onChange={v => updateAmenity(row.id, 'name', v)} />
+              {pager.rows.map(row => (
+                <tr key={row.id} className={STACK_ROW}>
+                  <td className={STACK_TITLE}>
+                    <CellLabel>{t('facilities.colAmenity')}</CellLabel>
+                    <InlineInput value={row.name} type="text" w={200} className={TITLE_INPUT} onChange={v => updateAmenity(row.id, 'name', v)} />
                   </td>
-                  <td className="px-3 py-[7px] text-center">
-                    <InlineInput value={row.dailyRate} type="number" min={0} onChange={v => updateAmenity(row.id, 'dailyRate', v)} />
+                  <td className={STACK_CELL}>
+                    <CellLabel>{t('facilities.colDaily')}</CellLabel>
+                    <InlineInput value={row.dailyRate} type="number" min={0} w={110} onChange={v => updateAmenity(row.id, 'dailyRate', v)} />
                   </td>
-                  <td className="px-3 py-[7px] text-center">
-                    <InlineInput value={row.monthlyRate} type="number" min={0} onChange={v => updateAmenity(row.id, 'monthlyRate', v)} />
+                  <td className={STACK_CELL}>
+                    <CellLabel>{t('facilities.colMonthly')}</CellLabel>
+                    <InlineInput value={row.monthlyRate} type="number" min={0} w={110} onChange={v => updateAmenity(row.id, 'monthlyRate', v)} />
                   </td>
-                  <td className="px-3 py-[7px] text-center">
-                    <button
-                      onClick={() => removeAmenity(row.id)}
-                      className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
-                    >
-                      ×
-                    </button>
+                  <td className={STACK_DEL}>
+                    <RowDelete onClick={() => removeAmenity(row.id)} label={t('row.remove', { name: row.name })} />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      <SaveButton onClick={handleSave} saving={saving} />
+        </EditableTable>
+      </Section>
     </div>
   )
 }
 
 // ─── Tab 4: Food Plans ────────────────────────────────────────────────────────
 function FoodPlansTab({ plans, setPlans, addToast }) {
+  const { t } = useTranslation('settings')
   const [saving, setSaving] = useState(false)
 
   function updatePlan(id, field, value) {
     setPlans(rows => rows.map(r => r.id === id ? { ...r, [field]: value } : r))
   }
 
+  const [reveal, setReveal] = useState(0)
   function addPlan() {
-    setPlans(rows => [...rows, { id: newRowId(), name: 'New Plan', oneTimeRate: 0, weeklyRate: 0, monthlyRate: 0, description: '' }])
+    setReveal(n => n + 1)
+    setPlans(rows => [...rows, { id: newRowId(), name: t('food.newPlan'), oneTimeRate: 0, weeklyRate: 0, monthlyRate: 0, description: '' }])
   }
 
   function removePlan(id) {
@@ -666,74 +782,77 @@ function FoodPlansTab({ plans, setPlans, addToast }) {
     setSaving(true)
     try {
       await settingsApi.update({ foodPlans: plans.map(r => stripForSave(r)) })
-      addToast('Settings saved successfully', 'success')
+      addToast(t('toast.saved'), 'success')
     } catch {
-      addToast('Failed to save food plans', 'error')
+      addToast(t('food.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
   }
 
+  const pager = usePaged(plans)
+  useSettingsHeader('food', {
+    actions: [{ id: 'add-plan', label: t('food.addPlan'), icon: <LuPlus />, onClick: addPlan }],
+    onSave: handleSave,
+    saving,
+  })
+
   return (
-    <div className="flex flex-col gap-5">
-      <div className="card">
-        <div className="card-header flex items-center justify-between">
-          <span className="card-title">Food / Meal Plans</span>
-          <button className="btn btn-primary text-[12px] px-[14px] py-[5px]" onClick={addPlan}>
-            + Add Meal Plan
-          </button>
-        </div>
-        <div className="card-body overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                {['Meal Name', 'One-time ₹', 'Weekly ₹', 'Monthly ₹', 'Description', ''].map(h => (
-                  <th key={h} className={`px-3 py-2 border-b border-line text-ink3 font-semibold text-[11px] ${h === 'Meal Name' || h === 'Description' ? 'text-left' : 'text-center'}`}>
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+    <div className={TAB_STACK}>
+      <Section
+        title={t('food.title')}
+        subtitle={t('food.subtitle')}
+        bodyClassName="p-0"
+      >
+        <EditableTable
+          pager={pager}
+          reveal={reveal}
+          empty={
+            <EmptyState icon={<LuUtensils />} title={t('food.emptyTitle')} message={t('food.emptyMessage')}
+              action={<AddButton onClick={addPlan}>{t('food.addPlan')}</AddButton>} />
+          }
+        >
+          <table className={STACK_TABLE}>
+            <TableHead cols={[t('food.colName'), t('food.colOneTime'), t('food.colWeekly'), t('food.colMonthly'), t('food.colDescription'), '']} />
             <tbody>
-              {plans.map(row => (
-                <tr key={row.id} className="border-b border-line">
-                  <td className="px-3 py-[7px]">
-                    <InlineInput value={row.name} type="text" style={{ width: 130 }} onChange={v => updatePlan(row.id, 'name', v)} />
+              {pager.rows.map(row => (
+                <tr key={row.id} className={`${STACK_ROW_BASE} max-lg:grid-cols-3`}>
+                  <td className={STACK_TITLE}>
+                    <CellLabel>{t('food.colName')}</CellLabel>
+                    <InlineInput value={row.name} type="text" w={140} className={TITLE_INPUT} onChange={v => updatePlan(row.id, 'name', v)} />
                   </td>
-                  <td className="px-3 py-[7px] text-center">
+                  <td className={STACK_CELL}>
+                    <CellLabel>{t('food.colOneTime')}</CellLabel>
                     <InlineInput value={row.oneTimeRate} type="number" min={0} onChange={v => updatePlan(row.id, 'oneTimeRate', v)} />
                   </td>
-                  <td className="px-3 py-[7px] text-center">
+                  <td className={STACK_CELL}>
+                    <CellLabel>{t('food.colWeekly')}</CellLabel>
                     <InlineInput value={row.weeklyRate} type="number" min={0} onChange={v => updatePlan(row.id, 'weeklyRate', v)} />
                   </td>
-                  <td className="px-3 py-[7px] text-center">
+                  <td className={STACK_CELL}>
+                    <CellLabel>{t('food.colMonthly')}</CellLabel>
                     <InlineInput value={row.monthlyRate} type="number" min={0} onChange={v => updatePlan(row.id, 'monthlyRate', v)} />
                   </td>
-                  <td className="px-3 py-[7px]">
-                    <InlineInput value={row.description} type="text" style={{ width: 140 }} onChange={v => updatePlan(row.id, 'description', v)} />
+                  <td className={`${STACK_CELL} max-lg:col-span-3`}>
+                    <CellLabel>{t('food.colDescription')}</CellLabel>
+                    <InlineInput value={row.description} type="text" w={180} onChange={v => updatePlan(row.id, 'description', v)} />
                   </td>
-                  <td className="px-3 py-[7px] text-center">
-                    <button
-                      onClick={() => removePlan(row.id)}
-                      className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
-                    >
-                      ×
-                    </button>
+                  <td className={STACK_DEL}>
+                    <RowDelete onClick={() => removePlan(row.id)} label={t('row.remove', { name: row.name })} />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      <SaveButton onClick={handleSave} saving={saving} />
+        </EditableTable>
+      </Section>
     </div>
   )
 }
 
 // ─── Tab 5: Tax & Pricing ─────────────────────────────────────────────────────
 function TaxPricingTab({ settings, setSettings, addToast }) {
+  const { t } = useTranslation('settings')
   const [saving, setSaving] = useState(false)
 
   async function handleSave() {
@@ -749,93 +868,85 @@ function TaxPricingTab({ settings, setSettings, addToast }) {
           gracePeriod: settings.gracePeriod,
         },
       })
-      addToast('Settings saved successfully', 'success')
+      addToast(t('toast.saved'), 'success')
     } catch {
-      addToast('Failed to save settings', 'error')
+      addToast(t('toast.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
   }
 
+  useSettingsHeader('tax', { onSave: handleSave, saving })
+
   return (
-    <div className="flex flex-col gap-5">
-      <div className="card">
-        <div className="card-header"><span className="card-title">GST Settings</span></div>
-        <div className="card-body">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="GST Rate %">
-              <input className="form-input max-w-[120px]" type="number" min={0} max={28}
-                value={settings.gstRate}
-                onChange={e => setSettings(s => ({ ...s, gstRate: Number(e.target.value) }))} />
-            </Field>
-            <Field label="GST Type">
-              <select className="form-select" value={settings.gstType}
-                onChange={e => setSettings(s => ({ ...s, gstType: e.target.value }))}>
-                <option value="CGST+SGST">CGST + SGST</option>
-                <option value="IGST">IGST</option>
-              </select>
-            </Field>
-            <Field label="GSTIN">
-              <input className="form-input" value={settings.gstin}
-                onChange={e => setSettings(s => ({ ...s, gstin: e.target.value }))} />
-            </Field>
-            <Field label="Apply GST On">
-              <select className="form-select" value={settings.gstApplyOn}
-                onChange={e => setSettings(s => ({ ...s, gstApplyOn: e.target.value }))}>
-                <option value="All">All</option>
-                <option value="Rent Only">Rent Only</option>
-                <option value="Rent+Food">Rent + Food</option>
-              </select>
-            </Field>
-          </div>
+    <div className={TAB_STACK}>
+      <Section title={t('tax.gstTitle')} subtitle={t('tax.gstSubtitle')}>
+        <div className={FORM_GRID}>
+          <Field label={t('tax.gstRate')}>
+            <input className="form-input" type="number" min={0} max={28}
+              value={settings.gstRate}
+              onChange={e => setSettings(s => ({ ...s, gstRate: Number(e.target.value) }))} />
+          </Field>
+          <Field label={t('tax.gstType')}>
+            <select className="form-select" value={settings.gstType}
+              onChange={e => setSettings(s => ({ ...s, gstType: e.target.value }))}>
+              <option value="CGST+SGST">CGST + SGST</option>
+              <option value="IGST">IGST</option>
+            </select>
+          </Field>
+          <Field label={t('fields.gstin')}>
+            <input className="form-input" value={settings.gstin}
+              onChange={e => setSettings(s => ({ ...s, gstin: e.target.value }))} />
+          </Field>
+          <Field label={t('tax.applyOn')}>
+            <select className="form-select" value={settings.gstApplyOn}
+              onChange={e => setSettings(s => ({ ...s, gstApplyOn: e.target.value }))}>
+              <option value="All">{t('tax.applyAll')}</option>
+              <option value="Rent Only">{t('tax.applyRent')}</option>
+              <option value="Rent+Food">{t('tax.applyRentFood')}</option>
+            </select>
+          </Field>
         </div>
-      </div>
+      </Section>
 
-      <div className="card">
-        <div className="card-header"><span className="card-title">Late Fee & Grace Period</span></div>
-        <div className="card-body">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Late Fee Rate %">
-              <input className="form-input max-w-[120px]" type="number" min={0}
-                value={settings.lateFeeRate}
-                onChange={e => setSettings(s => ({ ...s, lateFeeRate: Number(e.target.value) }))} />
-            </Field>
-            <Field label="Grace Period (days)">
-              <input className="form-input max-w-[120px]" type="number" min={0}
-                value={settings.gracePeriod}
-                onChange={e => setSettings(s => ({ ...s, gracePeriod: Number(e.target.value) }))} />
-            </Field>
-          </div>
+      <Section title={t('tax.lateTitle')} subtitle={t('tax.lateSubtitle')}>
+        <div className={FORM_GRID}>
+          <Field label={t('tax.lateFee')}>
+            <input className="form-input" type="number" min={0}
+              value={settings.lateFeeRate}
+              onChange={e => setSettings(s => ({ ...s, lateFeeRate: Number(e.target.value) }))} />
+          </Field>
+          <Field label={t('tax.grace')}>
+            <input className="form-input" type="number" min={0}
+              value={settings.gracePeriod}
+              onChange={e => setSettings(s => ({ ...s, gracePeriod: Number(e.target.value) }))} />
+          </Field>
         </div>
-      </div>
+      </Section>
 
-      <div className="card">
-        <div className="card-header"><span className="card-title">Seasonal Pricing</span></div>
-        <div className="card-body">
-          <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={settings.seasonalPricing}
-              onChange={e => setSettings(s => ({ ...s, seasonalPricing: e.target.checked }))}
-              className="w-4 h-4 accent-[var(--gold)]"
-            />
-            <span className="t-body">Enable seasonal / peak pricing for room types</span>
-          </label>
-          {settings.seasonalPricing && (
-            <p className="t-xs mt-2.5 mb-0 text-ink3">
-              Peak rates defined per room type will be applied during marked peak periods.
-            </p>
-          )}
-        </div>
-      </div>
-
-      <SaveButton onClick={handleSave} saving={saving} />
+      <Section title={t('tax.seasonalTitle')}>
+        <label className="flex items-center gap-2.5 cursor-pointer select-none pointer-coarse:min-h-11">
+          <input
+            type="checkbox"
+            checked={settings.seasonalPricing}
+            onChange={e => setSettings(s => ({ ...s, seasonalPricing: e.target.checked }))}
+            className="w-4 h-4 accent-[var(--gold)]"
+          />
+          <span className="t-body">{t('tax.seasonalEnable')}</span>
+        </label>
+        {settings.seasonalPricing && (
+          <p className="t-xs mt-2.5 mb-0 text-ink3">
+            {t('tax.seasonalHint')}
+          </p>
+        )}
+      </Section>
     </div>
   )
 }
 
 // ─── Tab 6: Documents ─────────────────────────────────────────────────────────
 function DocumentsTab({ settings, addToast }) {
+  const { t } = useTranslation('settings')
   const [kycDocs, setKycDocs] = useState(initKycDocs)
   const [expiryReminderDays, setExpiryReminderDays] = useState(30)
   const [saving, setSaving] = useState(false)
@@ -859,79 +970,81 @@ function DocumentsTab({ settings, addToast }) {
     setSaving(true)
     try {
       await settingsApi.update({ hotel: { documentsConfig: JSON.stringify({ kycDocs, expiryReminderDays }) } })
-      addToast('Document settings saved', 'success')
+      addToast(t('documents.saved'), 'success')
     } catch (e) {
-      addToast(e.response?.data?.message || 'Failed to save document settings', 'error')
+      addToast(e.response?.data?.message || t('documents.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
   }
 
-  return (
-    <div className="flex flex-col gap-5">
-      {/* KYC checklist */}
-      <div className="card">
-        <div className="card-header"><span className="card-title">Required KYC Documents</span></div>
-        <div className="card-body">
-          <div className="flex flex-col gap-[14px]">
-            {kycDocs.map(doc => (
-              <div key={doc.id} className="flex items-center gap-[14px] px-[14px] py-2.5 bg-surface2 rounded-lg border border-line flex-wrap">
-                <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-[160px]">
-                  <input
-                    type="checkbox"
-                    checked={doc.enabled}
-                    onChange={e => toggleDoc(doc.id, 'enabled', e.target.checked)}
-                    className="w-[15px] h-[15px] accent-[var(--gold)]"
-                  />
-                  <span className="t-title">{doc.label}</span>
-                </label>
-                <span
-                  className="text-[11px] px-2 py-0.5 rounded-[10px] font-semibold"
-                  style={{
-                    background: doc.required ? 'rgba(239,68,68,0.15)' : 'rgba(100,116,139,0.2)',
-                    color: doc.required ? '#ef4444' : 'var(--text3)',
-                  }}
-                >
-                  {doc.required ? 'Required' : 'Optional'}
-                </span>
-                <label className="t-xs flex items-center gap-1.5 text-ink3 ml-auto">
-                  Max
-                  <input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={doc.maxMB}
-                    onChange={e => toggleDoc(doc.id, 'maxMB', Number(e.target.value))}
-                    className="w-[52px] px-1.5 py-0.5 text-[12px] bg-surface border border-line rounded text-ink"
-                  />
-                  MB
-                </label>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+  const pager = usePaged(kycDocs)
+  useSettingsHeader('documents', { onSave: handleSave, saving })
 
-      {/* Expiry reminder */}
-      <div className="card">
-        <div className="card-header"><span className="card-title">Document Expiry Reminder</span></div>
-        <div className="card-body">
-          <Field label="Remind before expiry (days)">
+  return (
+    <div className={TAB_STACK}>
+      <Section
+        title={t('documents.kycTitle')}
+        subtitle={t('documents.kycSubtitle')}
+        bodyClassName="p-0"
+      >
+        <ul className="list-none m-0 p-0 divide-y divide-[var(--border)]">
+          {pager.rows.map(doc => {
+            const docLabel = t(`documents.kyc.${doc.id}`, { defaultValue: doc.label })
+            return (
+            <li key={doc.id} className="flex items-center gap-x-4 gap-y-2 px-4 sm:px-5 py-3 flex-wrap">
+              <label className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-[160px] pointer-coarse:min-h-11">
+                <input
+                  type="checkbox"
+                  checked={doc.enabled}
+                  onChange={e => toggleDoc(doc.id, 'enabled', e.target.checked)}
+                  className="w-4 h-4 accent-[var(--gold)]"
+                />
+                <span className={`t-title ${doc.enabled ? '' : 'text-ink3'}`}>{docLabel}</span>
+              </label>
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                  doc.required ? 'bg-danger-bg text-danger-text' : 'bg-surface2 text-ink3 border border-line'
+                }`}
+              >
+                {doc.required ? t('documents.required') : t('documents.optional')}
+              </span>
+              <label className="t-xs flex items-center gap-1.5 text-ink3 ml-auto">
+                {t('documents.max')}
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={doc.maxMB}
+                  onChange={e => toggleDoc(doc.id, 'maxMB', Number(e.target.value))}
+                  className={`${CELL_INPUT} !w-[64px]`}
+                  aria-label={t('documents.maxAria', { label: docLabel })}
+                />
+                {t('documents.mb')}
+              </label>
+            </li>
+            )
+          })}
+        </ul>
+        <TablePager pager={pager} />
+      </Section>
+
+      <Section title={t('documents.expiryTitle')}>
+        <div className={FORM_GRID}>
+          <Field label={t('documents.expiryDays')}>
             <input
-              className="form-input max-w-[120px]"
+              className="form-input"
               type="number"
               min={1}
               value={expiryReminderDays}
               onChange={e => setExpiryReminderDays(Number(e.target.value))}
             />
           </Field>
-          <p className="t-xs mt-2 mb-0 text-ink3">
-            System will send alerts when guest KYC documents are about to expire within this window.
-          </p>
         </div>
-      </div>
-
-      <SaveButton onClick={handleSave} saving={saving} />
+        <p className="t-xs mt-2 mb-0 text-ink3">
+          {t('documents.expiryHint')}
+        </p>
+      </Section>
     </div>
   )
 }
@@ -947,6 +1060,7 @@ const initRules = [
 const YOUR_RATES = { Single: 500, Double: 800, Suite: 1500, Deluxe: 1200 }
 
 function PricingRulesTab({ addToast }) {
+  const { t } = useTranslation('settings')
   const [rules, setRules]           = useState(initRules)
   const [competitors, setCompetitors] = useState([])
   const [saving, setSaving]         = useState(false)
@@ -980,31 +1094,24 @@ function PricingRulesTab({ addToast }) {
         threshold: Number(r.threshold), adjustment: Number(r.adjustment), active: !!r.active,
       }))
       await api.put('/pricing/rules', { rules: payload })
-      addToast('Pricing rules saved', 'success')
+      addToast(t('pricing.saved'), 'success')
     } catch (e) {
-      addToast(e.response?.data?.error || 'Could not save rules', 'error')
+      addToast(e.response?.data?.error || t('pricing.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
-  }
-
-  const thStyle = {
-    padding: '8px 10px',
-    borderBottom: '1px solid var(--border)',
-    color: 'var(--text3)',
-    fontWeight: 600,
-    fontSize: 11,
-    whiteSpace: 'nowrap',
-    textAlign: 'left',
   }
 
   function updateRule(id, field, value) {
     setRules(rows => rows.map(r => r.id === id ? { ...r, [field]: value } : r))
   }
 
+  const [ruleReveal, setRuleReveal] = useState(0)
+  const [compReveal, setCompReveal] = useState(0)
   function addRule() {
+    setRuleReveal(n => n + 1)
     setRules(rows => [...rows, {
-      id: String(Date.now()), name: 'New Rule', triggerType: 'occupancy',
+      id: String(Date.now()), name: t('pricing.newRule'), triggerType: 'occupancy',
       threshold: 50, adjustment: 5, active: true,
     }])
   }
@@ -1025,16 +1132,17 @@ function PricingRulesTab({ addToast }) {
     try {
       await pricingApi.updateCompetitor(row.id, { name: row.name, roomType: row.roomType, theirRate: Number(row.theirRate) })
     } catch (e) {
-      addToast(e.response?.data?.error || 'Could not save competitor', 'error')
+      addToast(e.response?.data?.error || t('pricing.compSaveFailed'), 'error')
     }
   }
 
   async function addCompetitor() {
+    setCompReveal(n => n + 1)
     try {
-      await pricingApi.createCompetitor({ name: 'New Hotel', roomType: 'Single', theirRate: 500 })
+      await pricingApi.createCompetitor({ name: t('pricing.newHotel'), roomType: 'Single', theirRate: 500 })
       loadCompetitors()
     } catch (e) {
-      addToast(e.response?.data?.error || 'Could not add competitor', 'error')
+      addToast(e.response?.data?.error || t('pricing.compAddFailed'), 'error')
     }
   }
 
@@ -1043,7 +1151,7 @@ function PricingRulesTab({ addToast }) {
       await pricingApi.deleteCompetitor(id)
       setCompetitors(rows => rows.filter(r => r.id !== id))
     } catch (e) {
-      addToast(e.response?.data?.error || 'Could not delete competitor', 'error')
+      addToast(e.response?.data?.error || t('pricing.compDeleteFailed'), 'error')
     }
   }
 
@@ -1054,208 +1162,225 @@ function PricingRulesTab({ addToast }) {
     const avgComp = compsForType.length
       ? Math.round(compsForType.reduce((s, c) => s + c.theirRate, 0) / compsForType.length)
       : 0
-    return { name: rt, 'Your Rate': YOUR_RATES[rt] || 0, 'Competitor Avg': avgComp }
+    return { name: rt, yours: YOUR_RATES[rt] || 0, comp: avgComp }
+  })
+
+  const rulesPager = usePaged(rules)
+  const compPager  = usePaged(competitors)
+  useSettingsHeader('pricing', {
+    actions: [
+      { id: 'add-rule', label: t('pricing.addRule'), icon: <LuPlus />, onClick: addRule },
+      { id: 'add-competitor', label: t('pricing.addCompetitor'), icon: <LuBuilding2 />, onClick: addCompetitor },
+    ],
+    onSave: handleSaveRules,
+    saving,
   })
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className={TAB_STACK}>
       {/* Dynamic Pricing Rules */}
-      <div className="card">
-        <div className="card-header flex items-center justify-between">
-          <span className="card-title">Revenue Engine — Dynamic Pricing Rules</span>
-        </div>
-        <div className="card-body overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                {['Rule Name', 'Trigger', 'Threshold', 'Adjustment %', 'Active', ''].map(h => (
-                  <th key={h} style={thStyle}>{h}</th>
-                ))}
-              </tr>
-            </thead>
+      <Section
+        title={t('pricing.rulesTitle')}
+        subtitle={t('pricing.rulesSubtitle')}
+        bodyClassName="p-0"
+      >
+        <EditableTable
+          pager={rulesPager}
+          reveal={ruleReveal}
+          empty={
+            <EmptyState icon={<LuTrendingUp />} title={t('pricing.rulesEmptyTitle')} message={t('pricing.rulesEmptyMessage')}
+              action={<AddButton onClick={addRule}>{t('pricing.addRule')}</AddButton>} />
+          }
+        >
+          <table className={STACK_TABLE}>
+            <TableHead cols={[t('pricing.colRuleName'), t('pricing.colTrigger'), t('pricing.colThreshold'), t('pricing.colAdjustment'), t('pricing.colActive'), '']} />
             <tbody>
-              {rules.map(row => {
+              {rulesPager.rows.map(row => {
                 const isPositive = row.adjustment > 0
-                const adjColor = isPositive ? '#ef4444' : '#22c55e'
+                const adjColor = isPositive ? 'text-danger' : 'text-success'
                 const adjPrefix = isPositive ? '+' : ''
                 return (
-                  <tr key={row.id} className="border-b border-line">
+                  <tr key={row.id} className={STACK_ROW}>
                     {/* Name */}
-                    <td className="px-2.5 py-[7px]">
+                    <td className={STACK_TITLE}>
+                      <CellLabel>{t('pricing.colRuleName')}</CellLabel>
                       <input
                         type="text"
                         value={row.name}
                         onChange={e => updateRule(row.id, 'name', e.target.value)}
-                        className="w-[200px] px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
+                        className={`${CELL_INPUT} ${TITLE_INPUT}`}
+                        style={{ '--w': '170px' }}
+                        aria-label={t('pricing.ruleNameAria')}
                       />
                     </td>
                     {/* Trigger type */}
-                    <td className="px-2.5 py-[7px]">
+                    <td className={STACK_WIDE}>
+                      <CellLabel>{t('pricing.colTrigger')}</CellLabel>
                       <select
                         value={row.triggerType}
                         onChange={e => updateRule(row.id, 'triggerType', e.target.value)}
-                        className="px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
+                        className={`${CELL_INPUT} lg:w-auto lg:min-w-[96px] pr-8 lg:pr-7`}
+                        aria-label={t('pricing.triggerAria', { name: row.name })}
                       >
-                        <option value="occupancy">Occupancy ≥ %</option>
-                        <option value="stay_length">Stay ≥ days</option>
-                        <option value="lead_time">Lead Time ≥ days</option>
+                        <option value="occupancy">{t('pricing.trigger.occupancy')}</option>
+                        <option value="stay_length">{t('pricing.trigger.stay_length')}</option>
+                        <option value="lead_time">{t('pricing.trigger.lead_time')}</option>
                       </select>
                     </td>
                     {/* Threshold */}
-                    <td className="px-2.5 py-[7px]">
+                    <td className={STACK_CELL}>
+                      <CellLabel>{t('pricing.colThreshold')}</CellLabel>
                       <input
                         type="number"
                         value={row.threshold}
                         min={0}
                         onChange={e => updateRule(row.id, 'threshold', Number(e.target.value))}
-                        className="w-[70px] px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
+                        className={CELL_INPUT}
+                        style={{ '--w': '70px' }}
+                        aria-label={t('pricing.thresholdAria', { name: row.name })}
                       />
                     </td>
                     {/* Adjustment */}
-                    <td className="px-2.5 py-[7px]">
-                      <span className="t-xs mr-0.5" style={{ color: adjColor }}>
-                        {adjPrefix}
-                      </span>
-                      <input
-                        type="number"
-                        value={row.adjustment}
-                        onChange={e => updateRule(row.id, 'adjustment', Number(e.target.value))}
-                        className="w-20 px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded font-bold"
-                        style={{ color: adjColor }}
-                      />
+                    <td className={STACK_CELL}>
+                      <CellLabel>{t('pricing.colAdjustment')}</CellLabel>
+                      <div className="flex items-center gap-0.5">
+                        <span className={`t-xs ${adjColor}`}>
+                          {adjPrefix}
+                        </span>
+                        <input
+                          type="number"
+                          value={row.adjustment}
+                          onChange={e => updateRule(row.id, 'adjustment', Number(e.target.value))}
+                          className={`${CELL_INPUT} font-bold ${adjColor}`}
+                          style={{ '--w': '80px' }}
+                          aria-label={t('pricing.adjustmentAria', { name: row.name })}
+                        />
+                      </div>
                     </td>
                     {/* Active toggle */}
-                    <td className="px-2.5 py-[7px]">
-                      <input
-                        type="checkbox"
-                        checked={row.active}
-                        onChange={e => updateRule(row.id, 'active', e.target.checked)}
-                        className="w-[15px] h-[15px] accent-[var(--gold)] cursor-pointer"
-                      />
+                    <td className={`${STACK_WIDE} max-lg:order-last`}>
+                      <label className="inline-flex items-center gap-2 cursor-pointer pointer-coarse:min-h-11">
+                        <input
+                          type="checkbox"
+                          checked={row.active}
+                          onChange={e => updateRule(row.id, 'active', e.target.checked)}
+                          className="w-[15px] h-[15px] pointer-coarse:w-5 pointer-coarse:h-5 rounded text-gold focus:ring-gold/30 accent-[var(--gold)] cursor-pointer"
+                          aria-label={t('row.activeAria', { name: row.name })}
+                        />
+                        <span className="lg:hidden t-sm text-ink2">{t('row.active')}</span>
+                      </label>
                     </td>
                     {/* Delete */}
-                    <td className="px-2.5 py-[7px]">
-                      <button
-                        onClick={() => deleteRule(row.id)}
-                        className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
-                        title="Delete rule"
-                      >
-                        ×
-                      </button>
+                    <td className={STACK_DEL}>
+                      <RowDelete onClick={() => deleteRule(row.id)} label={t('row.delete', { name: row.name })} />
                     </td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
-          <div className="pt-3">
-            <button className="btn btn-outline text-[12px] px-[14px] py-[5px]" onClick={addRule}>
-              + Add Rule
-            </button>
-          </div>
-        </div>
-      </div>
+        </EditableTable>
+      </Section>
 
-      {/* Competitor Rate Benchmarking */}
-      <div className="card">
-        <div className="card-header flex items-center justify-between">
-          <span className="card-title">Competitor Rate Benchmarking</span>
-        </div>
-        <div className="card-body overflow-x-auto">
-          <table className="w-full border-collapse mb-3">
-            <thead>
-              <tr>
-                {['Competitor Name', 'Room Type', 'Their Daily Rate ₹', 'Your Rate ₹', 'Δ %', ''].map(h => (
-                  <th key={h} style={thStyle}>{h}</th>
-                ))}
-              </tr>
-            </thead>
+      {/* Competitor Rate Benchmarking — each row saves as you edit it */}
+      <Section
+        title={t('pricing.compTitle')}
+        subtitle={t('pricing.compSubtitle')}
+        bodyClassName="p-0"
+      >
+        <EditableTable
+          pager={compPager}
+          reveal={compReveal}
+          empty={
+            <EmptyState icon={<LuTrendingUp />} title={t('pricing.compEmptyTitle')} message={t('pricing.compEmptyMessage')}
+              action={<AddButton onClick={addCompetitor}>{t('pricing.addCompetitor')}</AddButton>} />
+          }
+        >
+          <table className={STACK_TABLE}>
+            <TableHead cols={[t('pricing.colCompName'), t('pricing.colRoomType'), t('pricing.colTheirRate'), t('pricing.colYourRate'), t('pricing.colDelta'), '']} />
             <tbody>
-              {competitors.map(row => {
+              {compPager.rows.map(row => {
                 const yourRate = YOUR_RATES[row.roomType] || 0
                 const delta = row.theirRate ? ((yourRate - row.theirRate) / row.theirRate * 100).toFixed(1) : 0
                 const deltaNum = Number(delta)
-                const deltaColor = deltaNum < 0 ? '#22c55e' : '#ef4444'
+                const deltaColor = deltaNum < 0 ? 'text-success' : 'text-danger'
                 const deltaPrefix = deltaNum > 0 ? '+' : ''
                 return (
-                  <tr key={row.id} className="border-b border-line">
-                    <td className="px-2.5 py-[7px]">
+                  <tr key={row.id} className={STACK_ROW}>
+                    <td className={STACK_TITLE}>
+                      <CellLabel>{t('pricing.colCompName')}</CellLabel>
                       <input
                         type="text"
                         value={row.name}
                         onChange={e => updateComp(row.id, 'name', e.target.value)}
                         onBlur={() => persistComp(row)}
-                        className="w-40 px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
+                        className={`${CELL_INPUT} ${TITLE_INPUT}`}
+                        style={{ '--w': '160px' }}
+                        aria-label={t('pricing.compNameAria')}
                       />
                     </td>
-                    <td className="px-2.5 py-[7px]">
+                    <td className={STACK_CELL}>
+                      <CellLabel>{t('pricing.colRoomType')}</CellLabel>
                       <select
                         value={row.roomType}
                         onChange={e => { updateComp(row.id, 'roomType', e.target.value); persistComp({ ...row, roomType: e.target.value }) }}
-                        className="px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
+                        className={`${CELL_INPUT} lg:w-auto lg:min-w-[96px] pr-8 lg:pr-7`}
+                        aria-label={t('pricing.roomTypeAria', { name: row.name })}
                       >
-                        {['Single', 'Double', 'Suite', 'Deluxe'].map(t => (
-                          <option key={t} value={t}>{t}</option>
+                        {['Single', 'Double', 'Suite', 'Deluxe'].map(rt => (
+                          <option key={rt} value={rt}>{rt}</option>
                         ))}
                       </select>
                     </td>
-                    <td className="px-2.5 py-[7px]">
+                    <td className={STACK_CELL}>
+                      <CellLabel>{t('pricing.colTheirRate')}</CellLabel>
                       <input
                         type="number"
                         value={row.theirRate}
                         min={0}
                         onChange={e => updateComp(row.id, 'theirRate', Number(e.target.value))}
                         onBlur={() => persistComp(row)}
-                        className="w-[90px] px-1.5 py-[3px] text-[12px] bg-surface2 border border-line rounded text-ink"
+                        className={CELL_INPUT}
+                        style={{ '--w': '90px' }}
+                        aria-label={t('pricing.dailyRateAria', { name: row.name })}
                       />
                     </td>
-                    <td className="t-sm px-2.5 py-[7px] text-ink3">
+                    <td className={`${STACK_CELL} t-sm text-ink3`}>
+                      <CellLabel>{t('pricing.colYourRate')}</CellLabel>
                       ₹{yourRate}
                     </td>
-                    <td className="t-title px-2.5 py-[7px]" style={{ color: deltaColor }}>
+                    <td className={`${STACK_CELL} t-title ${deltaColor}`}>
+                      <CellLabel>{t('pricing.colDelta')}</CellLabel>
                       {deltaPrefix}{delta}%
                     </td>
-                    <td className="px-2.5 py-[7px]">
-                      <button
-                        onClick={() => deleteComp(row.id)}
-                        className="t-sm text-[#ef4444] bg-none border-none cursor-pointer px-1.5 py-0.5"
-                      >
-                        ×
-                      </button>
+                    <td className={STACK_DEL}>
+                      <RowDelete onClick={() => deleteComp(row.id)} label={t('row.remove', { name: row.name })} />
                     </td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
-          <button className="btn btn-outline text-[12px] px-[14px] py-[5px] mb-5" onClick={addCompetitor}>
-            + Add Competitor
-          </button>
+        </EditableTable>
+      </Section>
 
-          {/* Bar chart */}
-          <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text3)' }} />
-                <YAxis tick={{ fontSize: 11, fill: 'var(--text3)' }} width={50} />
-                <Tooltip
-                  contentStyle={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12 }}
-                  formatter={(value) => [`₹${value}`, undefined]}
-                />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="Your Rate"        fill="#c9a84c" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="Competitor Avg"   fill="#6b7280" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      <Section title={t('pricing.chartTitle')} subtitle={t('pricing.chartSubtitle')}>
+        <div className="h-48">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--text3)' }} />
+              <YAxis tick={{ fontSize: 11, fill: 'var(--text3)' }} width={50} />
+              <Tooltip
+                contentStyle={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12 }}
+                formatter={(value) => [`₹${value}`, undefined]}
+              />
+              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Bar dataKey="yours" name={t('pricing.yourRate')}      fill="#c9a84c" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="comp"  name={t('pricing.competitorAvg')} fill="#6b7280" radius={[3, 3, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
-      </div>
-
-      <div className="pt-4 border-t border-line mt-2">
-        <button className="btn btn-primary" onClick={handleSaveRules} disabled={saving}>
-          {saving ? 'Saving…' : 'Save Rules'}
-        </button>
-      </div>
+      </Section>
     </div>
   )
 }
@@ -1301,6 +1426,10 @@ const enrichTemplate = (t) => ({
 })
 
 function NotificationsTab({ addToast }) {
+  const { t } = useTranslation('settings')
+  // Display label / delay for a template, in the current language.
+  const tplLabel = (tpl) => t(`notifications.templates.${tpl.trigger}`, { defaultValue: tpl.label })
+  const tplDelay = (tpl) => t(`notifications.delays.${tpl.trigger}`, { defaultValue: tpl.delay })
   const [templates, setTemplates] = useState([])
   const [editingId, setEditingId]   = useState(null)
   const [editContent, setEditContent] = useState('')
@@ -1345,10 +1474,10 @@ function NotificationsTab({ addToast }) {
     try {
       await remindersApi.updateTemplate(editingId, { content: editContent })
       setTemplates(rows => rows.map(t => t.id === editingId ? { ...t, content: editContent } : t))
-      addToast('Template saved', 'success')
+      addToast(t('notifications.templateSaved'), 'success')
       closeEdit()
     } catch (e) {
-      addToast(e.response?.data?.error || 'Could not save template', 'error')
+      addToast(e.response?.data?.error || t('notifications.templateSaveFailed'), 'error')
     } finally {
       setSaving(false)
     }
@@ -1378,81 +1507,75 @@ function NotificationsTab({ addToast }) {
     } catch (e) {
       // Revert on failure.
       setTemplates(rows => rows.map(t => t.id === id ? { ...t, active: !val } : t))
-      addToast(e.response?.data?.error || 'Could not update template', 'error')
+      addToast(e.response?.data?.error || t('notifications.templateUpdateFailed'), 'error')
     }
   }
 
-  const thStyle = {
-    padding: '8px 12px',
-    borderBottom: '1px solid var(--border)',
-    color: 'var(--text3)',
-    fontWeight: 600,
-    fontSize: 11,
-    textAlign: 'left',
-    whiteSpace: 'nowrap',
-  }
+  const pager = usePaged(templates)
+  useSettingsHeader('notifications', { onSave: () => addToast(t('notifications.scheduleSaved'), 'success') })
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">Automated Message Schedule</span>
-        </div>
-        <div className="card-body overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                {['Trigger / Event', 'Delay', 'Active', 'Template'].map(h => (
-                  <th key={h} style={thStyle}>{h}</th>
-                ))}
-              </tr>
-            </thead>
+    <div className={TAB_STACK}>
+      <Section
+        title={t('notifications.title')}
+        subtitle={t('notifications.subtitle')}
+        bodyClassName="p-0"
+      >
+        <EditableTable
+          pager={pager}
+          empty={<EmptyState icon={<LuBell />} title={t('notifications.emptyTitle')} message={t('notifications.emptyMessage')} />}
+        >
+          <table className={STACK_TABLE}>
+            <TableHead cols={[t('notifications.colTrigger'), t('notifications.colDelay'), t('notifications.colActive'), '']} />
             <tbody>
-              {templates.map(tpl => (
-                <tr key={tpl.id} className="border-b border-line">
-                  <td className="px-3 py-2.5">
-                    <span className="t-title">{tpl.label}</span>
+              {pager.rows.map(tpl => (
+                <tr key={tpl.id} className={`${STACK_ROW_BASE} max-lg:items-center max-lg:grid-cols-[minmax(0,1fr)_auto]`}>
+                  <td className={`${STACK_CELL} lg:py-3`}>
+                    <span className="t-title">{tplLabel(tpl)}</span>
                   </td>
-                  <td className="px-3 py-2.5">
-                    <span className="inline-block px-2.5 py-0.5 rounded-[20px] bg-[rgba(245,158,11,0.15)] text-[#f59e0b] text-[11px] font-bold">
-                      {tpl.delay}
+                  <td className={`${STACK_CELL} lg:py-3 max-lg:col-start-1 max-lg:row-start-2`}>
+                    <span className="inline-block px-2.5 py-0.5 rounded-full bg-warning-bg text-warning-text text-xs font-bold">
+                      {tplDelay(tpl)}
                     </span>
                   </td>
-                  <td className="px-3 py-2.5">
-                    <input
-                      type="checkbox"
-                      checked={tpl.active}
-                      onChange={e => toggleActive(tpl.id, e.target.checked)}
-                      className="w-[15px] h-[15px] accent-[var(--gold)] cursor-pointer"
-                    />
+                  <td className={`${STACK_CELL} lg:py-3 max-lg:col-start-2 max-lg:row-start-1 max-lg:row-span-2`}>
+                    <label className="inline-flex items-center gap-2 cursor-pointer pointer-coarse:min-h-11">
+                      <input
+                        type="checkbox"
+                        checked={tpl.active}
+                        onChange={e => toggleActive(tpl.id, e.target.checked)}
+                        className="w-[15px] h-[15px] pointer-coarse:w-5 pointer-coarse:h-5 rounded text-gold focus:ring-gold/30 accent-[var(--gold)] cursor-pointer"
+                        aria-label={t('row.activeAria', { name: tplLabel(tpl) })}
+                      />
+                      <span className="lg:hidden t-sm text-ink2">{t('row.active')}</span>
+                    </label>
                   </td>
-                  <td className="px-3 py-2.5">
-                    <button
-                      className="btn btn-outline text-[11px] px-3 py-1"
-                      onClick={() => openEdit(tpl)}
-                    >
-                      Edit Template
-                    </button>
+                  <td className={`${STACK_CELL} lg:py-3 lg:text-right max-lg:col-span-2`}>
+                    <ActionButton icon={<LuPencil />} onClick={() => openEdit(tpl)} className="max-lg:w-full">
+                      {t('notifications.editTemplate')}
+                    </ActionButton>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      <div className="pt-4 border-t border-line mt-2">
-        <button className="btn btn-primary" onClick={() => addToast('Notification schedule saved', 'success')}>
-          Save Schedule
-        </button>
-      </div>
+        </EditableTable>
+      </Section>
 
       {/* Edit Template Modal */}
       {editingId && editingTpl && (
         <Modal
           isOpen
-          title={`Edit Template — ${editingTpl.label}`}
+          title={t('notifications.editTitle', { label: tplLabel(editingTpl) })}
           onClose={closeEdit}
+          footer={
+            <>
+              <Button variant="ghost" onClick={closeEdit}>{t('common:cancel')}</Button>
+              <Button onClick={saveTemplate} disabled={saving}>
+                {saving ? t('common:saving') : t('notifications.saveTemplate')}
+              </Button>
+            </>
+          }
         >
           <div className="flex flex-col gap-3">
             <textarea
@@ -1460,31 +1583,27 @@ function NotificationsTab({ addToast }) {
               rows={5}
               value={editContent}
               onChange={e => setEditContent(e.target.value)}
-              className="w-full px-2.5 py-2 text-[13px] bg-surface2 border border-line rounded-md text-ink resize-y box-border"
+              aria-label={t('notifications.messageAria')}
+              className="w-full px-2.5 py-2 text-base sm:text-[13px] bg-surface2 border border-line rounded-lg text-ink resize-y box-border focus:border-gold focus:ring-gold/20"
               style={{ fontFamily: 'var(--font-mono)' }}
             />
             {/* Variable chips */}
-            <div className="flex flex-wrap gap-1.5">
-              {TEMPLATE_VARS.map(v => (
-                <button
-                  key={v}
-                  onClick={() => insertVar(v)}
-                  className="px-2.5 py-[3px] rounded-[20px] bg-[var(--gold-bg,#3a2e0a)] border border-gold text-gold text-[11px] font-bold cursor-pointer"
-                  style={{ fontFamily: 'var(--font-mono)' }}
-                  title={`Insert ${v}`}
-                >
-                  {v}
-                </button>
-              ))}
-            </div>
-            {/* Actions */}
-            <div className="flex gap-2.5 justify-end pt-1">
-              <button className="btn btn-outline text-[12px]" onClick={closeEdit}>
-                Cancel
-              </button>
-              <button className="btn btn-primary text-[12px]" onClick={saveTemplate} disabled={saving}>
-                {saving ? 'Saving…' : 'Save Template'}
-              </button>
+            <div>
+              <div className="text-xs font-medium text-ink2 mb-1.5">{t('notifications.insertVariable')}</div>
+              <div className="flex flex-wrap gap-1.5">
+                {TEMPLATE_VARS.map(v => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => insertVar(v)}
+                    className="px-2.5 py-[3px] pointer-coarse:py-2 rounded-full bg-gold-bg border border-gold-border text-gold text-[12px] font-bold cursor-pointer hover:border-gold"
+                    style={{ fontFamily: 'var(--font-mono)' }}
+                    title={t('notifications.insertVar', { v })}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </Modal>
@@ -1495,9 +1614,22 @@ function NotificationsTab({ addToast }) {
 
 // ─── Tab 9: Properties ────────────────────────────────────────────────────────
 function PropertiesTab({ settings, setSettings, addToast }) {
+  const { t } = useTranslation('settings')
   const [editingMain, setEditingMain] = useState(false)
   const [saving, setSaving] = useState(false)
+  const snapshot = useRef(null)
   const { setHotelName, setOwnerName } = useHotelActions()
+
+  function startEdit() {
+    snapshot.current = settings
+    setEditingMain(true)
+  }
+
+  // Cancel throws away unsaved typing instead of leaving it in the page state.
+  function cancelEdit() {
+    if (snapshot.current) setSettings(snapshot.current)
+    setEditingMain(false)
+  }
 
   async function handleSaveProperty() {
     setSaving(true)
@@ -1508,146 +1640,104 @@ function PropertiesTab({ settings, setSettings, addToast }) {
       } })
       setHotelName(settings.name)
       setOwnerName(settings.ownerName)
-      addToast('Property updated', 'success')
+      addToast(t('properties.updated'), 'success')
       setEditingMain(false)
     } catch (e) {
-      addToast(e.response?.data?.message || 'Failed to update property', 'error')
+      addToast(e.response?.data?.message || t('properties.updateFailed'), 'error')
     } finally {
       setSaving(false)
     }
   }
 
-  const thStyle = {
-    padding: '8px 12px',
-    borderBottom: '1px solid var(--border)',
-    color: 'var(--text3)',
-    fontWeight: 600,
-    fontSize: 11,
-    textAlign: 'left',
-    whiteSpace: 'nowrap',
-  }
+  const managerRef = useRef(null)
+  // Header: add a property; edit this one's details (Cancel + Save while editing).
+  useSettingsHeader('properties', {
+    actions: [
+      { id: 'add-property', label: t('properties.add'), icon: <LuPlus />, onClick: () => managerRef.current?.add() },
+      editingMain
+        ? { id: 'cancel-edit', label: t('properties.cancelEditing'), icon: <LuX />, disabled: saving, onClick: cancelEdit }
+        : { id: 'edit-property', label: t('properties.editDetails'), icon: <LuPencil />, onClick: startEdit },
+    ],
+    onSave: editingMain ? handleSaveProperty : undefined,
+    saving,
+  })
+
+  const set = (key, num) => e => setSettings(s => ({ ...s, [key]: num ? Number(e.target.value) : e.target.value }))
+  const initials = (settings.name || '?').split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  const details = [
+    { label: t('fields.owner'),      value: settings.ownerName },
+    { label: t('fields.phone'),      value: settings.phone },
+    { label: t('fields.email'),      value: settings.email, wide: true },
+    { label: t('fields.gstin'),      value: settings.gstin, mono: true },
+    { label: t('fields.totalRooms'), value: settings.totalRooms },
+  ]
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Current Property Card */}
-      <div className="card">
-        <div className="card-header flex items-center justify-between">
-          <span className="card-title">Current Property</span>
-          <button
-            className="btn btn-outline text-[12px] px-[14px] py-[5px]"
-            onClick={() => setEditingMain(v => !v)}
-          >
-            {editingMain ? 'Close' : 'Edit'}
-          </button>
-        </div>
-        <div className="card-body">
-          {!editingMain ? (
-            <div className="flex flex-col gap-2.5">
-              <div className="flex items-center gap-3 flex-wrap">
-                <span className="t-h2">
-                  {settings.name}
-                </span>
-                <span className="px-2.5 py-0.5 rounded-[20px] bg-[rgba(34,197,94,0.15)] text-[#22c55e] text-[11px] font-bold">
-                  Active
-                </span>
-              </div>
-              <p className="t-sm m-0 text-ink3">{settings.address}</p>
-              <div className="t-sm flex gap-6 flex-wrap">
-                <span><span className="text-ink3">GSTIN:</span> {settings.gstin}</span>
-                <span><span className="text-ink3">Rooms:</span> {settings.totalRooms}</span>
-              </div>
+    <div className={TAB_STACK}>
+      {/* Current Property — the active property's own profile */}
+      <Section
+        title={t('properties.currentTitle')}
+        subtitle={editingMain ? t('properties.editingHint') : t('properties.currentHint')}
+        bodyClassName="p-0"
+      >
+        <div className="flex items-start gap-3 sm:gap-4 px-4 sm:px-5 py-4">
+          <span className="w-12 h-12 rounded-xl bg-gold-bg border border-gold-border text-gold text-[16px] font-bold flex items-center justify-center shrink-0">
+            {initials}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h3 className="t-h2 m-0 break-words min-w-0">{settings.name}</h3>
+              <span className="badge badge-green">{t('common:active')}</span>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label="Hotel Name">
-                <input className="form-input" value={settings.name}
-                  onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
-              </Field>
-              <Field label="Owner Name">
-                <input className="form-input" value={settings.ownerName}
-                  onChange={e => setSettings(s => ({ ...s, ownerName: e.target.value }))} />
-              </Field>
-              <Field label="Phone">
-                <input className="form-input" value={settings.phone}
-                  onChange={e => setSettings(s => ({ ...s, phone: e.target.value }))} />
-              </Field>
-              <Field label="Email">
-                <input className="form-input" type="email" value={settings.email}
-                  onChange={e => setSettings(s => ({ ...s, email: e.target.value }))} />
-              </Field>
-              <Field label="GSTIN">
-                <input className="form-input" value={settings.gstin}
-                  onChange={e => setSettings(s => ({ ...s, gstin: e.target.value }))} />
-              </Field>
-              <Field label="Total Rooms">
-                <input className="form-input" type="number" min={1} value={settings.totalRooms}
-                  onChange={e => setSettings(s => ({ ...s, totalRooms: Number(e.target.value) }))} />
-              </Field>
-              <Field label="Address" fullWidth>
-                <textarea className="form-textarea resize-y" rows={3} value={settings.address}
-                  onChange={e => setSettings(s => ({ ...s, address: e.target.value }))} />
-              </Field>
-              <div className="col-[1/-1]">
-                <button className="btn btn-primary text-[12px]"
-                  onClick={handleSaveProperty} disabled={saving}>
-                  {saving ? 'Saving…' : 'Save Property'}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Multi-property section */}
-      <div className="card">
-        <div className="card-header flex items-center justify-between">
-          <span className="card-title">Multi-Property Management</span>
-          <button
-            className="btn btn-primary text-[12px] px-[14px] py-[5px] opacity-50 cursor-not-allowed"
-            onClick={() => addToast('Multi-property feature available in Pro plan', 'info')}
-            title="Upgrade to Pro"
-          >
-            + Add Property
-          </button>
-        </div>
-        <div className="card-body">
-          {/* Info banner */}
-          <div className="t-sm flex items-center gap-2.5 px-[14px] py-2.5 rounded-lg bg-[rgba(201,168,76,0.08)] border border-[rgba(201,168,76,0.3)] mb-4 text-ink3">
-            <span className="t-h3">🔒</span>
-            Upgrade to Multi-Property plan to manage multiple hotels from one account.
-          </div>
-
-          {/* Demo table — greyed out */}
-          <div className="opacity-45 pointer-events-none overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  {['Property', 'Address', 'Rooms', 'Manager', 'Status'].map(h => (
-                    <th key={h} style={thStyle}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-line">
-                  <td className="t-title px-3 py-2.5">
-                    Quantum Vorvex — Branch
-                  </td>
-                  <td className="t-sm px-3 py-2.5 text-ink3">
-                    456, MG Road, Bangalore
-                  </td>
-                  <td className="t-sm px-3 py-2.5 text-ink3">24</td>
-                  <td className="t-sm px-3 py-2.5 text-ink3">Priya Sharma</td>
-                  <td className="px-3 py-2.5">
-                    <span className="px-2.5 py-0.5 rounded-[20px] bg-[rgba(34,197,94,0.15)] text-[#22c55e] text-[11px] font-bold">
-                      Active
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            {settings.address && (
+              <p className="t-sm text-ink2 mt-1.5 mb-0 flex items-start gap-1.5">
+                <LuMapPin size={14} className="text-ink3 mt-[3px] shrink-0" aria-hidden />
+                {settings.address}
+              </p>
+            )}
           </div>
         </div>
-      </div>
+
+        {!editingMain ? (
+          <dl className="m-0 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-[auto_auto_minmax(0,1fr)_auto_auto] border-t border-line bg-surface2/60 rounded-b-xl">
+            {details.map(d => (
+              <div key={d.label} className={`px-4 sm:px-5 py-3.5 min-w-0 ${d.wide ? 'col-span-2 md:col-span-1' : ''}`}>
+                <dt className="t-label mb-1 whitespace-nowrap">{d.label}</dt>
+                <dd className={`m-0 text-[13.5px] font-medium text-ink truncate ${d.mono ? 't-mono text-[13px]' : ''}`} title={String(d.value ?? '')}>
+                  {d.value || <span className="text-ink3 font-normal">{t('properties.notSet')}</span>}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : (
+          <div className={`${FORM_GRID} border-t border-line px-4 sm:px-5 py-4 sm:py-5`}>
+            <Field label={t('fields.hotelName')}>
+              <input className="form-input" value={settings.name} onChange={set('name')} autoFocus />
+            </Field>
+            <Field label={t('fields.ownerName')}>
+              <input className="form-input" value={settings.ownerName} onChange={set('ownerName')} />
+            </Field>
+            <Field label={t('fields.phone')}>
+              <input className="form-input" value={settings.phone} onChange={set('phone')} />
+            </Field>
+            <Field label={t('fields.email')}>
+              <input className="form-input" type="email" value={settings.email} onChange={set('email')} />
+            </Field>
+            <Field label={t('fields.gstin')}>
+              <input className="form-input t-mono" value={settings.gstin} onChange={set('gstin')} />
+            </Field>
+            <Field label={t('fields.totalRooms')}>
+              <input className="form-input" type="number" min={1} value={settings.totalRooms} onChange={set('totalRooms', true)} />
+            </Field>
+            <Field label={t('fields.address')} fullWidth>
+              <textarea className="form-textarea resize-y" rows={2} value={settings.address} onChange={set('address')} />
+            </Field>
+          </div>
+        )}
+      </Section>
+
+      {/* Every property: add, rename, archive / restore, who has access */}
+      <PropertyManager ref={managerRef} />
     </div>
   )
 }
@@ -1662,7 +1752,9 @@ function Segmented({ value, options, onChange }) {
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
-            className={`px-[14px] py-1.5 rounded-md border-none cursor-pointer text-[13px] transition-all duration-[140ms] ${
+            type="button"
+            aria-pressed={active}
+            className={`inline-flex items-center gap-1.5 px-[14px] py-1.5 pointer-coarse:min-h-10 rounded-md border-none cursor-pointer text-[13px] transition-all duration-[140ms] ${
               active ? 'font-semibold bg-gold text-[#000]' : 'font-medium bg-transparent text-ink2'
             }`}
           >
@@ -1677,14 +1769,16 @@ function Segmented({ value, options, onChange }) {
 function ToggleRow({ label, hint, checked, onChange }) {
   return (
     <div className="flex items-center justify-between gap-4 py-3 border-b border-line">
-      <div>
+      <div className="min-w-0">
         <div className="text-[13.5px] font-semibold text-ink">{label}</div>
         {hint && <div className="t-xs text-ink3 mt-0.5">{hint}</div>}
       </div>
       <button
+        type="button"
         onClick={() => onChange(!checked)}
         aria-pressed={checked}
-        className={`w-[42px] h-6 rounded-xl border-none cursor-pointer shrink-0 relative transition-[background] duration-[160ms] ${
+        aria-label={label}
+        className={`w-[42px] h-6 rounded-xl border-none cursor-pointer shrink-0 relative transition-[background] duration-[160ms] pointer-coarse:after:content-[''] pointer-coarse:after:absolute pointer-coarse:after:-inset-2.5 ${
           checked ? 'bg-gold' : 'bg-line2'
         }`}
       >
@@ -1701,6 +1795,7 @@ function ToggleRow({ label, hint, checked, onChange }) {
 
 // ─── Tab: Appearance ──────────────────────────────────────────────────────────
 function AppearanceTab({ settings, addToast }) {
+  const { t } = useTranslation('settings')
   const darkMode = useAppSelector(s => s.ui.darkMode)
   const { toggleDarkMode } = useUiActions()
   const [prefs, setPrefs] = useState(getAppearance)
@@ -1734,93 +1829,97 @@ function AppearanceTab({ settings, addToast }) {
     setSaving(true)
     try {
       await settingsApi.update({ hotel: { appearance: JSON.stringify(prefs) } })
-      addToast('Appearance saved', 'success')
+      addToast(t('appearance.saved'), 'success')
     } catch (e) {
-      addToast(e.response?.data?.message || 'Failed to save appearance', 'error')
+      addToast(e.response?.data?.message || t('appearance.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
   }
 
+  function resetDefaults() {
+    const d = { accent: 'classic', density: 'comfortable', radius: 'soft' }
+    setPrefs(d); applyAppearance(d); saveAppearance(d); addToast(t('appearance.resetDone'), 'info')
+  }
+
+  useSettingsHeader('appearance', {
+    actions: [{ id: 'reset', label: t('appearance.reset'), icon: <LuRotateCcw />, onClick: resetDefaults }],
+    onSave: handleSave,
+    saving,
+  })
+
   return (
-    <div className="flex flex-col gap-5">
-      <div className="card">
-        <div className="card-header"><span className="card-title">Theme</span></div>
-        <div className="card-body flex flex-col gap-2">
-          <label className="form-label text-[12px]">Color mode</label>
+    <div className={TAB_STACK}>
+      <Section title={t('appearance.themeTitle')} subtitle={t('appearance.themeSubtitle')}>
+        <div className="flex flex-col gap-2">
+          <span className="form-label text-[12px]">{t('appearance.colorMode')}</span>
           <Segmented
             value={darkMode ? 'dark' : 'light'}
             onChange={setTheme}
-            options={[{ value: 'light', label: '☀ Light' }, { value: 'dark', label: '☾ Dark' }]}
+            options={[
+              { value: 'light', label: <><LuSun size={14} aria-hidden /> {t('appearance.light')}</> },
+              { value: 'dark', label: <><LuMoon size={14} aria-hidden /> {t('appearance.dark')}</> },
+            ]}
           />
           <p className="t-xs text-ink3 mt-1 mb-0">
-            Light keeps the pure white &amp; gold look; dark switches to a warm charcoal palette.
+            {t('appearance.themeHint')}
           </p>
         </div>
-      </div>
+      </Section>
 
-      <div className="card">
-        <div className="card-header"><span className="card-title">Accent Color</span></div>
-        <div className="card-body">
-          <div className="flex gap-3 flex-wrap">
-            {ACCENT_PRESETS.map(a => {
-              const active = prefs.accent === a.id
-              return (
-                <button
-                  key={a.id}
-                  onClick={() => update({ accent: a.id })}
-                  className="flex flex-col items-center gap-1.5 cursor-pointer bg-none border-none p-1"
-                >
-                  <span
-                    className={`w-11 h-11 rounded-full border-[3px] ${active ? 'border-ink' : 'border-transparent'}`}
-                    style={{
-                      background: `linear-gradient(135deg, ${a.gold}, ${a.gold2})`,
-                      boxShadow: active ? '0 0 0 2px var(--surface) inset' : 'none',
-                    }}
-                  />
-                  <span className={`text-[11.5px] ${active ? 'font-bold text-ink' : 'font-medium text-ink3'}`}>
-                    {a.label}
-                  </span>
-                </button>
-              )
-            })}
+      <Section
+        title={t('appearance.accentTitle')}
+        subtitle={t('appearance.accentSubtitle')}
+      >
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-2">
+            <span className="form-label text-[12px]">{t('appearance.accentColor')}</span>
+            <div className="flex gap-3 flex-wrap">
+              {ACCENT_PRESETS.map(a => {
+                const active = prefs.accent === a.id
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    onClick={() => update({ accent: a.id })}
+                    aria-pressed={active}
+                    className="flex flex-col items-center gap-1.5 cursor-pointer bg-transparent border-none p-1"
+                  >
+                    <span
+                      className={`w-11 h-11 rounded-full border-[3px] ${active ? 'border-ink' : 'border-transparent'}`}
+                      style={{
+                        background: `linear-gradient(135deg, ${a.gold}, ${a.gold2})`,
+                        boxShadow: active ? '0 0 0 2px var(--surface) inset' : 'none',
+                      }}
+                    />
+                    <span className={`text-xs ${active ? 'font-bold text-ink' : 'font-medium text-ink3'}`}>
+                      {t(`appearance.accents.${a.id}`, { defaultValue: a.label })}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <div className={FORM_GRID}>
+            <div className="flex flex-col gap-2">
+              <span className="form-label text-[12px]">{t('appearance.density')}</span>
+              <Segmented
+                value={prefs.density}
+                onChange={v => update({ density: v })}
+                options={[{ value: 'comfortable', label: t('appearance.comfortable') }, { value: 'compact', label: t('appearance.compact') }]}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="form-label text-[12px]">{t('appearance.cornerStyle')}</span>
+              <Segmented
+                value={prefs.radius}
+                onChange={v => update({ radius: v })}
+                options={RADIUS_PRESETS.map(r => ({ value: r.id, label: t(`appearance.radius.${r.id}`, { defaultValue: r.label }) }))}
+              />
+            </div>
           </div>
         </div>
-      </div>
-
-      <div className="card">
-        <div className="card-header"><span className="card-title">Layout</span></div>
-        <div className="card-body flex flex-col gap-[18px]">
-          <div className="flex flex-col gap-2">
-            <label className="form-label text-[12px]">Density</label>
-            <Segmented
-              value={prefs.density}
-              onChange={v => update({ density: v })}
-              options={[{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <label className="form-label text-[12px]">Corner Style</label>
-            <Segmented
-              value={prefs.radius}
-              onChange={v => update({ radius: v })}
-              options={RADIUS_PRESETS.map(r => ({ value: r.id, label: r.label }))}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="pt-1">
-        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving…' : 'Save Appearance'}
-        </button>
-        <button
-          className="btn btn-outline ml-2.5"
-          onClick={() => { const d = { accent: 'classic', density: 'comfortable', radius: 'soft' }; setPrefs(d); applyAppearance(d); saveAppearance(d); addToast('Reset to defaults', 'info') }}
-        >
-          Reset to Default
-        </button>
-      </div>
+      </Section>
     </div>
   )
 }
@@ -1835,6 +1934,7 @@ const initBranding = {
 }
 
 function BrandingTab({ settings, setSettings, addToast }) {
+  const { t } = useTranslation('settings')
   const { setHotelName } = useHotelActions()
   const fileRef = useRef(null)
   const [cropSrc, setCropSrc] = useState(null)
@@ -1868,7 +1968,7 @@ function BrandingTab({ settings, setSettings, addToast }) {
     const dataUrl = await blobToDataUrl(blob)
     setBranding(b => ({ ...b, logoUrl: dataUrl }))
     setCropSrc(null)
-    addToast('Logo cropped — remember to Save', 'success')
+    addToast(t('branding.logoCropped'), 'success')
   }
 
   async function handleSave() {
@@ -1878,9 +1978,9 @@ function BrandingTab({ settings, setSettings, addToast }) {
     setHotelName(settings.name)
     try {
       await settingsApi.update({ hotel: { name: settings.name, branding: JSON.stringify(branding) } })
-      addToast('Branding saved', 'success')
+      addToast(t('branding.saved'), 'success')
     } catch (e) {
-      addToast(e.response?.data?.message || 'Failed to save branding', 'error')
+      addToast(e.response?.data?.message || t('branding.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
@@ -1888,65 +1988,71 @@ function BrandingTab({ settings, setSettings, addToast }) {
 
   const initials = (settings.name || 'QV').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
 
+  useSettingsHeader('branding', {
+    actions: [
+      { id: 'upload-logo', label: t('branding.uploadLogo'), icon: <LuUpload />, onClick: () => fileRef.current?.click() },
+      branding.logoUrl && { id: 'remove-logo', label: t('branding.removeLogo'), icon: <LuTrash2 />, onClick: () => setBranding(b => ({ ...b, logoUrl: '' })) },
+    ],
+    onSave: handleSave,
+    saving,
+  })
+
   return (
-    <div className="flex flex-col gap-5">
-      <div className="card">
-        <div className="card-header"><span className="card-title">Logo &amp; Identity</span></div>
-        <div className="card-body flex items-center gap-[18px] flex-wrap">
-          <div
+    <div className={TAB_STACK}>
+      <Section
+        title={t('branding.identityTitle')}
+        subtitle={t('branding.identitySubtitle')}
+      >
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
             onClick={() => fileRef.current?.click()}
-            className="w-[84px] h-[84px] rounded-2xl cursor-pointer overflow-hidden shrink-0 border-2 border-gold flex items-center justify-center"
+            className="w-[84px] h-[84px] rounded-2xl cursor-pointer overflow-hidden shrink-0 border-2 border-gold flex items-center justify-center p-0"
             style={{ background: branding.logoUrl ? '#fff' : 'var(--gold-bg)' }}
-            title="Click to upload logo"
+            title={t('branding.clickLogo')}
+            aria-label={t('branding.uploadLogo')}
           >
             {branding.logoUrl
-              ? <img src={branding.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+              ? <img src={branding.logoUrl} alt={t('profile.logoAlt')} className="w-full h-full object-contain" />
               : <span className="t-display text-gold">{initials}</span>}
-          </div>
-          <div>
-            <button className="btn btn-outline text-[12px]" onClick={() => fileRef.current?.click()}>Upload Logo</button>
-            {branding.logoUrl && (
-              <button className="btn btn-outline text-[12px] ml-2" onClick={() => setBranding(b => ({ ...b, logoUrl: '' }))}>Remove</button>
-            )}
-            <p className="mt-1.5 mb-0 text-[11px] text-ink3">PNG or SVG with transparent background recommended · crop after selecting.</p>
-            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} />
-          </div>
+          </button>
+          <p className="m-0 text-xs text-ink3 min-w-0">
+            {t('branding.tileHint')}
+          </p>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleLogo} />
         </div>
-      </div>
+      </Section>
 
       <LogoCropModal
         key={cropSrc || 'closed'}
         src={cropSrc}
-        title="Crop logo"
+        title={t('crop.cropLogo')}
         cropShape="rect"
-        confirmLabel="Crop & Apply"
+        confirmLabel={t('crop.cropApply')}
         onCancel={() => setCropSrc(null)}
         onComplete={applyCropped}
       />
 
-      <div className="card">
-        <div className="card-header"><span className="card-title">Brand Text</span></div>
-        <div className="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Hotel / Brand Name">
+      <Section title={t('branding.textTitle')}>
+        <div className={FORM_GRID}>
+          <Field label={t('branding.brandName')}>
             <input className="form-input" value={settings.name}
               onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
           </Field>
-          <Field label="Tagline">
+          <Field label={t('branding.tagline')}>
             <input className="form-input" value={branding.tagline}
               onChange={e => setBranding(b => ({ ...b, tagline: e.target.value }))} />
           </Field>
-          <Field label="Login Screen Title" fullWidth>
+          <Field label={t('branding.loginTitle')} fullWidth>
             <input className="form-input" value={branding.loginTitle}
               onChange={e => setBranding(b => ({ ...b, loginTitle: e.target.value }))} />
           </Field>
-          <Field label="Footer Note" fullWidth>
+          <Field label={t('branding.footerNote')} fullWidth>
             <input className="form-input" value={branding.footerNote}
               onChange={e => setBranding(b => ({ ...b, footerNote: e.target.value }))} />
           </Field>
         </div>
-      </div>
-
-      <SaveButton onClick={handleSave} saving={saving} />
+      </Section>
     </div>
   )
 }
@@ -1965,6 +2071,7 @@ const initPreferences = {
 }
 
 function PreferencesTab({ settings, addToast }) {
+  const { t, i18n } = useTranslation('settings')
   const [prefs, setPrefs] = useState(() => {
     try { const r = localStorage.getItem(PREFS_KEY); return r ? { ...initPreferences, ...JSON.parse(r) } : initPreferences }
     catch { return initPreferences }
@@ -1987,38 +2094,40 @@ function PreferencesTab({ settings, addToast }) {
     try { localStorage.setItem(PREFS_KEY, JSON.stringify(prefs)) } catch { /* ignore */ }
     try {
       await settingsApi.update({ hotel: { preferences: JSON.stringify(prefs) } })
-      addToast('Preferences saved', 'success')
+      addToast(t('preferences.saved'), 'success')
     } catch (e) {
-      addToast(e.response?.data?.message || 'Failed to save preferences', 'error')
+      addToast(e.response?.data?.message || t('preferences.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
   }
 
+  useSettingsHeader('preferences', { onSave: handleSave, saving })
+
   return (
-    <div className="flex flex-col gap-5">
-      <div className="card">
-        <div className="card-header"><span className="card-title">Regional</span></div>
-        <div className="card-body grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Language">
-            <select className="form-select" value={prefs.language} onChange={e => set({ language: e.target.value })}>
-              <option value="en">English</option>
-              <option value="hi">हिन्दी (Hindi)</option>
-              <option value="es">Español</option>
-              <option value="fr">Français</option>
-              <option value="ar">العربية (Arabic)</option>
+    <div className={TAB_STACK}>
+      <Section title={t('preferences.regionalTitle')} subtitle={t('preferences.regionalSubtitle')}>
+        <div className={FORM_GRID}>
+          {/* The app language: applies at once on this device (no Save needed). */}
+          <Field label={t('common:language')}>
+            <select
+              className="form-select"
+              value={LANGUAGES.some(l => l.code === i18n.language) ? i18n.language : 'en'}
+              onChange={e => { i18n.changeLanguage(e.target.value); set({ language: e.target.value }) }}
+              aria-describedby="pref-language-hint"
+            >
+              {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.native}</option>)}
             </select>
+            <span id="pref-language-hint" className="text-xs text-ink3">{t('preferences.languageHint')}</span>
           </Field>
-          <Field label="Currency">
+          <Field label={t('preferences.currency')}>
             <select className="form-select" value={prefs.currency} onChange={e => set({ currency: e.target.value })}>
-              <option value="INR">₹ Indian Rupee (INR)</option>
-              <option value="USD">$ US Dollar (USD)</option>
-              <option value="EUR">€ Euro (EUR)</option>
-              <option value="GBP">£ British Pound (GBP)</option>
-              <option value="AED">د.إ UAE Dirham (AED)</option>
+              {['INR', 'USD', 'EUR', 'GBP', 'AED'].map(c => (
+                <option key={c} value={c}>{t(`preferences.currencies.${c}`)}</option>
+              ))}
             </select>
           </Field>
-          <Field label="Date Format">
+          <Field label={t('preferences.dateFormat')}>
             <select className="form-select" value={prefs.dateFormat} onChange={e => set({ dateFormat: e.target.value })}>
               <option>DD/MM/YYYY</option>
               <option>MM/DD/YYYY</option>
@@ -2026,34 +2135,34 @@ function PreferencesTab({ settings, addToast }) {
               <option>DD MMM YYYY</option>
             </select>
           </Field>
-          <Field label="Time Format">
+          <Field label={t('preferences.timeFormat')}>
             <Segmented
               value={prefs.timeFormat}
               onChange={v => set({ timeFormat: v })}
-              options={[{ value: '12h', label: '12-hour' }, { value: '24h', label: '24-hour' }]}
+              options={[{ value: '12h', label: t('preferences.hour12') }, { value: '24h', label: t('preferences.hour24') }]}
             />
           </Field>
-          <Field label="Rows Per Page">
+          <Field label={t('preferences.rowsPerPage')}>
             <select className="form-select" value={prefs.itemsPerPage} onChange={e => set({ itemsPerPage: Number(e.target.value) })}>
               {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
             </select>
           </Field>
         </div>
-      </div>
+      </Section>
 
-      <div className="card">
-        <div className="card-header"><span className="card-title">Notifications &amp; Session</span></div>
-        <div className="card-body pt-1">
-          <ToggleRow label="Sound alerts" hint="Play a chime for new bookings and check-ins"
+      <Section
+        title={t('preferences.sessionTitle')}
+        bodyClassName="px-4 sm:px-5 py-1"
+      >
+        <div className="[&>*:last-child]:border-b-0">
+          <ToggleRow label={t('preferences.soundAlerts')} hint={t('preferences.soundAlertsHint')}
             checked={prefs.soundAlerts} onChange={v => set({ soundAlerts: v })} />
-          <ToggleRow label="Daily email digest" hint="Receive a summary of the day's activity each evening"
+          <ToggleRow label={t('preferences.emailDigest')} hint={t('preferences.emailDigestHint')}
             checked={prefs.emailDigest} onChange={v => set({ emailDigest: v })} />
-          <ToggleRow label="Auto sign-out when idle" hint="Lock the dashboard after 30 minutes of inactivity"
+          <ToggleRow label={t('preferences.autoLogout')} hint={t('preferences.autoLogoutHint')}
             checked={prefs.autoLogout} onChange={v => set({ autoLogout: v })} />
         </div>
-      </div>
-
-      <SaveButton onClick={handleSave} saving={saving} />
+      </Section>
     </div>
   )
 }
@@ -2074,6 +2183,7 @@ function previewSerial(prefix, year, seq, d) {
 }
 
 function InvoiceConfigTab({ settings, setSettings, addToast }) {
+  const { t } = useTranslation('settings')
   const [saving, setSaving] = useState(false)
 
   // Preview for a booking made today, first invoice of the day.
@@ -2094,9 +2204,9 @@ function InvoiceConfigTab({ settings, setSettings, addToast }) {
           termsAndConditions: settings.termsAndConditions ?? '',
         },
       })
-      addToast('Invoice settings saved', 'success')
+      addToast(t('invoice.saved'), 'success')
     } catch (e) {
-      addToast(e.response?.data?.message || 'Failed to save invoice settings', 'error')
+      addToast(e.response?.data?.message || t('invoice.saveFailed'), 'error')
     } finally {
       setSaving(false)
     }
@@ -2104,108 +2214,100 @@ function InvoiceConfigTab({ settings, setSettings, addToast }) {
 
   const set = (field) => (e) => setSettings(s => ({ ...s, [field]: e.target.value }))
 
+  useSettingsHeader('invoice', { onSave: handleSave, saving })
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className={TAB_STACK}>
       {/* Serial numbering */}
-      <div className="card">
-        <div className="card-header"><span className="card-title">Invoice Numbering</span></div>
-        <div className="card-body">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Prefix">
-              <input className="form-input" value={settings.invoicePrefix ?? ''}
-                onChange={set('invoicePrefix')} placeholder="RA/" />
-            </Field>
-            <Field label="Year">
-              <input className="form-input" value={settings.invoiceYear ?? ''}
-                onChange={set('invoiceYear')} placeholder="2026" />
-            </Field>
-          </div>
-
-          {/* Live preview */}
-          <div className="mt-4 rounded-md bg-surface2 px-4 py-3">
-            <span className="t-xs text-ink3">Invoice number will look like</span>
-            <div className="font-mono text-lg font-bold text-ink mt-1">{nextSerial}</div>
-          </div>
-
-          <p className="t-xs mt-3 mb-0 text-ink3">
-            <span className="font-mono">{settings.invoicePrefix || 'RA/'}{settings.invoiceYear || '2026'}</span> is fixed;
-            the <span className="font-mono">-DD/MM</span> is taken automatically from the booking's date, and the
-            last <span className="font-mono">NN</span> counts bookings for that day (restarts at 01 daily).
-            The number is assigned when an invoice is first generated and can still be edited per invoice.
-          </p>
+      <Section title={t('invoice.numberingTitle')} subtitle={t('invoice.numberingSubtitle')}>
+        <div className={FORM_GRID}>
+          <Field label={t('invoice.prefix')}>
+            <input className="form-input" value={settings.invoicePrefix ?? ''}
+              onChange={set('invoicePrefix')} placeholder="RA/" />
+          </Field>
+          <Field label={t('invoice.year')}>
+            <input className="form-input" value={settings.invoiceYear ?? ''}
+              onChange={set('invoiceYear')} placeholder="2026" />
+          </Field>
         </div>
-      </div>
+
+        {/* Live preview */}
+        <div className="mt-4 rounded-lg bg-surface2 border border-line px-4 py-3">
+          <span className="t-xs text-ink3">{t('invoice.preview')}</span>
+          <div className="font-mono text-lg font-bold text-ink mt-1">{nextSerial}</div>
+        </div>
+
+        <p className="t-xs mt-3 mb-0 text-ink3">
+          <Trans
+            t={t}
+            i18nKey="invoice.serialHelp"
+            values={{ fixed: `${settings.invoicePrefix || 'RA/'}${settings.invoiceYear || '2026'}` }}
+            components={{ mono: <span className="font-mono" /> }}
+          />
+        </p>
+      </Section>
 
       {/* GST place of supply */}
-      <div className="card">
-        <div className="card-header"><span className="card-title">Place of Supply</span></div>
-        <div className="card-body">
-          <Field label="State / Place of Supply">
-            <input className="form-input max-w-[320px]" value={settings.placeOfSupply ?? ''}
-              onChange={set('placeOfSupply')} placeholder="e.g. Maharashtra" />
+      <Section title={t('invoice.supplyTitle')}>
+        <div className={FORM_GRID}>
+          <Field label={t('invoice.supplyLabel')}>
+            <input className="form-input" value={settings.placeOfSupply ?? ''}
+              onChange={set('placeOfSupply')} placeholder={t('invoice.supplyPlaceholder')} />
           </Field>
         </div>
-      </div>
+      </Section>
 
       {/* Bank details */}
-      <div className="card">
-        <div className="card-header"><span className="card-title">Bank Details</span></div>
-        <div className="card-body">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Account Holder Name">
-              <input className="form-input" value={settings.bankAccountName ?? ''}
-                onChange={set('bankAccountName')} placeholder="Defaults to hotel name if blank" />
-            </Field>
-            <Field label="Bank Name">
-              <input className="form-input" value={settings.bankName ?? ''}
-                onChange={set('bankName')} />
-            </Field>
-            <Field label="Account Number">
-              <input className="form-input" value={settings.bankAccountNo ?? ''}
-                onChange={set('bankAccountNo')} />
-            </Field>
-            <Field label="IFSC">
-              <input className="form-input" value={settings.bankIfsc ?? ''}
-                onChange={set('bankIfsc')} />
-            </Field>
-          </div>
-          <p className="t-xs mt-3 mb-0 text-ink3">
-            The Bank Details block only appears on the invoice when a bank name is set.
-          </p>
-        </div>
-      </div>
-
-      {/* Terms */}
-      <div className="card">
-        <div className="card-header"><span className="card-title">Terms &amp; Conditions</span></div>
-        <div className="card-body">
-          <Field label="Printed in the invoice footer">
-            <textarea className="form-textarea resize-y" rows={3} value={settings.termsAndConditions ?? ''}
-              onChange={set('termsAndConditions')} placeholder="e.g. Check-out by 11 AM. Taxes as applicable." />
+      <Section title={t('invoice.bankTitle')} subtitle={t('invoice.bankSubtitle')}>
+        <div className={FORM_GRID}>
+          <Field label={t('invoice.accountName')}>
+            <input className="form-input" value={settings.bankAccountName ?? ''}
+              onChange={set('bankAccountName')} placeholder={t('invoice.accountNamePlaceholder')} />
+          </Field>
+          <Field label={t('invoice.bankName')}>
+            <input className="form-input" value={settings.bankName ?? ''}
+              onChange={set('bankName')} />
+          </Field>
+          <Field label={t('invoice.accountNo')}>
+            <input className="form-input" value={settings.bankAccountNo ?? ''}
+              onChange={set('bankAccountNo')} />
+          </Field>
+          <Field label={t('invoice.ifsc')}>
+            <input className="form-input" value={settings.bankIfsc ?? ''}
+              onChange={set('bankIfsc')} />
           </Field>
         </div>
-      </div>
+      </Section>
 
-      <SaveButton onClick={handleSave} saving={saving} />
+      {/* Terms */}
+      <Section title={t('invoice.termsTitle')}>
+        <Field label={t('invoice.termsLabel')}>
+          <textarea className="form-textarea resize-y" rows={3} value={settings.termsAndConditions ?? ''}
+            onChange={set('termsAndConditions')} placeholder={t('invoice.termsPlaceholder')} />
+        </Field>
+      </Section>
     </div>
   )
 }
 
 // ─── Settings (Root) ──────────────────────────────────────────────────────────
+// Grouped so 13 sections stay scannable: the sidebar renders one heading per group.
+// Labels and descriptions live in settings.json (tabs.<id>.label / .description,
+// groups.<group>) and are looked up at render time so they follow the language.
 const ALL_TABS = [
-  { id: 'profile',       label: 'Hotel Profile'  },
-  { id: 'rooms',         label: 'Room Config'    },
-  { id: 'facilities',    label: 'Facilities'     },
-  { id: 'food',          label: 'Food Plans'     },
-  { id: 'tax',           label: 'Tax & Pricing'  },
-  { id: 'invoice',       label: 'Invoice'        },
-  { id: 'documents',     label: 'Documents'      },
-  { id: 'pricing',       label: 'Pricing Rules'  },
-  { id: 'notifications', label: 'Notifications'  },
-  { id: 'appearance',    label: 'Appearance'     },
-  { id: 'branding',      label: 'Branding'       },
-  { id: 'preferences',   label: 'Preferences'    },
-  { id: 'properties',    label: 'Properties'     },
+  { id: 'profile',       group: 'property',   icon: LuHotel },
+  { id: 'properties',    group: 'property',   icon: LuBuilding2 },
+  { id: 'branding',      group: 'property',   icon: LuStamp },
+  { id: 'rooms',         group: 'roomsRates', icon: LuBedDouble },
+  { id: 'facilities',    group: 'roomsRates', icon: LuSparkles },
+  { id: 'food',          group: 'roomsRates', icon: LuUtensils },
+  { id: 'pricing',       group: 'roomsRates', icon: LuTrendingUp },
+  { id: 'tax',           group: 'billing',    icon: LuPercent },
+  { id: 'invoice',       group: 'billing',    icon: LuReceipt },
+  { id: 'documents',     group: 'guests',     icon: LuFileText },
+  { id: 'notifications', group: 'guests',     icon: LuBell },
+  { id: 'appearance',    group: 'system',     icon: LuPalette },
+  { id: 'preferences',   group: 'system',     icon: LuSlidersHorizontal },
 ]
 
 const TAB_IDS = ALL_TABS.map(t => t.id)
@@ -2217,8 +2319,12 @@ function tabFromUrl(fallback = 'profile') {
   return TAB_IDS.includes(t) ? t : fallback
 }
 
-export default function Settings({ onRunSetup }) {
-  const [activeTab, setActiveTab] = useState(tabFromUrl)
+// `onRunSetup` (re-run the setup wizard) is accepted but its button is disabled below.
+export default function Settings() {
+  const { t } = useTranslation('settings')
+  // A deep link (navigateTo({ panel: 'settings', params: { tab } })) wins over the URL.
+  const panelParams = useAppSelector(s => s.ui.activePanelParams)
+  const [activeTab, setActiveTab] = useState(() => (TAB_IDS.includes(panelParams?.tab) ? panelParams.tab : tabFromUrl()))
   const [settings, setSettings]   = useState(initSettings)
   const [roomTypes, setRoomTypes] = useState(initRoomTypes)
   const [foodPlans, setFoodPlans] = useState(initFoodPlans)
@@ -2239,10 +2345,16 @@ export default function Settings({ onRunSetup }) {
   }, [])
   const { setHotelName, setOwnerName } = useHotelActions()
   const currentUser  = useAppSelector(s => s.auth.currentUser)
-  const isOwner      = !!currentUser?.isOwner
 
   // Filter tabs based on the user's resolved permissions
-  const tabs = ALL_TABS.filter(t => canAccessSettingsTab(currentUser, t.id))
+  const tabs = ALL_TABS
+    .filter(tab => canAccessSettingsTab(currentUser, tab.id))
+    .map(tab => ({
+      ...tab,
+      label: t(`tabs.${tab.id}.label`),
+      description: t(`tabs.${tab.id}.description`),
+      groupLabel: t(`groups.${tab.group}`),
+    }))
 
   // Reset to first allowed tab if current tab is no longer accessible
   const validActiveTab = tabs.find(t => t.id === activeTab) ? activeTab : (tabs[0]?.id || 'profile')
@@ -2269,77 +2381,143 @@ export default function Settings({ onRunSetup }) {
     return () => window.removeEventListener('popstate', onPop)
   }, [])
 
+  const panels = {
+    profile: (
+      <HotelProfileTab
+        settings={settings}
+        setSettings={setSettings}
+        addToast={addToast}
+        setHotelName={setHotelName}
+        setOwnerName={setOwnerName}
+      />
+    ),
+    rooms: (
+      <RoomConfigTab settings={settings} setSettings={setSettings}
+        roomTypes={roomTypes} setRoomTypes={setRoomTypes} addToast={addToast} />
+    ),
+    facilities:    <FacilitiesTab amenities={amenities} setAmenities={setAmenities} addToast={addToast} />,
+    food:          <FoodPlansTab plans={foodPlans} setPlans={setFoodPlans} addToast={addToast} />,
+    tax:           <TaxPricingTab settings={settings} setSettings={setSettings} addToast={addToast} />,
+    invoice:       <InvoiceConfigTab settings={settings} setSettings={setSettings} addToast={addToast} />,
+    documents:     <DocumentsTab settings={settings} setSettings={setSettings} addToast={addToast} />,
+    pricing:       <PricingRulesTab addToast={addToast} />,
+    notifications: <NotificationsTab addToast={addToast} />,
+    appearance:    <AppearanceTab settings={settings} addToast={addToast} />,
+    branding:      <BrandingTab settings={settings} setSettings={setSettings} addToast={addToast} />,
+    preferences:   <PreferencesTab settings={settings} addToast={addToast} />,
+    properties:    <PropertiesTab settings={settings} setSettings={setSettings} addToast={addToast} />,
+  }
+  const activeMeta = tabs.find(t => t.id === validActiveTab)
+
+  // The page header bar ("Settings", the open tab, its actions and Save) is set
+  // by each tab through useSettingsHeader: child effects run before the
+  // parent's, so setting it here too would overwrite the tab's actions.
+
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="mb-5 flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="t-h1 m-0 tracking-[-0.02em]">
-            Settings
-          </h1>
-          <p className="t-sm mt-1 mb-0 text-ink3">
-            Configure hotel profile, room types, pricing, and system preferences
-          </p>
-        </div>
-        {/* {onRunSetup && isOwner && (
-          <button
-            className="btn btn-outline btn-sm shrink-0"
-            onClick={onRunSetup}
-            title="Re-run the first-time setup wizard"
-          >
-            ⚙ Re-run Setup
-          </button>
-        )} */}
+    <div className="w-full min-w-0">
+      {/* {onRunSetup && isOwner && (
+        <button
+          className="btn btn-outline btn-sm shrink-0"
+          onClick={onRunSetup}
+          title="Re-run the first-time setup wizard"
+        >
+          ⚙ Re-run Setup
+        </button>
+      )} */}
+
+      <div className="flex flex-col xl:flex-row xl:items-start gap-3 xl:gap-7">
+        <SettingsNav tabs={tabs} active={validActiveTab} onChange={setActiveTab} />
+
+        <section className="flex-1 min-w-0" aria-label={activeMeta?.label || t('common:settings')}>
+          {/* The section name is the header subtitle; its description sits above the form. */}
+          {activeMeta && <p className="t-xs text-ink3 -mt-1 xl:mt-0 mb-4 xl:mb-5 xl:pb-4 xl:border-b xl:border-line">{activeMeta.description}</p>}
+          {panels[validActiveTab]}
+        </section>
+      </div>
+    </div>
+  )
+}
+
+// Height of the sticky page header bar (layout/PageHeader.jsx), kept current as
+// it wraps or its subtitle changes; 88px until it's measured.
+function usePageHeaderHeight() {
+  const [h, setH] = useState(88)
+  useEffect(() => {
+    const el = document.querySelector('#content .page-header')
+    if (!el) return
+    const measure = () => setH(el.offsetHeight)
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+  return h
+}
+
+// Left rail from xl (grouped, sticky); a grouped select below that — phones,
+// tablets and small laptops, where a 13-item rail would squeeze the editable
+// tables and a tab strip would push the content off-screen.
+function SettingsNav({ tabs, active, onChange }) {
+  const { t } = useTranslation('settings')
+  const pageHeaderH = usePageHeaderHeight()
+  const groups = []
+  for (const tab of tabs) {
+    const g = groups.find(x => x.name === tab.group)
+    if (g) g.items.push(tab)
+    else groups.push({ name: tab.group, label: tab.groupLabel, items: [tab] })
+  }
+
+  return (
+    <>
+      <div className="xl:hidden relative">
+        <label htmlFor="settings-section" className="sr-only">{t('nav.section')}</label>
+        <LuChevronDown size={16} aria-hidden className="absolute right-3 top-1/2 -translate-y-1/2 text-ink3 pointer-events-none" />
+        <select id="settings-section" className="form-select appearance-none pr-9 py-2.5 min-h-11 text-[14px] font-medium"
+          value={active} onChange={e => onChange(e.target.value)}>
+          {groups.map(g => (
+            <optgroup key={g.name} label={g.label}>
+              {g.items.map(tab => <option key={tab.id} value={tab.id}>{tab.label}</option>)}
+            </optgroup>
+          ))}
+        </select>
       </div>
 
-      <Tabs tabs={tabs} active={validActiveTab} onChange={setActiveTab}>
-        <div data-tab-id="profile">
-          <HotelProfileTab
-            settings={settings}
-            setSettings={setSettings}
-            addToast={addToast}
-            setHotelName={setHotelName}
-            setOwnerName={setOwnerName}
-          />
-        </div>
-        <div data-tab-id="rooms">
-          <RoomConfigTab settings={settings} setSettings={setSettings}
-            roomTypes={roomTypes} setRoomTypes={setRoomTypes} addToast={addToast} />
-        </div>
-        <div data-tab-id="facilities">
-          <FacilitiesTab amenities={amenities} setAmenities={setAmenities} addToast={addToast} />
-        </div>
-        <div data-tab-id="food">
-          <FoodPlansTab plans={foodPlans} setPlans={setFoodPlans} addToast={addToast} />
-        </div>
-        <div data-tab-id="tax">
-          <TaxPricingTab settings={settings} setSettings={setSettings} addToast={addToast} />
-        </div>
-        <div data-tab-id="invoice">
-          <InvoiceConfigTab settings={settings} setSettings={setSettings} addToast={addToast} />
-        </div>
-        <div data-tab-id="documents">
-          <DocumentsTab settings={settings} setSettings={setSettings} addToast={addToast} />
-        </div>
-        <div data-tab-id="pricing">
-          <PricingRulesTab addToast={addToast} />
-        </div>
-        <div data-tab-id="notifications">
-          <NotificationsTab addToast={addToast} />
-        </div>
-        <div data-tab-id="appearance">
-          <AppearanceTab settings={settings} addToast={addToast} />
-        </div>
-        <div data-tab-id="branding">
-          <BrandingTab settings={settings} setSettings={setSettings} addToast={addToast} />
-        </div>
-        <div data-tab-id="preferences">
-          <PreferencesTab settings={settings} addToast={addToast} />
-        </div>
-        <div data-tab-id="properties">
-          <PropertiesTab settings={settings} setSettings={setSettings} addToast={addToast} />
-        </div>
-      </Tabs>
-    </div>
+      {/* Sticks just under the page header bar, which is itself pinned to the
+          top of #content (sticky offsets count from #content's padding edge,
+          hence the - --content-pt). */}
+      <nav aria-label={t('nav.sections')}
+        style={{ top: `calc(${pageHeaderH}px - var(--content-pt) + 1rem)` }}
+        className="hidden xl:flex flex-col gap-4 w-[196px] shrink-0 sticky -ml-2.5">
+        {groups.map(g => (
+          <div key={g.name}>
+            <div className="t-label text-xs px-2.5 mb-1">{g.label}</div>
+            <ul className="list-none m-0 p-0 flex flex-col gap-0.5">
+              {g.items.map(tab => {
+                const isActive = tab.id === active
+                const Icon = tab.icon
+                return (
+                  <li key={tab.id}>
+                    <button
+                      type="button"
+                      onClick={() => onChange(tab.id)}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`w-full flex items-center gap-2.5 px-2.5 py-[7px] rounded-md border-none cursor-pointer text-left text-[13px] transition-colors duration-[140ms] ${
+                        isActive
+                          ? 'bg-[var(--gold-bg)] text-ink font-semibold'
+                          : 'bg-transparent text-ink2 font-medium hover:bg-surface2 hover:text-ink'
+                      }`}
+                    >
+                      <Icon size={15} aria-hidden className={isActive ? 'text-gold' : 'text-ink3'} />
+                      {tab.label}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        ))}
+      </nav>
+    </>
   )
 }

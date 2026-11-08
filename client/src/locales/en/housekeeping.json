@@ -1,0 +1,121 @@
+{
+  "title": "Housekeeping",
+  "subtitle": "Manage room status, staff assignments, and inspections",
+  "loadFailed": "Could not load housekeeping board. Make sure the backend is running.",
+  "loadingBoard": "Loading board…",
+  "roomNo": "Room {{number}}",
+  "floorNo": "Floor {{floor}}",
+  "floorShort": "F{{floor}}",
+  "unassigned": "Unassigned",
+  "days_one": "{{count}}d",
+  "days_other": "{{count}}d",
+  "duration": {
+    "m": "{{m}}m",
+    "hm": "{{h}}h {{m}}m"
+  },
+  "tabs": {
+    "board": "Board",
+    "daily": "Daily List",
+    "linen": "Linen Tracker",
+    "inspection": "Inspection"
+  },
+  "status": {
+    "clean_available": "Clean",
+    "dirty_available": "Dirty",
+    "occupied": "Occupied",
+    "checkout_pending": "Checkout",
+    "cleaning_in_progress": "Cleaning",
+    "maintenance": "Maintenance"
+  },
+  "stats": {
+    "clean": "Clean & available",
+    "cleanHint": "Ready for check-in",
+    "dirty": "Dirty / needs cleaning",
+    "dirtyHint": "Dirty + checkout pending",
+    "cleaning": "Cleaning in progress",
+    "cleaningHint": "Currently being cleaned"
+  },
+  "bulk": {
+    "label": "Bulk update",
+    "checkoutsDirty": "Mark checkouts as Dirty",
+    "dirtyInProgress": "Mark all Dirty → In Progress"
+  },
+  "assign": {
+    "title": "Room {{number}} — Update",
+    "staff": "Assign Staff"
+  },
+  "empty": {
+    "noRooms": "No rooms yet",
+    "noRoomsHint": "Rooms appear here once they are added in Settings.",
+    "noMatch": "No rooms match filters"
+  },
+  "daily": {
+    "assignedTo": "Assigned To",
+    "assignAria": "Assign staff to room {{number}}",
+    "startedAt": "Started At",
+    "completedAt": "Completed At",
+    "duration": "Duration",
+    "timing": "Started · Done",
+    "start": "Start",
+    "done": "Done",
+    "staff": "Staff",
+    "allStaff": "All Staff",
+    "floor": "Floor",
+    "allFloors": "All Floors"
+  },
+  "linen": {
+    "lastChanged": "Last Changed",
+    "nextDue": "Next Due",
+    "daysUntilDue": "Days Until Due",
+    "daysOverdue_one": "{{count}}d overdue",
+    "daysOverdue_other": "{{count}}d overdue",
+    "overdue": "Overdue",
+    "dueToday": "Due Today",
+    "changedBy": "Changed By",
+    "markChanged": "Mark Changed"
+  },
+  "inspection": {
+    "selectRoom": "Select Room",
+    "checklistTitle": "Inspection Checklist — Room {{number}}",
+    "historyTitle": "Inspection History — Room {{number}}",
+    "pass": "Pass",
+    "fail": "Fail",
+    "unchecked": "Unchecked",
+    "score": "Score",
+    "you": "You",
+    "submit": "Submit Inspection",
+    "checkAll": "Check all items before submitting",
+    "emptyTitle": "No inspections yet",
+    "emptyMessage": "No inspections submitted this session."
+  },
+  "checklist": {
+    "Minibar stocked": "Minibar stocked",
+    "Toiletries refilled": "Toiletries refilled",
+    "AC functional": "AC functional",
+    "TV functional": "TV functional",
+    "Bathroom clean": "Bathroom clean",
+    "Bed made": "Bed made",
+    "Fresh towels": "Fresh towels",
+    "Floor mopped": "Floor mopped",
+    "Dustbin emptied": "Dustbin emptied"
+  },
+  "toast": {
+    "cleaningStarted": "Room {{number}} cleaning started",
+    "markedClean": "Room {{number}} marked clean",
+    "saveFailed": "Could not save room update",
+    "roomUpdated": "Room {{number}} updated",
+    "noMatching": "No matching rooms found",
+    "bulkMarked_one": "{{count}} room marked {{status}}",
+    "bulkMarked_other": "{{count}} rooms marked {{status}}",
+    "linenChanged": "Linen changed for Room {{number}}",
+    "linenFailed": "Could not record linen change",
+    "inspectionSaved": "Inspection saved — Score: {{score}}%",
+    "inspectionFailed": "Could not save inspection"
+  },
+  "filter": {
+    "status": "Status",
+    "all": "All rooms",
+    "showing": "Showing: {{status}}",
+    "clear": "Clear filter"
+  }
+}

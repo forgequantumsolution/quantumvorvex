@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Formik, Form, Field, ErrorMessage } from 'formik'
 import { useAuthActions } from '../../store/hooks'
 import { authApi } from '../../api/client'
@@ -6,23 +7,26 @@ import { loginSchema, loginInitialValues } from '../../validation/authSchema'
 import { MailIcon, LockIcon, EyeIcon, EyeOffIcon, AlertIcon } from './authIcons'
 import OtpLoginForm from './OtpLoginForm'
 import ForgotPasswordForm from './ForgotPasswordForm'
+import LanguageSwitcher from '../layout/LanguageSwitcher'
 import goldenLogo from '../../assets/golden_blue_logo.png'
 import './LoginPage.css'
 
 // Background lives in /public so it's served from the site root
 const BANNER_BG = '/Banner.webp'
 
-const PILLS = ['Check-In', 'Billing', 'Housekeeping', 'Reports', 'AI Insights']
+// Feature pills — text in auth:pills.<id>
+const PILLS = ['checkIn', 'billing', 'housekeeping', 'reports', 'aiInsights']
 
 const DEMO_ACCOUNTS = [
-  { role: 'owner',   label: 'Owner',   email: 'owner@quantumvorvex.com',   pass: 'owner123'   },
-  { role: 'manager', label: 'Manager', email: 'manager@quantumvorvex.com', pass: 'manager123' },
-  { role: 'staff',   label: 'Staff',   email: 'staff@quantumvorvex.com',   pass: 'staff123'   },
+  { role: 'owner',   email: 'owner@quantumvorvex.com',   pass: 'owner123'   },
+  { role: 'manager', email: 'manager@quantumvorvex.com', pass: 'manager123' },
+  { role: 'staff',   email: 'staff@quantumvorvex.com',   pass: 'staff123'   },
 ]
 
 // ── Password sign-in form (the original flow) ──────────────────────────────────
 function PasswordLoginForm({ onForgot }) {
   const { login } = useAuthActions()
+  const { t } = useTranslation('auth')
   const [showPw, setShowPw] = useState(false)
   const [error, setError]   = useState('')
 
@@ -39,10 +43,10 @@ function PasswordLoginForm({ onForgot }) {
       const status = err.response?.status
       setError(
         data?.error || data?.message ||
-        (status === 500 ? 'Server error — database may not be configured yet.' :
-         status === 429 ? 'Too many attempts. Please wait 15 minutes.' :
-         status === 401 ? 'Invalid email or password.' :
-         'Cannot reach server. Make sure the backend is running.')
+        (status === 500 ? t('errors.serverDb') :
+         status === 429 ? t('errors.tooManyWait15') :
+         status === 401 ? t('errors.invalidLogin') :
+         t('errors.unreachable'))
       )
     } finally {
       setSubmitting(false)
@@ -63,22 +67,23 @@ function PasswordLoginForm({ onForgot }) {
           <>
             <Form>
               <div className="login-field">
-                <label className="login-field-label">Email address</label>
+                <label className="login-field-label">{t('email')}</label>
                 <div className="login-field-wrap">
                   <span className="login-field-icon"><MailIcon /></span>
-                  <Field type="email" name="email" placeholder="you@hotel.com"
+                  <Field type="email" name="email" placeholder={t('emailPlaceholder')}
                          className="login-input" autoComplete="email" />
                 </div>
                 <ErrorMessage name="email" component="div" className="login-field-error" />
               </div>
 
               <div className="login-field">
-                <label className="login-field-label">Password</label>
+                <label className="login-field-label">{t('password')}</label>
                 <div className="login-field-wrap">
                   <span className="login-field-icon"><LockIcon /></span>
                   <Field type={showPw ? 'text' : 'password'} name="password" placeholder="••••••••"
-                         className="login-input pr-10" autoComplete="current-password" />
-                  <button type="button" className="login-pw-toggle" onClick={() => setShowPw(!showPw)} tabIndex={-1}>
+                         className="login-input pr-12" autoComplete="current-password" />
+                  <button type="button" className="login-pw-toggle" onClick={() => setShowPw(!showPw)} tabIndex={-1}
+                          aria-label={showPw ? t('hidePassword') : t('showPassword')}>
                     {showPw ? <EyeOffIcon /> : <EyeIcon />}
                   </button>
                 </div>
@@ -87,27 +92,27 @@ function PasswordLoginForm({ onForgot }) {
 
               <div className="login-meta-row">
                 <button type="button" className="login-link" onClick={onForgot}>
-                  Forgot password?
+                  {t('forgotPassword')}
                 </button>
               </div>
 
               <button type="submit" disabled={isSubmitting} className="login-submit">
                 {isSubmitting && <span className="login-spinner" />}
-                {isSubmitting ? 'Signing in…' : 'Sign In'}
+                {isSubmitting ? t('signingIn') : t('signIn')}
               </button>
             </Form>
 
             <div className="login-demo-section">
-              <span className="login-demo-label">Demo Accounts — Click to Fill</span>
+              <span className="login-demo-label">{t('demoAccounts')}</span>
               <div className="login-demo-chips">
-                {DEMO_ACCOUNTS.map(({ role, label, email: e, pass }) => (
+                {DEMO_ACCOUNTS.map(({ role, email: e, pass }) => (
                   <button key={role} type="button" className="login-demo-chip"
                           onClick={() => {
                             setFieldValue('email', e)
                             setFieldValue('password', pass)
                             setError('')
                           }}>
-                    {label}
+                    {t(`roles.${role}`)}
                   </button>
                 ))}
               </div>
@@ -123,6 +128,7 @@ export default function LoginPage() {
   // view: 'login' (with method tabs) | 'forgot'
   const [view, setView]     = useState('login')
   const [method, setMethod] = useState('password')   // 'password' | 'otp'
+  const { t } = useTranslation('auth')
 
   // Surface a logout reason left by the API client (read once at mount, then clear).
   const [notice] = useState(() => {
@@ -132,32 +138,32 @@ export default function LoginPage() {
   })
 
   const title =
-    view === 'forgot' ? 'Reset Password' :
-    method === 'otp'  ? 'Sign In with Code' :
-                        'Sign In'
+    view === 'forgot' ? t('resetPassword') :
+    method === 'otp'  ? t('signInWithCode') :
+                        t('signIn')
 
   return (
     <div className="login-page" style={{ backgroundImage: `url(${BANNER_BG})` }}>
       <div className="login-overlay" />
+      <div className="login-lang"><LanguageSwitcher /></div>
 
       <div className="login-brand">
         <div className="login-brand-eyebrow">
           <span className="login-brand-dot" />
-          <span className="login-brand-eyebrow-text">Hotel Management System</span>
+          <span className="login-brand-eyebrow-text">{t('brand.eyebrow')}</span>
         </div>
 
         <h1 className="login-brand-headline">
-          Seamless Operations.<br />
-          <em>Intelligent Control.</em>
+          {t('brand.headline1')}<br />
+          <em>{t('brand.headline2')}</em>
         </h1>
 
         <p className="login-brand-desc">
-          Sign in to access your hotel's unified command centre — rooms, guests,
-          billing, housekeeping, and more in one place.
+          {t('brand.desc')}
         </p>
 
         <div className="login-brand-pills">
-          {PILLS.map((p) => (<span key={p} className="login-brand-pill">{p}</span>))}
+          {PILLS.map((p) => (<span key={p} className="login-brand-pill">{t(`pills.${p}`)}</span>))}
         </div>
       </div>
 
@@ -180,7 +186,7 @@ export default function LoginPage() {
               <h2 className="login-card-title">{title}</h2>
               <div className="login-status">
                 <span className="login-status-dot" />
-                System Online
+                {t('systemOnline')}
               </div>
             </div>
 
@@ -192,12 +198,12 @@ export default function LoginPage() {
                   <button type="button"
                           className={`login-tab ${method === 'password' ? 'active' : ''}`}
                           onClick={() => setMethod('password')}>
-                    Password
+                    {t('password')}
                   </button>
                   <button type="button"
                           className={`login-tab ${method === 'otp' ? 'active' : ''}`}
                           onClick={() => setMethod('otp')}>
-                    Email OTP
+                    {t('emailOtp')}
                   </button>
                 </div>
 
@@ -209,7 +215,7 @@ export default function LoginPage() {
           </div>
 
           <div className="login-card-footer">
-            Powered by Quantum Vorvex · Forge Quantum Solutions
+            {t('poweredBy')}
           </div>
         </div>
       </div>

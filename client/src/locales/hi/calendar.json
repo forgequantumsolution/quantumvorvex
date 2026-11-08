@@ -1,0 +1,69 @@
+{
+  "title": "रूम कैलेंडर",
+  "subtitleGrid": "बुकिंग टाइमलाइन — बुक करने या विवरण देखने के लिए सेल पर क्लिक करें",
+  "subtitleList": "दिन-ब-दिन बुकिंग — विवरण के लिए बुकिंग पर टैप करें",
+  "newBookingAction": "नई बुकिंग",
+  "gridHint": "बुक करने के लिए खाली सेल पर क्लिक करें · विवरण के लिए बुकिंग पर क्लिक करें",
+  "nights_one": "{{count}} रात",
+  "nights_other": "{{count}} रातें",
+  "stats": {
+    "totalRooms": "कुल रूम",
+    "occupiedToday": "आज भरे हुए",
+    "confirmedUpcoming": "आगामी कन्फर्म",
+    "availableToday": "आज उपलब्ध"
+  },
+  "nav": {
+    "prev": "पिछला",
+    "prevRange": "पिछली अवधि",
+    "nextRange": "अगली अवधि"
+  },
+  "filter": {
+    "daysShown": "दिखाए गए दिन",
+    "days_one": "{{count}} दिन",
+    "days_other": "{{count}} दिन",
+    "allTypes": "सभी",
+    "floor": "मंज़िल",
+    "allFloors": "सभी मंज़िलें",
+    "floorN": "मंज़िल {{n}}"
+  },
+  "status": {
+    "occupied": "भरा हुआ",
+    "confirmed": "कन्फर्म",
+    "maintenance": "मेंटेनेंस",
+    "checkout": "चेक-आउट हुआ",
+    "available": "उपलब्ध"
+  },
+  "field": {
+    "guest": "मेहमान",
+    "room": "रूम",
+    "roomType": "रूम प्रकार",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "duration": "अवधि"
+  },
+  "newBooking": {
+    "title": "नई बुकिंग",
+    "create": "बुकिंग बनाएँ",
+    "guestName": "मेहमान का नाम",
+    "fullName": "पूरा नाम",
+    "selectRoom": "रूम चुनें",
+    "notes": "नोट्स",
+    "notesPlaceholder": "विशेष अनुरोध..."
+  },
+  "detail": {
+    "title": "बुकिंग विवरण"
+  },
+  "toast": {
+    "added": "बुकिंग कैलेंडर में जोड़ी गई",
+    "removed": "बुकिंग हटाई गई"
+  },
+  "day": {
+    "allFree_one": "कोई बुकिंग नहीं — {{count}} रूम खाली",
+    "allFree_other": "कोई बुकिंग नहीं — सभी {{count}} रूम खाली",
+    "summary": "{{inHouse}} ठहरे हुए · {{free}} खाली",
+    "book": "बुक करें",
+    "arrives": "आगमन",
+    "departs": "प्रस्थान",
+    "inHouse": "ठहरे हुए"
+  }
+}

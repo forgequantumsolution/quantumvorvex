@@ -75,7 +75,7 @@ export const updateSettings = async (req, res) => {
             return prisma.roomType.update({ where: { id: rt.id }, data: rt })
           }
           return prisma.roomType.upsert({
-            where: { name: rt.name },
+            where: { propertyId_name: { propertyId: req.propertyId, name: rt.name } },
             update: rt,
             create: rt,
           })
@@ -95,7 +95,7 @@ export const updateSettings = async (req, res) => {
             return prisma.foodPlan.update({ where: { id: fp.id }, data: fp })
           }
           return prisma.foodPlan.upsert({
-            where: { name: fp.name },
+            where: { propertyId_name: { propertyId: req.propertyId, name: fp.name } },
             update: fp,
             create: fp,
           })
@@ -114,7 +114,7 @@ export const updateSettings = async (req, res) => {
             return prisma.amenity.update({ where: { id: am.id }, data: am })
           }
           return prisma.amenity.upsert({
-            where: { name: am.name },
+            where: { propertyId_name: { propertyId: req.propertyId, name: am.name } },
             update: am,
             create: am,
           })

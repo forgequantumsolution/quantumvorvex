@@ -1,0 +1,82 @@
+{
+  "title": "డాష్‌బోర్డ్",
+  "subtitle": "{{hotel}} — అవలోకనం",
+  "shortcutsBtn": "షార్ట్‌కట్‌లు",
+  "stats": {
+    "totalRooms": "మొత్తం గదులు",
+    "allInventory": "అన్ని గదుల జాబితా",
+    "available": "అందుబాటులో ఉంది",
+    "occupied": "ఆక్రమించబడింది",
+    "pctOfTotal": "మొత్తంలో {{pct}}%",
+    "maintenance": "నిర్వహణ",
+    "underService": "సర్వీస్‌లో ఉంది",
+    "monthlyRevenue": "నెలవారీ ఆదాయం",
+    "occupancyRate": "ఆక్యుపెన్సీ రేటు",
+    "thisMonth": "ఈ నెల"
+  },
+  "charts": {
+    "monthlyRevenue": "నెలవారీ ఆదాయం",
+    "occupancyTrend": "ఆక్యుపెన్సీ ట్రెండ్",
+    "last6Months": "గత 6 నెలలు"
+  },
+  "newCount_one": "{{count}} కొత్తది",
+  "newCount_other": "{{count}} కొత్తవి",
+  "hoursAgo_one": "{{count}} గం. క్రితం",
+  "hoursAgo_other": "{{count}} గం. క్రితం",
+  "notif": {
+    "paymentDue_one": "గది {{room}} చెల్లింపు {{count}} రోజులో బాకీ",
+    "paymentDue_other": "గది {{room}} చెల్లింపు {{count}} రోజుల్లో బాకీ",
+    "maintTomorrow": "గది {{room}} నిర్వహణ రేపు షెడ్యూల్ చేయబడింది",
+    "newCheckIn": "కొత్త చెక్-ఇన్: గది {{room}} — {{name}}",
+    "idPending": "గది {{room}}కు ID ధృవీకరణ పెండింగ్‌లో ఉంది"
+  },
+  "occupancyByType": "గది రకం వారీగా ఆక్యుపెన్సీ",
+  "recentCheckIns": "ఇటీవలి చెక్-ఇన్‌లు",
+  "upcomingCheckouts": "రాబోయే చెక్-అవుట్‌లు",
+  "since": "{{date}} నుండి",
+  "checkout": "చెక్-అవుట్",
+  "extend": "పొడిగించండి",
+  "table": {
+    "type": "రకం",
+    "tags": "ట్యాగ్‌లు"
+  },
+  "type": {
+    "monthly": "నెలవారీ",
+    "daily": "రోజువారీ"
+  },
+  "status": {
+    "active": "యాక్టివ్",
+    "due": "బాకీ"
+  },
+  "toast": {
+    "checkout": "{{name}} కోసం చెక్-అవుట్ ప్రారంభించబడింది — గది {{room}}",
+    "extended": "{{name}} బస పొడిగించబడింది — గది {{room}}"
+  },
+  "timeline": {
+    "title": "ఈరోజు టైమ్‌లైన్",
+    "doneCount": "{{total}}లో {{done}} ఈవెంట్‌లు పూర్తయ్యాయి",
+    "urgent": "అత్యవసరం",
+    "hkShift": "హౌస్‌కీపింగ్ షిఫ్ట్ ప్రారంభమైంది",
+    "checkedIn": "{{name}} చెక్-ఇన్ అయ్యారు — గది {{room}}",
+    "paid": "{{invoice}} — {{name}} {{amount}} చెల్లించారు",
+    "checkoutDue": "{{name}} చెక్-అవుట్ బాకీ — గది {{room}}",
+    "arriving": "{{name}} వస్తున్నారు — గది {{room}}",
+    "acCheck": "నిర్వహణ: గది {{room}} AC తనిఖీ",
+    "nightAudit": "నైట్ ఆడిట్ బాకీ"
+  },
+  "shortcuts": {
+    "title": "కీబోర్డ్ షార్ట్‌కట్‌లు",
+    "hint": "ఇన్‌పుట్ ఫీల్డ్‌పై ఫోకస్ లేనప్పుడే షార్ట్‌కట్‌లు పనిచేస్తాయి.",
+    "dashboard": "డాష్‌బోర్డ్",
+    "rooms": "గదులు",
+    "floorPlan": "ఫ్లోర్ ప్లాన్",
+    "reports": "నివేదికలు",
+    "checkIn": "చెక్-ఇన్",
+    "guests": "అతిథులు",
+    "billing": "బిల్లింగ్",
+    "settings": "సెట్టింగ్‌లు",
+    "darkMode": "డార్క్ మోడ్ మార్చండి",
+    "closeModal": "విండోను మూసివేయండి",
+    "openShortcuts": "షార్ట్‌కట్‌లను తెరవండి"
+  }
+}

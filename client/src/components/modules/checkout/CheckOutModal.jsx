@@ -1,19 +1,18 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import Modal from '../../ui/Modal'
+import CameraCapture from '../../ui/CameraCapture'
 import { formatCurrency } from '../../../utils/format'
+
+// Step labels: checkout:steps.<key>.
+const STEPS = ['bill', 'pay', 'photo']
 
 const MAX_PROOF_BYTES = 10 * 1024 * 1024 // matches the server's 10MB limit
 
 // Lowercase values are what the check-out API persists for the payment method —
 // shared by both the guests and bookings flows so the payments ledger stays uniform.
-const DEFAULT_METHODS = [
-  { value: 'cash', label: 'Cash' },
-  { value: 'card', label: 'Card' },
-  { value: 'upi', label: 'UPI' },
-  { value: 'bank_transfer', label: 'Bank transfer' },
-  { value: 'cheque', label: 'Cheque' },
-  { value: 'other', label: 'Other' },
-]
+// A method without a label is shown as checkout:methods.<value>.
+const DEFAULT_METHODS = ['cash', 'card', 'upi', 'bank_transfer', 'cheque', 'other'].map((value) => ({ value }))
 
 /**
  * Shared two-step check-out modal used by both Guests and Bookings.
@@ -24,7 +23,10 @@ const DEFAULT_METHODS = [
  * partial "collect now" amount, payment reference) are opt-in via flags so the
  * guest flow stays a simple full-balance settlement.
  *
- * onConfirm receives: { extra, finalPayment, paymentMethod, paymentReference, notes, proofFile }
+ * A final step captures a check-out photo of the guest; it is optional, so a
+ * device without a working camera never blocks the check-out.
+ *
+ * onConfirm receives: { extra, finalPayment, paymentMethod, paymentReference, notes, proofFile, photoFile }
  */
 export default function CheckOutModal({
   isOpen,
@@ -38,23 +40,26 @@ export default function CheckOutModal({
   lineItems = [],
   advance = 0,
   balanceDue = 0,
+  defaultPayment,
   paymentMethods = DEFAULT_METHODS,
   allowExtraCharges = false,
   allowPartialPayment = false,
-  footnote = 'Room will be marked as Dirty and queued for housekeeping automatically.',
+  footnote, // defaults to checkout:footnote; pass '' to hide it
 }) {
+  const { t } = useTranslation('checkout')
   // Both call sites render this modal conditionally (it unmounts on close), so
   // state initialisers re-run on every open — the collectable amount defaults to
   // the full balance without needing a reset effect.
   const [step, setStep] = useState(1)
   const [extra, setExtra] = useState(0)
-  const [payment, setPayment] = useState(() => (balanceDue > 0 ? balanceDue : 0))
+  const [payment, setPayment] = useState(() => defaultPayment ?? (balanceDue > 0 ? balanceDue : 0))
   const [payMethod, setPayMethod] = useState(() => paymentMethods[0]?.value)
   const [reference, setReference] = useState('')
   const [notes, setNotes] = useState('')
   const [settled, setSettled] = useState(false)
   const [proof, setProof] = useState(null)
   const [proofError, setProofError] = useState('')
+  const [photo, setPhoto] = useState(null)
 
   if (!isOpen) return null
 
@@ -70,7 +75,7 @@ export default function CheckOutModal({
     const file = e.target.files?.[0] || null
     setProofError('')
     if (file && file.size > MAX_PROOF_BYTES) {
-      setProof(null); setProofError('File is too large (max 10MB).')
+      setProof(null); setProofError(t('fileTooLarge'))
       e.target.value = ''
       return
     }
@@ -78,7 +83,7 @@ export default function CheckOutModal({
   }
 
   const handleConfirm = () => {
-    if (step === 1) { setStep(2); return }
+    if (step < 3) { setStep(step + 1); return }
     onConfirm({
       extra: extraNum,
       finalPayment: paymentNum,
@@ -86,46 +91,50 @@ export default function CheckOutModal({
       paymentReference: showReference ? reference.trim() : '',
       notes,
       proofFile: proof,
+      photoFile: photo,
     })
   }
 
   const confirmLabel = submitting
-    ? 'Processing…'
+    ? t('processing')
     : allowPartialPayment && paymentNum > 0
-      ? `Collect ${formatCurrency(paymentNum)} & Check Out`
-      : 'Complete Check-Out'
+      ? t('collectAndCheckOut', { amount: formatCurrency(paymentNum) })
+      : t('complete')
+
+  const nextLabel = step === 1 ? `${t('review')} →` : step === 2 ? `${t('nextPhoto')} →` : confirmLabel
+  const note = footnote ?? t('footnote')
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Check-Out — ${guestName}`}
+      title={t('title', { name: guestName })}
       maxWidth="520px"
       footer={
         <>
           <button
             className="btn btn-outline btn-sm"
             disabled={submitting}
-            onClick={step === 2 ? () => setStep(1) : onClose}
+            onClick={step > 1 ? () => setStep(step - 1) : onClose}
           >
-            {step === 2 ? 'Back' : 'Cancel'}
+            {step > 1 ? t('common:back') : t('common:cancel')}
           </button>
           <button
-            className="btn btn-danger btn-sm"
+            className="btn btn-danger btn-sm max-sm:whitespace-normal max-sm:leading-tight"
             disabled={submitting || (step === 2 && !settled)}
             onClick={handleConfirm}
           >
-            {step === 1 ? 'Review & Confirm →' : confirmLabel}
+            {nextLabel}
           </button>
         </>
       }
     >
       {/* Step indicator */}
-      <div className="flex gap-1.5 mb-5">
-        {['Bill Summary', 'Confirm & Pay'].map((s, i) => (
-          <div key={s} className="flex-1 text-center">
+      <div className="flex gap-1.5 mb-4 sm:mb-5">
+        {STEPS.map((s, i) => (
+          <div key={s} className="flex-1 min-w-0 text-center">
             <div className={`h-[3px] rounded-sm mb-[5px] ${step > i ? 'bg-gold' : 'bg-line'}`} />
-            <span className={`text-[10.5px] font-semibold ${step > i ? 'text-gold' : 'text-ink3'}`}>{s}</span>
+            <span className={`block text-xs leading-tight font-semibold ${step > i ? 'text-gold' : 'text-ink3'}`}>{t(`steps.${s}`)}</span>
           </div>
         ))}
       </div>
@@ -135,19 +144,19 @@ export default function CheckOutModal({
           {/* Room + period */}
           <div className="bg-surface2 rounded-lg px-3.5 py-3 mb-3.5 border border-line">
             {folio && (
-              <div className="flex justify-between mb-1.5">
-                <span className="t-xs text-ink3">Folio</span>
-                <span className="t-xs text-ink2" style={{ fontFamily: 'var(--font-mono)' }}>{folio}</span>
+              <div className="flex justify-between gap-3 mb-1.5">
+                <span className="t-xs text-ink3 shrink-0">{t('folio')}</span>
+                <span className="t-xs text-ink2 font-mono text-right break-all">{folio}</span>
               </div>
             )}
-            <div className="flex justify-between mb-1.5">
-              <span className="t-xs text-ink3">Room</span>
-              <span className="t-title" style={{ fontFamily: 'var(--font-mono)' }}>{room}</span>
+            <div className="flex justify-between gap-3 mb-1.5">
+              <span className="t-xs text-ink3 shrink-0">{t('common:room')}</span>
+              <span className="t-title font-mono text-right min-w-0 break-words">{room}</span>
             </div>
             {stayPeriod && (
-              <div className="flex justify-between">
-                <span className="t-xs text-ink3">Stay Period</span>
-                <span className="text-[12.5px] font-medium">{stayPeriod}</span>
+              <div className="flex justify-between gap-3">
+                <span className="t-xs text-ink3 shrink-0">{t('stayPeriod')}</span>
+                <span className="text-[12.5px] font-medium text-right min-w-0">{stayPeriod}</span>
               </div>
             )}
           </div>
@@ -155,25 +164,25 @@ export default function CheckOutModal({
           {/* Bill breakdown */}
           <div className="mb-3.5">
             {lineItems.map(([k, v]) => v > 0 && (
-              <div key={k} className="flex justify-between py-[7px] border-b border-line">
-                <span className="t-sm text-ink2">{k}</span>
-                <span className="t-sm" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(v)}</span>
+              <div key={k} className="flex justify-between gap-3 py-[7px] border-b border-line">
+                <span className="t-sm text-ink2 min-w-0">{k}</span>
+                <span className="t-sm font-mono">{formatCurrency(v)}</span>
               </div>
             ))}
             <div className="flex justify-between py-[9px] border-b border-line">
-              <span className="t-sm text-ink2">Advance Paid</span>
-              <span className="t-sm text-success-text" style={{ fontFamily: 'var(--font-mono)' }}>−{formatCurrency(advance)}</span>
+              <span className="t-sm text-ink2">{t('advancePaid')}</span>
+              <span className="t-sm text-success-text font-mono">−{formatCurrency(advance)}</span>
             </div>
-            <div className="t-h3 flex justify-between py-[11px]">
-              <span>Balance Due</span>
+            <div className="t-h3 flex flex-wrap justify-between gap-x-3 py-[11px]">
+              <span>{t('balanceDue')}</span>
               <span style={{ fontFamily: 'var(--font-mono)', color: balanceDue > 0 ? 'var(--red-text)' : 'var(--green-text)' }}>
-                {formatCurrency(Math.abs(balanceDue))} {balanceDue <= 0 ? '(refund)' : ''}
+                {formatCurrency(Math.abs(balanceDue))} {balanceDue <= 0 ? `(${t('refund')})` : ''}
               </span>
             </div>
           </div>
 
-          {footnote && (
-            <div className="t-xs text-ink3 mt-2.5">{footnote}</div>
+          {note && (
+            <div className="t-xs text-ink3 mt-2.5">{note}</div>
           )}
         </>
       )}
@@ -182,26 +191,26 @@ export default function CheckOutModal({
         <>
           {/* Fixed full-balance settlement (guest flow) */}
           {!allowPartialPayment && (
-            <div className="bg-[var(--gold-bg)] rounded-lg px-3.5 py-3 mb-4 flex justify-between items-center">
-              <span className="font-semibold text-gold">Amount to Collect</span>
-              <span className="t-h3 text-gold" style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(Math.max(balanceDue, 0))}</span>
+            <div className="bg-[var(--gold-bg)] rounded-lg px-3.5 py-3 mb-4 flex flex-wrap justify-between items-center gap-x-3">
+              <span className="font-semibold text-gold">{t('amountToCollect')}</span>
+              <span className="t-h3 text-gold font-mono">{formatCurrency(Math.max(balanceDue, 0))}</span>
             </div>
           )}
 
           {/* Editable billing controls (booking flow) */}
           {(allowExtraCharges || allowPartialPayment) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3.5">
+            <div className={`grid gap-3 mb-3.5 ${allowExtraCharges && allowPartialPayment ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {allowExtraCharges && (
                 <div>
-                  <label className="form-label block mb-[5px]">Extra charges (₹)</label>
-                  <input className="form-input" type="number" min="0" value={extra}
+                  <label className="form-label block mb-[5px]">{t('extraCharges')}</label>
+                  <input className="form-input w-full" type="number" min="0" value={extra}
                     onChange={e => setExtra(e.target.value)} placeholder="0" />
                 </div>
               )}
               {allowPartialPayment && (
                 <div>
-                  <label className="form-label block mb-[5px]">Collect now (₹)</label>
-                  <input className="form-input" type="number" min="0" value={payment}
+                  <label className="form-label block mb-[5px]">{t('collectNow')}</label>
+                  <input className="form-input w-full" type="number" min="0" value={payment}
                     onChange={e => setPayment(e.target.value)} placeholder="0" />
                 </div>
               )}
@@ -209,62 +218,78 @@ export default function CheckOutModal({
           )}
 
           <div className="mb-3">
-            <label className="form-label block mb-[5px]">Payment Method</label>
+            <label className="form-label block mb-[5px]">{t('paymentMethod')}</label>
             <select className="form-select" value={payMethod} onChange={e => setPayMethod(e.target.value)}>
-              {paymentMethods.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              {paymentMethods.map(m => <option key={m.value} value={m.value}>{m.label || t(`methods.${m.value}`, { defaultValue: m.value })}</option>)}
             </select>
           </div>
 
           {showReference && (
             <div className="mb-3.5">
-              <label className="form-label block mb-[5px]">Reference / txn no.</label>
+              <label className="form-label block mb-[5px]">{t('reference')}</label>
               <input className="form-input" value={reference}
-                onChange={e => setReference(e.target.value)} placeholder="e.g. UPI ref, last 4 digits" />
+                onChange={e => setReference(e.target.value)} placeholder={t('referencePlaceholder')} />
             </div>
           )}
 
           <div className="mb-3.5">
-            <label className="form-label block mb-[5px]">Remarks (optional)</label>
-            <textarea className="form-textarea" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Key return confirmation, damages, etc." />
+            <label className="form-label block mb-[5px]">{t('remarks')}</label>
+            <textarea className="form-textarea" rows={2} value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('remarksPlaceholder')} />
           </div>
 
           <div className="mb-3.5">
-            <label className="form-label block mb-[5px]">Payment screenshot / proof (optional)</label>
+            <label className="form-label block mb-[5px]">{t('proof')}</label>
             {proof ? (
               <div className="flex items-center justify-between gap-3 rounded-lg border border-line2 bg-surface px-3 py-2">
                 <span className="t-sm text-ink truncate">📎 {proof.name}</span>
                 <button
                   type="button"
-                  className="t-xs text-ink3 hover:text-danger-text shrink-0"
+                  className="t-xs text-ink3 hover:text-danger-text shrink-0 pointer-coarse:min-h-11 pointer-coarse:px-2"
                   onClick={() => { setProof(null); setProofError('') }}
                 >
-                  Remove
+                  {t('common:remove')}
                 </button>
               </div>
             ) : (
-              <label className="flex items-center gap-2 cursor-pointer rounded-lg border border-dashed border-line2 bg-surface px-3 py-2.5 t-sm text-ink3 hover:border-gold hover:text-ink2">
-                <span className="text-base">⬆</span>
-                <span>Attach an image or PDF (e.g. UPI / card receipt)</span>
+              <label className="flex items-center gap-2 min-h-11 cursor-pointer rounded-lg border border-dashed border-line2 bg-surface px-3 py-2.5 t-sm text-ink3 hover:border-gold hover:text-ink2">
+                <span className="text-base shrink-0">⬆</span>
+                <span>{t('attachProof')}</span>
                 <input type="file" accept="image/*,.pdf" className="hidden" onChange={pickProof} />
               </label>
             )}
-            {proofError && <span className="block text-[11.5px] text-danger mt-1">{proofError}</span>}
+            {proofError && <span className="block text-xs text-danger mt-1">{proofError}</span>}
           </div>
 
           {/* Running balance after this settlement (booking flow) */}
           {(allowExtraCharges || allowPartialPayment) && (
-            <div className="mb-3.5 flex items-center justify-between rounded-lg bg-surface2 border border-line px-3.5 py-3">
-              <span className="font-semibold text-ink">Balance after check-out</span>
+            <div className="mb-3.5 flex flex-wrap items-center justify-between gap-x-3 rounded-lg bg-surface2 border border-line px-3.5 py-3">
+              <span className="font-semibold text-ink">{t('balanceAfter')}</span>
               <span className="t-h3" style={{ fontFamily: 'var(--font-mono)', color: dueAfter > 0 ? 'var(--red-text)' : 'var(--green-text)' }}>
-                {dueAfter > 0 ? formatCurrency(dueAfter) : 'Settled'}
+                {dueAfter > 0 ? formatCurrency(dueAfter) : t('settled')}
               </span>
             </div>
           )}
 
-          <label className="t-sm flex items-center gap-[9px] cursor-pointer">
-            <input type="checkbox" checked={settled} onChange={e => setSettled(e.target.checked)} />
-            Payment received & key returned — confirm checkout
+          <label className="t-sm flex items-center gap-[9px] min-h-11 cursor-pointer">
+            <input className="shrink-0 w-[18px] h-[18px]" type="checkbox" checked={settled} onChange={e => setSettled(e.target.checked)} />
+            {t('confirmReceived')}
           </label>
+        </>
+      )}
+
+      {step === 3 && (
+        <>
+          <p className="t-sm text-ink3 mb-3">
+            {t('photoHint')}
+          </p>
+          {/* Mounted only on this step so the camera stops the moment the user
+              goes Back or the check-out completes. */}
+          <CameraCapture
+            facingMode="user"
+            namePrefix="checkout-photo"
+            disabled={submitting}
+            onChange={setPhoto}
+          />
         </>
       )}
     </Modal>

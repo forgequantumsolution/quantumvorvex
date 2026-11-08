@@ -4,11 +4,12 @@ import {
   dismissNotification,
   clearAll,
 } from '../controllers/notificationsController.js'
-import { verifyToken } from '../middleware/auth.js'
+import { verifyToken, requireProperty } from '../middleware/auth.js'
 
 const router = express.Router()
 
-router.use(verifyToken)
+// Notifications belong to the current property; any member of it may see them.
+router.use(verifyToken, requireProperty)
 
 router.get('/', getNotifications)
 router.put('/:id/dismiss', dismissNotification)

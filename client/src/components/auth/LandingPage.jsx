@@ -227,7 +227,7 @@ export default function LandingPage({ onLogin }) {
             Quantum <span style={{ color: GOLD }}>Vorvex</span>
           </div>
 
-          <div className="desktop-only flex items-center gap-7">
+          <div className="hidden lg:flex items-center gap-7">
             {NAV_LINKS.map(l => (
               <span key={l} className="text-[12.5px] font-medium tracking-[0.06em] uppercase text-[#5a5550] cursor-pointer transition-colors duration-150"
                 onMouseEnter={e => e.currentTarget.style.color = GOLD}
@@ -236,7 +236,7 @@ export default function LandingPage({ onLogin }) {
             ))}
           </div>
 
-          <div className="desktop-only flex items-center gap-2.5">
+          <div className="hidden lg:flex items-center gap-2.5">
             <button onClick={onLogin} className="px-[18px] py-2 rounded-md border border-[rgba(0,0,0,0.15)] bg-transparent cursor-pointer text-[12.5px] font-semibold tracking-[0.06em] transition-all duration-150" style={{
               color: INK,
             }}
@@ -252,8 +252,10 @@ export default function LandingPage({ onLogin }) {
           </div>
 
           <button
-            className="mobile-only bg-none border border-[rgba(0,0,0,0.12)] rounded-md w-9 h-9 items-center justify-center cursor-pointer text-[18px]"
+            className="lg:hidden inline-flex bg-none border border-[rgba(0,0,0,0.12)] rounded-md w-11 h-11 items-center justify-center cursor-pointer text-[18px]"
             onClick={() => setMenuOpen(o => !o)}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
             style={{
               color: INK,
             }}
@@ -261,17 +263,17 @@ export default function LandingPage({ onLogin }) {
         </div>
 
         {menuOpen && (
-          <div className="border-t border-t-[rgba(0,0,0,0.07)] pt-4 px-[clamp(16px,5vw,40px)] pb-5" style={{
+          <div className="lg:hidden border-t border-t-[rgba(0,0,0,0.07)] pt-2 px-[clamp(16px,5vw,40px)] pb-5" style={{
             background: CREAM,
           }}>
             {NAV_LINKS.map(l => (
-              <div key={l} onClick={() => setMenuOpen(false)} className="t-body py-[13px] border-b border-b-[rgba(0,0,0,0.05)] text-[#3a3530] cursor-pointer tracking-[0.04em] uppercase">{l}</div>
+              <div key={l} onClick={() => setMenuOpen(false)} className="t-body min-h-11 flex items-center py-[11px] border-b border-b-[rgba(0,0,0,0.05)] text-[#3a3530] cursor-pointer tracking-[0.04em] uppercase">{l}</div>
             ))}
-            <div className="flex gap-2.5 mt-4">
-              <button onClick={() => { setMenuOpen(false); onLogin() }} className="t-title flex-1 p-[11px] rounded-md border border-[rgba(0,0,0,0.15)] bg-transparent cursor-pointer" style={{
+            <div className="flex flex-col min-[400px]:flex-row gap-2.5 mt-4">
+              <button onClick={() => { setMenuOpen(false); onLogin() }} className="t-title flex-1 min-h-11 p-[11px] rounded-md border border-[rgba(0,0,0,0.15)] bg-transparent cursor-pointer" style={{
                 color: INK,
               }}>SIGN IN</button>
-              <button onClick={() => { setMenuOpen(false); onLogin() }} className="t-title flex-1 p-[11px] rounded-md border-none cursor-pointer text-white" style={{
+              <button onClick={() => { setMenuOpen(false); onLogin() }} className="t-title flex-1 min-h-11 p-[11px] rounded-md border-none cursor-pointer text-white" style={{
                 background: INK,
               }}>GET STARTED</button>
             </div>
@@ -281,7 +283,7 @@ export default function LandingPage({ onLogin }) {
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="max-w-[1200px] mx-auto pt-[clamp(40px,7vh,88px)] px-[clamp(16px,5vw,40px)] pb-[clamp(36px,6vh,72px)]">
-        <div className="lp-hero-grid grid grid-cols-2 gap-[clamp(32px,5vw,72px)] items-center">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-[clamp(32px,5vw,72px)] items-center">
           <div>
             <div className="inline-flex items-center gap-[7px] bg-[rgba(201,168,76,0.1)] border border-[rgba(201,168,76,0.3)] rounded-[100px] px-[14px] py-[5px] mb-[26px]">
               <span className="w-1.5 h-1.5 rounded-full block" style={{ background: GOLD }} />
@@ -306,14 +308,14 @@ export default function LandingPage({ onLogin }) {
               property owners who mean business.
             </p>
 
-            <div className="flex flex-wrap gap-3">
-              <button onClick={onLogin} className="px-[clamp(22px,2.5vw,30px)] py-[clamp(11px,1.5vw,13px)] rounded-lg border-none text-white text-[clamp(12px,1.3vw,13px)] font-bold tracking-[0.06em] cursor-pointer transition-[background] duration-150" style={{
+            <div className="flex flex-col min-[400px]:flex-row min-[400px]:flex-wrap gap-3">
+              <button onClick={onLogin} className="min-h-11 px-[clamp(22px,2.5vw,30px)] py-[clamp(11px,1.5vw,13px)] rounded-lg border-none text-white text-[clamp(12px,1.3vw,13px)] font-bold tracking-[0.06em] cursor-pointer transition-[background] duration-150" style={{
                 background: INK,
               }}
                 onMouseEnter={e => e.currentTarget.style.background = '#2a2a28'}
                 onMouseLeave={e => e.currentTarget.style.background = INK}
               >START FREE DEMO →</button>
-              <button className="px-[clamp(22px,2.5vw,30px)] py-[clamp(11px,1.5vw,13px)] rounded-lg border-[1.5px] border-[rgba(0,0,0,0.15)] bg-transparent text-[clamp(12px,1.3vw,13px)] font-semibold tracking-[0.06em] cursor-pointer transition-all duration-150" style={{
+              <button className="min-h-11 px-[clamp(22px,2.5vw,30px)] py-[clamp(11px,1.5vw,13px)] rounded-lg border-[1.5px] border-[rgba(0,0,0,0.15)] bg-transparent text-[clamp(12px,1.3vw,13px)] font-semibold tracking-[0.06em] cursor-pointer transition-all duration-150" style={{
                 color: INK,
               }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = GOLD; e.currentTarget.style.color = GOLD }}
@@ -323,7 +325,7 @@ export default function LandingPage({ onLogin }) {
           </div>
 
           {/* Right — stat cards */}
-          <div className="grid grid-cols-2 gap-[14px]">
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-[14px]">
             {[
               { label: 'Occupancy', value: '87%',  icon: '◉', color: '#16a34a', bg: '#dcfce7' },
               { label: 'Revenue',   value: '₹2.4L', icon: '◑', color: '#c9a84c', bg: 'rgba(201,168,76,0.1)' },
@@ -354,7 +356,7 @@ export default function LandingPage({ onLogin }) {
               <div className="text-[clamp(28px,4vw,44px)] font-black leading-none" style={{
                 color: GOLD,
               }}>{s.value}</div>
-              <div className="text-[10.5px] font-semibold tracking-[0.1em] uppercase text-[rgba(255,255,255,0.4)] mt-1.5">{s.label}</div>
+              <div className="text-[12px] font-semibold tracking-[0.1em] uppercase text-[rgba(255,255,255,0.4)] mt-1.5">{s.label}</div>
             </div>
           ))}
         </div>
@@ -374,7 +376,7 @@ export default function LandingPage({ onLogin }) {
           </p>
         </div>
 
-        <div className="lp-why-grid grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {WHY.map(w => (
             <div key={w.title} className="bg-white border border-[rgba(0,0,0,0.07)] rounded-xl p-[clamp(20px,2.5vw,28px)] transition-all duration-150"
               onMouseEnter={e => {
@@ -399,7 +401,7 @@ export default function LandingPage({ onLogin }) {
       {/* ── Modules ──────────────────────────────────────────────────────── */}
       <section className="bg-[#f0ede6] py-[clamp(44px,7vh,80px)] px-[clamp(16px,5vw,40px)]">
         <div className="max-w-[1200px] mx-auto">
-          <div className="lp-modules-grid grid grid-cols-[280px_1fr] gap-[clamp(24px,4vw,60px)] items-start">
+          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,280px)_1fr] gap-[clamp(24px,4vw,60px)] items-start">
             <div>
               <div className="t-label tracking-[0.16em] mb-[14px]" style={{
                 color: GOLD,
@@ -410,7 +412,7 @@ export default function LandingPage({ onLogin }) {
               <p className="t-body text-[#6b6055] leading-[1.75] m-0 max-w-[320px]">
                 From front desk to back office — Quantum Vorvex covers every workflow your hotel needs.
               </p>
-              <button onClick={onLogin} className="mt-[26px] px-6 py-[11px] rounded-[7px] border-none text-black text-[12.5px] font-bold tracking-[0.06em] cursor-pointer transition-[background] duration-150 inline-block" style={{
+              <button onClick={onLogin} className="mt-[26px] min-h-11 px-6 py-[11px] rounded-[7px] border-none text-black text-[12.5px] font-bold tracking-[0.06em] cursor-pointer transition-[background] duration-150 inline-block" style={{
                 background: GOLD,
               }}
                 onMouseEnter={e => e.currentTarget.style.background = '#d4b55a'}
@@ -418,7 +420,7 @@ export default function LandingPage({ onLogin }) {
               >SIGN IN TO PLATFORM</button>
             </div>
 
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5">
               {MODULES.map(mod => (
                 <div key={mod.label} className="bg-white border border-[rgba(0,0,0,0.07)] rounded-[10px] p-[15px] transition-all duration-150 cursor-default"
                   onMouseEnter={e => {
@@ -455,12 +457,10 @@ export default function LandingPage({ onLogin }) {
 
         <div className="flex flex-col gap-5">
           {FEATURES.map((f, i) => (
-            <div key={f.badge} className="lp-feature-card grid gap-[clamp(24px,4vw,60px)] items-center bg-white border border-[rgba(0,0,0,0.07)] rounded-2xl p-[clamp(28px,4vw,44px)] shadow-[0_4px_24px_rgba(0,0,0,0.05)]" style={{
-              gridTemplateColumns: i % 2 === 0 ? '1fr 420px' : '420px 1fr',
-            }}>
+            <div key={f.badge} className={`grid grid-cols-1 gap-[clamp(20px,4vw,60px)] items-center bg-white border border-[rgba(0,0,0,0.07)] rounded-2xl p-5 sm:p-[clamp(28px,4vw,44px)] shadow-[0_4px_24px_rgba(0,0,0,0.05)] ${i % 2 === 0 ? 'lg:grid-cols-[1fr_minmax(0,420px)]' : 'lg:grid-cols-[minmax(0,420px)_1fr]'}`}>
               {/* Text */}
-              <div style={{ order: i % 2 === 0 ? 0 : 1 }}>
-                <div className="inline-flex items-center gap-1.5 rounded-[100px] px-3 py-1 text-[9.5px] font-bold tracking-[0.12em] mb-4" style={{
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-1.5 rounded-[100px] px-3 py-1 text-[12px] font-bold tracking-[0.12em] mb-4" style={{
                   background: f.bg, color: f.color,
                 }}>{f.badge}</div>
                 <h3 className="text-[clamp(20px,2.5vw,28px)] font-black mt-0 mx-0 mb-[14px] leading-[1.2]" style={{
@@ -470,7 +470,7 @@ export default function LandingPage({ onLogin }) {
                 <ul className="list-none p-0 m-0">
                   {f.points.map(p => (
                     <li key={p} className="flex items-start gap-[9px] text-[13.5px] text-[#3a3530] mb-[9px] leading-[1.5]">
-                      <span className="w-4 h-4 rounded-full inline-flex items-center justify-center text-[9px] font-bold shrink-0 mt-px" style={{
+                      <span className="w-[18px] h-[18px] rounded-full inline-flex items-center justify-center text-[12px] font-bold shrink-0 mt-px" style={{
                         background: f.bg, color: f.color,
                       }}>✓</span>
                       {p}
@@ -480,8 +480,7 @@ export default function LandingPage({ onLogin }) {
               </div>
 
               {/* Visual */}
-              <div className="rounded-xl h-[clamp(180px,22vw,260px)] flex items-center justify-center text-[clamp(56px,8vw,96px)]" style={{
-                order: i % 2 === 0 ? 1 : 0,
+              <div className={`rounded-xl h-[clamp(140px,22vw,260px)] flex items-center justify-center text-[clamp(56px,8vw,96px)] ${i % 2 === 0 ? '' : 'lg:order-first'}`} style={{
                 background: f.bg,
               }}>{f.icon}</div>
             </div>
@@ -501,11 +500,11 @@ export default function LandingPage({ onLogin }) {
             <h2 className="text-[clamp(26px,3.5vw,42px)] font-black text-white m-0 leading-[1.1]">Up and running<br />in minutes.</h2>
           </div>
 
-          <div className="lp-steps-grid grid grid-cols-3 gap-[clamp(16px,3vw,32px)]">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-[clamp(16px,3vw,32px)]">
             {HOW_STEPS.map((s, i) => (
               <div key={s.step} className="relative bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.08)] rounded-[14px] p-[clamp(24px,3vw,32px)]">
                 {i < HOW_STEPS.length - 1 && (
-                  <div className="desktop-only absolute -right-4 top-[38%] text-[20px] text-[rgba(255,255,255,0.15)] z-[1]">→</div>
+                  <div className="hidden lg:block absolute -right-4 top-[38%] text-[20px] text-[rgba(255,255,255,0.15)] z-[1]">→</div>
                 )}
                 <div className="text-[clamp(40px,5vw,64px)] font-black leading-none mb-4 opacity-70" style={{
                   color: GOLD,
@@ -517,7 +516,7 @@ export default function LandingPage({ onLogin }) {
           </div>
 
           <div className="text-center mt-10">
-            <button onClick={onLogin} className="t-title px-9 py-[13px] rounded-lg border-none text-black tracking-[0.08em] cursor-pointer transition-[background] duration-150" style={{
+            <button onClick={onLogin} className="t-title w-full min-[400px]:w-auto min-h-11 px-9 py-[13px] rounded-lg border-none text-black tracking-[0.08em] cursor-pointer transition-[background] duration-150" style={{
               background: GOLD,
             }}
               onMouseEnter={e => e.currentTarget.style.background = '#d4b55a'}
@@ -537,7 +536,7 @@ export default function LandingPage({ onLogin }) {
             color: INK,
           }}>Right access.<br />Right people.</h2>
         </div>
-        <div className="lp-roles-grid grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {ROLES.map(r => (
             <div key={r.role} className="bg-white border border-[rgba(0,0,0,0.07)] rounded-[10px] p-[clamp(20px,3vw,26px)]" style={{
               borderTop: `3px solid ${r.color}`,
@@ -564,7 +563,7 @@ export default function LandingPage({ onLogin }) {
             }}>Trusted by hotel owners<br />across India.</h2>
           </div>
 
-          <div className="lp-testimonials-grid grid grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {TESTIMONIALS.map(t => (
               <div key={t.name} className="bg-white border border-[rgba(0,0,0,0.07)] rounded-[14px] p-[clamp(22px,3vw,32px)] shadow-[0_4px_20px_rgba(0,0,0,0.05)] flex flex-col gap-5">
                 <div className="text-[36px] leading-none opacity-50" style={{
@@ -577,7 +576,7 @@ export default function LandingPage({ onLogin }) {
                   }}>{t.initial}</div>
                   <div>
                     <div className="t-title" style={{ color: INK }}>{t.name}</div>
-                    <div className="text-[11.5px] text-[#888] mt-0.5">{t.title}</div>
+                    <div className="text-[12px] text-[#888] mt-0.5">{t.title}</div>
                   </div>
                 </div>
               </div>
@@ -600,7 +599,7 @@ export default function LandingPage({ onLogin }) {
           </p>
         </div>
 
-        <div className="lp-pricing-grid grid grid-cols-3 gap-5 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-5 items-start">
           {PLANS.map(plan => (
             <div key={plan.name} className="rounded-[14px] p-[clamp(24px,3vw,36px)] relative" style={{
               background: plan.highlight ? INK : '#fff',
@@ -608,7 +607,7 @@ export default function LandingPage({ onLogin }) {
               boxShadow: plan.highlight ? '0 12px 48px rgba(0,0,0,0.18)' : '0 4px 20px rgba(0,0,0,0.05)',
             }}>
               {plan.highlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-black text-[9.5px] font-extrabold tracking-[0.12em] px-[14px] py-1 rounded-[100px]" style={{
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-black text-[12px] font-extrabold tracking-[0.12em] px-[14px] py-1 rounded-[100px]" style={{
                   background: GOLD,
                 }}>MOST POPULAR</div>
               )}
@@ -636,7 +635,7 @@ export default function LandingPage({ onLogin }) {
                   </li>
                 ))}
               </ul>
-              <button onClick={onLogin} className="w-full p-3 rounded-lg text-[12.5px] font-bold tracking-[0.07em] cursor-pointer transition-all duration-150" style={{
+              <button onClick={onLogin} className="w-full min-h-11 p-3 rounded-lg text-[12.5px] font-bold tracking-[0.07em] cursor-pointer transition-all duration-150" style={{
                 border: plan.highlight ? 'none' : `1.5px solid ${plan.color === GOLD ? GOLD : 'rgba(0,0,0,0.15)'}`,
                 background: plan.highlight ? GOLD : 'transparent',
                 color: plan.highlight ? '#000' : plan.color,
@@ -672,7 +671,7 @@ export default function LandingPage({ onLogin }) {
               <div key={i} className={`bg-white border border-[rgba(0,0,0,0.07)] rounded-[10px] overflow-hidden transition-shadow duration-150 ${openFaq === i ? 'shadow-[0_4px_20px_rgba(0,0,0,0.07)]' : 'shadow-none'}`}>
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  className="w-full text-left bg-none border-none cursor-pointer px-[clamp(16px,2.5vw,24px)] py-[clamp(14px,2vw,20px)] flex justify-between items-center gap-4"
+                  className="w-full min-h-11 text-left bg-none border-none cursor-pointer px-[clamp(16px,2.5vw,24px)] py-[clamp(14px,2vw,20px)] flex justify-between items-center gap-4"
                 >
                   <span className="text-[14.5px] font-semibold leading-[1.4]" style={{ color: INK }}>{faq.q}</span>
                   <span className={`text-[18px] shrink-0 transition-transform duration-200 ${openFaq === i ? 'rotate-45' : 'rotate-0'}`} style={{ color: GOLD }}>+</span>
@@ -688,7 +687,7 @@ export default function LandingPage({ onLogin }) {
 
       {/* ── Contact Us ───────────────────────────────────────────────────── */}
       <section className="max-w-[1200px] mx-auto py-[clamp(44px,7vh,80px)] px-[clamp(16px,5vw,40px)]">
-        <div className="lp-contact-grid grid grid-cols-2 gap-[clamp(32px,5vw,72px)] items-start">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-[clamp(32px,5vw,72px)] items-start">
           {/* Left copy */}
           <div>
             <div className="t-label tracking-[0.16em] mb-[14px]" style={{ color: GOLD }}>CONTACT US</div>
@@ -704,11 +703,11 @@ export default function LandingPage({ onLogin }) {
                 { icon: '📱', label: 'Phone', value: '+91 98765 00000' },
                 { icon: '📍', label: 'Office', value: 'MG Road, Bengaluru 560001' },
               ].map(item => (
-                <div key={item.label} className="flex items-center gap-3">
+                <div key={item.label} className="flex items-center gap-3 min-w-0">
                   <div className="w-[38px] h-[38px] rounded-[9px] bg-[rgba(201,168,76,0.1)] border border-[rgba(201,168,76,0.2)] flex items-center justify-center text-[16px] shrink-0">{item.icon}</div>
-                  <div>
-                    <div className="text-[10.5px] font-bold text-[#888] tracking-[0.06em] uppercase mb-px">{item.label}</div>
-                    <div className="text-[13.5px] font-medium" style={{ color: INK }}>{item.value}</div>
+                  <div className="min-w-0">
+                    <div className="text-[12px] font-bold text-[#888] tracking-[0.06em] uppercase mb-px">{item.label}</div>
+                    <div className="text-[13.5px] font-medium break-words" style={{ color: INK }}>{item.value}</div>
                   </div>
                 </div>
               ))}
@@ -716,13 +715,13 @@ export default function LandingPage({ onLogin }) {
           </div>
 
           {/* Right form */}
-          <div className="bg-white border border-[rgba(0,0,0,0.09)] rounded-2xl p-[clamp(24px,3vw,36px)] shadow-[0_8px_32px_rgba(0,0,0,0.06)]">
+          <div className="min-w-0 bg-white border border-[rgba(0,0,0,0.09)] rounded-2xl p-5 sm:p-[clamp(24px,3vw,36px)] shadow-[0_8px_32px_rgba(0,0,0,0.06)]">
             {contactSent ? (
               <div className="text-center py-5">
                 <div className="text-[48px] mb-[14px]">✅</div>
                 <h3 className="t-h1 mt-0 mx-0 mb-2.5" style={{ color: INK }}>Message received!</h3>
                 <p className="t-body text-[#6b6055] leading-[1.8]">We'll get back to you at <strong>{contactForm.email}</strong> within one business day.</p>
-                <button onClick={() => setContactSent(false)} className="mt-5 px-6 py-2.5 rounded-[7px] border border-[rgba(0,0,0,0.15)] bg-transparent cursor-pointer text-[12.5px] font-semibold" style={{ color: INK }}>Send another message</button>
+                <button onClick={() => setContactSent(false)} className="mt-5 min-h-11 px-6 py-2.5 rounded-[7px] border border-[rgba(0,0,0,0.15)] bg-transparent cursor-pointer text-[12.5px] font-semibold" style={{ color: INK }}>Send another message</button>
               </div>
             ) : (
               <form onSubmit={handleContactSubmit}>
@@ -730,7 +729,7 @@ export default function LandingPage({ onLogin }) {
                   <h3 className="t-h1 mt-0 mx-0 mb-1" style={{ color: INK }}>Get in touch</h3>
                   <p className="text-[12.5px] text-[#888] m-0">We'll respond within one business day.</p>
                 </div>
-                <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                   {[
                     { key: 'name',     label: 'Your Name',        placeholder: 'Ramesh Gupta',         type: 'text'  },
                     { key: 'email',    label: 'Email Address',     placeholder: 'you@hotel.com',         type: 'email' },
@@ -738,7 +737,7 @@ export default function LandingPage({ onLogin }) {
                     { key: 'phone',    label: 'Phone (optional)',   placeholder: '+91 98765 00000',       type: 'tel'   },
                   ].map(field => (
                     <div key={field.key}>
-                      <label className="block text-[10.5px] font-bold tracking-[0.08em] text-[#888] uppercase mb-1.5">{field.label}</label>
+                      <label className="block text-[12px] font-bold tracking-[0.08em] text-[#888] uppercase mb-1.5">{field.label}</label>
                       <input
                         type={field.type}
                         value={contactForm[field.key] || ''}
@@ -746,7 +745,7 @@ export default function LandingPage({ onLogin }) {
                         placeholder={field.placeholder}
                         onFocus={() => setContactFocus(f => ({ ...f, [field.key]: true }))}
                         onBlur={() => setContactFocus(f => ({ ...f, [field.key]: false }))}
-                        className="t-sm w-full box-border px-3 py-[9px] rounded-[7px] outline-none transition-all duration-150"
+                        className="t-sm w-full min-h-11 box-border px-3 py-[9px] rounded-[7px] outline-none focus:ring-0 transition-all duration-150"
                         style={{
                           background: contactFocus[field.key] ? '#fff' : '#f9f8f5',
                           border: `1px solid ${contactFocus[field.key] ? GOLD : 'rgba(0,0,0,0.12)'}`,
@@ -758,13 +757,13 @@ export default function LandingPage({ onLogin }) {
                   ))}
                 </div>
                 <div className="mb-4">
-                  <label className="block text-[10.5px] font-bold tracking-[0.08em] text-[#888] uppercase mb-1.5">Message</label>
+                  <label className="block text-[12px] font-bold tracking-[0.08em] text-[#888] uppercase mb-1.5">Message</label>
                   <textarea
                     value={contactForm.message}
                     onChange={e => setContact('message', e.target.value)}
                     placeholder="Tell us about your property and what you're looking for..."
                     rows={4}
-                    className="t-sm w-full box-border px-3 py-[9px] resize-y bg-[#f9f8f5] border border-[rgba(0,0,0,0.12)] rounded-[7px] outline-none transition-all duration-150"
+                    className="t-sm w-full box-border px-3 py-[9px] focus:ring-0 resize-y bg-[#f9f8f5] border border-[rgba(0,0,0,0.12)] rounded-[7px] outline-none transition-all duration-150"
                     style={{
                       color: INK,
                     }}
@@ -772,7 +771,7 @@ export default function LandingPage({ onLogin }) {
                     onBlur={e => { e.currentTarget.style.background = '#f9f8f5'; e.currentTarget.style.borderColor = 'rgba(0,0,0,0.12)'; e.currentTarget.style.boxShadow = 'none' }}
                   />
                 </div>
-                <button type="submit" disabled={contactLoading || !contactForm.name || !contactForm.email} className="w-full p-3 text-white border-none rounded-lg text-[12px] font-bold tracking-[0.1em] transition-[background] duration-150" style={{
+                <button type="submit" disabled={contactLoading || !contactForm.name || !contactForm.email} className="w-full min-h-11 p-3 text-white border-none rounded-lg text-[12px] font-bold tracking-[0.1em] transition-[background] duration-150" style={{
                   background: contactLoading || !contactForm.name || !contactForm.email ? '#888' : INK,
                   cursor: contactLoading || !contactForm.name || !contactForm.email ? 'not-allowed' : 'pointer',
                 }}>
@@ -794,14 +793,14 @@ export default function LandingPage({ onLogin }) {
             No installation. No backend required for demo. Sign in and explore the full
             system with real-looking mock data — instantly.
           </p>
-          <div className="flex flex-wrap gap-3 justify-center">
-            <button onClick={onLogin} className="t-title px-[clamp(24px,4vw,36px)] py-[13px] rounded-lg border-none text-black tracking-[0.08em] cursor-pointer transition-[background] duration-150" style={{
+          <div className="flex flex-col min-[400px]:flex-row min-[400px]:flex-wrap gap-3 justify-center">
+            <button onClick={onLogin} className="t-title min-h-11 px-[clamp(24px,4vw,36px)] py-[13px] rounded-lg border-none text-black tracking-[0.08em] cursor-pointer transition-[background] duration-150" style={{
               background: GOLD,
             }}
               onMouseEnter={e => e.currentTarget.style.background = '#d4b55a'}
               onMouseLeave={e => e.currentTarget.style.background = GOLD}
             >SIGN IN TO PLATFORM →</button>
-            <button onClick={onLogin} className="t-title px-[clamp(24px,4vw,36px)] py-[13px] rounded-lg border border-[rgba(255,255,255,0.2)] bg-transparent text-white tracking-[0.08em] cursor-pointer transition-[border-color] duration-150"
+            <button onClick={onLogin} className="t-title min-h-11 px-[clamp(24px,4vw,36px)] py-[13px] rounded-lg border border-[rgba(255,255,255,0.2)] bg-transparent text-white tracking-[0.08em] cursor-pointer transition-[border-color] duration-150"
               onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)'}
               onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'}
             >SIGN IN</button>
@@ -813,9 +812,9 @@ export default function LandingPage({ onLogin }) {
       <footer className="bg-[#060604]">
         {/* Main footer grid */}
         <div className="max-w-[1200px] mx-auto pt-[clamp(40px,6vh,64px)] px-[clamp(16px,5vw,40px)] pb-[clamp(28px,4vh,48px)]">
-          <div className="lp-footer-grid grid grid-cols-[240px_repeat(4,1fr)] gap-[clamp(24px,3vw,48px)]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-[240px_repeat(4,1fr)] gap-x-[clamp(24px,3vw,48px)] gap-y-8">
             {/* Brand column */}
-            <div>
+            <div className="col-span-2 sm:col-span-4 lg:col-span-1">
               <div className="t-h2 italic mb-3" style={{
                 color: GOLD,
               }}>Quantum Vorvex</div>
@@ -824,7 +823,7 @@ export default function LandingPage({ onLogin }) {
               </p>
               <div className="flex gap-2.5">
                 {['𝕏', 'in', 'f', '▶'].map(s => (
-                  <div key={s} className="w-8 h-8 rounded-[7px] border border-[rgba(255,255,255,0.1)] flex items-center justify-center text-[13px] text-[rgba(255,255,255,0.35)] cursor-pointer transition-all duration-150"
+                  <div key={s} className="w-10 h-10 sm:w-8 sm:h-8 rounded-[7px] border border-[rgba(255,255,255,0.1)] flex items-center justify-center text-[13px] text-[rgba(255,255,255,0.35)] cursor-pointer transition-all duration-150"
                     onMouseEnter={e => { e.currentTarget.style.borderColor = GOLD; e.currentTarget.style.color = GOLD }}
                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)' }}
                   >{s}</div>
@@ -836,9 +835,9 @@ export default function LandingPage({ onLogin }) {
             {Object.entries(FOOTER_LINKS).map(([category, links]) => (
               <div key={category}>
                 <div className="t-label tracking-[0.12em] text-[rgba(255,255,255,0.4)] mb-4">{category}</div>
-                <div className="flex flex-col gap-2.5">
+                <div className="flex flex-col gap-1 sm:gap-2.5">
                   {links.map(l => (
-                    <span key={l} className="t-sm text-[rgba(255,255,255,0.45)] cursor-pointer transition-colors duration-150"
+                    <span key={l} className="t-sm py-1.5 sm:py-0 text-[rgba(255,255,255,0.45)] cursor-pointer transition-colors duration-150"
                       onMouseEnter={e => e.currentTarget.style.color = '#fff'}
                       onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.45)'}
                     >{l}</span>
@@ -851,12 +850,12 @@ export default function LandingPage({ onLogin }) {
 
         {/* Footer bottom bar */}
         <div className="border-t border-t-[rgba(255,255,255,0.06)] py-[clamp(14px,2vh,20px)] px-[clamp(16px,5vw,40px)] flex flex-wrap gap-3 items-center justify-between">
-          <div className="text-[11.5px] text-[rgba(255,255,255,0.22)]">
+          <div className="text-[12px] text-[rgba(255,255,255,0.22)]">
             © 2026 Forge Quantum Solutions Pvt. Ltd. · GST-ready · Made for India 🇮🇳
           </div>
           <div className="flex gap-5">
             {['Privacy', 'Terms', 'Cookies'].map(l => (
-              <span key={l} className="text-[11.5px] text-[rgba(255,255,255,0.22)] cursor-pointer transition-colors duration-150"
+              <span key={l} className="text-[12px] text-[rgba(255,255,255,0.22)] cursor-pointer transition-colors duration-150"
                 onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.55)'}
                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.22)'}
               >{l}</span>
@@ -865,74 +864,6 @@ export default function LandingPage({ onLogin }) {
         </div>
       </footer>
 
-      <style>{`
-        /* Hero: 2 cols on ≥860px, 1 col below */
-        .lp-hero-grid { grid-template-columns: 1fr 1fr !important; }
-        @media (max-width: 860px) {
-          .lp-hero-grid { grid-template-columns: 1fr !important; }
-        }
-        /* Why: 4 cols → 2 → 1 */
-        .lp-why-grid { grid-template-columns: repeat(4,1fr) !important; }
-        @media (max-width: 860px) {
-          .lp-why-grid { grid-template-columns: repeat(2,1fr) !important; }
-        }
-        @media (max-width: 540px) {
-          .lp-why-grid { grid-template-columns: 1fr !important; }
-        }
-        /* Modules outer: sidebar + grid on ≥800px */
-        .lp-modules-grid { grid-template-columns: 280px 1fr !important; }
-        @media (max-width: 800px) {
-          .lp-modules-grid { grid-template-columns: 1fr !important; }
-        }
-        /* Feature deep-dive cards: side-by-side on ≥760px, stacked below */
-        .lp-feature-card { grid-template-columns: 1fr 420px !important; }
-        @media (max-width: 760px) {
-          .lp-feature-card { grid-template-columns: 1fr !important; }
-          .lp-feature-card > div { order: 0 !important; }
-        }
-        /* How it works: 3 cols → 1 */
-        .lp-steps-grid { grid-template-columns: repeat(3,1fr) !important; }
-        @media (max-width: 680px) {
-          .lp-steps-grid { grid-template-columns: 1fr !important; }
-        }
-        /* Roles: 3 cols → 2 → 1 */
-        .lp-roles-grid { grid-template-columns: repeat(3,1fr) !important; }
-        @media (max-width: 640px) {
-          .lp-roles-grid { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 860px) and (min-width: 641px) {
-          .lp-roles-grid { grid-template-columns: repeat(2,1fr) !important; }
-        }
-        /* Testimonials: 3 cols → 1 */
-        .lp-testimonials-grid { grid-template-columns: repeat(3,1fr) !important; }
-        @media (max-width: 860px) {
-          .lp-testimonials-grid { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 1100px) and (min-width: 861px) {
-          .lp-testimonials-grid { grid-template-columns: repeat(2,1fr) !important; }
-        }
-        /* Pricing: 3 cols → 1 */
-        .lp-pricing-grid { grid-template-columns: repeat(3,1fr) !important; }
-        @media (max-width: 900px) {
-          .lp-pricing-grid { grid-template-columns: 1fr !important; }
-        }
-        @media (max-width: 1100px) and (min-width: 901px) {
-          .lp-pricing-grid { grid-template-columns: repeat(2,1fr) !important; }
-        }
-        /* Footer grid: brand + 4 cols → 2 cols → 1 */
-        .lp-footer-grid { grid-template-columns: 240px repeat(4,1fr) !important; }
-        @media (max-width: 860px) {
-          .lp-footer-grid { grid-template-columns: repeat(2,1fr) !important; }
-        }
-        @media (max-width: 480px) {
-          .lp-footer-grid { grid-template-columns: 1fr !important; }
-        }
-        /* Contact: 2 cols → 1 */
-        .lp-contact-grid { grid-template-columns: 1fr 1fr !important; }
-        @media (max-width: 800px) {
-          .lp-contact-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </div>
   )
 }

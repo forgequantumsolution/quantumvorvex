@@ -22,9 +22,12 @@ export const PANEL_MODULE = {
   food:          'food',
   housekeeping:  'housekeeping',
   billing:       'billing',
+  expenses:      'expenses',
   reports:       'reports',
   users:         'users',
   settings:      'settings',
+  // Cross-property overview — not tied to one module; see canAccess.
+  portfolio:     null,
 }
 
 // Every known panel id (used by the URL router to validate ?panel paths).
@@ -45,8 +48,21 @@ export function hasModule(user, module, level = 'VIEW') {
   return (LEVEL_RANK[have] || 0) >= (LEVEL_RANK[level] || 0)
 }
 
+/**
+ * The "All Properties" overview: owners, and anyone who can view reports at more
+ * than one property. Matches GET /properties/summary, which lists only the
+ * properties where the caller has report access.
+ */
+export function canSeePortfolio(user) {
+  if (isOwnerUser(user)) return true
+  const withReports = (user?.properties || []).filter((p) =>
+    p.isOwner || (LEVEL_RANK[p.permissions?.reports] || 0) >= LEVEL_RANK.VIEW)
+  return withReports.length > 1
+}
+
 /** Can the user open a sidebar panel (needs at least VIEW on its module). */
 export function canAccess(user, panel) {
+  if (panel === 'portfolio') return canSeePortfolio(user)
   const module = PANEL_MODULE[panel]
   if (!module) return true // unknown/utility panel — don't hard-block
   return hasModule(user, module, 'VIEW')

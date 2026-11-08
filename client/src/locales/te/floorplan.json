@@ -1,0 +1,24 @@
+{
+  "title": "ఫ్లోర్ ప్లాన్",
+  "subtitle": "అంతస్తుల వారీగా గదుల లేఅవుట్",
+  "legend": "సూచిక",
+  "occupiedOf": "{{occupied}}/{{total}} ఆక్రమించబడ్డాయి",
+  "noRooms": "గదులు కనుగొనబడలేదు",
+  "floorN": "అంతస్తు {{n}}",
+  "roomN": "గది {{number}}",
+  "roomCount_one": "{{count}} గది",
+  "roomCount_other": "{{count}} గదులు",
+  "status": {
+    "available": "అందుబాటులో ఉంది",
+    "occupied": "ఆక్రమించబడింది",
+    "maintenance": "నిర్వహణ",
+    "reserved": "రిజర్వ్ చేయబడింది"
+  },
+  "detail": {
+    "roomNumber": "గది నంబర్",
+    "floor": "అంతస్తు",
+    "type": "రకం",
+    "dailyRate": "రోజువారీ రేటు",
+    "currentOccupant": "ప్రస్తుత నివాసి"
+  }
+}

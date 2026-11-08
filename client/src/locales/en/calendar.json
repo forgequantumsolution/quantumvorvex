@@ -1,0 +1,69 @@
+{
+  "title": "Room Calendar",
+  "subtitleGrid": "Visual booking timeline — click a cell to book or view details",
+  "subtitleList": "Bookings day by day — tap a booking for details",
+  "newBookingAction": "New booking",
+  "gridHint": "Click empty cell to book · Click booking to view details",
+  "nights_one": "{{count}} night",
+  "nights_other": "{{count}} nights",
+  "stats": {
+    "totalRooms": "Total rooms",
+    "occupiedToday": "Occupied today",
+    "confirmedUpcoming": "Confirmed upcoming",
+    "availableToday": "Available today"
+  },
+  "nav": {
+    "prev": "Prev",
+    "prevRange": "Previous range",
+    "nextRange": "Next range"
+  },
+  "filter": {
+    "daysShown": "Days shown",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
+    "allTypes": "All",
+    "floor": "Floor",
+    "allFloors": "All Floors",
+    "floorN": "Floor {{n}}"
+  },
+  "status": {
+    "occupied": "Occupied",
+    "confirmed": "Confirmed",
+    "maintenance": "Maintenance",
+    "checkout": "Checked out",
+    "available": "Available"
+  },
+  "field": {
+    "guest": "Guest",
+    "room": "Room",
+    "roomType": "Room type",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "duration": "Duration"
+  },
+  "newBooking": {
+    "title": "New Booking",
+    "create": "Create Booking",
+    "guestName": "Guest Name",
+    "fullName": "Full name",
+    "selectRoom": "Select room",
+    "notes": "Notes",
+    "notesPlaceholder": "Special requests..."
+  },
+  "detail": {
+    "title": "Booking Details"
+  },
+  "toast": {
+    "added": "Booking added to calendar",
+    "removed": "Booking removed"
+  },
+  "day": {
+    "allFree_one": "No bookings — {{count}} room free",
+    "allFree_other": "No bookings — all {{count}} rooms free",
+    "summary": "{{inHouse}} in house · {{free}} free",
+    "book": "Book",
+    "arrives": "Arrives",
+    "departs": "Departs",
+    "inHouse": "In house"
+  }
+}

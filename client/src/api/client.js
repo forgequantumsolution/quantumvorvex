@@ -8,17 +8,30 @@ const api = axios.create({
   withCredentials: true,
 })
 
-// ── Attach the persisted auth token to every request ─────────────────────────
+// ── Attach the persisted auth token + active property to every request ───────
+// The server scopes every request to X-Property-Id (falls back to the user's
+// first property when absent). The store mirrors the active property into
+// localStorage — see store/index.js.
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('qv_token')
   if (token) config.headers.Authorization = `Bearer ${token}`
+  // A call may target another property explicitly (e.g. inviting someone into a
+  // property you're not currently in) — don't overwrite that.
+  const propertyId = localStorage.getItem('qv_property')
+  if (propertyId && !config.headers['X-Property-Id']) config.headers['X-Property-Id'] = propertyId
   return config
 })
+
+// For links opened in a new tab (no custom headers possible): ?propertyId=…
+const withProperty = (url) => {
+  const propertyId = localStorage.getItem('qv_property')
+  return propertyId ? `${url}${url.includes('?') ? '&' : '?'}propertyId=${encodeURIComponent(propertyId)}` : url
+}
 
 // ── Mock adapter — short-circuits all HTTP when VITE_MOCK=true ────────────────
 if (MOCK) {
   api.defaults.adapter = async (config) => {
-    const data = await getMockResponse(config.method, config.url)
+    const data = await getMockResponse(config.method, config.url, config.params, config.data)
     return { data, status: 200, statusText: 'OK', headers: {}, config, request: {} }
   }
 }
@@ -50,9 +63,11 @@ api.interceptors.response.use(
         window.dispatchEvent(new CustomEvent('auth:unauthorized'))
       }
     }
-    // A 403 from the RBAC layer means the user's access may have changed (e.g. role
-    // edited). Nudge the app to resync the live permission map so the sidebar updates.
-    if (err.response?.status === 403 && err.response?.data?.code === 'ERR_FORBIDDEN' && !isAuthCall) {
+    // A 403 from the RBAC layer means the user's access may have changed (role edited,
+    // removed from / archived property). Nudge the app to resync the live permission
+    // map + property list so the sidebar and property switcher update.
+    const ACCESS_CODES = ['ERR_FORBIDDEN', 'ERR_PROPERTY_FORBIDDEN', 'ERR_NO_PROPERTY']
+    if (err.response?.status === 403 && ACCESS_CODES.includes(err.response?.data?.code) && !isAuthCall) {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('auth:forbidden'))
       }
@@ -90,11 +105,29 @@ export const billingApi = {
   getAll: (params) => api.get('/billing', { params }),
   getStats: (params) => api.get('/billing/stats', { params }),
   generate: (data) => api.post('/billing/generate', data),
+  // Raise PG rent invoices that have fallen due now (a daily job also does this).
+  billPgRent: ()   => api.post('/billing/pg-rent'),
   collect: (id)    => api.put(`/billing/${id}/collect`),
   delete: (id)     => api.delete(`/billing/${id}`),
   getPdf: (id)     => api.get(`/billing/${id}/pdf`, { responseType: 'blob' }),
+  getLetterhead:   ()        => api.get('/billing/letterhead'),
   getLedger:       (guestId) => api.get('/billing/ledger', { params: { guestId } }),
   getCashRegister: (date)    => api.get('/billing/cash-register', { params: { date } }),
+}
+
+// Cash book: money out (expenses) and other money in, with a period summary.
+// Dates are YYYY-MM-DD (inclusive); the period defaults to the current month.
+export const expensesApi = {
+  list:           (params)   => api.get('/expenses', { params }),   // { from, to, type, status, paidFrom, categoryId, group, search, page, limit }
+  summary:        (params)   => api.get('/expenses/summary', { params }), // { from, to }
+  payees:         ()         => api.get('/expenses/payees'),
+  create:         (data)     => api.post('/expenses', data),
+  update:         (id, data) => api.put(`/expenses/${id}`, data),
+  pay:            (id, data) => api.post(`/expenses/${id}/pay`, data || {}), // { date?, paymentMode?, paidFrom? }
+  remove:         (id)       => api.delete(`/expenses/${id}`),
+  categories:     ()         => api.get('/expenses/categories'),
+  createCategory: (data)     => api.post('/expenses/categories', data),     // { name, group, monthlyBudget? }
+  updateCategory: (id, data) => api.put(`/expenses/categories/${id}`, data), // { name?, group?, monthlyBudget?, active? }
 }
 
 export const bookingsApi = {
@@ -102,6 +135,15 @@ export const bookingsApi = {
   getStats: (params)   => api.get('/bookings/stats', { params }),
   getOne:   (id)       => api.get(`/bookings/${id}`),
   create:   (data)     => api.post('/bookings', data),
+  // PG: several occupants into one room let by bed — one booking per bed.
+  createGroup: (data)  => api.post('/bookings/group', data),
+  // PG: per-bed free/held status of a room over [from, to) (ISO strings).
+  bedAvailability: (params) => api.get('/bookings/bed-availability', { params }),
+  // Monthly tenancy: rent account (months billed, due, credit) and collect rent.
+  rentAccount: (id)    => api.get(`/bookings/${id}/rent`),
+  collectRent: (id, data) => api.post(`/bookings/${id}/collect-rent`, data),
+  // After move-out: dues from the deposit, the rest recorded as refunded.
+  refund:      (id, data) => api.post(`/bookings/${id}/refund`, data),
   update:   (id, data) => api.put(`/bookings/${id}`, data),
   confirm:  (id)       => api.post(`/bookings/${id}/confirm`),
   checkIn:  (id, data) => api.post(`/bookings/${id}/check-in`, data || {}),
@@ -115,10 +157,12 @@ export const bookingsApi = {
   getInvoice: (id, params) => api.get(`/bookings/${id}/invoice`, { params, responseType: 'blob' }),
   // Next auto invoice serial for today (create-form preview; not reserved).
   nextInvoiceNo: () => api.get('/bookings/next-invoice-no'),
+  // Returning-guest lookup: details from the most recent stay on this number.
+  lookupGuest: (phone) => api.get('/bookings/guest-lookup', { params: { phone } }),
   // Override the tax-invoice serial number for a booking.
   updateInvoiceNo: (id, invoiceNo) => api.patch(`/bookings/${id}/invoice-no`, { invoiceNo }),
   // Direct URL to open/print the invoice in a new tab.
-  invoiceUrl: (id) => `${api.defaults.baseURL}/bookings/${id}/invoice?print=1`,
+  invoiceUrl: (id) => withProperty(`${api.defaults.baseURL}/bookings/${id}/invoice?print=1`),
 }
 
 export const documentsApi = {
@@ -182,9 +226,25 @@ export const housekeepingApi = {
 
 export const usersApi = {
   getAll: ()         => api.get('/users'),
-  create: (data)     => api.post('/users', data),
-  update: (id, data) => api.put(`/users/${id}`, data),
-  remove: (id)       => api.delete(`/users/${id}`),
+  create: (data)     => api.post('/users', data),       // assigned to the active property
+  // Create an account directly in a given property (owner inviting staff to a branch).
+  createIn: (propertyId, data) => api.post('/users', data, { headers: { 'X-Property-Id': propertyId } }),
+  update: (id, data) => api.put(`/users/${id}`, data),  // role change applies to the active property
+  remove: (id)       => api.delete(`/users/${id}`),     // non-owners: removes from the active property only
+  // Owner-only: every property the user can open + their role at each.
+  setAccess: (id, access) => api.put(`/users/${id}/access`, { access }), // [{ propertyId, roleId }]
+}
+
+export const propertiesApi = {
+  getAll:     ()         => api.get('/properties'),           // properties the caller can open
+  // portfolio stats per property + totals; params { forecast: 7|14|30, trend: '7'|'30'|'90'|'month' }
+  summary:    (params)   => api.get('/properties/summary', { params }),
+  create:     (data)     => api.post('/properties', data),    // { name, code?, address?, phone?, email?, gstin?, copyFromPropertyId? }
+  update:     (id, data) => api.put(`/properties/${id}`, data), // { name?, code?, status: 'active'|'archived' }
+  getMembers: (id)       => api.get(`/properties/${id}/members`),
+  // Give a person access to a property with a role there, or change that role.
+  setMember:    (id, userId, roleId) => api.put(`/properties/${id}/members/${userId}`, { roleId }),
+  removeMember: (id, userId)         => api.delete(`/properties/${id}/members/${userId}`),
 }
 
 export const rolesApi = {

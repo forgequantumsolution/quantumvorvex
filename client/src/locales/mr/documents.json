@@ -1,0 +1,108 @@
+{
+  "title": "कागदपत्रे",
+  "subtitle": "KYC पडताळणी आणि ID व्यवस्थापन",
+  "searchPlaceholder": "पाहुणा किंवा DOC ID शोधा",
+  "roomNo": "खोली {{room}}",
+  "clearFilters": "फिल्टर काढा",
+  "filesCount_one": "{{count}} फाइल",
+  "filesCount_other": "{{count}} फाइल्स",
+  "kind": { "booking": "बुकिंग", "guest": "पाहुणा" },
+  "verification": { "verified": "पडताळलेले", "pending": "बाकी", "incomplete": "फाइल नाही" },
+  "docType": {
+    "idFront": "ID पुढील बाजू",
+    "idBack": "ID मागील बाजू",
+    "guestPhoto": "पाहुण्याचा फोटो",
+    "checkoutPhoto": "Check-out फोटो",
+    "paymentProof": "पेमेंट पुरावा",
+    "additional": "अतिरिक्त कागदपत्र",
+    "document": "कागदपत्र"
+  },
+  "stats": {
+    "total": "पाहुणे आणि बुकिंग",
+    "verifiedHint": "प्रत्येक फाइल मंजूर",
+    "pendingHint": "तपासणी बाकी",
+    "incompleteHint": "अजून काहीही अपलोड नाही"
+  },
+  "card": {
+    "title": "KYC नोंदी",
+    "records_one": "{{count}} नोंद",
+    "records_other": "{{count}} नोंदी",
+    "matching_one": "{{count}} नोंद जुळते",
+    "matching_other": "{{count}} नोंदी जुळतात"
+  },
+  "filter": {
+    "typeLabel": "नोंद प्रकारानुसार फिल्टर करा",
+    "allTypes": "सर्व प्रकार",
+    "bookings": "नवीन बुकिंग",
+    "guests": "Check-in झालेले पाहुणे",
+    "statusLabel": "पडताळणी स्थितीनुसार फिल्टर करा",
+    "allStatuses": "सर्व स्थिती"
+  },
+  "empty": {
+    "loading": "कागदपत्रे लोड होत आहेत…",
+    "filteredTitle": "जुळणाऱ्या नोंदी नाहीत",
+    "title": "अजून कागदपत्रे नाहीत",
+    "filteredMessage": "दुसरा शोध वापरा किंवा फिल्टर काढा.",
+    "message": "बुकिंगवेळी घेतलेले ID स्कॅन इथे आपोआप दिसतील."
+  },
+  "col": {
+    "docId": "Doc ID",
+    "viewDocuments": "कागदपत्रे पहा",
+    "noPhoto": "पाहुण्याचा फोटो नाही",
+    "identification": "ओळख",
+    "files": "फाइल्स",
+    "verification": "पडताळणी",
+    "filesOf": "{{n}} / {{max}} फाइल्स"
+  },
+  "actions": {
+    "verify": "पडताळा",
+    "alreadyVerified": "आधीच पडताळलेले",
+    "verifyTitle": "सर्व फाइल्स पडताळलेल्या म्हणून नोंदवा",
+    "deleteAll": "या पाहुण्याची सर्व कागदपत्रे हटवा"
+  },
+  "upload": {
+    "title": "कागदपत्रे अपलोड करा",
+    "save": "कागदपत्रे जतन करा",
+    "uploaded": "अपलोड",
+    "alreadyUploaded": "आधीच अपलोड",
+    "limitReached": "मर्यादा पूर्ण",
+    "clickOrDrop": "क्लिक करा किंवा फाइल टाका",
+    "tapToAdd": "फाइल जोडण्यासाठी टॅप करा",
+    "allFilled": "या पाहुण्याचे सर्व {{max}} कागदपत्र स्लॉट भरले आहेत.",
+    "ready_one": "{{count}} नवीन फाइल अपलोडसाठी तयार",
+    "ready_other": "{{count}} नवीन फाइल्स अपलोडसाठी तयार",
+    "slotsLeft_one": "{{count}} स्लॉट बाकी",
+    "slotsLeft_other": "{{count}} स्लॉट बाकी"
+  },
+  "view": {
+    "title": "कागदपत्रे",
+    "verifyAll": "सर्व पडताळा",
+    "empty": "अजून कागदपत्रे अपलोड नाहीत",
+    "openFull": "पूर्ण आकारात उघडा",
+    "previewUnavailable": "पूर्वावलोकन उपलब्ध नाही",
+    "openDocument": "कागदपत्र उघडा",
+    "uploadedOn": "{{date}} रोजी अपलोड",
+    "deleteDocument": "कागदपत्र हटवा"
+  },
+  "errors": { "load": "कागदपत्रे लोड झाली नाहीत. बॅकएंड चालू आहे का ते तपासा." },
+  "toast": {
+    "uploaded": "{{name}} ची कागदपत्रे अपलोड झाली",
+    "uploadFailed": "अपलोड अयशस्वी",
+    "nothingToVerify": "पडताळण्यासाठी कागदपत्रे नाहीत",
+    "verified": "{{name}} चे KYC पडताळले",
+    "verifyFailed": "कागदपत्रे पडताळता आली नाहीत",
+    "docDeleted": "कागदपत्र हटवले",
+    "docDeleteFailed": "कागदपत्र हटवता आले नाही",
+    "allDeleted": "{{name}} ची कागदपत्रे हटवली",
+    "allDeleteFailed": "कागदपत्रे हटवता आली नाहीत"
+  },
+  "deleteDoc": {
+    "title": "कागदपत्र हटवा",
+    "message": "<b>{{name}}</b> चे <b>{{label}}</b> हटवायचे? फाइल कायमची काढली जाईल."
+  },
+  "deleteAll": {
+    "title": "कागदपत्रे हटवा",
+    "message_one": "<b>{{name}}</b> चे <b>{{count}}</b> कागदपत्र हटवायचे? फाइल कायमची काढली जाईल.",
+    "message_other": "<b>{{name}}</b> ची सर्व <b>{{count}}</b> कागदपत्रे हटवायची? फाइल्स कायमच्या काढल्या जातील."
+  }
+}

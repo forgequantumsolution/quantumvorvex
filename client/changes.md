@@ -6,6 +6,158 @@ Folder: `quantumvorvex-main/client/`
 
 ---
 
+# Session — 2026-11-05 · Responsive redesign, page header, Settings redesign, 4 languages
+
+Same colours and font throughout; phone, tablet and desktop layouts for every page.
+
+- **Responsive redesign** — Tailwind breakpoints replace the old !important media patches (`index.css`). Phone
+  bottom nav (`layout/BottomNav.jsx`), tablet icon rail, popups as bottom sheets on phones, tables as cards on
+  phones (`ui-tw/DataTable`), every module page reworked. Playwright phone/tablet projects + `tests/responsive.spec.js`.
+- **KPI cards** — one compact design (`ui-tw/StatCard.jsx`) used by every page; `ui/StatCard` wraps it.
+- **Page header (Redux)** — `store/slices/pageHeaderSlice.js` + `usePageHeader` (`store/hooks.js`) +
+  `utils/headerRegistry.js` (handlers/icons outside the store) + `layout/PageHeader.jsx`: title, search and every
+  page-level button in one sticky bar. Top-bar slots and hard-coded top-bar buttons removed (`TopbarSlot.jsx` deleted).
+- **Top bar** — property switcher redesigned (no code chip, no border; initials list; archived grouped; phone sheet),
+  date chip, Ctrl K search bar. All popovers/dropdowns on one layer (z-1600).
+- **Portfolio** — auto-refresh every minute and on tab focus; forecast (7/14/30 nights) and collections
+  (7/30/90 days, month) pickers; Filters popover (properties, occupancy band, needs attention, archived) with chips.
+  `canSeePortfolio` now requires reports access at 2+ properties (matches the server).
+- **Settings** — shared `settings/settingsUi.jsx` (Section, RowDelete, TablePager) + `usePaged.js`; every section's
+  actions and its single Save live in the page header; paginated tables; full-width layout.
+- **Languages** — English, Hindi, Marathi, Telugu via i18next (`src/i18n`, `src/locales/<lang>/<ns>.json`, 26
+  namespaces). Switcher in the top bar, user menu, Settings → Preferences, login and guest pages. Dates via
+  `appLocale()` (0–9 digits); money always Indian grouping. Noto Sans Devanagari / Telugu as fallback fonts.
+- Demo data (`api/mockData.js`) matches real API shapes; the demo owner has properties.
+
+---
+
+# Session — 2026-11-01 · PG rent on calendar months
+
+- `utils/beds.js`, `bookings/BookingForm.jsx` — the summary shows the rent billed at move-in (first month by
+  the day, plus any months already passed) and explains the part-month charge.
+- `bookings/RefundModal.jsx` *(new)*, `BookingsTable.jsx`, `utils/beds.js`, `utils/normalizeBooking.js` — after move-out the
+  refund screen opens (deposit left + rent credit, less dues and deductions). A pending refund shows on the booking
+  with a Refund button. `checkout/CheckOutModal.jsx` — `defaultPayment` leaves dues the deposit covers uncollected.
+- `bookings/Bookings.jsx` — check-out of a tenancy shows rent up to today and any rent credit to refund.
+
+---
+
+# Session — 2026-10-31 · Room prices for PGs
+
+- `components/modules/rooms/Rooms.jsx` — Add/Edit room no longer requires a daily price; any one price is
+  enough, so a PG can set monthly rent only. Rooms with 2+ beds show rent per bed (month/day) above the
+  whole-room prices. Room cards show the bed rent when set, otherwise the room's monthly and daily prices.
+
+---
+
+# Session — 2026-10-31 · Organization logo on invoices
+
+- `components/modules/billing/Billing.jsx` — the Billing invoice header showed hardcoded "Quantum Vorvex",
+  address and GSTIN. It now shows the active property's logo and details from `GET /billing/letterhead`.
+- `api/client.js` — `billingApi.getLetterhead`.
+
+---
+
+# Session — 2026-10-31 · PG / per-bed booking
+
+- `components/modules/bookings/BookingForm.jsx` — picking a room let by bed switches the form to
+  **PG mode**: "By bed / Whole room" toggle (whole room only while every bed is free), monthly by
+  default, live bed picker for the chosen dates, one card per occupant, per-bed summary rail (rent,
+  advance, due, deposit; totals incl. deposits held). Saves via `POST /bookings/group`, then uploads
+  each occupant's ID scans to their own booking. Hotel rooms keep the original form.
+- `bookings/PgOccupants.jsx` *(new)*, `bookings/occupants.js` *(new)* — bed picker + occupant cards
+  (name, phone, email, rent, advance, refundable deposit, ID type/no., front/back scan) and their
+  validation; "Copy rent & deposit to all beds".
+- `bookings/UploadZone.jsx` *(new)* — the ID upload/scan tile, moved out of BookingForm for reuse.
+- `bookings/BookingsTable.jsx`, `Bookings.jsx` — bed shown next to the room ("Bed B"); clash and
+  check-out texts name the bed; check-out reminds the desk to refund a held deposit; group toast.
+- `modules/rooms/Rooms.jsx` — "Let this room: Whole room / By bed (PG)" with bed count and per-bed
+  rents on Add room and in the room detail; PG cards show one dot per bed and "1/3 free"; the room
+  detail lists each bed with its occupant, dates and dues; header shows PG bed occupancy.
+- `utils/beds.js` *(new)* — `bedLabel`, `isBedRoom`, `bedOccupancy`. `utils/normalizeBooking.js`
+  adds `bed`. `api/client.js` adds `bookingsApi.createGroup` / `bedAvailability`.
+
+---
+
+# Session — 2026-10-25 · Assign staff from the property (Team & access)
+
+- `components/modules/properties/PropertyTeam.jsx` *(new)* — per-property team panel in Settings →
+  Properties ("Team & access"): list who works there with their role **at that property** (change it
+  inline), remove access, **add an existing person** with a role, or **invite a new person** (account
+  created directly in that property, temporary password shown once). Owners are listed as having
+  implicit access. Links to Users & Roles for creating roles such as Receptionist.
+- `PropertyManager.jsx` — a newly created property opens straight onto its team panel.
+- `api/client.js` — `propertiesApi.setMember` / `removeMember`, `usersApi.createIn(propertyId, data)`;
+  an explicit `X-Property-Id` on a request is no longer overwritten by the active property.
+
+---
+
+# Session — 2026-10-24 · Portfolio page redesign (industry-standard KPIs)
+
+## Summary
+Rebuilt `components/modules/portfolio/Portfolio.jsx` (nav label now **Portfolio**) around what hotel
+groups compare: tonight's occupancy as the hero figure; a KPI row with ADR, RevPAR, in-house,
+arrivals/departures, collections (month + today) and outstanding; a 14-night "on the books" forecast
+chart (hover tooltip per night, tonight emphasised); a **Needs attention** list (overbooking risk,
+out-of-order rooms, dues, sold-out nights — icon + text, each opens the right panel in that property);
+and a sortable **comparison table** with occupancy meter and a 7-night strip per property (row click
+or Enter switches property). Stacked cards under 768px; skeleton loading; error state with retry;
+search above 4 properties; archived properties behind a toggle.
+
+## Page header in the topbar
+- `components/layout/TopbarSlot.jsx` *(new)* — `title` / `actions` / `primary` slots in the Topbar
+  that a page fills via a portal, so its header shares the topbar row. Empty slots collapse; a page
+  title hides the date; a panel can set `PRIMARY_ACTIONS[panel] = null` to replace "New Booking".
+  Below 768px the slots are hidden and the page shows its header in-page.
+- Portfolio uses it: switcher │ Portfolio · summary … refresh · search · bell · **Add property**.
+
+## Styling
+- `index.css` — `--chart-accent` / `--chart-track` tokens. Brand gold is 2.3:1 on white, so chart
+  marks use `#a8862e` in light mode (validated ≥ 3:1) and brand gold in dark mode. `.pf-table` dense
+  cell padding for the comparison table.
+- Occupancy is a single-hue meter (not red/green) — high occupancy is good, not an alarm.
+
+---
+
+# Session — 2026-10-24 · Multi-property: switcher, portfolio, property & access management
+
+## Summary
+Frontend for the backend multi-property work (see `../server/CHANGES.md`). The app always works in
+one **active property**; every request carries it as `X-Property-Id`, and switching property reloads
+the current page with that property's data. Permissions shown in the UI are the user's role **at the
+active property**.
+
+## State + API
+- `store/slices/authSlice.js` — new `activePropertyId`, `setActiveProperty`, selectors
+  `selectProperties` / `selectActiveProperty`. Whenever the user or active property changes,
+  `currentUser.roleName` / `currentUser.permissions` are set from that property's entry in
+  `currentUser.properties`, so `useCan`, `canAccess` and the sidebar need no changes.
+- `store/index.js` — mirrors `activePropertyId` to `localStorage.qv_property`.
+- `api/client.js` — sends `X-Property-Id`; `invoiceUrl` adds `?propertyId=` for new-tab links;
+  `ERR_PROPERTY_FORBIDDEN` / `ERR_NO_PROPERTY` trigger the same access resync as `ERR_FORBIDDEN`;
+  new `propertiesApi`, `usersApi.setAccess`.
+
+## UI
+- `components/layout/PropertySwitcher.jsx` *(new)*, in the Topbar — code chip, name and your role
+  there; dropdown to switch, plus "All properties overview" and (owners) "Manage properties". Plain
+  label when you only have one property. The date is hidden under 768px to make room.
+- `components/modules/portfolio/Portfolio.jsx` *(new)* — **All Properties** panel (sidebar →
+  Overview): totals + a card per property (occupancy, in-house, arrivals, collected this month,
+  outstanding); a card switches to that property. Visible to owners and multi-property users.
+- `components/modules/properties/PropertyManager.jsx` *(new)* — replaces the "Pro plan" placeholder in
+  Settings → Properties: add (optionally copying another property's setup), rename / change code,
+  archive / restore, and "Who has access" per property.
+- `components/modules/users/UsersRoles.jsx` — "Role here" + "Properties" columns; owners get an
+  **Access** modal (tick properties, pick the role at each); non-owner admins "Remove" a user from the
+  current property instead of deleting the account; the Owner role is hidden from non-owners.
+- `App.jsx` — the active panel is keyed on the property (switching reloads it); a "No property
+  assigned" screen for users with no access; the sidebar name follows the active property (falls
+  back to the property name when the user can't read Settings).
+- `Settings.jsx` — accepts `navigateTo({ panel: 'settings', params: { tab } })`.
+- `utils/permissions.js` — `canSeePortfolio`; `utils/navigation.js` — "All Properties" nav item.
+
+---
+
 # Session — 2026-06-23 · Editable invoice number on the booking form
 
 ## Summary

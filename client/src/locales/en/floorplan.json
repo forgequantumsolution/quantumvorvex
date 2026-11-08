@@ -1,0 +1,24 @@
+{
+  "title": "Floor Plan",
+  "subtitle": "Visual room layout by floor",
+  "legend": "Legend",
+  "occupiedOf": "{{occupied}}/{{total}} occupied",
+  "noRooms": "No rooms found",
+  "floorN": "Floor {{n}}",
+  "roomN": "Room {{number}}",
+  "roomCount_one": "{{count}} room",
+  "roomCount_other": "{{count}} rooms",
+  "status": {
+    "available": "Available",
+    "occupied": "Occupied",
+    "maintenance": "Maintenance",
+    "reserved": "Reserved"
+  },
+  "detail": {
+    "roomNumber": "Room Number",
+    "floor": "Floor",
+    "type": "Type",
+    "dailyRate": "Daily Rate",
+    "currentOccupant": "Current Occupant"
+  }
+}

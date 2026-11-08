@@ -37,13 +37,22 @@ const ROOMS = [
 ]
 
 const GUESTS = [
-  { id: uid('g1'), name: 'Anil Sharma',      email: 'anil@example.com',   phone: '9876543201', roomNumber: '101', roomId: uid('r1'),  checkIn: d(3),  checkOut: d(-2), stayType: 'daily',   status: 'checked_in',  nationality: 'Indian', tags: ['VIP'] },
-  { id: uid('g2'), name: 'Priya Mehta',      email: 'priya@example.com',  phone: '9876543202', roomNumber: '104', roomId: uid('r4'),  checkIn: d(7),  checkOut: d(-3), stayType: 'monthly', status: 'checked_in',  nationality: 'Indian', tags: ['Corporate'] },
-  { id: uid('g3'), name: 'Rajesh Kumar',     email: 'rajesh@example.com', phone: '9876543203', roomNumber: '202', roomId: uid('r7'),  checkIn: d(1),  checkOut: d(-4), stayType: 'daily',   status: 'checked_in',  nationality: 'Indian', tags: [] },
-  { id: uid('g4'), name: 'Sunita Verma',     email: 'sunita@example.com', phone: '9876543204', roomNumber: '401', roomId: uid('r12'), checkIn: d(14), checkOut: d(-1), stayType: 'monthly', status: 'checked_in',  nationality: 'Indian', tags: ['Long-term'] },
-  { id: uid('g5'), name: 'Michael D\'Souza', email: 'mike@example.com',   phone: '9876543205', roomNumber: '',    roomId: null,       checkIn: d(20), checkOut: d(10), stayType: 'daily',   status: 'checked_out', nationality: 'Indian', tags: ['VIP'] },
-  { id: uid('g6'), name: 'Kavya Reddy',      email: 'kavya@example.com',  phone: '9876543206', roomNumber: '',    roomId: null,       checkIn: d(30), checkOut: d(25), stayType: 'daily',   status: 'checked_out', nationality: 'Indian', tags: [] },
-]
+  { id: uid('g1'), name: 'Anil Sharma',      email: 'anil@example.com',   phone: '9876543201', roomNumber: '101', roomId: uid('r1'),  checkIn: d(3),  checkOut: d(-2), stayType: 'daily',   status: 'Active',      nationality: 'Indian', tags: ['VIP'] },
+  { id: uid('g2'), name: 'Priya Mehta',      email: 'priya@example.com',  phone: '9876543202', roomNumber: '104', roomId: uid('r4'),  checkIn: d(7),  checkOut: d(-3), stayType: 'monthly', status: 'Active',      nationality: 'Indian', tags: ['Corporate'], foodPlan: 'All Meals' },
+  { id: uid('g3'), name: 'Rajesh Kumar',     email: 'rajesh@example.com', phone: '9876543203', roomNumber: '202', roomId: uid('r7'),  checkIn: d(1),  checkOut: d(-4), stayType: 'daily',   status: 'Active',      nationality: 'Indian', tags: [], foodPlan: 'Breakfast Only' },
+  { id: uid('g4'), name: 'Sunita Verma',     email: 'sunita@example.com', phone: '9876543204', roomNumber: '401', roomId: uid('r12'), checkIn: d(14), checkOut: d(1),  stayType: 'monthly', status: 'Due',         nationality: 'Indian', tags: ['Long-term'], foodPlan: 'All Meals' },
+  { id: uid('g5'), name: 'Michael D\'Souza', email: 'mike@example.com',   phone: '9876543205', roomNumber: '',    roomId: null,       checkIn: d(20), checkOut: d(10), stayType: 'daily',   status: 'Checked Out', nationality: 'Indian', tags: ['VIP'] },
+  { id: uid('g6'), name: 'Kavya Reddy',      email: 'kavya@example.com',  phone: '9876543206', roomNumber: '',    roomId: null,       checkIn: d(30), checkOut: d(25), stayType: 'daily',   status: 'Checked Out', nationality: 'Indian', tags: [] },
+].map((g, i) => ({
+  // Fields the real GET /guests returns (room relation, *Date names, docId).
+  ...g,
+  docId: `DOC-${String(i + 1).padStart(4, '0')}`,
+  room: g.roomNumber ? { number: g.roomNumber } : null,
+  checkInDate: g.checkIn,
+  checkOutDate: g.checkOut,
+  idType: 'Aadhaar',
+  idNumber: `XXXX-XXXX-${4200 + i}`,
+}))
 
 const INVOICES = [
   { id: uid('inv1'), invoiceNumber: 'INV-2026-001', guestId: uid('g1'), guestName: 'Anil Sharma',      roomNumber: '101', stayType: 'daily',   period: '3 days',   rentAmount: 5400,  foodAmount: 900,  amenitiesAmount: 200, gstRate: 12, gstAmount: 780,  totalAmount: 7280,  status: 'pending', createdAt: d(3) },
@@ -51,11 +60,64 @@ const INVOICES = [
   { id: uid('inv3'), invoiceNumber: 'INV-2026-003', guestId: uid('g5'), guestName: "Michael D'Souza",  roomNumber: '203', stayType: 'daily',   period: '10 days',  rentAmount: 55000, foodAmount: 2200, amenitiesAmount: 500, gstRate: 12, gstAmount: 6924, totalAmount: 64624, status: 'paid',    createdAt: d(20), paidAt: d(18) },
   { id: uid('inv4'), invoiceNumber: 'INV-2026-004', guestId: uid('g3'), guestName: 'Rajesh Kumar',     roomNumber: '202', stayType: 'daily',   period: '1 day',    rentAmount: 5500,  foodAmount: 0,    amenitiesAmount: 0,   gstRate: 12, gstAmount: 660,  totalAmount: 6160,  status: 'pending', createdAt: d(1) },
   { id: uid('inv5'), invoiceNumber: 'INV-2026-005', guestId: uid('g6'), guestName: 'Kavya Reddy',      roomNumber: '101', stayType: 'daily',   period: '5 days',   rentAmount: 9000,  foodAmount: 1500, amenitiesAmount: 300, gstRate: 12, gstAmount: 1296, totalAmount: 12096, status: 'overdue', createdAt: d(30) },
-]
+].map((inv) => ({
+  // Fields the real GET /billing returns: invoiceNo, the guest relation, and
+  // rent/food/amenities/total with capitalized statuses (Paid | Pending | Overdue).
+  ...inv,
+  invoiceNo: inv.invoiceNumber,
+  guest: { id: inv.guestId, name: inv.guestName, room: { number: inv.roomNumber } },
+  rent: inv.rentAmount,
+  food: inv.foodAmount,
+  amenities: inv.amenitiesAmount,
+  total: inv.totalAmount,
+  status: inv.status.charAt(0).toUpperCase() + inv.status.slice(1),
+}))
 
-// Seed booking data removed — bookings now come from the real API/database.
-// (Only used if VITE_MOCK=true; left empty so no demo bookings ever appear.)
-const BOOKINGS = []
+// Demo bookings (mock mode only) — shaped like GET /bookings: `room` is a
+// relation and statuses are Pending | Confirmed | CheckedIn | CheckedOut | Cancelled.
+// checkIn / roomNumber mirror fromDate / room.number for the Today arrivals list.
+const BOOKINGS = [
+  { id: uid('bk1'), bookingNo: 'BK-2026-0101', guestName: 'Anil Sharma, Meera Sharma', guestPhone: '9876543201, 9876500000', room: { number: '102', type: { name: 'Standard' } }, roomId: uid('r2'), fromDate: d(-2), toDate: d(-5), stayType: 'daily', status: 'Confirmed', amount: 5400, advance: 1000, paymentStatus: 'Partial', adults: 2, children: 1, roomRate: 1800 },
+  { id: uid('bk2'), bookingNo: 'BK-2026-0102', guestName: 'Priya Mehta', guestPhone: '9876543202', room: { number: '104', type: { name: 'Deluxe' } }, roomId: uid('r4'), fromDate: d(7), toDate: d(-23), stayType: 'monthly', status: 'CheckedIn', amount: 70000, advance: 70000, paymentStatus: 'Paid', adults: 1, roomRate: 70000, checkedInAt: d(7) },
+  { id: uid('bk3'), bookingNo: 'BK-2026-0103', guestName: 'Rohan Kapoor Venkataraman', guestPhone: '9876543209', room: { number: '302', type: { name: 'Executive' } }, roomId: uid('r10'), bedNo: 2, billing: 'monthly', fromDate: d(20), toDate: null, stayType: 'monthly', status: 'CheckedIn', amount: 6000, advance: 0, balance: 6000, paymentStatus: 'Pending', adults: 1, roomRate: 6000, securityDeposit: 6000, invoices: [] },
+  { id: uid('bk4'), bookingNo: 'BK-2026-0104', guestName: 'Kavya Reddy', guestPhone: '9876543206', room: { number: '203', type: { name: 'Suite' } }, roomId: uid('r8'), fromDate: d(30), toDate: d(25), stayType: 'daily', status: 'CheckedOut', amount: 27500, advance: 27500, paymentStatus: 'Paid', adults: 2, roomRate: 5500, checkedOutAt: d(25) },
+  { id: uid('bk5'), bookingNo: 'BK-2026-0105', guestName: 'Sunil Joshi', guestPhone: '9876543210', room: { number: '201', type: { name: 'Deluxe' } }, roomId: uid('r6'), fromDate: d(-10), toDate: d(-12), stayType: 'daily', status: 'Cancelled', cancelReason: 'Plans changed due to a family emergency', cancelledAt: d(1), amount: 6400, advance: 0, paymentStatus: 'Pending', adults: 1, roomRate: 3200 },
+  { id: uid('bk6'), bookingNo: 'BK-2026-0106', guestName: 'Neha Gupta', guestPhone: '9876543211', room: { number: '303', type: { name: 'Standard' } }, roomId: uid('r11'), fromDate: d(0), toDate: d(-3), stayType: 'daily', status: 'Pending', amount: 5400, advance: 0, paymentStatus: 'Pending', adults: 1, roomRate: 1800 },
+].map((b) => ({
+  ...b,
+  nights: b.stayType === 'daily' ? Math.round((new Date(b.toDate) - new Date(b.fromDate)) / 86400000) : undefined,
+  checkIn: b.fromDate,
+  checkOut: b.toDate,
+  roomNumber: b.room.number,
+}))
+
+// GET /bookings/:id/rent — a tenancy's rent account (one billed month, unpaid).
+const RENT_ACCOUNT = {
+  invoices: [{ id: uid('ri1'), invoiceNo: 'INV-2026-0141', period: 'Oct 2026', total: 6000, amountPaid: 0, status: 'Pending', createdAt: d(20), paidAt: null }],
+  rent: 6000,
+  due: 6000,
+  credit: 0,
+  nextBillOn: d(-11),
+  moveOut: { amount: 6000, due: 6000, credit: 0 },
+}
+
+const BOOKING_STATS = {
+  stats: {
+    total: BOOKINGS.length,
+    confirmed: BOOKINGS.filter(b => b.status === 'Confirmed').length,
+    checkedIn: BOOKINGS.filter(b => b.status === 'CheckedIn').length,
+    revenue: BOOKINGS.filter(b => b.status !== 'Cancelled').reduce((s, b) => s + b.amount, 0),
+    dues: BOOKINGS.filter(b => b.status !== 'Cancelled').reduce((s, b) => s + Math.max(0, b.amount - b.advance), 0),
+  },
+  counts: {
+    all: BOOKINGS.length,
+    Upcoming: BOOKINGS.filter(b => ['Pending', 'Confirmed'].includes(b.status)).length,
+    Confirmed: BOOKINGS.filter(b => b.status === 'Confirmed').length,
+    CheckedIn: BOOKINGS.filter(b => b.status === 'CheckedIn').length,
+    CheckedOut: BOOKINGS.filter(b => b.status === 'CheckedOut').length,
+    Cancelled: BOOKINGS.filter(b => b.status === 'Cancelled').length,
+  },
+}
 
 const NOTIFICATIONS = [
   { id: uid('n1'), type: 'warn',    title: 'Room 105 Maintenance Due',  message: 'AC servicing overdue by 3 days.',          createdAt: d(0), dismissed: false },
@@ -97,18 +159,18 @@ const SETTINGS_HOTEL = {
 }
 
 const SETTINGS_ROOM_TYPES = [
-  { id: uid('rt'), name: 'Single', dailyRate: 500,  monthlyRate: 9000,  peakDailyRate: 700,  peakMonthlyRate: 13000, maxOccupancy: 1 },
-  { id: uid('rt'), name: 'Double', dailyRate: 800,  monthlyRate: 14000, peakDailyRate: 1100, peakMonthlyRate: 20000, maxOccupancy: 2 },
+  { id: uid('rt-1'), name: 'Single', dailyRate: 500,  monthlyRate: 9000,  peakDailyRate: 700,  peakMonthlyRate: 13000, maxOccupancy: 1 },
+  { id: uid('rt-2'), name: 'Double', dailyRate: 800,  monthlyRate: 14000, peakDailyRate: 1100, peakMonthlyRate: 20000, maxOccupancy: 2 },
 ]
 
 const SETTINGS_FOOD_PLANS = [
-  { id: uid('fp'), name: 'Breakfast Only', oneTimeRate: 120, weeklyRate: 700,  monthlyRate: 2500, description: 'Morning meal' },
-  { id: uid('fp'), name: 'All Meals',      oneTimeRate: 350, weeklyRate: 2100, monthlyRate: 8000, description: 'Full board'    },
+  { id: uid('fp-1'), name: 'Breakfast Only', oneTimeRate: 120, weeklyRate: 700,  monthlyRate: 2500, description: 'Morning meal' },
+  { id: uid('fp-2'), name: 'All Meals',     oneTimeRate: 350, weeklyRate: 2100, monthlyRate: 8000, description: 'Full board'    },
 ]
 
 const SETTINGS_AMENITIES = [
-  { id: uid('am'), name: 'Mini Fridge',     dailyRate: 50, monthlyRate: 800,  chargeable: true },
-  { id: uid('am'), name: 'Washing Machine', dailyRate: 80, monthlyRate: 1200, chargeable: true },
+  { id: uid('am-1'), name: 'Mini Fridge',     dailyRate: 50, monthlyRate: 800,  chargeable: true },
+  { id: uid('am-2'), name: 'Washing Machine', dailyRate: 80, monthlyRate: 1200, chargeable: true },
 ]
 
 const DOCUMENTS = [
@@ -116,6 +178,26 @@ const DOCUMENTS = [
   { id: uid('d2'), guestId: uid('g2'), guestName: 'Priya Mehta',  type: 'PAN',     fileName: 'pan_priya.pdf',     verified: true,  uploadedAt: d(7) },
   { id: uid('d3'), guestId: uid('g3'), guestName: 'Rajesh Kumar', type: 'Aadhaar', fileName: 'aadhaar_rajesh.pdf',verified: false, uploadedAt: d(1) },
 ]
+
+// GET /documents shape: one row per guest, with its uploaded documents.
+const DOCUMENT_GUESTS = GUESTS.slice(0, 4).map((g) => ({
+  id: g.id,
+  docId: g.docId,
+  name: g.name,
+  room: g.room,
+  idType: g.idType,
+  idNumber: g.idNumber,
+  lastActivityAt: g.checkIn,
+  documents: DOCUMENTS.filter(doc => doc.guestId === g.id).map(doc => ({ ...doc, slot: 'idFront', url: null })),
+}))
+
+// Housekeeping board (GET /housekeeping/board): rooms with their housekeeping status.
+const HK_STATUS = { '102': 'dirty_available', '202': 'cleaning_in_progress', '203': 'dirty_available', '401': 'checkout_pending' }
+const HOUSEKEEPING_BOARD = ROOMS.map((r) => {
+  const status = HK_STATUS[r.number]
+  const cleaning = status === 'cleaning_in_progress'
+  return { ...r, housekeepingStatus: status ? { status, assignedTo: cleaning ? 'Ravi Patel' : null, startedAt: cleaning ? d(0) : null } : null }
+})
 
 const DASHBOARD = {
   totalRooms: ROOMS.length,
@@ -141,12 +223,16 @@ const DASHBOARD = {
     { month: 'Mar', rate: 83 },
     { month: 'Apr', rate: 67 },
   ],
-  recentCheckIns: GUESTS.filter(g => g.status === 'checked_in').slice(0, 4),
-  upcomingCheckouts: GUESTS.filter(g => g.status === 'checked_in').slice(0, 3),
+  revenue: 241600,
+  recentGuests: GUESTS.filter(g => g.status !== 'Checked Out'),
+  recentCheckIns: GUESTS.filter(g => g.status !== 'Checked Out').slice(0, 4),
+  upcomingCheckouts: GUESTS.filter(g => g.status !== 'Checked Out').slice(0, 3),
 }
 
 const REVENUE = {
   totalRevenue: 241600,
+  invoices: INVOICES.filter(i => i.status === 'Paid'),
+  byDay: Array.from({ length: 14 }, (_, i) => ({ date: d(13 - i).split('T')[0].slice(5), revenue: 8000 + ((i * 37) % 9) * 2500 })),
   roomRevenue: 210000,
   foodRevenue: 18600,
   amenitiesRevenue: 13000,
@@ -159,6 +245,8 @@ const REVENUE = {
 
 const GST_REPORT = {
   period: 'March 2026',
+  totalTaxable: 241600,
+  totalAmount: 270592,
   totalTaxableAmount: 241600,
   cgst: 14496,
   sgst: 14496,
@@ -175,11 +263,11 @@ const STAFF_USERS = [
 ]
 
 const MAINTENANCE = [
-  { id: uid('m1'), roomNumber: '105', title: 'AC Servicing',        description: 'AC unit needs gas refill and filter cleaning.', priority: 'high',   status: 'pending',     assignedTo: 'Ravi Patel',  createdAt: d(3) },
-  { id: uid('m2'), roomNumber: '201', title: 'Geyser Repair',       description: 'Geyser not heating water properly.',            priority: 'medium', status: 'in_progress', assignedTo: 'Ravi Patel',  createdAt: d(1) },
-  { id: uid('m3'), roomNumber: '303', title: 'WiFi Router Reset',   description: 'WiFi signal weak in room 303.',                priority: 'low',    status: 'completed',   assignedTo: 'Meena Nair', createdAt: d(5) },
-  { id: uid('m4'), roomNumber: '401', title: 'Window Latch Broken', description: 'Bathroom window latch needs replacement.',     priority: 'medium', status: 'pending',     assignedTo: null,          createdAt: d(0) },
-]
+  { id: uid('m1'), ticketNo: 'MT-0041', roomNumber: '105', category: 'HVAC',       title: 'AC Servicing',        description: 'AC unit needs gas refill and filter cleaning.', priority: 'High',   status: 'Open',        assignedTo: 'Ravi Patel',  reportedBy: 'Front Desk', createdAt: d(3) },
+  { id: uid('m2'), ticketNo: 'MT-0042', roomNumber: '201', category: 'Plumbing',   title: 'Geyser Repair',       description: 'Geyser not heating water properly.',            priority: 'Medium', status: 'In Progress', assignedTo: 'Ravi Patel',  reportedBy: 'Guest',      createdAt: d(1) },
+  { id: uid('m3'), ticketNo: 'MT-0039', roomNumber: '303', category: 'Electrical', title: 'WiFi Router Reset',   description: 'WiFi signal weak in room 303.',                priority: 'Low',    status: 'Resolved',    assignedTo: 'Meena Nair', reportedBy: 'Guest',      createdAt: d(5), resolvedAt: d(4) },
+  { id: uid('m4'), ticketNo: 'MT-0043', roomNumber: '401', category: 'Furniture',  title: 'Window Latch Broken', description: 'Bathroom window latch needs replacement.',     priority: 'Urgent', status: 'Open',        assignedTo: null,          reportedBy: 'Front Desk', createdAt: d(0) },
+].map((t) => ({ ...t, room: { number: t.roomNumber } }))
 
 const HOUSEKEEPING = [
   { id: uid('hk1'), roomNumber: '101', status: 'clean',    assignedTo: 'Meena Nair', lastCleaned: d(0), notes: '' },
@@ -189,6 +277,86 @@ const HOUSEKEEPING = [
   { id: uid('hk5'), roomNumber: '203', status: 'dirty',    assignedTo: null,         lastCleaned: d(2), notes: 'Needs deep clean' },
   { id: uid('hk6'), roomNumber: '401', status: 'clean',    assignedTo: 'Meena Nair', lastCleaned: d(0), notes: '' },
 ]
+
+// Header counts the list endpoints' sibling /stats routes return.
+const ROOM_STATS = {
+  total: ROOMS.length,
+  counts: ROOMS.reduce((c, r) => ({ ...c, [r.status]: (c[r.status] || 0) + 1 }), {}),
+  floors: [...new Set(ROOMS.map(r => r.floor))],
+  beds: { total: 0, taken: 0 },
+}
+const GUEST_STATS = {
+  total: GUESTS.length,
+  active: GUESTS.filter(g => g.status === 'Active').length,
+  due: GUESTS.filter(g => g.status === 'Due').length,
+  checkedOut: GUESTS.filter(g => g.status === 'Checked Out').length,
+}
+const sumOf = (list) => list.reduce((s, i) => s + i.total, 0)
+const BILLING_STATS = {
+  collected: sumOf(INVOICES.filter(i => i.status === 'Paid')),
+  gstCollected: INVOICES.filter(i => i.status === 'Paid').reduce((s, i) => s + i.gstAmount, 0),
+  paidCount: INVOICES.filter(i => i.status === 'Paid').length,
+  pendingTotal: sumOf(INVOICES.filter(i => i.status === 'Pending')),
+  pendingCount: INVOICES.filter(i => i.status === 'Pending').length,
+  overdueTotal: sumOf(INVOICES.filter(i => i.status === 'Overdue')),
+  overdueCount: INVOICES.filter(i => i.status === 'Overdue').length,
+}
+
+// ── Properties / roles (GET /properties, /properties/summary, /roles) ─────────
+const PROPERTIES = [
+  { id: uid('p1'), name: 'Quantum Vorvex Residency',             code: 'QVR',    status: 'active',   roleName: 'Owner' },
+  { id: uid('p2'), name: 'Sea View Suites Marine Drive',         code: 'SEAV',   status: 'active',   roleName: 'Owner' },
+  { id: uid('p3'), name: 'Hilltop PG for Working Professionals', code: 'HPG-01', status: 'active',   roleName: 'Owner' },
+  { id: uid('p4'), name: 'Old Town Inn',                         code: 'OTI',    status: 'archived', roleName: 'Owner' },
+]
+
+// The demo owner works in these properties, so the topbar property switcher shows.
+MOCK_USER.properties = PROPERTIES
+
+const ymd = (daysAgo) => d(daysAgo).split('T')[0]
+const propertyStats = (k) => {
+  const total = [40, 25, 45, 0][k]
+  const occupied = [29, 12, 41, 0][k]
+  return {
+    occupancyRate: total ? Math.round((occupied / total) * 1000) / 10 : 0,
+    adr: [3200, 5400, 0, 0][k], revpar: [2320, 2592, 0, 0][k],
+    arrivalsToday: [6, 2, 1, 0][k], departuresToday: [4, 3, 0, 0][k],
+    collectedThisMonth: [482000, 1265000, 98000, 0][k], collectedToday: [24000, 61000, 0, 0][k],
+    outstanding: [36500, 0, 12400, 0][k], inHouse: occupied,
+    rooms: { total, occupied, sellable: total - [1, 0, 0, 0][k], outOfOrder: [1, 0, 0, 0][k], available: [6, 11, 4, 0][k], reserved: [4, 2, 0, 0][k] },
+    forecast: Array.from({ length: 14 }, (_, i) => ({ date: ymd(-i), booked: Math.round(occupied * (0.6 + ((i * 7 + k) % 5) / 10)) })),
+    stayMix: { daily: [22, 12, 2, 0][k], monthly: [7, 0, 39, 0][k] },
+    collections: Array.from({ length: 30 }, (_, i) => ({ date: ymd(29 - i), amount: ((i * 37 + k * 11) % 9) * 4000 })),
+    paymentMethods: [{ method: 'upi', amount: 210000 }, { method: 'cash', amount: 120000 }, { method: 'card', amount: 98000 }, { method: 'bank_transfer', amount: 54000 }],
+    roomTypes: [{ type: 'Standard', total: 16, occupied: 12 }, { type: 'Deluxe', total: 12, occupied: 9 }, { type: 'Suite', total: 6, occupied: 3 }, { type: 'Executive', total: 6, occupied: 5 }],
+  }
+}
+const PROPERTY_SUMMARY = {
+  generatedAt: d(0),
+  properties: PROPERTIES.map((p, k) => ({ ...p, stats: propertyStats(k) })),
+  totals: { ...propertyStats(0), occupied: 82, sellable: 109, outOfOrder: 1, available: 21, reserved: 6, rooms: 110, properties: 3, occupancyRate: 75.2 },
+}
+
+const ROLES = [
+  { id: uid('ro1'), name: 'Owner',      isOwner: true, isSystem: true, userCount: 1, description: 'Full access to every property', permissions: {} },
+  { id: uid('ro2'), name: 'Manager',    isSystem: true, userCount: 1, description: 'Runs day-to-day operations', permissions: { bookings: 'MANAGE', guests: 'MANAGE', rooms: 'MANAGE', billing: 'MANAGE', reports: 'VIEW', settings: 'VIEW', users: 'VIEW', maintenance: 'MANAGE', housekeeping: 'MANAGE', documents: 'MANAGE', food: 'MANAGE' } },
+  { id: uid('ro3'), name: 'Staff',      isSystem: true, userCount: 3, description: 'Front desk and housekeeping', permissions: { bookings: 'MANAGE', guests: 'VIEW', rooms: 'VIEW', housekeeping: 'MANAGE' } },
+  { id: uid('ro4'), name: 'Accountant', userCount: 0, description: 'Billing and reports only', permissions: { billing: 'MANAGE', reports: 'VIEW' } },
+]
+const ROLE_MODULES = ['bookings', 'maintenance', 'guests', 'rooms', 'documents', 'food', 'housekeeping', 'billing', 'reports', 'settings', 'users']
+
+// GET /users shape: the role relation plus per-property access.
+const accessTo = (k, role) => ({ propertyId: PROPERTIES[k].id, propertyCode: PROPERTIES[k].code, propertyName: PROPERTIES[k].name, roleId: role.id, roleName: role.name })
+const RBAC_USERS = STAFF_USERS.map((u, i) => {
+  const role = [ROLES[0], ROLES[1], ROLES[2], ROLES[2], null][i]
+  return {
+    ...u,
+    isOwner: i === 0,
+    roleId: role?.id || null,
+    roleRef: role,
+    access: [[], [accessTo(0, ROLES[1]), accessTo(1, ROLES[2])], [accessTo(0, ROLES[2])], [accessTo(0, ROLES[2]), accessTo(2, ROLES[1])], []][i],
+  }
+})
 
 // ── Frontend-only feature mocks (ledger / cash register / occupancy / etc.) ─────
 const LEDGER_ENTRIES = [
@@ -251,13 +419,14 @@ export async function getMockResponse(method, url) {
   if (path === '/auth/me')     return { user: MOCK_USER }
 
   // Rooms
-  if (path === '/rooms' && m === 'get')  return { rooms: ROOMS, total: ROOMS.length }
+  if (path === '/rooms' && m === 'get')  return { rooms: ROOMS, total: ROOMS.length, stats: ROOM_STATS }
   if (path === '/rooms' && m === 'post') return { room: { id: uid('r-new'), ...{}, status: 'available' }, message: 'Room created.' }
   if (path.match(/^\/rooms\/[^/]+$/) && m === 'put')    return { room: ROOMS[0], message: 'Room updated.' }
   if (path.match(/^\/rooms\/[^/]+$/) && m === 'delete') return { message: 'Room deleted.' }
 
   // Guests
   if (path === '/guests' && m === 'get')  return { guests: GUESTS, total: GUESTS.length }
+  if (path === '/guests/stats')           return GUEST_STATS
   if (path === '/guests' && m === 'post') return { guest: { id: uid('g-new'), status: 'checked_in' }, message: 'Guest checked in.' }
   if (path.match(/^\/guests\/[^/]+\/checkout$/))       return { message: 'Checked out successfully.' }
   if (path.match(/^\/guests\/[^/]+\/renew$/))          return { guest: { ...GUESTS[0], stayCount: 2 }, message: 'Stay renewed successfully.' }
@@ -268,7 +437,9 @@ export async function getMockResponse(method, url) {
 
   // Billing
   if (path === '/billing' && m === 'get')          return { invoices: INVOICES, total: INVOICES.length }
+  if (path === '/billing/stats')         return BILLING_STATS
   if (path === '/billing/ledger')        return { guest: { id: GUESTS[0].id, name: GUESTS[0].name, docId: 'DOC-0001' }, entries: LEDGER_ENTRIES, closingBalance: LEDGER_ENTRIES.length ? LEDGER_ENTRIES[LEDGER_ENTRIES.length - 1].balance : 0 }
+  if (path === '/billing/letterhead')    return { hotel: SETTINGS_HOTEL }
   if (path === '/billing/cash-register') return { date: d(0).split('T')[0], transactions: CASH_TXNS, totalIn: CASH_TXNS.reduce((s, t) => s + t.cashIn, 0), totalOut: CASH_TXNS.reduce((s, t) => s + t.cashOut, 0), net: CASH_TXNS.reduce((s, t) => s + t.cashIn - t.cashOut, 0) }
   if (path === '/billing/generate' && m === 'post') return { invoice: INVOICES[0], message: 'Invoice generated.' }
   if (path.match(/^\/billing\/[^/]+\/collect$/))   return { invoice: { ...INVOICES[0], status: 'paid' }, message: 'Payment collected.' }
@@ -276,17 +447,19 @@ export async function getMockResponse(method, url) {
 
   // Bookings
   if (path === '/bookings' && m === 'get')  return { bookings: BOOKINGS, total: BOOKINGS.length }
+  if (path === '/bookings/stats')           return BOOKING_STATS
+  if (path.match(/^\/bookings\/[^/]+\/rent$/) && m === 'get') return RENT_ACCOUNT
   if (path === '/bookings' && m === 'post') return { booking: { id: uid('bnew'), status: 'Confirmed' }, message: 'Booking created.' }
   if (path.match(/^\/bookings\/[^/]+$/) && m === 'put') return { booking: BOOKINGS[0], message: 'Updated.' }
 
   // Documents
-  if (path === '/documents' && m === 'get')              return { documents: DOCUMENTS }
+  if (path === '/documents' && m === 'get')              return { guests: DOCUMENT_GUESTS, documents: DOCUMENTS }
   if (path.match(/^\/documents\/[^/]+$/) && m === 'post') return { document: DOCUMENTS[0], message: 'Uploaded.' }
   if (path.match(/^\/documents\/[^/]+\/verify$/))         return { document: { ...DOCUMENTS[0], verified: true }, message: 'Verified.' }
 
   // Food
-  if (path === '/food-plans')  return { plans: FOOD_PLANS }
-  if (path === '/food-orders') return { orders: FOOD_ORDERS }
+  if (path === '/food-plans' && m === 'get') return { plans: FOOD_PLANS, foodPlans: SETTINGS_FOOD_PLANS }
+  if (path === '/food-orders') return { orders: FOOD_ORDERS, guests: GUESTS.filter(g => g.foodPlan && g.status !== 'Checked Out') }
 
   // Reports
   if (path === '/reports/dashboard') return DASHBOARD
@@ -312,7 +485,7 @@ export async function getMockResponse(method, url) {
   if (path === '/notifications' && m === 'delete') return { message: 'Cleared.' }
 
   // Users (staff management)
-  if (path === '/users' && m === 'get')  return { users: STAFF_USERS, total: STAFF_USERS.length }
+  if (path === '/users' && m === 'get')  return { users: RBAC_USERS, total: RBAC_USERS.length }
   if (path === '/users' && m === 'post') return { user: STAFF_USERS[2], message: 'User created.' }
   if (path.match(/^\/users\/[^/]+$/) && m === 'put')    return { user: STAFF_USERS[0], message: 'Updated.' }
   if (path.match(/^\/users\/[^/]+$/) && m === 'delete') return { message: 'User deleted.' }
@@ -324,8 +497,16 @@ export async function getMockResponse(method, url) {
 
   // Housekeeping
   if (path === '/housekeeping' && m === 'get')  return { tasks: HOUSEKEEPING }
+  if (path === '/housekeeping/board')           return { rooms: HOUSEKEEPING_BOARD }
   if (path === '/housekeeping' && m === 'post') return { task: HOUSEKEEPING[0], message: 'Created.' }
   if (path.match(/^\/housekeeping\/[^/]+$/) && m === 'put') return { task: HOUSEKEEPING[0], message: 'Updated.' }
+
+  // Properties / roles (multi-property + RBAC)
+  if (path === '/properties' && m === 'get') return PROPERTIES
+  if (path === '/properties/summary')        return PROPERTY_SUMMARY
+  if (path.match(/^\/properties\/[^/]+\/members$/) && m === 'get') return { members: RBAC_USERS.slice(1, 4), owners: [RBAC_USERS[0]] }
+  if (path === '/roles' && m === 'get')      return ROLES
+  if (path === '/roles/modules')             return { modules: ROLE_MODULES }
 
   // Staff
   if (path === '/staff' && m === 'get')  return { staff: STAFF_USERS.filter(u => u.role !== 'owner') }

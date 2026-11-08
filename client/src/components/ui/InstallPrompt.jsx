@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const VISIT_KEY     = 'qv_visit_count'
 const DISMISSED_KEY = 'qv_install_dismissed'
 const SHOW_AFTER    = 3
 
 export default function InstallPrompt() {
+  const { t } = useTranslation('shell')
   const deferredPrompt          = useRef(null)
   const [visible, setVisible]   = useState(false)
 
@@ -59,8 +61,8 @@ export default function InstallPrompt() {
   return (
     <div
       role="dialog"
-      aria-label="Install Quantum Vortex app"
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1400] w-[calc(100%-32px)] max-w-[400px] bg-surface border border-line rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.45)] px-5 py-[18px] [animation:qv-slide-up_0.25s_ease]"
+      aria-label={t('install.label')}
+      className="fixed bottom-above-nav md:bottom-6 left-1/2 -translate-x-1/2 z-[1400] w-[calc(100%-32px)] max-w-[400px] bg-surface border border-line rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.45)] px-5 py-[18px] [animation:qv-slide-up_0.25s_ease]"
     >
       <style>{`
         @keyframes qv-slide-up {
@@ -86,26 +88,26 @@ export default function InstallPrompt() {
 
       {/* Message */}
       <p className="t-sm mt-0 mx-0 mb-4 text-ink2 leading-[1.55]">
-        Add Quantum Vortex to your home screen for faster access
+        {t('install.message')}
       </p>
 
       {/* Buttons */}
       <div className="flex gap-2.5">
         <button
           onClick={handleInstall}
-          className="t-title flex-1 px-4 py-[9px] rounded-[7px] cursor-pointer bg-gold border-none text-[#141414] transition-all duration-[150ms]"
+          className="t-title flex-1 px-4 py-[9px] min-h-11 sm:min-h-0 rounded-[7px] cursor-pointer bg-gold border-none text-[#141414] transition-all duration-[150ms]"
           onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
           onMouseLeave={e => e.currentTarget.style.opacity = '1'}
         >
-          Install
+          {t('install.install')}
         </button>
         <button
           onClick={handleLater}
-          className="t-title flex-1 px-4 py-[9px] rounded-[7px] cursor-pointer bg-transparent border border-line text-ink2 transition-all duration-[150ms]"
+          className="t-title flex-1 px-4 py-[9px] min-h-11 sm:min-h-0 rounded-[7px] cursor-pointer bg-transparent border border-line text-ink2 transition-all duration-[150ms]"
           onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text3)'; e.currentTarget.style.color = 'var(--text)' }}
           onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text2)' }}
         >
-          Later
+          {t('install.later')}
         </button>
       </div>
     </div>

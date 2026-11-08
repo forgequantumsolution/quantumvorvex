@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, Field, Button } from '../../ui-tw'
 import { roomsApi } from '../../../api/client'
 import { TICKET_CATEGORIES, TICKET_PRIORITIES } from '../../../data/opsSeed'
+
+const REPORTERS = ['Front Desk', 'Housekeeping', 'Guest', 'Manager']
 
 const EMPTY = {
   roomId: '', category: TICKET_CATEGORIES[0], title: '',
@@ -13,6 +16,7 @@ const EMPTY = {
  * onSave(payload) with the API-shaped body. The parent posts it.
  */
 export default function NewTicketModal({ isOpen, onClose, onSave }) {
+  const { t } = useTranslation('maintenance')
   const [values, setValues] = useState(EMPTY)
   const [errors, setErrors] = useState({})
   const [rooms, setRooms] = useState([])
@@ -35,8 +39,8 @@ export default function NewTicketModal({ isOpen, onClose, onSave }) {
 
   const validate = () => {
     const e = {}
-    if (!values.roomId) e.roomId = 'Select a room'
-    if (!values.title.trim()) e.title = 'A short title is required'
+    if (!values.roomId) e.roomId = t('form.selectRoom')
+    if (!values.title.trim()) e.title = t('form.titleRequired')
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -62,33 +66,35 @@ export default function NewTicketModal({ isOpen, onClose, onSave }) {
     <Modal
       isOpen={isOpen}
       onClose={close}
-      title="New Maintenance Ticket"
-      subtitle="Log an issue for the maintenance team"
+      title={t('form.title')}
+      subtitle={t('form.subtitle')}
       footer={
         <>
-          <Button variant="ghost" onClick={close}>Cancel</Button>
-          <Button onClick={handleSubmit} icon="＋" disabled={loadingRooms}>Create Ticket</Button>
+          <Button variant="ghost" onClick={close}>{t('common:cancel')}</Button>
+          <Button onClick={handleSubmit} icon="＋" disabled={loadingRooms}>{t('form.create')}</Button>
         </>
       }
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Room" value={values.roomId} onChange={set('roomId')} error={errors.roomId}
+        <Field label={t('common:room')} value={values.roomId} onChange={set('roomId')} error={errors.roomId}
                options={
                  loadingRooms
-                   ? [{ value: '', label: 'Loading rooms…' }]
+                   ? [{ value: '', label: t('form.loadingRooms') }]
                    : rooms.length
-                     ? rooms.map((r) => ({ value: r.id, label: `Room ${r.number}` }))
-                     : [{ value: '', label: 'No rooms found' }]
+                     ? rooms.map((r) => ({ value: r.id, label: t('roomNo', { number: r.number }) }))
+                     : [{ value: '', label: t('form.noRooms') }]
                } />
-        <Field label="Category" value={values.category} onChange={set('category')} options={TICKET_CATEGORIES} />
-        <Field label="Title" value={values.title} onChange={set('title')} placeholder="Short summary"
+        <Field label={t('form.category')} value={values.category} onChange={set('category')}
+               options={TICKET_CATEGORIES.map((c) => ({ value: c, label: t(`category.${c}`, c) }))} />
+        <Field label={t('form.titleLabel')} value={values.title} onChange={set('title')} placeholder={t('form.titlePlaceholder')}
                error={errors.title} required className="sm:col-span-2" />
-        <Field label="Description" textarea value={values.description} onChange={set('description')}
-               placeholder="Details of the issue…" className="sm:col-span-2" />
-        <Field label="Priority" value={values.priority} onChange={set('priority')} options={TICKET_PRIORITIES} />
-        <Field label="Assign to" value={values.assignedTo} onChange={set('assignedTo')} placeholder="Technician (optional)" />
-        <Field label="Reported by" value={values.reportedBy} onChange={set('reportedBy')}
-               options={['Front Desk', 'Housekeeping', 'Guest', 'Manager']} className="sm:col-span-2" />
+        <Field label={t('form.description')} textarea value={values.description} onChange={set('description')}
+               placeholder={t('form.descriptionPlaceholder')} className="sm:col-span-2" />
+        <Field label={t('form.priority')} value={values.priority} onChange={set('priority')}
+               options={TICKET_PRIORITIES.map((p) => ({ value: p, label: t(`priority.${p}`, p) }))} />
+        <Field label={t('form.assignTo')} value={values.assignedTo} onChange={set('assignedTo')} placeholder={t('form.assignPlaceholder')} />
+        <Field label={t('form.reportedBy')} value={values.reportedBy} onChange={set('reportedBy')}
+               options={REPORTERS.map((r) => ({ value: r, label: t(`reporter.${r}`, r) }))} className="sm:col-span-2" />
       </div>
     </Modal>
   )

@@ -1,0 +1,121 @@
+{
+  "title": "हाउसकीपिंग",
+  "subtitle": "खोल्यांची स्थिती, स्टाफ नियुक्ती आणि तपासणी सांभाळा",
+  "loadFailed": "हाउसकीपिंग बोर्ड लोड झाला नाही. सर्व्हर चालू आहे का ते तपासा.",
+  "loadingBoard": "बोर्ड लोड होत आहे…",
+  "roomNo": "खोली {{number}}",
+  "floorNo": "मजला {{floor}}",
+  "floorShort": "मजला {{floor}}",
+  "unassigned": "नियुक्त नाही",
+  "days_one": "{{count}} दिवस",
+  "days_other": "{{count}} दिवस",
+  "duration": {
+    "m": "{{m}} मि",
+    "hm": "{{h}} ता {{m}} मि"
+  },
+  "tabs": {
+    "board": "बोर्ड",
+    "daily": "दैनिक यादी",
+    "linen": "लिनन ट्रॅकर",
+    "inspection": "तपासणी"
+  },
+  "status": {
+    "clean_available": "स्वच्छ",
+    "dirty_available": "अस्वच्छ",
+    "occupied": "भरलेली",
+    "checkout_pending": "चेक-आउट",
+    "cleaning_in_progress": "स्वच्छता सुरू",
+    "maintenance": "देखभाल"
+  },
+  "stats": {
+    "clean": "स्वच्छ आणि उपलब्ध",
+    "cleanHint": "चेक-इनसाठी तयार",
+    "dirty": "अस्वच्छ / स्वच्छता बाकी",
+    "dirtyHint": "अस्वच्छ + चेक-आउट बाकी",
+    "cleaning": "स्वच्छता सुरू",
+    "cleaningHint": "सध्या स्वच्छ होत आहेत"
+  },
+  "bulk": {
+    "label": "एकत्र अपडेट",
+    "checkoutsDirty": "चेक-आउट झालेल्या खोल्या अस्वच्छ म्हणून नोंदवा",
+    "dirtyInProgress": "सर्व अस्वच्छ → स्वच्छता सुरू"
+  },
+  "assign": {
+    "title": "खोली {{number}} — अपडेट",
+    "staff": "स्टाफ नियुक्त करा"
+  },
+  "empty": {
+    "noRooms": "अजून खोल्या नाहीत",
+    "noRoomsHint": "सेटिंग्जमध्ये खोल्या जोडल्यावर त्या येथे दिसतील.",
+    "noMatch": "फिल्टरनुसार एकही खोली नाही"
+  },
+  "daily": {
+    "assignedTo": "कोणाकडे सोपवले",
+    "assignAria": "खोली {{number}} साठी स्टाफ नियुक्त करा",
+    "startedAt": "सुरू झाले",
+    "completedAt": "पूर्ण झाले",
+    "duration": "लागलेला वेळ",
+    "timing": "सुरू · पूर्ण",
+    "start": "सुरू करा",
+    "done": "पूर्ण",
+    "staff": "स्टाफ",
+    "allStaff": "सर्व स्टाफ",
+    "floor": "मजला",
+    "allFloors": "सर्व मजले"
+  },
+  "linen": {
+    "lastChanged": "शेवटचे बदलले",
+    "nextDue": "पुढील वेळ",
+    "daysUntilDue": "किती दिवस बाकी",
+    "daysOverdue_one": "{{count}} दिवस उशीर",
+    "daysOverdue_other": "{{count}} दिवस उशीर",
+    "overdue": "मुदत संपली",
+    "dueToday": "आज बदलायचे",
+    "changedBy": "कोणी बदलले",
+    "markChanged": "बदलले म्हणून नोंदवा"
+  },
+  "inspection": {
+    "selectRoom": "खोली निवडा",
+    "checklistTitle": "तपासणी यादी — खोली {{number}}",
+    "historyTitle": "तपासणी इतिहास — खोली {{number}}",
+    "pass": "पास",
+    "fail": "नापास",
+    "unchecked": "बाकी",
+    "score": "गुण",
+    "you": "तुम्ही",
+    "submit": "तपासणी सबमिट करा",
+    "checkAll": "सबमिट करण्यापूर्वी सर्व बाबी तपासा",
+    "emptyTitle": "अजून तपासणी नाही",
+    "emptyMessage": "या सत्रात एकही तपासणी सबमिट झालेली नाही."
+  },
+  "checklist": {
+    "Minibar stocked": "मिनीबार भरलेला",
+    "Toiletries refilled": "टॉयलेटरीज भरल्या",
+    "AC functional": "AC चालू आहे",
+    "TV functional": "TV चालू आहे",
+    "Bathroom clean": "बाथरूम स्वच्छ",
+    "Bed made": "बेड नीट केलेला",
+    "Fresh towels": "नवीन टॉवेल",
+    "Floor mopped": "फरशी पुसलेली",
+    "Dustbin emptied": "कचराकुंडी रिकामी"
+  },
+  "toast": {
+    "cleaningStarted": "खोली {{number}} ची स्वच्छता सुरू",
+    "markedClean": "खोली {{number}} स्वच्छ म्हणून नोंदवली",
+    "saveFailed": "खोलीचे अपडेट सेव्ह झाले नाही",
+    "roomUpdated": "खोली {{number}} अपडेट झाली",
+    "noMatching": "जुळणारी खोली सापडली नाही",
+    "bulkMarked_one": "{{count}} खोली: {{status}}",
+    "bulkMarked_other": "{{count}} खोल्या: {{status}}",
+    "linenChanged": "खोली {{number}} चे लिनन बदलले",
+    "linenFailed": "लिनन बदल नोंदवता आला नाही",
+    "inspectionSaved": "तपासणी सेव्ह झाली — गुण: {{score}}%",
+    "inspectionFailed": "तपासणी सेव्ह झाली नाही"
+  },
+  "filter": {
+    "status": "स्थिती",
+    "all": "सर्व खोल्या",
+    "showing": "दाखवत आहे: {{status}}",
+    "clear": "फिल्टर काढा"
+  }
+}

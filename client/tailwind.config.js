@@ -1,3 +1,5 @@
+import forms from '@tailwindcss/forms'
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,jsx,ts,tsx}'],
@@ -45,5 +47,13 @@ export default {
       },
     },
   },
-  plugins: [require('@tailwindcss/forms')],
+  plugins: [
+    forms,
+    // Touch vs mouse, e.g. `pointer-coarse:min-h-11` for 44px tap targets on
+    // phones/tablets without changing desktop sizing.
+    function ({ addVariant }) {
+      addVariant('pointer-coarse', '@media (pointer: coarse)')
+      addVariant('pointer-fine', '@media (pointer: fine)')
+    },
+  ],
 }

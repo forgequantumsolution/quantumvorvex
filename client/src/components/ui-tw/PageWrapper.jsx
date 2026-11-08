@@ -1,48 +1,54 @@
+import { usePageHeader } from '../../store/hooks'
+import StatStrip from './StatStrip.jsx'
+
 /**
  * Shared page shell for every front-desk module.
  *
  *   <PageWrapper
- *     title="Bookings" subtitle="…" icon="◷"
- *     actions={<Button>New</Button>}
- *     stats={<StatCard … />…}        // optional row of KPI tiles
+ *     title="Bookings" subtitle="…"
+ *     search={{ value, onChange, placeholder }}         // optional header search box
+ *     headerActions={[{ id, label, icon, variant, onClick }, …]}
+ *     stats={<StatCard … />…}        // optional KPI strip (desktop only)
+ *     toolbar={<FilterTabs … />}     // optional filter row under the header
  *   >
  *     …page content…
  *   </PageWrapper>
  *
- * Provides a consistent header (icon + title + subtitle + actions), an optional
- * responsive stats grid, and a max-width content column.
+ * The title, search and buttons go to the page header bar at the top of the
+ * screen (layout/PageHeader.jsx, through usePageHeader — see store/hooks.js for
+ * the action fields). This component lays out the rest: an optional KPI strip,
+ * the toolbar and the content column.
+ *
+ * Stats are one compact strip (each StatCard a segment of the bar) from xl;
+ * phones and tablets skip them so the list starts at the top — the page's own
+ * filters cover the same ground there.
  */
-export default function PageWrapper({ title, subtitle, icon, actions, stats, children }) {
-  const hasHeader = title || icon || actions
+
+export default function PageWrapper({
+  title,
+  subtitle,
+  search,
+  headerActions,
+  stats,
+  toolbar,
+  className = '',
+  children,
+}) {
+  usePageHeader({ title, subtitle, search, actions: headerActions })
+
   return (
-    <div className="w-full font-sans">
-      {/* Header — only rendered when there's something to show */}
-      {hasHeader && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-          <div className="flex items-center gap-3.5">
-            {icon && (
-              <div className="w-11 h-11 rounded-xl bg-gold-bg border border-gold-border text-gold flex items-center justify-center text-xl shrink-0">
-                {icon}
-              </div>
-            )}
-            {(title || subtitle) && (
-              <div>
-                {title && <h1 className="font-display font-bold text-[26px] leading-none tracking-tight text-ink">{title}</h1>}
-                {subtitle && <p className="text-sm text-ink2 mt-1.5">{subtitle}</p>}
-              </div>
-            )}
-          </div>
-          {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
-        </div>
+    <div className={`w-full min-w-0 font-sans ${className}`}>
+      {/* KPI strip (xl and up) */}
+      {stats && <StatStrip className="mb-4">{stats}</StatStrip>}
+
+      {/* Filter row */}
+      {toolbar && (
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2.5 sm:gap-3 mb-4">{toolbar}</div>
       )}
 
-      {/* Stats row */}
-      {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mb-5">{stats}</div>
-      )}
-
-      {/* Content */}
-      {children}
+      {/* Content. The trailing space keeps the last row (pagination, row actions)
+          clear of the floating assistant button pinned to the bottom-right. */}
+      <div className="pb-16">{children}</div>
     </div>
   )
 }

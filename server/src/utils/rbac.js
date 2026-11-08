@@ -9,6 +9,9 @@
  *   1. the three system roles exist with their permission matrix,
  *   2. every user has a role (sensible default), and
  *   3. at least one active Owner exists — so the app is never locked out.
+ *
+ * Owners reach every property implicitly; a backfilled non-owner is also given
+ * access to the first property so a new account isn't stranded with no property.
  */
 import bcrypt from 'bcryptjs'
 import prisma from './prisma.js'
@@ -111,12 +114,22 @@ export async function ensureRbac() {
       where: { roleId: null },
       select: { id: true, email: true },
     })
+    const firstProperty = unassigned.length
+      ? await prisma.property.findFirst({ where: { status: 'active' }, orderBy: { createdAt: 'asc' }, select: { id: true } })
+      : null
     for (const u of unassigned) {
       const email = (u.email || '').toLowerCase()
       let roleId = ids.Staff
       if (KNOWN_OWNERS.includes(email))        roleId = ids.Owner
       else if (KNOWN_MANAGERS.includes(email)) roleId = ids.Manager
       await prisma.user.update({ where: { id: u.id }, data: { roleId } })
+      if (roleId !== ids.Owner && firstProperty) {
+        await prisma.propertyAccess.upsert({
+          where:  { userId_propertyId: { userId: u.id, propertyId: firstProperty.id } },
+          update: {},
+          create: { userId: u.id, propertyId: firstProperty.id, roleId },
+        })
+      }
     }
     if (unassigned.length) {
       logger.info(`RBAC bootstrap: assigned roles to ${unassigned.length} user(s)`, { event: 'SYSTEM' })
