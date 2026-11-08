@@ -12,7 +12,8 @@
     "db:seed:demo": "node src/utils/seedDemo.js",
     "db:rbac": "node src/utils/ensureRbac.run.js",
     "db:generate": "prisma generate",
-    "db:seed:bookings": "node src/utils/seedBookings.js"
+    "db:seed:bookings": "node src/utils/seedBookings.js",
+    "db:seed:expenses": "node src/utils/seedExpenses.js"
   },
   "keywords": [],
   "author": "",

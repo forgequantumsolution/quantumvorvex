@@ -22,6 +22,7 @@ export const PANEL_MODULE = {
   food:          'food',
   housekeeping:  'housekeeping',
   billing:       'billing',
+  expenses:      'expenses',
   reports:       'reports',
   users:         'users',
   settings:      'settings',
