@@ -3,7 +3,7 @@ import {
   LuPencil, LuTrash2, LuCheck, LuPlus, LuZap, LuUsers, LuWrench, LuSparkles, LuCoffee, LuPercent,
   LuLandmark, LuFuel, LuUndo2, LuEllipsis, LuArrowDownLeft,
 } from 'react-icons/lu'
-import { Card, FilterTabs, Pagination, Button, EmptyState, ActionMenu } from '../../ui-tw'
+import { Card, FilterTabs, Pagination, Button, EmptyState, ActionMenu, Field } from '../../ui-tw'
 import { formatCurrency, formatDate } from '../../../utils/format'
 import { dayKey, today } from './expenseUtils'
 
@@ -35,7 +35,7 @@ const money = (v, sign) => `${sign}${formatCurrency(v)}`
 
 function RowActions({ e, busy, h }) {
   const { t } = useTranslation('expenses')
-  if (!h.canManage) return null
+  if (!h.canManageRow(e)) return null
   return (
     <ActionMenu disabled={busy} items={[
       e.status === 'unpaid' && { label: t('actions.markPaid'), icon: <LuCheck size={14} />, onClick: () => h.onPay(e) },
@@ -47,7 +47,7 @@ function RowActions({ e, busy, h }) {
 
 /*
  * One entry:   [icon]  Payee  (Unpaid)                      −₹2,400   ⋮
- *                      Category · Reception (Ravi) · Cash    Mark paid
+ *                      [Property] Category · Reception · Cash Mark paid
  *                      note · #ref
  */
 function Row({ e, busy, h }) {
@@ -74,7 +74,16 @@ function Row({ e, busy, h }) {
           <span className="font-semibold text-[14.5px] text-ink truncate">{e.payee}</span>
           {unpaid && <span className="shrink-0 rounded-full bg-warning-bg text-warning-text px-2 py-px text-[11px] font-semibold">{t('status.unpaid')}</span>}
         </div>
-        <div className="text-xs text-ink3 truncate mt-0.5">{meta}</div>
+        <div className="flex items-center gap-1.5 min-w-0 text-xs text-ink3 mt-0.5">
+          {h.showProperty && e.property && (
+            <span title={e.property.name} className="shrink-0 max-w-[45%] truncate rounded bg-gold-bg text-gold px-1.5 py-px font-semibold">
+              {/* Phones: the short code; the full name from sm up. */}
+              <span className="sm:hidden">{e.property.code || e.property.name}</span>
+              <span className="hidden sm:inline">{e.property.name}</span>
+            </span>
+          )}
+          <span className="truncate">{meta}</span>
+        </div>
         {note && <div className="text-xs text-ink3 truncate mt-0.5 italic">{note}</div>}
       </div>
 
@@ -82,7 +91,7 @@ function Row({ e, busy, h }) {
         <div className={`font-bold text-[15px] sm:text-[16px] tabular-nums ${income ? 'text-success-text' : unpaid ? 'text-warning-text' : 'text-ink'}`}>
           {money(e.amount, income ? '+' : '−')}
         </div>
-        {unpaid && h.canManage && (
+        {unpaid && h.canManageRow(e) && (
           <button type="button" disabled={busy} onClick={() => h.onPay(e)}
             className="mt-0.5 inline-flex items-center gap-1 bg-transparent border-0 p-0 cursor-pointer text-xs font-semibold text-gold hover:underline disabled:opacity-50">
             <LuCheck size={12} aria-hidden /> {t('actions.markPaid')}
@@ -152,21 +161,30 @@ function DayList({ groups, loading, busyId, h }) {
 /**
  * Cash-book list, the same at every width: the view's totals on top, then one
  * section per day (day subtotal in its header) with one line per entry.
+ * `properties` (All-properties scope only) adds a property filter and a property
+ * tag on every row; `canManageRow(e)` decides the row's write actions.
  */
 export default function ExpenseLedger({
   expenses, total, totals, loading, error, page, pageSize, onPage, filter, onFilter,
-  busyId, canManage, searching, onAdd, onPay, onEdit, onDelete,
+  busyId, canManage, canManageRow, properties, property, onProperty, searching, onAdd, onPay, onEdit, onDelete,
 }) {
   const { t } = useTranslation('expenses')
-  const h = { canManage, onPay, onEdit, onDelete }
+  const h = { canManageRow, showProperty: !!properties, onPay, onEdit, onDelete }
   const groups = groupByDay(expenses)
   const empty = !loading && !expenses.length
 
   return (
     <Card>
-      <div className="px-3 sm:px-5 py-3 border-b border-line min-w-0 xl:hidden">
-        <FilterTabs wrap={false} tabs={LEDGER_FILTERS.map((id) => ({ id, label: t(`filters.${id}`) }))}
-                    active={filter} onChange={onFilter} />
+      <div className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 border-b border-line min-w-0 ${properties ? '' : 'xl:hidden'}`}>
+        <div className="min-w-0 flex-1 xl:hidden">
+          <FilterTabs wrap={false} tabs={LEDGER_FILTERS.map((id) => ({ id, label: t(`filters.${id}`) }))}
+                      active={filter} onChange={onFilter} />
+        </div>
+        {properties && (
+          <Field className="sm:w-64 sm:ml-auto shrink-0" aria-label={t('filters.property')} value={property}
+            onChange={(e) => onProperty(e.target.value)}
+            options={[{ value: '', label: t('common:allProperties') }, ...properties.map((p) => ({ value: p.id, label: p.name }))]} />
+        )}
       </div>
       {error && <div className="px-4 sm:px-5 py-3 text-sm text-danger-text bg-danger-bg border-b border-line">{error}</div>}
 

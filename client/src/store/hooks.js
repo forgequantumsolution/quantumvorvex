@@ -33,6 +33,7 @@ export function useUiActions() {
           navigateTo: ui.navigateTo,
           setSearchOpen: ui.setSearchOpen,
           setDashboardScope: ui.setDashboardScope,
+          setExpenseScope: ui.setExpenseScope,
           requestPrimaryAction: ui.requestPrimaryAction,
         },
         dispatch,

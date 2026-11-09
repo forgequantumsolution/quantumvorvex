@@ -31,7 +31,7 @@ const withProperty = (url) => {
 // ── Mock adapter — short-circuits all HTTP when VITE_MOCK=true ────────────────
 if (MOCK) {
   api.defaults.adapter = async (config) => {
-    const data = await getMockResponse(config.method, config.url, config.params, config.data)
+    const data = await getMockResponse(config.method, config.url, config.params, config.data, config.headers?.['X-Property-Id'])
     return { data, status: 200, statusText: 'OK', headers: {}, config, request: {} }
   }
 }
@@ -138,16 +138,19 @@ export const claimsApi = {
 }
 
 // Cash book: money out (expenses) and other money in, with a period summary.
-// Dates are YYYY-MM-DD (inclusive); the period defaults to the current month.
+// `propertyId` (optional) targets another property than the active one — the
+// all-properties ledger acts on each row's own property.
+const atProperty = (propertyId) => (propertyId ? { headers: { 'X-Property-Id': propertyId } } : undefined)
 export const expensesApi = {
-  list:           (params)   => api.get('/expenses', { params }),   // { from, to, type, status, paidFrom, categoryId, group, search, page, limit }
+  list:           (params)   => api.get('/expenses', { params }),   // { from, to, type, status, paidFrom, categoryId, group, search, page, limit, scope: 'all', property }
   summary:        (params)   => api.get('/expenses/summary', { params }), // { from, to }
-  payees:         ()         => api.get('/expenses/payees'),
-  create:         (data)     => api.post('/expenses', data),
-  update:         (id, data) => api.put(`/expenses/${id}`, data),
-  pay:            (id, data) => api.post(`/expenses/${id}/pay`, data || {}), // { date?, paymentMode?, paidFrom? }
-  remove:         (id)       => api.delete(`/expenses/${id}`),
-  categories:     ()         => api.get('/expenses/categories'),
+  portfolio:      (params)   => api.get('/expenses/portfolio', { params }), // { from, to, properties: 'id1,id2' } — every property combined
+  payees:         (propertyId)           => api.get('/expenses/payees', atProperty(propertyId)),
+  create:         (data, propertyId)     => api.post('/expenses', data, atProperty(propertyId)),
+  update:         (id, data, propertyId) => api.put(`/expenses/${id}`, data, atProperty(propertyId)),
+  pay:            (id, data, propertyId) => api.post(`/expenses/${id}/pay`, data || {}, atProperty(propertyId)), // { date?, paymentMode?, paidFrom? }
+  remove:         (id, propertyId)       => api.delete(`/expenses/${id}`, atProperty(propertyId)),
+  categories:     (propertyId)           => api.get('/expenses/categories', atProperty(propertyId)),
   createCategory: (data)     => api.post('/expenses/categories', data),     // { name, group, monthlyBudget? }
   updateCategory: (id, data) => api.put(`/expenses/categories/${id}`, data), // { name?, group?, monthlyBudget?, active? }
 }

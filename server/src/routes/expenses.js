@@ -8,6 +8,7 @@ import {
   getExpenses,
   getPayees,
   getSummary,
+  getPortfolio,
   createExpense,
   updateExpense,
   payExpense,
@@ -25,6 +26,7 @@ router.post('/categories',    validate(schemas.createExpenseCategory), createCat
 router.put('/categories/:id', validate(schemas.updateExpenseCategory), updateCategory)
 router.get('/payees',         getPayees)
 router.get('/summary',        getSummary)
+router.get('/portfolio',      getPortfolio)
 
 router.get('/',          getExpenses)
 router.post('/',         validate(schemas.createExpense), createExpense)

@@ -61,8 +61,9 @@ function Row({ selected, onClick, badge, title, sub, muted }) {
 
 /**
  * Topbar control showing which property the app is working in, and switching it.
- * "All properties" opens the Portfolio dashboard with every property combined;
- * picking one property while on the dashboard narrows it to that property.
+ * "All properties" opens the Portfolio dashboard with every property combined
+ * (on the Expenses page it instead shows every property's cash book there);
+ * picking one property while on either narrows it to that property.
  * Switching changes the X-Property-Id sent with every request; the active panel
  * remounts (keyed on the property in App.jsx) so it reloads that property's data.
  * With a single property and no owner rights it is a plain label.
@@ -77,8 +78,9 @@ export default function PropertySwitcher() {
   const currentUser = useAppSelector((s) => s.auth.currentUser)
   const activePanel = useAppSelector((s) => s.ui.activePanel)
   const dashboardScope = useAppSelector((s) => s.ui.dashboardScope)
+  const expenseScope = useAppSelector((s) => s.ui.expenseScope)
   const { setActiveProperty } = useAuthActions()
-  const { setActivePanel, navigateTo, setDashboardScope } = useUiActions()
+  const { setActivePanel, navigateTo, setDashboardScope, setExpenseScope } = useUiActions()
   const { t } = useTranslation('shell')
   const [open, setOpen] = useState(false)
   const [filter, setFilter] = useState('')
@@ -103,7 +105,9 @@ export default function PropertySwitcher() {
   const isOwner = !!currentUser?.isOwner
   const canSwitch = properties.length > 1 || isOwner
   const offerAll = canSeePortfolio(currentUser) && properties.length > 1
-  const allSelected = offerAll && activePanel === 'portfolio' && dashboardScope === 'all'
+  // The Expenses page has its own "All properties" view and stays put when it's chosen.
+  const onExpenses = activePanel === 'expenses'
+  const allSelected = offerAll && (onExpenses ? expenseScope === 'all' : activePanel === 'portfolio' && dashboardScope === 'all')
   const activeCount = properties.filter((p) => p.status === 'active').length
 
   const name = allSelected ? t('common:allProperties') : active.name
@@ -132,12 +136,14 @@ export default function PropertySwitcher() {
   const choose = (id) => {
     close()
     if (id !== active.id) setActiveProperty(id)
-    // On the dashboard, a single property narrows it rather than leaving it.
+    // On the dashboard (or Expenses), a single property narrows it rather than leaving it.
     if (activePanel === 'portfolio') setDashboardScope('property')
+    if (onExpenses) setExpenseScope('property')
   }
 
   const chooseAll = () => {
     close()
+    if (onExpenses && offerAll) { setExpenseScope('all'); return }
     setDashboardScope('all')
     setActivePanel('portfolio')
   }
