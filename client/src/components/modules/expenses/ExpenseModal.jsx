@@ -35,8 +35,11 @@ function Segmented({ label, value, options, onChange }) {
  * Add or edit one cash-book entry. Picking a payee seen before fills in its
  * category (and last amount, if none typed yet). "Save & add another" keeps the
  * date, type and who paid, for entering a day's sheet in one go.
+ *
+ * `propertyId` (All-properties scope) saves to that property, with its own
+ * categories and payees; `propertyOptions` lets a new entry pick the property.
  */
-export default function ExpenseModal({ expense, categories, onClose, onSaved }) {
+export default function ExpenseModal({ expense, categories: activeCategories, propertyId: initialPropertyId, propertyOptions, onClose, onSaved }) {
   const { t } = useTranslation('expenses')
   const toast = useToast()
   const [form, setForm] = useState(() => (expense ? {
@@ -48,12 +51,25 @@ export default function ExpenseModal({ expense, categories, onClose, onSaved }) 
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
   const [payees, setPayees] = useState([])
+  const [propertyId, setPropertyId] = useState(initialPropertyId)
+  const [propertyCategories, setPropertyCategories] = useState([])
+  const categories = propertyId ? propertyCategories : activeCategories
 
   useEffect(() => {
     let off = false
-    expensesApi.payees().then(({ data }) => { if (!off) setPayees(data.payees || []) }).catch(() => {})
+    expensesApi.payees(propertyId).then(({ data }) => { if (!off) setPayees(data.payees || []) }).catch(() => {})
+    if (propertyId) {
+      expensesApi.categories(propertyId).then(({ data }) => { if (!off) setPropertyCategories(data.categories || []) }).catch(() => {})
+    }
     return () => { off = true }
-  }, [])
+  }, [propertyId])
+
+  // Categories belong to a property, so another property starts the choice over.
+  const changeProperty = (id) => {
+    setPropertyId(id)
+    setPropertyCategories([])
+    setForm((f) => ({ ...f, categoryId: '' }))
+  }
 
   const set = (key, value) => {
     setForm((f) => ({ ...f, [key]: value }))
@@ -101,7 +117,7 @@ export default function ExpenseModal({ expense, categories, onClose, onSaved }) 
       description: form.description.trim() || null, paidByName: form.paidByName.trim() || null, reference: form.reference.trim() || null,
     }
     try {
-      const { data } = expense ? await expensesApi.update(expense.id, body) : await expensesApi.create(body)
+      const { data } = expense ? await expensesApi.update(expense.id, body, propertyId) : await expensesApi.create(body, propertyId)
       toast(expense ? t('toast.updated', { payee: body.payee }) : t('toast.added', { payee: body.payee }))
       onSaved(data.expense, another)
       if (another) {
@@ -130,6 +146,11 @@ export default function ExpenseModal({ expense, categories, onClose, onSaved }) 
       </>}
     >
       <form className="grid grid-cols-1 sm:grid-cols-2 gap-3.5" onSubmit={(e) => { e.preventDefault(); save(false) }} noValidate>
+        {propertyOptions?.length > 0 && (
+          <Field className="sm:col-span-2" label={t('form.property')} required value={propertyId || ''}
+            onChange={(e) => changeProperty(e.target.value)}
+            options={propertyOptions.map((p) => ({ value: p.id, label: p.name }))} />
+        )}
         <div className="sm:col-span-2">
           <Segmented label={t('form.type')} value={form.type} onChange={(v) => set('type', v)} options={[
             { value: 'expense', label: t('form.moneyOut'), activeClass: 'bg-danger-bg text-danger-text shadow-soft' },

@@ -21,6 +21,11 @@ const initialState = {
   // What the Portfolio dashboard shows: every property combined ('all') or just
   // the active property ('property'). Driven by the topbar property switcher.
   dashboardScope: 'all',
+  // Same for the Expenses page. Owners (anyone who may see every property) start
+  // on "All properties"; with one property, or without that right, the page
+  // falls back to the active property. Kept apart from dashboardScope so leaving
+  // one page in "All properties" doesn't change the other.
+  expenseScope: 'all',
   searchOpen: false,
   // Generic "primary action" trigger fired by the contextual header button.
   // A page listens for its own panel name + a changing nonce, then runs its action.
@@ -47,6 +52,7 @@ const uiSlice = createSlice({
     },
     setSearchOpen: (state, { payload }) => { state.searchOpen = payload },
     setDashboardScope: (state, { payload }) => { state.dashboardScope = payload },
+    setExpenseScope: (state, { payload }) => { state.expenseScope = payload },
     // Navigate to the target panel and bump the nonce so that page runs its primary action.
     requestPrimaryAction: (state, { payload }) => {
       state.activePanel = payload
@@ -68,6 +74,7 @@ export const {
   navigateTo,
   setSearchOpen,
   setDashboardScope,
+  setExpenseScope,
   requestPrimaryAction,
 } = uiSlice.actions
 

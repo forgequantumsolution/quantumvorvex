@@ -4,7 +4,7 @@ import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import { LuSparkles, LuSprayCan, LuLoader, LuRefreshCw, LuLayers, LuBrush, LuX } from 'react-icons/lu'
-import { PageWrapper, DataTable, EmptyState, StatCard } from '../../ui-tw'
+import { PageWrapper, DataTable, TableCard, EmptyState, StatCard } from '../../ui-tw'
 import { useToast } from '../../../hooks/useToast'
 import { useAppSelector } from '../../../store/hooks'
 import { housekeepingApi, usersApi } from '../../../api/client'
@@ -565,9 +565,9 @@ function InspectionTab({ rooms, onSubmit }) {
             <EmptyState icon="✓" title={t('inspection.emptyTitle')} message={t('inspection.emptyMessage')} />
           </div>
         ) : (
-          <div className="card overflow-hidden">
+          <TableCard>
             <DataTable columns={historyColumns(t)} rows={roomHistory} />
-          </div>
+          </TableCard>
         )}
       </div>
     </div>

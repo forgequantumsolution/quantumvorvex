@@ -2,27 +2,34 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import {
   LuPlus, LuRefreshCw, LuDownload, LuCalendarRange, LuCheck, LuArrowUpRight, LuArrowDownLeft, LuScale, LuReceipt, LuWallet,
-  LuBookOpen, LuChartPie, LuTags,
+  LuBookOpen, LuLayoutDashboard, LuTags, LuBuilding2,
 } from 'react-icons/lu'
-import { PageWrapper, StatCard } from '../../ui-tw'
+import { PageWrapper, StatCard, Card, Button } from '../../ui-tw'
 import ConfirmModal from '../../ui/ConfirmModal'
 import ExpenseLedger from './ExpenseLedger'
-import ExpenseAnalysis from './ExpenseAnalysis'
+import ExpenseDashboard from './ExpenseDashboard'
 import ExpenseCategories from './ExpenseCategories'
 import ExpenseModal from './ExpenseModal'
+import ExpenseDetailModal from './ExpenseDetailModal'
 import { useToast } from '../../../hooks/useToast'
 import { useCan } from '../../../hooks/useCan'
-import { usePrimaryAction } from '../../../store/hooks'
+import { usePrimaryAction, useAppSelector, useAuthActions, useUiActions } from '../../../store/hooks'
+import { selectProperties, selectActiveProperty } from '../../../store/slices/authSlice'
+import { canSeePortfolio, canDeleteExpenses } from '../../../utils/permissions'
 import { expensesApi } from '../../../api/client'
 import { formatCurrency, formatDate } from '../../../utils/format'
 import { PERIODS, periodRange, signedMoney, downloadCsv, today } from './expenseUtils'
 
 const PAGE_SIZE = 25
-const TABS = ['ledger', 'analysis', 'categories']
+const TABS = ['dashboard', 'ledger', 'categories']
 // The tabs sit in the header as a view toggle (like Rooms' floor / board switch).
-const TAB_ICONS = { ledger: <LuBookOpen />, analysis: <LuChartPie />, categories: <LuTags /> }
+const TAB_ICONS = { dashboard: <LuLayoutDashboard />, ledger: <LuBookOpen />, categories: <LuTags /> }
 
 // Ledger filters — one at a time; the KPI strip and the ledger's own tabs both set it.
+const RANK = { NONE: 0, VIEW: 1, MANAGE: 2 }
+// Expenses access at one property (the user's per-property access from currentUser).
+const levelAt = (user, p) => (user?.isOwner || p.isOwner ? 2 : RANK[p.permissions?.expenses] || 0)
+
 const FILTERS = {
   all:       {},
   out:       { type: 'expense' },
@@ -31,12 +38,48 @@ const FILTERS = {
   reception: { paidFrom: 'reception' },
 }
 
+// Categories are per property: in 'all' scope, say so and offer the properties.
+function PerPropertyNote({ properties, onOpen }) {
+  const { t } = useTranslation('expenses')
+  return (
+    <Card>
+      <div className="px-4 sm:px-5 py-4 space-y-3">
+        <p className="text-sm text-ink2 m-0">{t('categories.perProperty')}</p>
+        <div className="flex flex-wrap gap-2">
+          {properties.filter((p) => p.status !== 'archived').map((p) => (
+            <Button key={p.id} variant="ghost" icon={<LuBuilding2 />} onClick={() => onOpen(p.id)}>{p.name}</Button>
+          ))}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
 export default function Expenses() {
   const { t } = useTranslation('expenses')
   const toast = useToast()
   const canManage = useCan('expenses', 'MANAGE')
+  const currentUser = useAppSelector((s) => s.auth.currentUser)
+  const properties = useAppSelector(selectProperties)
+  const active = useAppSelector(selectActiveProperty)
+  const expenseScope = useAppSelector((s) => s.ui.expenseScope)
+  const { setActiveProperty } = useAuthActions()
+  const { setExpenseScope } = useUiActions()
 
-  const [tab, setTab] = useState('ledger')
+  // "All properties" (chosen in the topbar switcher): every property's cash book together.
+  const all = expenseScope === 'all' && canSeePortfolio(currentUser) && properties.length > 1
+  const viewable = useMemo(() => properties.filter((p) => levelAt(currentUser, p) >= RANK.VIEW), [properties, currentUser])
+  const writable = useMemo(() => viewable.filter((p) => p.status !== 'archived' && levelAt(currentUser, p) >= RANK.MANAGE), [viewable, currentUser])
+  const canWriteAt = useCallback((id) => writable.some((p) => p.id === id), [writable])
+  // Deleting is for the owner or an admin at the entry's property, never ordinary staff.
+  const canDeleteAt = useCallback((id) => {
+    const p = properties.find((x) => x.id === id)
+    return !!p && p.status !== 'archived' && canDeleteExpenses(currentUser, p)
+  }, [properties, currentUser])
+  const canAdd = all ? writable.length > 0 : canManage
+  const ids = properties.map((p) => p.id).join(',')
+
+  const [tab, setTab] = useState('dashboard')
   const [catEditing, setCatEditing] = useState(null) // category form: null | {} (new) | { group } | category
   const [period, setPeriod] = useState('thisMonth')
   const range = useMemo(() => periodRange(period), [period])
@@ -48,12 +91,14 @@ export default function Expenses() {
   const [list, setList] = useState({ expenses: [], total: 0, totals: { out: 0, in: 0, net: 0 } })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [summary, setSummary] = useState(null)
+  const [summary, setSummary] = useState(null)       // this property (GET /expenses/summary)
+  const [portfolio, setPortfolio] = useState(null)   // 'all' scope (GET /expenses/portfolio)
   const [summaryLoading, setSummaryLoading] = useState(true)
   const [categories, setCategories] = useState([])
 
   const [editing, setEditing] = useState(null)       // null | {} (new) | expense
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [viewing, setViewing] = useState(null)       // ledger row whose details are open
   const [busyId, setBusyId] = useState(null)
   const [exporting, setExporting] = useState(false)
 
@@ -64,8 +109,9 @@ export default function Expenses() {
   }, [query])
 
   const listParams = useCallback((extra = {}) => ({
-    from: range.from, to: range.to, ...FILTERS[filter], search: search || undefined, ...extra,
-  }), [range, filter, search])
+    from: range.from, to: range.to, ...FILTERS[filter], search: search || undefined,
+    ...(all && { scope: 'all' }), ...extra,
+  }), [range, filter, search, all])
 
   const loadList = useCallback(async () => {
     setLoading(true)
@@ -83,14 +129,19 @@ export default function Expenses() {
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true)
     try {
-      const { data } = await expensesApi.summary({ from: range.from, to: range.to })
-      setSummary(data)
+      if (all) {
+        const { data } = await expensesApi.portfolio({ from: range.from, to: range.to, properties: ids })
+        setPortfolio(data)
+      } else {
+        const { data } = await expensesApi.summary({ from: range.from, to: range.to })
+        setSummary(data)
+      }
     } catch {
       /* the list's error banner already covers an outage */
     } finally {
       setSummaryLoading(false)
     }
-  }, [range])
+  }, [range, all, ids])
 
   const loadCategories = useCallback(async () => {
     try {
@@ -110,18 +161,23 @@ export default function Expenses() {
 
   const reload = useCallback(() => { loadList(); loadSummary() }, [loadList, loadSummary])
 
-  const openNew = () => canManage && setEditing({})
+  const openNew = () => canAdd && setEditing({})
   usePrimaryAction('expenses', openNew)
 
   const applyFilter = (next) => { setFilter(next); setPage(1); setTab('ledger') }
   const changePeriod = (next) => { setPeriod(next); setPage(1) }
+  // Narrow the page to one property (dashboard comparison, Categories note).
+  const openProperty = (id) => { setExpenseScope('property'); if (id !== active?.id) setActiveProperty(id) }
+  // In 'all' scope a row is acted on at its own property.
+  const rowProperty = (e) => (all ? e.property?.id : undefined)
 
   // ── Row actions ──
   const markPaid = async (e) => {
     setBusyId(e.id)
     try {
-      await expensesApi.pay(e.id, { date: today() })
+      await expensesApi.pay(e.id, { date: today() }, rowProperty(e))
       toast(t('toast.paid', { payee: e.payee }))
+      setViewing(null)
       reload()
     } catch (err) {
       toast(err.response?.data?.message || t('toast.failed'), 'error')
@@ -135,9 +191,10 @@ export default function Expenses() {
     if (!e) return
     setBusyId(e.id)
     try {
-      await expensesApi.remove(e.id)
+      await expensesApi.remove(e.id, rowProperty(e))
       toast(t('toast.deleted', { payee: e.payee }), 'error')
       setDeleteTarget(null)
+      setViewing(null)
       reload()
     } catch (err) {
       toast(err.response?.data?.message || t('toast.failed'), 'error')
@@ -152,12 +209,14 @@ export default function Expenses() {
     try {
       const { data } = await expensesApi.list(listParams({ page: 1, limit: 5000 }))
       const rows = (data.expenses || []).map((e) => [
+        ...(all ? [e.property?.name || ''] : []),
         e.date?.slice(0, 10), e.payee, e.category?.name || '', t(`groups.${e.category?.group}`, { defaultValue: e.category?.group || '' }),
         e.description || '', t(`paidFrom.${e.paidFrom}`), e.paidByName || '', t(`modes.${e.paymentMode}`),
         e.reference || '', t(`status.${e.status}`),
         e.type === 'expense' ? e.amount : '', e.type === 'income' ? e.amount : '',
       ])
-      downloadCsv(`expenses-${range.from}-to-${range.to}.csv`, [
+      downloadCsv(`expenses-${all ? 'all-properties-' : ''}${range.from}-to-${range.to}.csv`, [
+        ...(all ? [t('csv.property')] : []),
         t('csv.date'), t('csv.payee'), t('csv.category'), t('csv.group'), t('csv.note'), t('csv.paidFrom'),
         t('csv.paidBy'), t('csv.mode'), t('csv.reference'), t('csv.status'), t('csv.out'), t('csv.in'),
       ], rows)
@@ -168,14 +227,18 @@ export default function Expenses() {
     }
   }
 
-  const totals = summary?.totals
-  const cash = summary?.cash
+  const canManageRow = (e) => (all ? canWriteAt(e.property?.id) : canManage)
+  const canDeleteRow = (e) => canDeleteAt(all ? e.property?.id : active?.id)
+
+  const shown = all ? portfolio : summary
+  const totals = shown?.totals
+  const cash = shown?.cash
   const money = (v) => formatCurrency(v ?? 0)
   const periodLabel = `${formatDate(`${range.from}T00:00`, { year: range.from.slice(0, 4) === range.to.slice(0, 4) ? undefined : 'numeric' })} – ${formatDate(`${range.to}T00:00`)}`
 
   const kpis = [
     { id: 'out', icon: <LuArrowUpRight />, tone: 'red', label: t('kpi.expenses'), value: money(totals?.expenses),
-      trend: totals?.expenseTrend ?? undefined, trendGoodWhenDown: true },
+      trend: all ? undefined : totals?.expenseTrend ?? undefined, trendGoodWhenDown: true },
     { id: 'in', icon: <LuArrowDownLeft />, tone: 'green', label: t('kpi.revenue'), value: money(totals?.revenue),
       hint: t('kpi.otherIncomeHint', { amount: money(totals?.otherIncome) }) },
     { id: 'all', icon: <LuScale />, tone: 'gold', label: t('kpi.net'), value: money(totals?.net),
@@ -199,12 +262,12 @@ export default function Expenses() {
         tab === 'ledger' && { id: 'export', label: t('exportCsv'), icon: <LuDownload />, disabled: exporting || loading, onClick: exportCsv },
         { id: 'refresh', label: t('common:refresh'), icon: <LuRefreshCw />, variant: 'icon', disabled: loading, onClick: () => { reload(); loadCategories() } },
         ...TABS.map((id) => ({ id: `tab-${id}`, label: t(`tabs.${id}`), icon: TAB_ICONS[id], variant: 'icon', active: tab === id, onClick: () => setTab(id) })),
-        canManage && (tab === 'categories'
-          ? { id: 'add-category', label: t('categories.add'), icon: <LuPlus />, variant: 'primary', onClick: () => setCatEditing({}) }
-          : { id: 'add', label: t('addExpense'), icon: <LuPlus />, variant: 'primary', onClick: openNew }),
+        tab === 'categories'
+          ? canManage && !all && { id: 'add-category', label: t('categories.add'), icon: <LuPlus />, variant: 'primary', onClick: () => setCatEditing({}) }
+          : canAdd && { id: 'add', label: t('addExpense'), icon: <LuPlus />, variant: 'primary', onClick: openNew },
       ]}
       stats={kpis.map((k) => (
-        <StatCard key={k.id} {...k} loading={summaryLoading && !summary}
+        <StatCard key={k.id} {...k} loading={summaryLoading && !shown}
           selected={tab === 'ledger' && filter === k.id} onClick={() => applyFilter(k.id)} />
       ))}
     >
@@ -221,7 +284,11 @@ export default function Expenses() {
           filter={filter}
           onFilter={applyFilter}
           busyId={busyId}
-          canManage={canManage}
+          canManage={canAdd}
+          canManageRow={canManageRow}
+          canDeleteRow={canDeleteRow}
+          onOpen={setViewing}
+          showProperty={all}
           searching={!!search}
           onAdd={openNew}
           onPay={markPaid}
@@ -229,8 +296,14 @@ export default function Expenses() {
           onDelete={setDeleteTarget}
         />
       )}
-      {tab === 'analysis' && <ExpenseAnalysis summary={summary} loading={summaryLoading} />}
-      {tab === 'categories' && (
+      {tab === 'dashboard' && (
+        <ExpenseDashboard all={all} summary={summary} portfolio={portfolio} loading={summaryLoading}
+          onOpenUnpaid={() => applyFilter('unpaid')} onOpenProperty={openProperty} />
+      )}
+      {tab === 'categories' && all && (
+        <PerPropertyNote properties={viewable} onOpen={openProperty} />
+      )}
+      {tab === 'categories' && !all && (
         <ExpenseCategories categories={categories} canManage={canManage} onChanged={loadCategories}
           editing={catEditing} onEdit={setCatEditing} />
       )}
@@ -239,8 +312,25 @@ export default function Expenses() {
         <ExpenseModal
           expense={editing.id ? editing : null}
           categories={categories}
+          propertyId={all ? (editing.id ? editing.property?.id : (canWriteAt(active?.id) ? active.id : writable[0]?.id)) : undefined}
+          propertyOptions={all && !editing.id ? writable : null}
           onClose={() => setEditing(null)}
           onSaved={(_, keepOpen) => { reload(); if (!keepOpen) setEditing(null) }}
+        />
+      )}
+
+      {viewing && (
+        <ExpenseDetailModal
+          key={viewing.id}
+          expense={viewing}
+          propertyId={rowProperty(viewing)}
+          canManage={canManageRow(viewing)}
+          canDelete={canDeleteRow(viewing)}
+          busy={busyId === viewing.id}
+          onClose={() => setViewing(null)}
+          onPay={markPaid}
+          onEdit={(e) => { setViewing(null); setEditing(e) }}
+          onDelete={setDeleteTarget}
         />
       )}
 

@@ -8,7 +8,7 @@ export const GROUPS = [
 
 export const PAID_FROM = ['reception', 'owner', 'bank']
 export const MODES = ['cash', 'upi', 'bank', 'card', 'cheque']
-export const PERIODS = ['thisMonth', 'lastMonth', 'thisQuarter', 'thisYear']
+export const PERIODS = ['thisMonth', 'lastMonth', 'thisQuarter', 'thisYear', 'last6Months', 'last12Months']
 
 // Local-date YYYY-MM-DD (toISOString would shift to UTC and lose a day in IST).
 export const ymd = (d) =>
@@ -29,6 +29,10 @@ export function periodRange(period, now = new Date()) {
     }
     case 'thisYear':
       return { from: ymd(new Date(y, 0, 1)), to: ymd(new Date(y, 11, 31)) }
+    case 'last6Months':  // this month and the five before it
+      return { from: ymd(new Date(y, m - 5, 1)), to: ymd(new Date(y, m + 1, 0)) }
+    case 'last12Months':
+      return { from: ymd(new Date(y, m - 11, 1)), to: ymd(new Date(y, m + 1, 0)) }
     default:
       return { from: ymd(new Date(y, m, 1)), to: ymd(new Date(y, m + 1, 0)) }
   }

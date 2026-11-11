@@ -8,7 +8,7 @@ import {
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import { LuCalendarCheck, LuIndianRupee, LuLink } from 'react-icons/lu'
-import { PageWrapper, DataTable, StatCard } from '../../ui-tw'
+import { PageWrapper, DataTable, TableCard, StatCard } from '../../ui-tw'
 import { useToast } from '../../../hooks/useToast'
 import { formatCurrency } from '../../../utils/format'
 import { appLocale } from '../../../i18n'
@@ -194,6 +194,41 @@ function RateParityTab() {
     { field: 'goibibo',    label: 'Goibibo'     },
   ]
 
+  const parityColumns = [
+    { key: 'type', header: t('parity.roomType'), primary: true, render: (row) => <span className="font-semibold">{row.type}</span> },
+    {
+      key: 'yourRate', header: `${t('parity.yourRate')} ₹`, mobileLabel: t('parity.yourRate'), align: 'right',
+      render: (row) => (
+        <span className="font-bold text-gold" style={{ fontFamily: 'var(--font-mono)' }}>
+          ₹{row.yourRate.toLocaleString(appLocale())}
+        </span>
+      ),
+    },
+    ...COMPETITORS.map(({ field, label }) => ({
+      key: field, header: `${label} ₹`, mobileLabel: label, align: 'right',
+      render: (row) => {
+        const rowIndex = rows.indexOf(row)
+        return (
+          // Phones: a tap-sized tile; table: the plain (clickable) figure
+          <div
+            className="cursor-pointer max-md:min-h-11 max-md:flex max-md:items-center max-md:rounded-md max-md:bg-surface2 max-md:border max-md:border-line max-md:px-1.5"
+            style={{ fontFamily: 'var(--font-mono)' }}
+            onClick={() => handleCellClick(rowIndex, field)}
+          >
+            {rateCell(row, rowIndex, field, row[field])}
+          </div>
+        )
+      },
+    })),
+    {
+      key: 'status', header: t('parity.status'), primary: true,
+      render: (row) => {
+        const parity = getParityStatus(row)
+        return <Badge type={parity.type}>{t(parity.labelKey)}</Badge>
+      },
+    },
+  ]
+
   const barData = rows.map(r => ({
     name:       r.type,
     yourRate:   r.yourRate,
@@ -207,76 +242,10 @@ function RateParityTab() {
         {t('parity.intro')}
       </p>
 
-      {/* Phones: one card per room type; tap a competitor rate to edit it */}
-      <ul className="md:hidden list-none m-0 p-0 flex flex-col gap-3 mb-5">
-        {rows.map((row, rowIndex) => {
-          const parity = getParityStatus(row)
-          return (
-            <li key={row.type} className="card px-4 py-3.5">
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <span className="t-title">{row.type}</span>
-                <Badge type={parity.type}>{t(parity.labelKey)}</Badge>
-              </div>
-              <div className="flex items-baseline justify-between gap-2 mb-2.5">
-                <span className="t-xs text-ink3">{t('parity.yourRate')}</span>
-                <span className="font-bold text-gold" style={{ fontFamily: 'var(--font-mono)' }}>₹{row.yourRate.toLocaleString(appLocale())}</span>
-              </div>
-              <dl className="grid grid-cols-3 gap-2 m-0">
-                {COMPETITORS.map(({ field, label }) => (
-                  <div key={field} className="min-w-0">
-                    <dt className="text-xs text-ink3 truncate">{label}</dt>
-                    <dd
-                      className="m-0 mt-1 min-h-11 flex items-center rounded-md bg-surface2 border border-line px-1.5 cursor-pointer text-[13px]"
-                      style={{ fontFamily: 'var(--font-mono)' }}
-                      onClick={() => handleCellClick(rowIndex, field)}
-                    >
-                      {rateCell(row, rowIndex, field, row[field])}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </li>
-          )
-        })}
-      </ul>
-
-      {/* Table (md+) */}
-      <div className="hidden md:block overflow-x-auto mb-[28px]">
-        <table>
-          <thead>
-            <tr>
-              <th>{t('parity.roomType')}</th>
-              <th>{t('parity.yourRate')} ₹</th>
-              <th>Booking.com ₹</th>
-              <th>MakeMyTrip ₹</th>
-              <th>Goibibo ₹</th>
-              <th>{t('parity.status')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, rowIndex) => {
-              const parity = getParityStatus(row)
-              return (
-                <tr key={row.type}>
-                  <td className="font-semibold">{row.type}</td>
-                  <td className="font-bold text-gold" style={{ fontFamily: 'var(--font-mono)' }}>
-                    ₹{row.yourRate.toLocaleString(appLocale())}
-                  </td>
-                  {COMPETITORS.map(({ field }) => (
-                    <td key={field} onClick={() => handleCellClick(rowIndex, field)}
-                      className="cursor-pointer" style={{ fontFamily: 'var(--font-mono)' }}>
-                      {rateCell(row, rowIndex, field, row[field])}
-                    </td>
-                  ))}
-                  <td>
-                    <Badge type={parity.type}>{t(parity.labelKey)}</Badge>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      {/* Table on md+, one card per room type on phones; tap a competitor rate to edit it */}
+      <TableCard className="mb-5 md:mb-[28px]">
+        <DataTable columns={parityColumns} rows={rows} rowKey={(row) => row.type} />
+      </TableCard>
 
       {/* Bar Chart */}
       <div className="card">
@@ -344,6 +313,31 @@ function ImportTab() {
     addToast(t('toast.imported', { count: 6 }), 'success')
   }
 
+  const mappingColumns = [
+    { key: 'field', header: t('importTab.systemField'), primary: true, render: (field) => <span className="t-title">{t(`importTab.fields.${field}`)}</span> },
+    {
+      key: 'csv', header: t('importTab.csvColumn'), mobileFull: true,
+      render: (field) => (
+        <select
+          aria-label={t(`importTab.fields.${field}`)}
+          className="form-select t-xs w-full sm:w-auto"
+          value={mapping[field]}
+          onChange={e => setMapping(m => ({ ...m, [field]: e.target.value }))}
+        >
+          {CSV_MOCK_COLUMNS.map(col => (
+            <option key={col} value={col}>{col}</option>
+          ))}
+        </select>
+      ),
+    },
+  ]
+
+  // Raw CSV rows (arrays): one column per CSV header; the amount column is numeric
+  const previewColumns = CSV_MOCK_COLUMNS.map((col, j) => ({
+    key: col, header: col, align: j === 4 ? 'right' : undefined,
+    render: (row) => <span className="t-xs" style={{ fontFamily: j === 4 ? 'monospace' : 'inherit' }}>{row[j]}</span>,
+  }))
+
   function handleDownloadTemplate() {
     addToast(t('toast.templateStarted'), 'info')
     const header = CSV_MOCK_COLUMNS.join(',')
@@ -393,85 +387,25 @@ function ImportTab() {
         </span>
       </div>
 
-      {/* Column Mapping */}
-      <div className="card mb-5">
-        <div className="card-header">
-          <span className="card-title">{t('importTab.columnMapping')}</span>
-        </div>
-        <div className="card-body">
-          {/* Phones: field name over its select; a table from sm up */}
-          <ul className="sm:hidden list-none m-0 p-0 flex flex-col gap-3">
-            {CSV_SYSTEM_FIELDS.map(field => (
-              <li key={field} className="flex flex-col gap-1">
-                <label htmlFor={`map-${field}`} className="t-title">{t(`importTab.fields.${field}`)}</label>
-                <select
-                  id={`map-${field}`}
-                  className="form-select t-xs"
-                  value={mapping[field]}
-                  onChange={e => setMapping(m => ({ ...m, [field]: e.target.value }))}
-                >
-                  {CSV_MOCK_COLUMNS.map(col => (
-                    <option key={col} value={col}>{col}</option>
-                  ))}
-                </select>
-              </li>
-            ))}
-          </ul>
-          <table className="hidden sm:table">
-            <thead>
-              <tr>
-                <th>{t('importTab.systemField')}</th>
-                <th>{t('importTab.csvColumn')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {CSV_SYSTEM_FIELDS.map(field => (
-                <tr key={field}>
-                  <td className="t-title">{t(`importTab.fields.${field}`)}</td>
-                  <td>
-                    <select
-                      className="form-select t-xs"
-                      value={mapping[field]}
-                      onChange={e => setMapping(m => ({ ...m, [field]: e.target.value }))}
-                    >
-                      {CSV_MOCK_COLUMNS.map(col => (
-                        <option key={col} value={col}>{col}</option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* Column Mapping (field name over its select on phones) */}
+      <TableCard title={t('importTab.columnMapping')} className="mb-5">
+        <DataTable
+          columns={mappingColumns}
+          rows={CSV_SYSTEM_FIELDS}
+          rowKey={(field) => field}
+          tableFrom="sm"
+        />
+      </TableCard>
 
       {/* CSV Preview */}
-      <div className="card mb-5">
-        <div className="card-header">
-          <span className="card-title">{t('importTab.preview', { count: CSV_PREVIEW_ROWS.length })}</span>
-        </div>
-        <div className="card-body overflow-x-auto">
-          <table>
-            <thead>
-              <tr>
-                {CSV_MOCK_COLUMNS.map(col => <th key={col}>{col}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {CSV_PREVIEW_ROWS.map((row, i) => (
-                <tr key={i}>
-                  {row.map((cell, j) => (
-                    <td key={j} className="t-xs" style={{ fontFamily: j === 4 ? 'monospace' : 'inherit' }}>
-                      {cell}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <TableCard title={t('importTab.preview', { count: CSV_PREVIEW_ROWS.length })} className="mb-5">
+        <DataTable
+          columns={previewColumns}
+          rows={CSV_PREVIEW_ROWS}
+          rowKey={(row) => CSV_PREVIEW_ROWS.indexOf(row)}
+          mobile="scroll"
+        />
+      </TableCard>
 
       <button className="btn btn-primary w-full sm:w-auto justify-center" onClick={handleImport}>
         {t('importTab.importBtn')}
@@ -518,9 +452,9 @@ function RevenueBySourceTab({ channels }) {
         </div>
       ),
     },
-    { key: 'bookings', header: t('card.bookings'), render: (ch) => <span style={mono}>{ch.bookings}</span> },
-    { key: 'revenue', header: `${t('card.revenue')} ₹`, render: (ch) => <span className="font-semibold" style={mono}>{formatCurrency(ch.revenue)}</span> },
-    { key: 'avg', header: `${t('revenue.avgStay')} ₹`, render: (ch) => <span style={mono}>{formatCurrency(ch.avgRate)}</span> },
+    { key: 'bookings', header: t('card.bookings'), align: 'right', render: (ch) => <span style={mono}>{ch.bookings}</span> },
+    { key: 'revenue', header: `${t('card.revenue')} ₹`, align: 'right', render: (ch) => <span className="font-semibold" style={mono}>{formatCurrency(ch.revenue)}</span> },
+    { key: 'avg', header: `${t('revenue.avgStay')} ₹`, align: 'right', render: (ch) => <span style={mono}>{formatCurrency(ch.avgRate)}</span> },
     {
       key: 'share', header: t('revenue.share'),
       render: (ch) => (
@@ -583,7 +517,7 @@ function RevenueBySourceTab({ channels }) {
       </div>
 
       {/* Table (cards on phones) + totals */}
-      <div className="card overflow-hidden">
+      <TableCard>
         <DataTable
           columns={columns}
           rows={channels.slice().sort((a, b) => b.revenue - a.revenue)}
@@ -595,7 +529,7 @@ function RevenueBySourceTab({ channels }) {
           <span style={mono}>{formatCurrency(totalRevenue)}</span>
           <span className="sm:ml-auto" style={mono}>100%</span>
         </div>
-      </div>
+      </TableCard>
     </div>
   )
 }

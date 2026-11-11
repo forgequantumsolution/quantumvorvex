@@ -1,18 +1,20 @@
 /**
- * Demo expenses for one property, taken from the owner's paper "Expenses" sheet
- * (MSEB, tanker, staff, Booking.com, deposit refunds…): this month's entries,
- * a few unpaid bills, two income rows, and last month's regular bills so the
- * trend has something to compare with.
+ * Demo expenses for a property, taken from the owner's paper "Expenses" sheet
+ * (MSEB, tanker, staff, Booking.com, deposit refunds…): six months of history.
+ * This month is the sheet (with a few unpaid bills and two income rows); the
+ * five months before it are the regular bills, varied ±10–20% month to month,
+ * plus a couple of one-offs, so the dashboard trends have something to show.
  *
  *   npm run db:seed:expenses                 # property named "Test"
  *   npm run db:seed:expenses -- "Main"       # any property, by name or code
+ *   npm run db:seed:expenses -- --all        # every property
  *
  * Goes through the real controllers, so default categories are created the same
  * way the page creates them. Dates are relative to today.
  *
- * Safe to keep around: it refuses to run twice on the same property (seeded
- * entries are created by "seed"), and refuses a non-local database unless
- * --allow-remote is passed.
+ * Safe to re-run: seeded entries are created by "seed", and a month that already
+ * has seeded entries is skipped (so a re-run only fills in missing months). It
+ * refuses a non-local database unless --allow-remote is passed.
  */
 import 'dotenv/config'
 import prisma from './prisma.js'
@@ -25,6 +27,7 @@ const SEED_BY = 'seed'
 
 const args = process.argv.slice(2)
 const allowRemote = args.includes('--allow-remote')
+const all = args.includes('--all')
 const target = args.find((a) => !a.startsWith('--')) || 'Test'
 
 const host = (() => { try { return new URL(process.env.DATABASE_URL).hostname } catch { return '' } })()
@@ -100,7 +103,8 @@ const INCOME = [
   ['Ravi (owner)', 'Other income', 20000, 'reception', 'Ravi', 'cash', { description: 'Cash added to reception' }],
 ]
 
-// Last month's regular bills (a little lower than this month).
+// Last month's regular bills (a little lower than this month); also the base
+// the older months vary from.
 const LAST_MONTH = [
   ['MSEB', 'Electricity (MSEB)', 16900, 'owner', 'Ravi', 'bank'],
   ['Airtel WiFi', 'Internet / WiFi', 1180, 'owner', 'Ravi', 'upi'],
@@ -116,19 +120,54 @@ const LAST_MONTH = [
   ['Petrol', 'Petrol', 1500, 'reception', null, 'cash'],
 ]
 
-async function main() {
-  const property = await runUnscoped(() => prisma.property.findFirst({
-    where: { OR: [{ name: { equals: target, mode: 'insensitive' } }, { code: { equals: target, mode: 'insensitive' } }] },
-  }))
-  if (!property) throw new Error(`No property named or coded "${target}".`)
+// Bills that come every month on top of LAST_MONTH in older months.
+const REGULAR = [
+  ['Didi', 'Staff salary', 9000, 'owner', 'Ravi', 'cash'],
+  ['Newspaper', 'Newspaper', 840, 'reception', null, 'cash'],
+  ['Garbage collection', 'Garbage collection', 600, 'owner', 'Ravi', 'cash'],
+  ['Water bottles', 'Drinking water', 2400, 'reception', null, 'cash'],
+]
+
+// One-offs, two per older month (picked by month), not varied.
+const ONE_OFFS = [
+  ['Painter', 'Repairs & maintenance', 14500, 'owner', 'Ravi', 'bank'],
+  ['Deposit refund', 'Deposit refund', 12000, 'reception', null, 'cash'],
+  ['Municipal licence', 'Licences', 7500, 'owner', 'Ravi', 'bank'],
+  ['Godrej', 'Appliance repair', 3800, 'reception', null, 'cash'],
+  ['Electrician', 'Electrician', 2600, 'reception', null, 'cash'],
+  ['GST', 'GST', 11800, 'owner', 'Ravi', 'bank'],
+  ['Towel & pillow', 'Linen (towels & pillows)', 5200, 'owner', 'Ravi', 'upi'],
+  ['Scooty service', 'Vehicle maintenance', 1200, 'reception', null, 'cash'],
+]
+
+// Older bills still owed, so "unpaid by age" has more than the 0–7 day bucket.
+const OLD_UNPAID = {
+  2: ['Hardware store', 'Hardware', 3400, 'reception', null, 'cash', { status: 'unpaid', reference: 'Credit slip 118' }],
+  3: ['Cleaning', 'Cleaning services', 6500, 'owner', 'Ravi', 'bank', { status: 'unpaid', reference: 'Balance due' }],
+}
+const OLDER_MONTHS = 5
+
+// Deterministic 0…1 noise, so re-runs on other properties look alike but not equal.
+const noise = (seed) => { const x = Math.sin(seed * 9301 + 49297) * 233280; return x - Math.floor(x) }
+// ±10–20%, rounded to ₹10.
+const vary = (amount, seed) => {
+  const f = 0.1 + 0.1 * noise(seed)
+  const sign = noise(seed + 7) < 0.5 ? -1 : 1
+  return Math.max(10, Math.round((amount * (1 + sign * f)) / 10) * 10)
+}
+
+const pad = (n) => String(n).padStart(2, '0')
+const monthStart = (k) => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth() - k, 1) }
+// Day `day` of the month k months ago (clamped to its length).
+const dayIn = (k, day) => {
+  const m = monthStart(k)
+  const last = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate()
+  return `${m.getFullYear()}-${pad(m.getMonth() + 1)}-${pad(Math.min(day, last))}`
+}
+
+async function seedProperty(property) {
   CURRENT.propertyId = property.id
-
-  await runWithProperty(property.id, async () => {
-    if (await prisma.expense.count({ where: { createdById: SEED_BY, deletedAt: null } })) {
-      console.log(`"${property.name}" already has seeded expenses — nothing to do.`)
-      return
-    }
-
+  return runWithProperty(property.id, async () => {
     // Default categories (created on first list, like the page does).
     const { categories } = await call(getCategories)
     const byName = Object.fromEntries(categories.map((c) => [c.name, c.id]))
@@ -145,20 +184,56 @@ async function main() {
       })
     }
 
-    for (const [i, row] of SHEET.entries()) await add(row, 'expense', ymd(thisMonth(i, SHEET.length)))
-    for (const [i, row] of INCOME.entries()) await add(row, 'income', ymd(thisMonth(i * 10 + 5, SHEET.length)))
-    for (const [i, row] of LAST_MONTH.entries()) await add(row, 'expense', ymd(-dayOfMonth - 2 - i * 2))
+    // Month k ago already seeded? (per-month idempotency)
+    const seeded = async (k) => prisma.expense.count({
+      where: { createdById: SEED_BY, deletedAt: null, date: { gte: monthStart(k), lt: monthStart(k - 1) } },
+    })
 
-    // Example monthly budgets, so Analysis can show budget vs actual.
+    const added = []
+    for (let k = 0; k <= OLDER_MONTHS; k++) {
+      if (await seeded(k)) continue
+      let n = 0
+      if (k === 0) {
+        for (const [i, row] of SHEET.entries()) { await add(row, 'expense', ymd(thisMonth(i, SHEET.length))); n++ }
+        for (const [i, row] of INCOME.entries()) { await add(row, 'income', ymd(thisMonth(i * 10 + 5, SHEET.length))); n++ }
+      } else if (k === 1) {
+        for (const [i, row] of LAST_MONTH.entries()) { await add(row, 'expense', dayIn(1, 26 - i * 2)); n++ }
+      } else {
+        const regular = [...LAST_MONTH, ...REGULAR]
+        for (const [i, row] of regular.entries()) {
+          const [payee, cat, amount, ...rest] = row
+          // Salaries and fixed plans stay put; the rest move with usage.
+          const fixed = ['Staff salary', 'Internet / WiFi', 'Newspaper', 'Garbage collection'].includes(cat)
+          await add([payee, cat, fixed ? amount : vary(amount, k * 100 + i), ...rest], 'expense', dayIn(k, 2 + i)); n++
+        }
+        for (const j of [0, 1]) { await add(ONE_OFFS[(k * 2 + j) % ONE_OFFS.length], 'expense', dayIn(k, 12 + j * 9)); n++ }
+        if (OLD_UNPAID[k]) { await add(OLD_UNPAID[k], 'expense', dayIn(k, 20)); n++ }
+        if (k % 2 === 0) { await add(['Scrap dealer', 'Other income', vary(1000, k), 'reception', null, 'cash'], 'income', dayIn(k, 15)); n++ }
+      }
+      const m = monthStart(k)
+      added.push(`${m.getFullYear()}-${pad(m.getMonth() + 1)}: ${n}`)
+    }
+
+    // Example monthly budgets, so the dashboard can show budget vs actual.
     const budgets = { 'Electricity (MSEB)': 18000, 'Staff salary': 60000, 'Cleaning services': 90000, 'Laundry': 7000, 'Diesel': 5000 }
     for (const [name, monthlyBudget] of Object.entries(budgets)) {
       const cat = categories.find((c) => c.name === name)
       if (cat && cat.monthlyBudget == null) await prisma.expenseCategory.update({ where: { id: cat.id }, data: { monthlyBudget } })
     }
 
-    console.log(`Seeded ${SHEET.length + INCOME.length + LAST_MONTH.length} expenses in "${property.name}" `
-      + `(${SHEET.length} this month, ${INCOME.length} income, ${LAST_MONTH.length} last month).`)
+    console.log(added.length
+      ? `"${property.name}": seeded ${added.join(', ')}.`
+      : `"${property.name}": all ${OLDER_MONTHS + 1} months already seeded — nothing to do.`)
   })
+}
+
+async function main() {
+  const properties = await runUnscoped(() => prisma.property.findMany({
+    where: all ? {} : { OR: [{ name: { equals: target, mode: 'insensitive' } }, { code: { equals: target, mode: 'insensitive' } }] },
+    orderBy: { createdAt: 'asc' },
+  }))
+  if (!properties.length) throw new Error(all ? 'No properties found.' : `No property named or coded "${target}".`)
+  for (const p of properties) await seedProperty(p)
 }
 
 main()

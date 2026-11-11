@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { LuTrash2, LuBan, LuPercent, LuIndianRupee, LuClock, LuRefreshCw } from 'react-icons/lu'
-import { PageWrapper, StatCard, Card, DataTable, Button, EmptyState } from '../../ui-tw'
+import { PageWrapper, StatCard, TableCard, DataTable, Button, EmptyState } from '../../ui-tw'
 import ConfirmModal from '../../ui/ConfirmModal'
 import CancelModal from './CancelModal'
 import { useToast } from '../../../hooks/useToast'
@@ -156,30 +156,30 @@ export default function Cancellations() {
         </>
       }
     >
-      <Card>
-        <div className="flex flex-wrap items-center justify-between gap-2 px-4 sm:px-5 py-3 border-b border-line">
-          <h3 className="font-display font-semibold text-ink text-[15px] leading-tight">{t('listTitle')}</h3>
-          {view === 'lost' && (
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-xs text-ink2 truncate">{t('filter.lostOnly')}</span>
-              <Button variant="ghost" size="sm" onClick={() => setView('all')}>{t('filter.showAll')}</Button>
-            </div>
-          )}
-        </div>
-        {error && <div className="px-5 py-3 text-sm text-danger-text border-b border-line">{error}</div>}
+      <TableCard
+        title={t('listTitle')}
+        actions={view === 'lost' && (
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-xs text-ink2 truncate">{t('filter.lostOnly')}</span>
+            <Button variant="ghost" size="sm" onClick={() => setView('all')}>{t('filter.showAll')}</Button>
+          </div>
+        )}
+        error={error}
+      >
         <DataTable
           columns={columns}
           rows={filtered}
           tableFrom="lg"
+          loading={loading && filtered.length === 0}
           empty={
             <EmptyState
               icon="✓"
-              title={loading ? t('common:loading') : narrowed ? t('empty.noMatch') : t('empty.none')}
-              message={loading ? t('empty.fetching') : narrowed ? t('empty.tryAgain') : t('empty.hint')}
+              title={narrowed ? t('empty.noMatch') : t('empty.none')}
+              message={narrowed ? t('empty.tryAgain') : t('empty.hint')}
             />
           }
         />
-      </Card>
+      </TableCard>
 
       <CancelModal
         isOpen={showCancel}

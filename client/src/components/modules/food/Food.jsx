@@ -7,7 +7,7 @@ import Modal from '../../ui/Modal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import { LuIndianRupee, LuUsers, LuUtensils, LuRefreshCw, LuPlus } from 'react-icons/lu'
-import { PageWrapper, Card, DataTable, EmptyState, StatCard } from '../../ui-tw'
+import { PageWrapper, Card, TableCard, DataTable, EmptyState, StatCard } from '../../ui-tw'
 import { useToast } from '../../../hooks/useToast'
 import { foodApi } from '../../../api/client'
 import { formatCurrency } from '../../../utils/format'
@@ -233,15 +233,16 @@ function MealCatalog({ plans, onCreate, onToggle, onDelete, showAddModal, setSho
 }
 
 // ─── Tab 2: Active Orders ─────────────────────────────────────────────────────
-function ActiveOrders({ orders }) {
+function ActiveOrders({ orders, loading }) {
   const { t } = useTranslation('food')
   const addToast = useToast()
 
   return (
-    <Card title={t('tabs.orders')} subtitle={t('guestsOnPlan', { count: orders.length })}>
+    <TableCard title={t('tabs.orders')} subtitle={t('guestsOnPlan', { count: orders.length })}>
       <DataTable
         rows={orders}
         rowKey={(o) => o.id}
+        loading={loading && orders.length === 0}
         empty={<EmptyState icon="🍽" title={t('empty.noOrders')} />}
         columns={[
           {
@@ -276,7 +277,7 @@ function ActiveOrders({ orders }) {
           },
         ]}
       />
-    </Card>
+    </TableCard>
   )
 }
 
@@ -454,7 +455,7 @@ export default function Food() {
             showAddModal={showAddModal} setShowAddModal={setShowAddModal} />
         </div>
         <div data-tab-id="orders">
-          <ActiveOrders orders={orders} />
+          <ActiveOrders orders={orders} loading={loading} />
         </div>
         <div data-tab-id="revenue">
           <Revenue orders={orders} plans={plans} />

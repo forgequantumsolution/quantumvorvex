@@ -3,7 +3,7 @@ import Cropper from 'react-easy-crop'
 import { QRCodeSVG } from 'qrcode.react'
 import { useTranslation, Trans } from 'react-i18next'
 import { LANGUAGES } from '../../../i18n'
-import { Modal, Button, EmptyState } from '../../ui-tw'
+import { Modal, Button, EmptyState, DataTable } from '../../ui-tw'
 import { Section, AddButton, ActionButton, RowDelete, TablePager } from './settingsUi'
 import { usePaged } from './usePaged'
 import { getCroppedBlob, blobToDataUrl } from '../../../utils/cropImage'
@@ -133,41 +133,15 @@ function InlineInput({ value, onChange, type = 'text', min, w = 80, className = 
 const TAB_STACK = 'flex flex-col gap-5'
 const FORM_GRID = 'grid grid-cols-1 md:grid-cols-2 gap-4'
 
-// Editable tables sit full-bleed in a <Section bodyClassName="p-0">: a normal
-// table from lg up; below lg (phones and portrait tablets, where 6–8 input
-// columns don't fit) every row becomes a card — the first cell (the row's
-// name) spans the card, the rest sit 2-up under small labels, and the delete
-// button pins to the card's top-right.
-// The [&_td] overrides beat the global td padding / border / nowrap.
-const STACK_TABLE =
-  'w-full border-collapse max-lg:block max-lg:[&_thead]:hidden max-lg:[&_tbody]:block max-lg:[&_td]:p-0 max-lg:[&_td]:border-0 max-lg:[&_td]:whitespace-normal ' +
-  'lg:[&_th:first-child]:pl-5 lg:[&_td:first-child]:pl-5 lg:[&_th:last-child]:pr-5 lg:[&_td:last-child]:pr-5'
-const STACK_ROW_BASE = 'border-b border-line max-lg:relative max-lg:grid max-lg:gap-x-3 max-lg:gap-y-3 max-lg:px-4 sm:max-lg:px-5 max-lg:py-4 max-lg:last:border-b-0'
-// 2-up on phones, 4-up on portrait tablets.
-const STACK_ROW   = `${STACK_ROW_BASE} max-lg:grid-cols-2 sm:max-lg:grid-cols-4`
-const STACK_CELL  = 'px-2.5 py-2 max-lg:p-0 max-lg:min-w-0'
-const STACK_TITLE = `${STACK_CELL} max-lg:col-span-full`
-// The row's name input leaves room for the pinned delete button.
-const TITLE_INPUT = 'max-lg:font-semibold max-lg:w-[calc(100%-3.25rem)]'
-const STACK_WIDE  = `${STACK_CELL} max-lg:col-span-2`
-const STACK_DEL   = `${STACK_CELL} lg:w-px lg:text-right max-lg:absolute max-lg:right-4 sm:max-lg:right-5 max-lg:top-[37px] pointer-coarse:max-lg:top-[31px]`
-// Column heading (lg+ only; stacked rows label each cell with CellLabel).
-const TH = 'px-2.5 py-2.5 border-b border-line text-ink3 font-semibold text-xs whitespace-nowrap text-left'
-
-// Field label shown above a stacked cell below lg (the table header carries it on lg+).
+// Editable tables sit full-bleed in a <Section bodyClassName="p-0"> as a shared
+// <DataTable tableFrom="lg">: a normal table from lg up; below lg (phones and
+// portrait tablets, where 6–8 input columns don't fit) every row becomes a
+// card — the row's name on the title line, the rest 2-up under labels, and the
+// delete button in the card's footer.
+// The name input has no table header in card mode, so it gets its own label.
+const TITLE_INPUT = 'max-lg:font-semibold'
 function CellLabel({ children }) {
-  return <span className="lg:hidden block text-xs font-semibold uppercase tracking-[0.05em] text-ink3 mb-1">{children}</span>
-}
-
-// Table header row from a list of column names ('' for the actions column).
-function TableHead({ cols }) {
-  return (
-    <thead>
-      <tr>
-        {cols.map((h, i) => <th key={h || `col-${i}`} className={TH}>{h}</th>)}
-      </tr>
-    </thead>
-  )
+  return <span className="lg:hidden block text-xs font-medium uppercase tracking-wider text-ink3 mb-1">{children}</span>
 }
 
 // A full-bleed editable table inside a Section: the table (or an empty state)
@@ -183,7 +157,8 @@ function EditableTable({ pager, empty, reveal = 0, children }) {
     if (reveal !== s.reveal) { s.reveal = reveal; s.wantFrom = s.total }
     if (s.wantFrom != null && pager.total > s.wantFrom) {
       s.wantFrom = null
-      const row = wrapRef.current?.querySelector('tbody tr:last-child')
+      // Table rows from lg, stacked cards (<li>) below it.
+      const row = wrapRef.current?.querySelector('tbody tr:last-child, ul > li:last-child')
       if (row) {
         row.scrollIntoView({ block: 'center', behavior: 'smooth' })
         row.querySelector('input, select')?.focus({ preventScroll: true })
@@ -195,7 +170,7 @@ function EditableTable({ pager, empty, reveal = 0, children }) {
     <div ref={wrapRef}>
       {pager.total === 0 ? empty : (
         <>
-          <div className="lg:overflow-x-auto">{children}</div>
+          {children}
           <TablePager pager={pager} />
         </>
       )}
@@ -571,46 +546,50 @@ function RoomConfigTab({ settings, setSettings, roomTypes, setRoomTypes, addToas
               action={<AddButton onClick={addRoom}>{t('rooms.addType')}</AddButton>} />
           }
         >
-          <table className={STACK_TABLE}>
-            <TableHead cols={[t('rooms.colName'), t('rooms.colDaily'), t('rooms.colMonthly'), t('rooms.colPeakDaily'), t('rooms.colPeakMonthly'), t('rooms.colCount'), t('rooms.colMaxOcc'), '']} />
-            <tbody>
-              {pager.rows.map(row => (
-                <tr key={row.id} className={STACK_ROW}>
-                  {[
-                    { field: 'name',            label: t('rooms.colName'),        val: row.name,            type: 'text',   w: 100 },
-                    { field: 'dailyRate',       label: t('rooms.colDaily'),       val: row.dailyRate,       type: 'number', w: 75 },
-                    { field: 'monthlyRate',     label: t('rooms.colMonthly'),     val: row.monthlyRate,     type: 'number', w: 80 },
-                    { field: 'peakDailyRate',   label: t('rooms.colPeakDaily'),   val: row.peakDailyRate,   type: 'number', w: 80 },
-                    { field: 'peakMonthlyRate', label: t('rooms.colPeakMonthly'), val: row.peakMonthlyRate, type: 'number', w: 90 },
-                    { field: 'count',           label: t('rooms.colCount'),       val: row.count ?? 0,      type: 'number', w: 60 },
-                    { field: 'maxOccupancy',    label: t('rooms.colMaxOcc'),      val: row.maxOccupancy,    type: 'number', w: 60 },
-                  ].map(({ field, label, val, type, w }) => (
-                    <td key={field} className={field === 'name' ? STACK_TITLE : STACK_CELL}>
-                      <CellLabel>{label}</CellLabel>
-                      <InlineInput
-                        value={val}
-                        type={type}
-                        min={type === 'number' ? 0 : undefined}
-                        w={w}
-                        className={field === 'name' ? TITLE_INPUT : ''}
-                        onChange={v => updateRoom(row.id, field, v)}
-                      />
-                    </td>
-                  ))}
-                  <td className={STACK_DEL}>
-                    {confirmDelete === row.id ? (
-                      <span className="inline-flex gap-1.5 max-lg:bg-surface max-lg:pl-2">
-                        <Button size="sm" variant="danger" onClick={() => deleteRoom(row.id)}>{t('common:delete')}</Button>
-                        <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(null)}>{t('common:cancel')}</Button>
-                      </span>
-                    ) : (
-                      <RowDelete onClick={() => setConfirmDelete(row.id)} label={t('row.delete', { name: row.name })} />
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable
+            rows={pager.rows}
+            tableFrom="lg"
+            columns={[
+              ...[
+                { field: 'name',            label: t('rooms.colName'),        type: 'text',   w: 100 },
+                { field: 'dailyRate',       label: t('rooms.colDaily'),       type: 'number', w: 75 },
+                { field: 'monthlyRate',     label: t('rooms.colMonthly'),     type: 'number', w: 80 },
+                { field: 'peakDailyRate',   label: t('rooms.colPeakDaily'),   type: 'number', w: 80 },
+                { field: 'peakMonthlyRate', label: t('rooms.colPeakMonthly'), type: 'number', w: 90 },
+                { field: 'count',           label: t('rooms.colCount'),       type: 'number', w: 60 },
+                { field: 'maxOccupancy',    label: t('rooms.colMaxOcc'),      type: 'number', w: 60 },
+              ].map(({ field, label, type, w }) => ({
+                key: field,
+                header: label,
+                primary: field === 'name',
+                align: type === 'number' ? 'right' : undefined,
+                render: (row) => (
+                  <>
+                    {field === 'name' && <CellLabel>{label}</CellLabel>}
+                    <InlineInput
+                      value={field === 'count' ? (row.count ?? 0) : row[field]}
+                      type={type}
+                      min={type === 'number' ? 0 : undefined}
+                      w={w}
+                      className={field === 'name' ? TITLE_INPUT : ''}
+                      onChange={v => updateRoom(row.id, field, v)}
+                    />
+                  </>
+                ),
+              })),
+              {
+                key: 'actions', header: '', actions: true, align: 'right', className: 'w-px',
+                render: (row) => confirmDelete === row.id ? (
+                  <span className="inline-flex gap-1.5">
+                    <Button size="sm" variant="danger" onClick={() => deleteRoom(row.id)}>{t('common:delete')}</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(null)}>{t('common:cancel')}</Button>
+                  </span>
+                ) : (
+                  <RowDelete onClick={() => setConfirmDelete(row.id)} label={t('row.delete', { name: row.name })} />
+                ),
+              },
+            ]}
+          />
         </EditableTable>
       </Section>
     </div>
@@ -733,30 +712,33 @@ function FacilitiesTab({ amenities, setAmenities, addToast }) {
               action={<AddButton onClick={addAmenity}>{t('facilities.addAmenity')}</AddButton>} />
           }
         >
-          <table className={STACK_TABLE}>
-            <TableHead cols={[t('facilities.colAmenity'), t('facilities.colDaily'), t('facilities.colMonthly'), '']} />
-            <tbody>
-              {pager.rows.map(row => (
-                <tr key={row.id} className={STACK_ROW}>
-                  <td className={STACK_TITLE}>
+          <DataTable
+            rows={pager.rows}
+            tableFrom="lg"
+            columns={[
+              {
+                key: 'name', header: t('facilities.colAmenity'), primary: true,
+                render: (row) => (
+                  <>
                     <CellLabel>{t('facilities.colAmenity')}</CellLabel>
                     <InlineInput value={row.name} type="text" w={200} className={TITLE_INPUT} onChange={v => updateAmenity(row.id, 'name', v)} />
-                  </td>
-                  <td className={STACK_CELL}>
-                    <CellLabel>{t('facilities.colDaily')}</CellLabel>
-                    <InlineInput value={row.dailyRate} type="number" min={0} w={110} onChange={v => updateAmenity(row.id, 'dailyRate', v)} />
-                  </td>
-                  <td className={STACK_CELL}>
-                    <CellLabel>{t('facilities.colMonthly')}</CellLabel>
-                    <InlineInput value={row.monthlyRate} type="number" min={0} w={110} onChange={v => updateAmenity(row.id, 'monthlyRate', v)} />
-                  </td>
-                  <td className={STACK_DEL}>
-                    <RowDelete onClick={() => removeAmenity(row.id)} label={t('row.remove', { name: row.name })} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </>
+                ),
+              },
+              {
+                key: 'dailyRate', header: t('facilities.colDaily'), align: 'right',
+                render: (row) => <InlineInput value={row.dailyRate} type="number" min={0} w={110} onChange={v => updateAmenity(row.id, 'dailyRate', v)} />,
+              },
+              {
+                key: 'monthlyRate', header: t('facilities.colMonthly'), align: 'right',
+                render: (row) => <InlineInput value={row.monthlyRate} type="number" min={0} w={110} onChange={v => updateAmenity(row.id, 'monthlyRate', v)} />,
+              },
+              {
+                key: 'actions', header: '', actions: true, align: 'right', className: 'w-px',
+                render: (row) => <RowDelete onClick={() => removeAmenity(row.id)} label={t('row.remove', { name: row.name })} />,
+              },
+            ]}
+          />
         </EditableTable>
       </Section>
     </div>
@@ -816,38 +798,37 @@ function FoodPlansTab({ plans, setPlans, addToast }) {
               action={<AddButton onClick={addPlan}>{t('food.addPlan')}</AddButton>} />
           }
         >
-          <table className={STACK_TABLE}>
-            <TableHead cols={[t('food.colName'), t('food.colOneTime'), t('food.colWeekly'), t('food.colMonthly'), t('food.colDescription'), '']} />
-            <tbody>
-              {pager.rows.map(row => (
-                <tr key={row.id} className={`${STACK_ROW_BASE} max-lg:grid-cols-3`}>
-                  <td className={STACK_TITLE}>
+          <DataTable
+            rows={pager.rows}
+            tableFrom="lg"
+            columns={[
+              {
+                key: 'name', header: t('food.colName'), primary: true,
+                render: (row) => (
+                  <>
                     <CellLabel>{t('food.colName')}</CellLabel>
                     <InlineInput value={row.name} type="text" w={140} className={TITLE_INPUT} onChange={v => updatePlan(row.id, 'name', v)} />
-                  </td>
-                  <td className={STACK_CELL}>
-                    <CellLabel>{t('food.colOneTime')}</CellLabel>
-                    <InlineInput value={row.oneTimeRate} type="number" min={0} onChange={v => updatePlan(row.id, 'oneTimeRate', v)} />
-                  </td>
-                  <td className={STACK_CELL}>
-                    <CellLabel>{t('food.colWeekly')}</CellLabel>
-                    <InlineInput value={row.weeklyRate} type="number" min={0} onChange={v => updatePlan(row.id, 'weeklyRate', v)} />
-                  </td>
-                  <td className={STACK_CELL}>
-                    <CellLabel>{t('food.colMonthly')}</CellLabel>
-                    <InlineInput value={row.monthlyRate} type="number" min={0} onChange={v => updatePlan(row.id, 'monthlyRate', v)} />
-                  </td>
-                  <td className={`${STACK_CELL} max-lg:col-span-3`}>
-                    <CellLabel>{t('food.colDescription')}</CellLabel>
-                    <InlineInput value={row.description} type="text" w={180} onChange={v => updatePlan(row.id, 'description', v)} />
-                  </td>
-                  <td className={STACK_DEL}>
-                    <RowDelete onClick={() => removePlan(row.id)} label={t('row.remove', { name: row.name })} />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </>
+                ),
+              },
+              ...[
+                { field: 'oneTimeRate', label: t('food.colOneTime') },
+                { field: 'weeklyRate',  label: t('food.colWeekly') },
+                { field: 'monthlyRate', label: t('food.colMonthly') },
+              ].map(({ field, label }) => ({
+                key: field, header: label, align: 'right',
+                render: (row) => <InlineInput value={row[field]} type="number" min={0} onChange={v => updatePlan(row.id, field, v)} />,
+              })),
+              {
+                key: 'description', header: t('food.colDescription'), mobileFull: true,
+                render: (row) => <InlineInput value={row.description} type="text" w={180} onChange={v => updatePlan(row.id, 'description', v)} />,
+              },
+              {
+                key: 'actions', header: '', actions: true, align: 'right', className: 'w-px',
+                render: (row) => <RowDelete onClick={() => removePlan(row.id)} label={t('row.remove', { name: row.name })} />,
+              },
+            ]}
+          />
         </EditableTable>
       </Section>
     </div>
@@ -1196,93 +1177,95 @@ function PricingRulesTab({ addToast }) {
               action={<AddButton onClick={addRule}>{t('pricing.addRule')}</AddButton>} />
           }
         >
-          <table className={STACK_TABLE}>
-            <TableHead cols={[t('pricing.colRuleName'), t('pricing.colTrigger'), t('pricing.colThreshold'), t('pricing.colAdjustment'), t('pricing.colActive'), '']} />
-            <tbody>
-              {rulesPager.rows.map(row => {
-                const isPositive = row.adjustment > 0
-                const adjColor = isPositive ? 'text-danger' : 'text-success'
-                const adjPrefix = isPositive ? '+' : ''
-                return (
-                  <tr key={row.id} className={STACK_ROW}>
-                    {/* Name */}
-                    <td className={STACK_TITLE}>
-                      <CellLabel>{t('pricing.colRuleName')}</CellLabel>
-                      <input
-                        type="text"
-                        value={row.name}
-                        onChange={e => updateRule(row.id, 'name', e.target.value)}
-                        className={`${CELL_INPUT} ${TITLE_INPUT}`}
-                        style={{ '--w': '170px' }}
-                        aria-label={t('pricing.ruleNameAria')}
-                      />
-                    </td>
-                    {/* Trigger type */}
-                    <td className={STACK_WIDE}>
-                      <CellLabel>{t('pricing.colTrigger')}</CellLabel>
-                      <select
-                        value={row.triggerType}
-                        onChange={e => updateRule(row.id, 'triggerType', e.target.value)}
-                        className={`${CELL_INPUT} lg:w-auto lg:min-w-[96px] pr-8 lg:pr-7`}
-                        aria-label={t('pricing.triggerAria', { name: row.name })}
-                      >
-                        <option value="occupancy">{t('pricing.trigger.occupancy')}</option>
-                        <option value="stay_length">{t('pricing.trigger.stay_length')}</option>
-                        <option value="lead_time">{t('pricing.trigger.lead_time')}</option>
-                      </select>
-                    </td>
-                    {/* Threshold */}
-                    <td className={STACK_CELL}>
-                      <CellLabel>{t('pricing.colThreshold')}</CellLabel>
+          <DataTable
+            rows={rulesPager.rows}
+            tableFrom="lg"
+            columns={[
+              {
+                key: 'name', header: t('pricing.colRuleName'), primary: true,
+                render: (row) => (
+                  <>
+                    <CellLabel>{t('pricing.colRuleName')}</CellLabel>
+                    <input
+                      type="text"
+                      value={row.name}
+                      onChange={e => updateRule(row.id, 'name', e.target.value)}
+                      className={`${CELL_INPUT} ${TITLE_INPUT}`}
+                      style={{ '--w': '170px' }}
+                      aria-label={t('pricing.ruleNameAria')}
+                    />
+                  </>
+                ),
+              },
+              {
+                key: 'triggerType', header: t('pricing.colTrigger'),
+                render: (row) => (
+                  <select
+                    value={row.triggerType}
+                    onChange={e => updateRule(row.id, 'triggerType', e.target.value)}
+                    className={`${CELL_INPUT} lg:w-auto lg:min-w-[96px] pr-8 lg:pr-7`}
+                    aria-label={t('pricing.triggerAria', { name: row.name })}
+                  >
+                    <option value="occupancy">{t('pricing.trigger.occupancy')}</option>
+                    <option value="stay_length">{t('pricing.trigger.stay_length')}</option>
+                    <option value="lead_time">{t('pricing.trigger.lead_time')}</option>
+                  </select>
+                ),
+              },
+              {
+                key: 'threshold', header: t('pricing.colThreshold'), align: 'right',
+                render: (row) => (
+                  <input
+                    type="number"
+                    value={row.threshold}
+                    min={0}
+                    onChange={e => updateRule(row.id, 'threshold', Number(e.target.value))}
+                    className={CELL_INPUT}
+                    style={{ '--w': '70px' }}
+                    aria-label={t('pricing.thresholdAria', { name: row.name })}
+                  />
+                ),
+              },
+              {
+                key: 'adjustment', header: t('pricing.colAdjustment'), align: 'right',
+                render: (row) => {
+                  const isPositive = row.adjustment > 0
+                  const adjColor = isPositive ? 'text-danger' : 'text-success'
+                  return (
+                    <div className="flex items-center gap-0.5 lg:justify-end">
+                      <span className={`t-xs ${adjColor}`}>{isPositive ? '+' : ''}</span>
                       <input
                         type="number"
-                        value={row.threshold}
-                        min={0}
-                        onChange={e => updateRule(row.id, 'threshold', Number(e.target.value))}
-                        className={CELL_INPUT}
-                        style={{ '--w': '70px' }}
-                        aria-label={t('pricing.thresholdAria', { name: row.name })}
+                        value={row.adjustment}
+                        onChange={e => updateRule(row.id, 'adjustment', Number(e.target.value))}
+                        className={`${CELL_INPUT} font-bold ${adjColor}`}
+                        style={{ '--w': '80px' }}
+                        aria-label={t('pricing.adjustmentAria', { name: row.name })}
                       />
-                    </td>
-                    {/* Adjustment */}
-                    <td className={STACK_CELL}>
-                      <CellLabel>{t('pricing.colAdjustment')}</CellLabel>
-                      <div className="flex items-center gap-0.5">
-                        <span className={`t-xs ${adjColor}`}>
-                          {adjPrefix}
-                        </span>
-                        <input
-                          type="number"
-                          value={row.adjustment}
-                          onChange={e => updateRule(row.id, 'adjustment', Number(e.target.value))}
-                          className={`${CELL_INPUT} font-bold ${adjColor}`}
-                          style={{ '--w': '80px' }}
-                          aria-label={t('pricing.adjustmentAria', { name: row.name })}
-                        />
-                      </div>
-                    </td>
-                    {/* Active toggle */}
-                    <td className={`${STACK_WIDE} max-lg:order-last`}>
-                      <label className="inline-flex items-center gap-2 cursor-pointer pointer-coarse:min-h-11">
-                        <input
-                          type="checkbox"
-                          checked={row.active}
-                          onChange={e => updateRule(row.id, 'active', e.target.checked)}
-                          className="w-[15px] h-[15px] pointer-coarse:w-5 pointer-coarse:h-5 rounded text-gold focus:ring-gold/30 accent-[var(--gold)] cursor-pointer"
-                          aria-label={t('row.activeAria', { name: row.name })}
-                        />
-                        <span className="lg:hidden t-sm text-ink2">{t('row.active')}</span>
-                      </label>
-                    </td>
-                    {/* Delete */}
-                    <td className={STACK_DEL}>
-                      <RowDelete onClick={() => deleteRule(row.id)} label={t('row.delete', { name: row.name })} />
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                    </div>
+                  )
+                },
+              },
+              {
+                key: 'active', header: t('pricing.colActive'),
+                render: (row) => (
+                  <label className="inline-flex items-center gap-2 cursor-pointer pointer-coarse:min-h-11">
+                    <input
+                      type="checkbox"
+                      checked={row.active}
+                      onChange={e => updateRule(row.id, 'active', e.target.checked)}
+                      className="w-[15px] h-[15px] pointer-coarse:w-5 pointer-coarse:h-5 rounded text-gold focus:ring-gold/30 accent-[var(--gold)] cursor-pointer"
+                      aria-label={t('row.activeAria', { name: row.name })}
+                    />
+                  </label>
+                ),
+              },
+              {
+                key: 'actions', header: '', actions: true, align: 'right', className: 'w-px',
+                render: (row) => <RowDelete onClick={() => deleteRule(row.id)} label={t('row.delete', { name: row.name })} />,
+              },
+            ]}
+          />
         </EditableTable>
       </Section>
 
@@ -1300,71 +1283,80 @@ function PricingRulesTab({ addToast }) {
               action={<AddButton onClick={addCompetitor}>{t('pricing.addCompetitor')}</AddButton>} />
           }
         >
-          <table className={STACK_TABLE}>
-            <TableHead cols={[t('pricing.colCompName'), t('pricing.colRoomType'), t('pricing.colTheirRate'), t('pricing.colYourRate'), t('pricing.colDelta'), '']} />
-            <tbody>
-              {compPager.rows.map(row => {
-                const yourRate = YOUR_RATES[row.roomType] || 0
-                const delta = row.theirRate ? ((yourRate - row.theirRate) / row.theirRate * 100).toFixed(1) : 0
-                const deltaNum = Number(delta)
-                const deltaColor = deltaNum < 0 ? 'text-success' : 'text-danger'
-                const deltaPrefix = deltaNum > 0 ? '+' : ''
-                return (
-                  <tr key={row.id} className={STACK_ROW}>
-                    <td className={STACK_TITLE}>
-                      <CellLabel>{t('pricing.colCompName')}</CellLabel>
-                      <input
-                        type="text"
-                        value={row.name}
-                        onChange={e => updateComp(row.id, 'name', e.target.value)}
-                        onBlur={() => persistComp(row)}
-                        className={`${CELL_INPUT} ${TITLE_INPUT}`}
-                        style={{ '--w': '160px' }}
-                        aria-label={t('pricing.compNameAria')}
-                      />
-                    </td>
-                    <td className={STACK_CELL}>
-                      <CellLabel>{t('pricing.colRoomType')}</CellLabel>
-                      <select
-                        value={row.roomType}
-                        onChange={e => { updateComp(row.id, 'roomType', e.target.value); persistComp({ ...row, roomType: e.target.value }) }}
-                        className={`${CELL_INPUT} lg:w-auto lg:min-w-[96px] pr-8 lg:pr-7`}
-                        aria-label={t('pricing.roomTypeAria', { name: row.name })}
-                      >
-                        {['Single', 'Double', 'Suite', 'Deluxe'].map(rt => (
-                          <option key={rt} value={rt}>{rt}</option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className={STACK_CELL}>
-                      <CellLabel>{t('pricing.colTheirRate')}</CellLabel>
-                      <input
-                        type="number"
-                        value={row.theirRate}
-                        min={0}
-                        onChange={e => updateComp(row.id, 'theirRate', Number(e.target.value))}
-                        onBlur={() => persistComp(row)}
-                        className={CELL_INPUT}
-                        style={{ '--w': '90px' }}
-                        aria-label={t('pricing.dailyRateAria', { name: row.name })}
-                      />
-                    </td>
-                    <td className={`${STACK_CELL} t-sm text-ink3`}>
-                      <CellLabel>{t('pricing.colYourRate')}</CellLabel>
-                      ₹{yourRate}
-                    </td>
-                    <td className={`${STACK_CELL} t-title ${deltaColor}`}>
-                      <CellLabel>{t('pricing.colDelta')}</CellLabel>
-                      {deltaPrefix}{delta}%
-                    </td>
-                    <td className={STACK_DEL}>
-                      <RowDelete onClick={() => deleteComp(row.id)} label={t('row.remove', { name: row.name })} />
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <DataTable
+            rows={compPager.rows}
+            tableFrom="lg"
+            columns={[
+              {
+                key: 'name', header: t('pricing.colCompName'), primary: true,
+                render: (row) => (
+                  <>
+                    <CellLabel>{t('pricing.colCompName')}</CellLabel>
+                    <input
+                      type="text"
+                      value={row.name}
+                      onChange={e => updateComp(row.id, 'name', e.target.value)}
+                      onBlur={() => persistComp(row)}
+                      className={`${CELL_INPUT} ${TITLE_INPUT}`}
+                      style={{ '--w': '160px' }}
+                      aria-label={t('pricing.compNameAria')}
+                    />
+                  </>
+                ),
+              },
+              {
+                key: 'roomType', header: t('pricing.colRoomType'),
+                render: (row) => (
+                  <select
+                    value={row.roomType}
+                    onChange={e => { updateComp(row.id, 'roomType', e.target.value); persistComp({ ...row, roomType: e.target.value }) }}
+                    className={`${CELL_INPUT} lg:w-auto lg:min-w-[96px] pr-8 lg:pr-7`}
+                    aria-label={t('pricing.roomTypeAria', { name: row.name })}
+                  >
+                    {['Single', 'Double', 'Suite', 'Deluxe'].map(rt => (
+                      <option key={rt} value={rt}>{rt}</option>
+                    ))}
+                  </select>
+                ),
+              },
+              {
+                key: 'theirRate', header: t('pricing.colTheirRate'), align: 'right',
+                render: (row) => (
+                  <input
+                    type="number"
+                    value={row.theirRate}
+                    min={0}
+                    onChange={e => updateComp(row.id, 'theirRate', Number(e.target.value))}
+                    onBlur={() => persistComp(row)}
+                    className={CELL_INPUT}
+                    style={{ '--w': '90px' }}
+                    aria-label={t('pricing.dailyRateAria', { name: row.name })}
+                  />
+                ),
+              },
+              {
+                key: 'yourRate', header: t('pricing.colYourRate'), align: 'right',
+                render: (row) => <span className="t-sm text-ink3">₹{YOUR_RATES[row.roomType] || 0}</span>,
+              },
+              {
+                key: 'delta', header: t('pricing.colDelta'), align: 'right',
+                render: (row) => {
+                  const yourRate = YOUR_RATES[row.roomType] || 0
+                  const delta = row.theirRate ? ((yourRate - row.theirRate) / row.theirRate * 100).toFixed(1) : 0
+                  const deltaNum = Number(delta)
+                  return (
+                    <span className={`t-title ${deltaNum < 0 ? 'text-success' : 'text-danger'}`}>
+                      {deltaNum > 0 ? '+' : ''}{delta}%
+                    </span>
+                  )
+                },
+              },
+              {
+                key: 'actions', header: '', actions: true, align: 'right', className: 'w-px',
+                render: (row) => <RowDelete onClick={() => deleteComp(row.id)} label={t('row.remove', { name: row.name })} />,
+              },
+            ]}
+          />
         </EditableTable>
       </Section>
 
@@ -1529,40 +1521,45 @@ function NotificationsTab({ addToast }) {
           pager={pager}
           empty={<EmptyState icon={<LuBell />} title={t('notifications.emptyTitle')} message={t('notifications.emptyMessage')} />}
         >
-          <table className={STACK_TABLE}>
-            <TableHead cols={[t('notifications.colTrigger'), t('notifications.colDelay'), t('notifications.colActive'), '']} />
-            <tbody>
-              {pager.rows.map(tpl => (
-                <tr key={tpl.id} className={`${STACK_ROW_BASE} max-lg:items-center max-lg:grid-cols-[minmax(0,1fr)_auto]`}>
-                  <td className={`${STACK_CELL} lg:py-3`}>
-                    <span className="t-title">{tplLabel(tpl)}</span>
-                  </td>
-                  <td className={`${STACK_CELL} lg:py-3 max-lg:col-start-1 max-lg:row-start-2`}>
-                    <span className="inline-block px-2.5 py-0.5 rounded-full bg-warning-bg text-warning-text text-xs font-bold">
-                      {tplDelay(tpl)}
-                    </span>
-                  </td>
-                  <td className={`${STACK_CELL} lg:py-3 max-lg:col-start-2 max-lg:row-start-1 max-lg:row-span-2`}>
-                    <label className="inline-flex items-center gap-2 cursor-pointer pointer-coarse:min-h-11">
-                      <input
-                        type="checkbox"
-                        checked={tpl.active}
-                        onChange={e => toggleActive(tpl.id, e.target.checked)}
-                        className="w-[15px] h-[15px] pointer-coarse:w-5 pointer-coarse:h-5 rounded text-gold focus:ring-gold/30 accent-[var(--gold)] cursor-pointer"
-                        aria-label={t('row.activeAria', { name: tplLabel(tpl) })}
-                      />
-                      <span className="lg:hidden t-sm text-ink2">{t('row.active')}</span>
-                    </label>
-                  </td>
-                  <td className={`${STACK_CELL} lg:py-3 lg:text-right max-lg:col-span-2`}>
-                    <ActionButton icon={<LuPencil />} onClick={() => openEdit(tpl)} className="max-lg:w-full">
-                      {t('notifications.editTemplate')}
-                    </ActionButton>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable
+            rows={pager.rows}
+            tableFrom="lg"
+            columns={[
+              { key: 'trigger', header: t('notifications.colTrigger'), primary: true, render: (tpl) => <span className="t-title">{tplLabel(tpl)}</span> },
+              {
+                key: 'delay', header: t('notifications.colDelay'),
+                render: (tpl) => (
+                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-warning-bg text-warning-text text-xs font-bold">
+                    {tplDelay(tpl)}
+                  </span>
+                ),
+              },
+              {
+                // On a card this sits at the right of the title line.
+                key: 'active', header: t('notifications.colActive'), primary: true,
+                render: (tpl) => (
+                  <label className="inline-flex items-center gap-2 cursor-pointer pointer-coarse:min-h-11">
+                    <input
+                      type="checkbox"
+                      checked={tpl.active}
+                      onChange={e => toggleActive(tpl.id, e.target.checked)}
+                      className="w-[15px] h-[15px] pointer-coarse:w-5 pointer-coarse:h-5 rounded text-gold focus:ring-gold/30 accent-[var(--gold)] cursor-pointer"
+                      aria-label={t('row.activeAria', { name: tplLabel(tpl) })}
+                    />
+                    <span className="lg:hidden t-sm text-ink2">{t('row.active')}</span>
+                  </label>
+                ),
+              },
+              {
+                key: 'actions', header: '', actions: true, align: 'right',
+                render: (tpl) => (
+                  <ActionButton icon={<LuPencil />} onClick={() => openEdit(tpl)}>
+                    {t('notifications.editTemplate')}
+                  </ActionButton>
+                ),
+              },
+            ]}
+          />
         </EditableTable>
       </Section>
 

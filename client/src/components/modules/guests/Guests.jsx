@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { Formik, Form } from 'formik'
 import { LuTrash2, LuUserCheck, LuCircleAlert, LuLogOut, LuUsers, LuRefreshCw, LuDownload, LuUserPlus } from 'react-icons/lu'
-import { PageWrapper, StatCard, Card, DataTable, Pagination, EmptyState, WhatsAppOffer, useWhatsAppComposer, waMenuItem } from '../../ui-tw'
+import { PageWrapper, StatCard, TableCard, DataTable, EmptyState, WhatsAppOffer, useWhatsAppComposer, waMenuItem } from '../../ui-tw'
 import ActionMenu from '../../ui-tw/ActionMenu'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
@@ -792,28 +792,30 @@ export default function Guests() {
           onDismiss={() => setWaOffer(null)}
         />
       )}
-      <Card>
-        {/* Filters: the two selects side by side */}
-        <div className="grid grid-cols-2 sm:flex gap-2.5 px-4 sm:px-5 py-3 border-b border-line">
-          <select aria-label={t('fields.stayType')} className="form-select w-full sm:w-[140px]" value={stayFilter} onChange={e => handleStayChange(e.target.value)}>
-            <option value="All">{t('filter.allStays')}</option><option value="Daily">{t('stayType.daily')}</option><option value="Monthly">{t('stayType.monthly')}</option>
-          </select>
-          <select aria-label={t('common:status')} className="form-select w-full sm:w-[150px]" value={statusFilter} onChange={e => handleStatusChange(e.target.value)}>
-            <option value="All">{t('filter.allStatuses')}</option>
-            {GUEST_STATUSES.map(s => <option key={s} value={s}>{L.status(s)}</option>)}
-          </select>
-        </div>
-
+      <TableCard
+        pagination={{ page, pageSize: PAGE_SIZE, total, onChange: setPage, disabled: loading }}
+        toolbar={
+          /* Filters: the two selects side by side */
+          <div className="grid grid-cols-2 sm:flex gap-2.5 w-full sm:w-auto">
+            <select aria-label={t('fields.stayType')} className="form-select w-full sm:w-[140px]" value={stayFilter} onChange={e => handleStayChange(e.target.value)}>
+              <option value="All">{t('filter.allStays')}</option><option value="Daily">{t('stayType.daily')}</option><option value="Monthly">{t('stayType.monthly')}</option>
+            </select>
+            <select aria-label={t('common:status')} className="form-select w-full sm:w-[150px]" value={statusFilter} onChange={e => handleStatusChange(e.target.value)}>
+              <option value="All">{t('filter.allStatuses')}</option>
+              {GUEST_STATUSES.map(s => <option key={s} value={s}>{L.status(s)}</option>)}
+            </select>
+          </div>
+        }
+      >
         <DataTable
           columns={columns}
           rows={guests}
           tableFrom="xl"
           onRowClick={openProfile}
-          empty={<EmptyState icon="◉" title={loading ? t('empty.loading') : t('empty.title')} />}
+          loading={loading && guests.length === 0}
+          empty={<EmptyState icon="◉" title={t('empty.title')} />}
         />
-
-        <Pagination page={page} pageSize={PAGE_SIZE} total={total} disabled={loading} onChange={setPage} />
-      </Card>
+      </TableCard>
 
       {/* Modals */}
       <GuestProfileModal guest={profileGuest} onClose={() => setProfileGuest(null)} onCheckout={openCheckout} onEdit={openEdit} />

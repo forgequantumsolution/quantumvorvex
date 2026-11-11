@@ -73,7 +73,8 @@ async function propertyStats({ forecastDays = FORECAST_DAYS, trendDays = TREND_D
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const trendStart = new Date(dayStart.getTime() - (trendDays - 1) * DAY_MS)
 
-  const counted = { OR: [{ invoiceId: null }, { invoice: { deletedAt: null } }] }
+  // method 'advance' = credit already received, applied to a rent invoice: not new money.
+  const counted = { method: { not: 'advance' }, OR: [{ invoiceId: null }, { invoice: { deletedAt: null } }] }
   const [roomList, recentPayments, methodTotals, inHouseRooms, inHouse, arrivalsToday, departuresToday, monthPayments, todayPayments, open, liveBookings, activeGuests, stayDues] = await Promise.all([
     prisma.room.findMany({ where: { deletedAt: null }, select: { id: true, status: true, type: { select: { name: true } } } }),
     prisma.payment.findMany({ where: { createdAt: { gte: trendStart }, ...counted }, select: { amount: true, type: true, createdAt: true } }),

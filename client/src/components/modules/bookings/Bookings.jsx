@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { LuTable2, LuLayoutGrid, LuCalendarDays, LuCalendarCheck, LuBedDouble, LuCircleAlert, LuPlus, LuRefreshCw, LuX } from 'react-icons/lu'
-import { PageWrapper, StatCard, Card, FilterTabs, Pagination, WhatsAppOffer, useWhatsAppComposer } from '../../ui-tw'
+import { PageWrapper, StatCard, Card, TableCard, WhatsAppOffer, useWhatsAppComposer } from '../../ui-tw'
 import BookingsTable from './BookingsTable'
 import BookingForm from './BookingForm'
 import CancelModal from '../cancellations/CancelModal'
@@ -385,18 +385,15 @@ export default function Bookings() {
           <BookingForm onSaved={handleCreated} onCancel={() => setShowNew(false)} />
         </Card>
       ) : (
-        <Card>
-          {/* Status tabs. Search, refresh, the view switch and New booking live in
-              the page header bar. The tab strip scrolls sideways on its own. */}
-          <div className="px-3 sm:px-5 py-3 border-b border-line min-w-0">
-            <FilterTabs wrap={false} tabs={TAB_IDS.map((id) => ({ id, label: t(`tabs.${id}`), count: counts[id] }))}
-                        active={tab} onChange={handleTabChange} />
-          </div>
-
-          {error && (
-            <div className="px-4 sm:px-5 py-3 text-sm text-danger-text bg-danger-bg border-b border-line">{error}</div>
-          )}
-
+        // Status tabs on top, pagination below. Search, refresh, the view switch
+        // and New booking live in the page header bar.
+        <TableCard
+          tabs={TAB_IDS.map((id) => ({ id, label: t(`tabs.${id}`), count: counts[id] }))}
+          activeTab={tab}
+          onTab={handleTabChange}
+          error={error}
+          pagination={{ page, pageSize: PAGE_SIZE, total, onChange: setPage, disabled: loading }}
+        >
           <BookingsTable
             bookings={bookings}
             loading={loading}
@@ -415,10 +412,7 @@ export default function Bookings() {
             view={view}
             emptyMessage={debouncedQuery ? t('page.emptySearch') : t('page.emptyStart')}
           />
-
-          <Pagination page={page} pageSize={PAGE_SIZE} total={total} disabled={loading}
-                      onChange={setPage} />
-        </Card>
+        </TableCard>
       )}
       <CancelModal
         isOpen={!!cancelTarget}

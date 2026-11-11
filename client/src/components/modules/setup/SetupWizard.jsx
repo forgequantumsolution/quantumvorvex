@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Badge from '../../ui/Badge'
 import { useToast } from '../../../hooks/useToast'
 import { formatCurrency } from '../../../utils/format'
+import { DataTable } from '../../ui-tw'
 import { useAppSelector, useHotelActions } from '../../../store/hooks'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -420,53 +421,50 @@ function Step3RoomTypes({ data, onChange }) {
       ) : (
         <>
           <div className="hidden md:block max-h-80 overflow-auto border border-line rounded-lg">
-            <table>
-              <thead>
-                <tr>
-                  <th className="w-9">
+            <DataTable
+              mobile="scroll"
+              rows={roomTypes}
+              rowKey={(r) => r.roomNo}
+              columns={[
+                {
+                  key: 'select', className: 'w-9',
+                  header: (
                     <input
                       type="checkbox"
                       className="rounded text-gold focus:ring-gold/30"
                       checked={allSelected}
                       onChange={(e) => toggleAll(e.target.checked)}
                     />
-                  </th>
-                  <th>{t('types.roomNo')}</th>
-                  <th>{t('types.type')}</th>
-                  <th>{t('rates.dailyRate')} ₹</th>
-                  <th>{t('rates.monthlyRate')} ₹</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roomTypes.map((r) => (
-                  <tr key={r.roomNo}>
-                    <td>
-                      <input type="checkbox" className="rounded text-gold focus:ring-gold/30" checked={bulkSelected.includes(r.roomNo)} onChange={() => toggleBulk(r.roomNo)} />
-                    </td>
-                    <td className="font-semibold text-ink font-mono">{r.roomNo}</td>
-                    <td>
-                      <select className={CELL_SELECT} value={r.type} onChange={(e) => changeType(r, e.target.value)}>
-                        {ROOM_TYPE_PRESETS.map((p) => <option key={p.name} value={p.name}>{typeLabel(p.name)}</option>)}
-                      </select>
-                    </td>
-                    <td>
-                      <input
-                        className={CELL_INPUT} type="number" min={0}
-                        value={r.dailyRate}
-                        onChange={(e) => setField(r.roomNo, 'dailyRate', +e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        className={CELL_INPUT} type="number" min={0}
-                        value={r.monthlyRate}
-                        onChange={(e) => setField(r.roomNo, 'monthlyRate', +e.target.value)}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  ),
+                  render: (r) => (
+                    <input type="checkbox" className="rounded text-gold focus:ring-gold/30" checked={bulkSelected.includes(r.roomNo)} onChange={() => toggleBulk(r.roomNo)} />
+                  ),
+                },
+                { key: 'roomNo', header: t('types.roomNo'), render: (r) => <span className="font-semibold text-ink font-mono">{r.roomNo}</span> },
+                {
+                  key: 'type', header: t('types.type'),
+                  render: (r) => (
+                    <select className={CELL_SELECT} value={r.type} onChange={(e) => changeType(r, e.target.value)}>
+                      {ROOM_TYPE_PRESETS.map((p) => <option key={p.name} value={p.name}>{typeLabel(p.name)}</option>)}
+                    </select>
+                  ),
+                },
+                {
+                  key: 'dailyRate', header: `${t('rates.dailyRate')} ₹`, align: 'right',
+                  render: (r) => (
+                    <input className={CELL_INPUT} type="number" min={0} value={r.dailyRate}
+                      onChange={(e) => setField(r.roomNo, 'dailyRate', +e.target.value)} />
+                  ),
+                },
+                {
+                  key: 'monthlyRate', header: `${t('rates.monthlyRate')} ₹`, align: 'right',
+                  render: (r) => (
+                    <input className={CELL_INPUT} type="number" min={0} value={r.monthlyRate}
+                      onChange={(e) => setField(r.roomNo, 'monthlyRate', +e.target.value)} />
+                  ),
+                },
+              ]}
+            />
           </div>
 
           <div className="md:hidden flex flex-col gap-2">
@@ -568,40 +566,38 @@ function Step4Facilities({ data, onChange }) {
           <button className="btn btn-outline btn-sm shrink-0" onClick={addAmenity}>+ {t('add')}</button>
         </div>
         <div className="hidden md:block border border-line rounded-lg overflow-x-auto">
-          <table>
-            <thead>
-              <tr>
-                <th>{t('facilities.amenityName')}</th>
-                <th>{t('rates.daily')} ₹</th>
-                <th>{t('rates.monthly')} ₹</th>
-                <th className="w-10"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {amenities.map((a) => (
-                <tr key={a.id}>
-                  <td>
-                    <input className={CELL_INPUT} value={a.name} placeholder={t('facilities.amenityPlaceholder')}
-                      onChange={(e) => setAmenity(a.id, 'name', e.target.value)} />
-                  </td>
-                  <td>
-                    <input className={CELL_INPUT} type="number" value={a.daily}
-                      onChange={(e) => setAmenity(a.id, 'daily', +e.target.value)} />
-                  </td>
-                  <td>
-                    <input className={CELL_INPUT} type="number" value={a.monthly}
-                      onChange={(e) => setAmenity(a.id, 'monthly', +e.target.value)} />
-                  </td>
-                  <td>
-                    <button className="btn btn-danger btn-xs" onClick={() => removeAmenity(a.id)} aria-label={t('facilities.remove')}>✕</button>
-                  </td>
-                </tr>
-              ))}
-              {amenities.length === 0 && (
-                <tr><td colSpan={4} className="t-xs text-center text-ink3">{t('facilities.empty')}</td></tr>
-              )}
-            </tbody>
-          </table>
+          <DataTable
+            mobile="scroll"
+            rows={amenities}
+            empty={<div className="t-xs text-center text-ink3 py-5">{t('facilities.empty')}</div>}
+            columns={[
+              {
+                key: 'name', header: t('facilities.amenityName'),
+                render: (a) => (
+                  <input className={CELL_INPUT} value={a.name} placeholder={t('facilities.amenityPlaceholder')}
+                    onChange={(e) => setAmenity(a.id, 'name', e.target.value)} />
+                ),
+              },
+              {
+                key: 'daily', header: `${t('rates.daily')} ₹`, align: 'right',
+                render: (a) => (
+                  <input className={CELL_INPUT} type="number" value={a.daily}
+                    onChange={(e) => setAmenity(a.id, 'daily', +e.target.value)} />
+                ),
+              },
+              {
+                key: 'monthly', header: `${t('rates.monthly')} ₹`, align: 'right',
+                render: (a) => (
+                  <input className={CELL_INPUT} type="number" value={a.monthly}
+                    onChange={(e) => setAmenity(a.id, 'monthly', +e.target.value)} />
+                ),
+              },
+              {
+                key: 'remove', header: '', className: 'w-10',
+                render: (a) => <button className="btn btn-danger btn-xs" onClick={() => removeAmenity(a.id)} aria-label={t('facilities.remove')}>✕</button>,
+              },
+            ]}
+          />
         </div>
 
         <ul className="md:hidden flex flex-col gap-2">
@@ -654,45 +650,35 @@ function Step5Food({ data, onChange }) {
         <button className="btn btn-outline btn-sm shrink-0" onClick={addPlan}>+ {t('add')}</button>
       </div>
       <div className="hidden md:block border border-line rounded-lg overflow-x-auto">
-        <table>
-          <thead>
-            <tr>
-              <th>{t('food.mealName')}</th>
-              <th>{t('rates.oneTime')} ₹</th>
-              <th>{t('rates.weekly')} ₹</th>
-              <th>{t('rates.monthly')} ₹</th>
-              <th className="w-10"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {foodPlans.map((p) => (
-              <tr key={p.id}>
-                <td>
-                  <input className={CELL_INPUT} value={p.name} placeholder={t('food.mealPlaceholder')}
-                    onChange={(e) => setPlan(p.id, 'name', e.target.value)} />
-                </td>
-                <td>
-                  <input className={CELL_INPUT} type="number" value={p.oneTime}
-                    onChange={(e) => setPlan(p.id, 'oneTime', +e.target.value)} />
-                </td>
-                <td>
-                  <input className={CELL_INPUT} type="number" value={p.weekly}
-                    onChange={(e) => setPlan(p.id, 'weekly', +e.target.value)} />
-                </td>
-                <td>
-                  <input className={CELL_INPUT} type="number" value={p.monthly}
-                    onChange={(e) => setPlan(p.id, 'monthly', +e.target.value)} />
-                </td>
-                <td>
-                  <button className="btn btn-danger btn-xs" onClick={() => removePlan(p.id)} aria-label={t('food.remove')}>✕</button>
-                </td>
-              </tr>
-            ))}
-            {foodPlans.length === 0 && (
-              <tr><td colSpan={5} className="t-xs text-center text-ink3">{t('food.empty')}</td></tr>
-            )}
-          </tbody>
-        </table>
+        <DataTable
+          mobile="scroll"
+          rows={foodPlans}
+          empty={<div className="t-xs text-center text-ink3 py-5">{t('food.empty')}</div>}
+          columns={[
+            {
+              key: 'name', header: t('food.mealName'),
+              render: (p) => (
+                <input className={CELL_INPUT} value={p.name} placeholder={t('food.mealPlaceholder')}
+                  onChange={(e) => setPlan(p.id, 'name', e.target.value)} />
+              ),
+            },
+            ...[
+              { field: 'oneTime', label: t('rates.oneTime') },
+              { field: 'weekly',  label: t('rates.weekly') },
+              { field: 'monthly', label: t('rates.monthly') },
+            ].map(({ field, label }) => ({
+              key: field, header: `${label} ₹`, align: 'right',
+              render: (p) => (
+                <input className={CELL_INPUT} type="number" value={p[field]}
+                  onChange={(e) => setPlan(p.id, field, +e.target.value)} />
+              ),
+            })),
+            {
+              key: 'remove', header: '', className: 'w-10',
+              render: (p) => <button className="btn btn-danger btn-xs" onClick={() => removePlan(p.id)} aria-label={t('food.remove')}>✕</button>,
+            },
+          ]}
+        />
       </div>
 
       <ul className="md:hidden flex flex-col gap-2">
@@ -767,55 +753,55 @@ function Step6Staff({ data, onChange }) {
       )}
 
       <div className="hidden md:block border border-line rounded-lg overflow-x-auto">
-        <table>
-          <thead>
-            <tr>
-              <th>{t('staff.name')}</th>
-              <th>{t('staff.email')}</th>
-              <th>{t('staff.role')}</th>
-              <th>{t('staff.password')}</th>
-              <th className="w-10"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {staff.map((s) => (
-              <tr key={s.id}>
-                <td>
-                  <input className={CELL_INPUT} value={s.name} placeholder={t('staff.namePlaceholder')}
-                    onChange={(e) => setStaff(s.id, 'name', e.target.value)} />
-                </td>
-                <td>
-                  <input className={CELL_INPUT} type="email" value={s.email} placeholder="email@hotel.com"
-                    onChange={(e) => setStaff(s.id, 'email', e.target.value)} />
-                </td>
-                <td>
-                  <select className={CELL_SELECT} value={s.role} onChange={(e) => setStaff(s.id, 'role', e.target.value)}>
-                    {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
-                  </select>
-                </td>
-                <td>
-                  <div className="flex items-center gap-1.5">
-                    <code className="text-[12px] bg-surface2 border border-line px-[7px] py-[3px] rounded text-ink2 font-mono">
-                      {s.password}
-                    </code>
-                    <button
-                      className="btn btn-outline btn-xs"
-                      onClick={() => setStaff(s.id, 'password', genPassword())}
-                      title={t('staff.regenerate')}
-                      aria-label={t('staff.regeneratePassword')}
-                    >↻</button>
-                  </div>
-                </td>
-                <td>
-                  <button className="btn btn-danger btn-xs" onClick={() => removeStaff(s.id)} aria-label={t('staff.remove')}>✕</button>
-                </td>
-              </tr>
-            ))}
-            {staff.length === 0 && (
-              <tr><td colSpan={5} className="t-xs text-center text-ink3">{t('staff.empty')}</td></tr>
-            )}
-          </tbody>
-        </table>
+        <DataTable
+          mobile="scroll"
+          rows={staff}
+          empty={<div className="t-xs text-center text-ink3 py-5">{t('staff.empty')}</div>}
+          columns={[
+            {
+              key: 'name', header: t('staff.name'),
+              render: (s) => (
+                <input className={CELL_INPUT} value={s.name} placeholder={t('staff.namePlaceholder')}
+                  onChange={(e) => setStaff(s.id, 'name', e.target.value)} />
+              ),
+            },
+            {
+              key: 'email', header: t('staff.email'),
+              render: (s) => (
+                <input className={CELL_INPUT} type="email" value={s.email} placeholder="email@hotel.com"
+                  onChange={(e) => setStaff(s.id, 'email', e.target.value)} />
+              ),
+            },
+            {
+              key: 'role', header: t('staff.role'),
+              render: (s) => (
+                <select className={CELL_SELECT} value={s.role} onChange={(e) => setStaff(s.id, 'role', e.target.value)}>
+                  {ROLES.map((r) => <option key={r} value={r}>{roleLabel(r)}</option>)}
+                </select>
+              ),
+            },
+            {
+              key: 'password', header: t('staff.password'),
+              render: (s) => (
+                <div className="flex items-center gap-1.5">
+                  <code className="text-[12px] bg-surface2 border border-line px-[7px] py-[3px] rounded text-ink2 font-mono">
+                    {s.password}
+                  </code>
+                  <button
+                    className="btn btn-outline btn-xs"
+                    onClick={() => setStaff(s.id, 'password', genPassword())}
+                    title={t('staff.regenerate')}
+                    aria-label={t('staff.regeneratePassword')}
+                  >↻</button>
+                </div>
+              ),
+            },
+            {
+              key: 'remove', header: '', className: 'w-10',
+              render: (s) => <button className="btn btn-danger btn-xs" onClick={() => removeStaff(s.id)} aria-label={t('staff.remove')}>✕</button>,
+            },
+          ]}
+        />
       </div>
 
       <ul className="md:hidden flex flex-col gap-2">

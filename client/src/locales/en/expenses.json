@@ -8,11 +8,13 @@
     "thisMonth": "This month",
     "lastMonth": "Last month",
     "thisQuarter": "This quarter",
-    "thisYear": "This year"
+    "thisYear": "This year",
+    "last6Months": "Last 6 months",
+    "last12Months": "Last 12 months"
   },
   "tabs": {
+    "dashboard": "Dashboard",
     "ledger": "Ledger",
-    "analysis": "Analysis",
     "categories": "Categories"
   },
   "filters": {
@@ -20,7 +22,8 @@
     "out": "Money out",
     "in": "Money in",
     "unpaid": "Unpaid",
-    "reception": "Reception cash"
+    "reception": "Reception cash",
+    "property": "Filter by property"
   },
   "kpi": {
     "expenses": "Expenses",
@@ -86,7 +89,8 @@
     "reference": "Reference",
     "status": "Status",
     "out": "Out",
-    "in": "In"
+    "in": "In",
+    "property": "Property"
   },
   "toast": {
     "added": "Saved: {{payee}}",
@@ -103,7 +107,8 @@
   "actions": {
     "markPaid": "Mark paid",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "view": "View details"
   },
   "table": {
     "date": "Date",
@@ -119,7 +124,11 @@
     "totalOut": "Total out",
     "totalIn": "Total in",
     "balance": "Balance",
-    "today": "Today"
+    "today": "Today",
+    "amount": "Amount",
+    "actions": "Actions",
+    "category": "Category",
+    "status": "Status"
   },
   "empty": {
     "title": "No entries yet",
@@ -164,35 +173,124 @@
       "payer": "Enter who paid you."
     },
     "searchCategory": "Search categories",
-    "noCategory": "No matching category"
+    "noCategory": "No matching category",
+    "property": "Property"
   },
-  "analysis": {
-    "moneyOut": "Money out",
-    "moneyIn": "Money in",
+  "dashboard": {
+    "revenue": "Revenue",
+    "expenses": "Expenses",
+    "net": "Net profit",
     "noSpend": "No spending recorded in this period.",
-    "budget": "Budget {{amount}}",
-    "entries_one": "{{count}} entry",
-    "entries_other": "{{count}} entries",
-    "overBudget": "Over budget by {{amount}} (budget {{budget}})",
-    "budgetLeft": "{{amount}} left of {{budget}}",
-    "cpor": "Cost per occupied room night",
-    "cporHelp": "What it cost to run the property for each room-night sold.",
-    "expenseRatio": "Expense-to-revenue ratio",
-    "expenseRatioHelp": "Out of every ₹100 collected from guests, how much was spent.",
-    "netMargin": "Net margin",
-    "netMarginHelp": "Share of all money in that is left after expenses.",
-    "roomNights": "Occupied room nights",
-    "roomNightsHelp": "Room-nights (or beds) sold in this period.",
-    "byGroup": "Spend by group",
-    "byGroupSub": "Total spent {{amount}} · the tick marks the budget",
-    "paidFrom": "Who paid",
-    "topPayees": "Top payees",
-    "dailyTrend": "Daily trend",
-    "monthlyTrend": "Monthly trend",
-    "trendSub": "Paid entries only"
+    "insights": {
+      "title": "What stands out",
+      "groupUp": "{{group}} up {{amount}} ({{pct}}%) on last period",
+      "groupUpNew": "{{group}}: {{amount}}, new this period",
+      "groupDown": "{{group}} down {{amount}} ({{pct}}%) on last period",
+      "overBudget_one": "{{names}} is over budget",
+      "overBudget_other": "{{count}} categories over budget: {{names}}",
+      "inBudget": "Every budgeted category is within budget",
+      "oldUnpaid_one": "{{count}} unpaid bill over 30 days old ({{amount}})",
+      "oldUnpaid_other": "{{count}} unpaid bills over 30 days old ({{amount}})",
+      "cporUp": "Cost per room night up to {{amount}} (was {{prev}})",
+      "cporDown": "Cost per room night down to {{amount}} (was {{prev}})",
+      "marginUp": "Net margin up to {{pct}}% in {{month}} (was {{prev}}%)",
+      "marginDown": "Net margin down to {{pct}}% in {{month}} (was {{prev}}%)",
+      "loss_one": "{{names}} spent more than it earned",
+      "loss_other": "{{count}} properties spent more than they earned: {{names}}",
+      "highestRatio": "{{name}} has the highest expense ratio ({{pct}}%)",
+      "none": "Nothing stands out yet. Insights appear as entries come in."
+    },
+    "pnl": {
+      "title": "Profit & loss — last 12 months",
+      "sub": "Revenue and expenses as bars, net profit as the line",
+      "empty": "No money in or out in the last 12 months."
+    },
+    "unit": {
+      "title": "Unit economics",
+      "sub": "What each room night and each ₹100 earned costs",
+      "cpor": "Cost per occupied room night",
+      "expenseRatio": "Expense ratio",
+      "netMargin": "Net margin",
+      "cporHelp": "Running cost for each room night sold",
+      "expenseRatioHelp": "Spent out of every ₹100 collected from guests",
+      "netMarginHelp": "Share of money in left after expenses",
+      "vsMonth": "vs {{month}}",
+      "pts": "{{value}} pts",
+      "same": "Same as {{month}}",
+      "trend": "Cost per room night, last 12 months"
+    },
+    "where": {
+      "title": "Spend by group",
+      "sub": "Ranked by amount · change vs the previous period",
+      "subAll": "Ranked by amount in this period",
+      "total": "Total {{amount}}",
+      "new": "New",
+      "same": "No change",
+      "vsPrev": "vs previous period",
+      "over": "{{amount}} over the {{budget}} budget",
+      "left": "{{amount}} left of the {{budget}} budget",
+      "budgetTick": "Budget {{amount}}"
+    },
+    "fixed": {
+      "title": "Fixed vs variable",
+      "sub": "How much of the spend comes every month",
+      "fixed": "Fixed",
+      "variable": "Variable",
+      "share": "{{pct}}% of spending is fixed",
+      "note": "Fixed = utilities, staff, taxes & fees. Variable rises and falls with occupancy."
+    },
+    "aging": {
+      "title": "Unpaid bills by age",
+      "sub": "Days since the bill date · tap to open in the ledger",
+      "none": "No unpaid bills. All settled.",
+      "total": "{{amount}} unpaid",
+      "bills_one": "{{count}} bill",
+      "bills_other": "{{count}} bills",
+      "buckets": {
+        "0-7": "0–7 days",
+        "8-30": "8–30 days",
+        "31-60": "31–60 days",
+        "60+": "Over 60 days"
+      }
+    },
+    "daily": {
+      "title": "Daily spend",
+      "monthlyTitle": "Monthly spend",
+      "sub": "Paid entries only",
+      "total": "Total",
+      "avgDay": "Average / day",
+      "avgMonth": "Average / month",
+      "busiestDay": "Busiest day",
+      "busiestMonth": "Busiest month"
+    },
+    "payees": {
+      "title": "Top payees",
+      "sub": "Who received the most in this period",
+      "entries_one": "{{count}} entry",
+      "entries_other": "{{count}} entries",
+      "paidFrom": "Who paid"
+    },
+    "compare": {
+      "title": "Compare properties",
+      "sub": "Tap a property to open its dashboard",
+      "property": "Property",
+      "expenses": "Expenses",
+      "revenue": "Revenue",
+      "net": "Net",
+      "margin": "Margin",
+      "cpor": "Cost / room night",
+      "unpaid": "Unpaid",
+      "total": "All properties",
+      "archived": "Archived",
+      "vsTitle": "Expenses vs revenue",
+      "vsSub": "Per property, this period",
+      "groupTitle": "Expenses by group",
+      "groupSub": "Per property · smaller groups folded into Other",
+      "other": "Other"
+    }
   },
   "categories": {
-    "intro": "Expense heads used in the ledger. Set a monthly budget to compare it with actual spend under Analysis.",
+    "intro": "Expense heads used in the ledger. Set a monthly budget to compare it with actual spend on the Dashboard.",
     "add": "Add category",
     "addTo": "Add a category to {{group}}",
     "addTitle": "Add category",
@@ -213,6 +311,30 @@
     "deactivated": "{{name}} is hidden from new entries",
     "errors": {
       "name": "Enter a name."
-    }
+    },
+    "perProperty": "Categories are set per property. Pick one in the property switcher, or here:"
+  },
+  "detail": {
+    "title": "Expense details",
+    "moneyOut": "Money out",
+    "moneyIn": "Money in",
+    "amount": "Amount",
+    "date": "Date",
+    "property": "Property",
+    "category": "Category",
+    "group": "Group",
+    "status": "Status",
+    "paidFrom": "Paid from",
+    "receivedInto": "Received into",
+    "paidBy": "Paid by",
+    "receivedBy": "Received by",
+    "mode": "Payment mode",
+    "reference": "Bill / reference no.",
+    "note": "Note",
+    "addedBy": "Added by",
+    "addedOn": "Added on",
+    "updatedOn": "Last updated",
+    "loadError": "Could not load this entry.",
+    "noDeleteHint": "Only the owner or an admin can delete expenses."
   }
 }

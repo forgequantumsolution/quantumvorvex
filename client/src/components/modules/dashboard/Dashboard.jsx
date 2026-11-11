@@ -15,6 +15,7 @@ import { useToast } from '../../../hooks/useToast'
 import { formatCurrency, formatCurrencyCompact, statusColor } from '../../../utils/format'
 import { LuBedDouble, LuDoorOpen, LuUserCheck, LuWrench, LuIndianRupee, LuChartPie, LuKeyboard, LuPrinter } from 'react-icons/lu'
 import StatCard from '../../ui/StatCard'
+import { DataTable } from '../../ui-tw'
 import Modal from '../../ui/Modal'
 import { appLocale } from '../../../i18n'
 
@@ -174,6 +175,49 @@ export default function Dashboard() {
     d === 'tomorrow' ? t('common:tomorrow') :
     new Date(`${d}T00:00:00`).toLocaleDateString(appLocale(), { day: 'numeric', month: 'short' })
   const since = (d) => t('since', { date: new Date(`${d}T00:00:00`).toLocaleDateString(appLocale(), { day: 'numeric', month: 'short', year: 'numeric' }) })
+
+  const mono = { fontFamily: 'var(--font-mono)' }
+  const dateTone = (d) => (d === 'today' ? 'text-danger-text' : d === 'tomorrow' ? 'text-warning-text' : 'text-ink2')
+  const guestColumns = [
+    {
+      key: 'name', header: t('common:guest'),
+      render: (g) => (
+        <>
+          <div className="t-sm text-ink whitespace-nowrap">{g.name}</div>
+          <div className="text-xs text-ink3 mt-px">{since(g.checkIn)}</div>
+        </>
+      ),
+    },
+    { key: 'room', header: t('common:room'), render: (g) => <span className="text-[12.5px] font-medium text-ink" style={mono}>{g.room}</span> },
+    { key: 'type', header: t('table.type'), render: (g) => <span className={`badge ${g.type === 'Monthly' ? 'badge-purple' : 'badge-blue'}`}>{typeLabel(g.type)}</span> },
+    {
+      key: 'tags', header: t('table.tags'),
+      render: (g) => (
+        <div className="flex gap-1 flex-wrap">
+          {g.tags.length > 0 ? g.tags.map((tag) => <GuestTag key={tag} tag={tag} />) : <span className="text-ink3 text-xs">—</span>}
+        </div>
+      ),
+    },
+    { key: 'status', header: t('common:status'), render: (g) => <span className={`badge ${statusColor(g.status)}`}>{statusLabel(g.status)}</span> },
+    {
+      key: 'actions', header: '', actions: true, align: 'right',
+      render: (g) => <button className="btn btn-outline btn-xs whitespace-nowrap" onClick={() => handleCheckout(g)}>{t('checkout')}</button>,
+    },
+  ]
+  const checkoutColumns = [
+    { key: 'name', header: t('common:guest'), render: (c) => <span className="t-sm text-ink">{c.name}</span> },
+    { key: 'room', header: t('common:room'), render: (c) => <span className="text-[12.5px] font-medium text-ink" style={mono}>{c.room}</span> },
+    { key: 'date', header: t('common:date'), render: (c) => <span className={`text-[12.5px] font-medium ${dateTone(c.date)}`}>{dateLabel(c.date)}</span> },
+    {
+      key: 'actions', header: '', actions: true, align: 'right',
+      render: (c) => (
+        <div className="flex gap-[5px] justify-end">
+          <button className="btn btn-outline btn-xs" onClick={() => handleCheckout(c)}>{t('checkout')}</button>
+          <button className="btn btn-outline btn-xs" onClick={() => handleExtend(c)}>{t('extend')}</button>
+        </div>
+      ),
+    },
+  ]
 
   usePageHeader({
     title: t('title'),
@@ -392,90 +436,8 @@ export default function Dashboard() {
               {t('common:viewAll')}
             </button>
           </div>
-          {/* Phones: one compact row per guest instead of a six-column table. */}
-          <ul className="sm:hidden m-0 p-0 list-none divide-y divide-line">
-            {mockGuests.map((g) => (
-              <li key={g.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="t-sm text-ink font-medium truncate">{g.name}</span>
-                    <span className="text-[13px] font-medium text-ink2 shrink-0" style={{ fontFamily: 'var(--font-mono)' }}>{g.room}</span>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1 mt-1">
-                    <span className={`badge ${g.type === 'Monthly' ? 'badge-purple' : 'badge-blue'}`}>{typeLabel(g.type)}</span>
-                    <span className={`badge ${statusColor(g.status)}`}>{statusLabel(g.status)}</span>
-                    {g.tags.map((tag) => <GuestTag key={tag} tag={tag} />)}
-                  </div>
-                  <div className="text-xs text-ink3 mt-1">{since(g.checkIn)}</div>
-                </div>
-                <button className="btn btn-outline btn-sm shrink-0" onClick={() => handleCheckout(g)}>
-                  {t('checkout')}
-                </button>
-              </li>
-            ))}
-          </ul>
-          <div className="hidden sm:block overflow-x-auto">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t('common:guest')}</th>
-                  <th>{t('common:room')}</th>
-                  <th>{t('table.type')}</th>
-                  <th>{t('table.tags')}</th>
-                  <th>{t('common:status')}</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockGuests.map((g) => (
-                  <tr key={g.id}>
-                    <td>
-                      <div className="t-sm text-ink whitespace-nowrap">
-                        {g.name}
-                      </div>
-                      <div className="text-xs text-ink3 mt-px">
-                        {since(g.checkIn)}
-                      </div>
-                    </td>
-                    <td>
-                      <span
-                        className="text-[12.5px] font-medium text-ink"
-                        style={{ fontFamily: 'var(--font-mono)' }}
-                      >
-                        {g.room}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className={`badge ${g.type === 'Monthly' ? 'badge-purple' : 'badge-blue'}`}
-                      >
-                        {typeLabel(g.type)}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="flex gap-1 flex-wrap">
-                        {g.tags.length > 0
-                          ? g.tags.map((tag) => <GuestTag key={tag} tag={tag} />)
-                          : <span className="text-ink3 text-xs">—</span>
-                        }
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`badge ${statusColor(g.status)}`}>{statusLabel(g.status)}</span>
-                    </td>
-                    <td>
-                      <button
-                        className="btn btn-outline btn-xs whitespace-nowrap"
-                        onClick={() => handleCheckout(g)}
-                      >
-                        {t('checkout')}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* Phones get stacked cards (DataTable); the checkout button sits in the card footer. */}
+          <DataTable tableFrom="sm" columns={guestColumns} rows={mockGuests} />
         </div>
 
         {/* Upcoming Checkouts */}
@@ -489,83 +451,7 @@ export default function Dashboard() {
               {t('common:viewAll')}
             </button>
           </div>
-          <ul className="sm:hidden m-0 p-0 list-none divide-y divide-line">
-            {mockCheckouts.map((c, i) => (
-              <li key={i} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
-                <div className="flex-1 min-w-0">
-                  <div className="t-sm text-ink font-medium truncate">{c.name}</div>
-                  <div className="text-xs text-ink3 mt-0.5">
-                    {t('common:room')} <span style={{ fontFamily: 'var(--font-mono)' }}>{c.room}</span> ·{' '}
-                    <span className={`font-medium ${
-                      c.date === 'today' ? 'text-danger-text' : c.date === 'tomorrow' ? 'text-warning-text' : 'text-ink2'
-                    }`}>{dateLabel(c.date)}</span>
-                  </div>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <button className="btn btn-outline btn-sm" onClick={() => handleCheckout(c)}>{t('checkout')}</button>
-                  <button className="btn btn-outline btn-sm" onClick={() => handleExtend(c)}>{t('extend')}</button>
-                </div>
-              </li>
-            ))}
-          </ul>
-          <div className="hidden sm:block overflow-x-auto">
-            <table>
-              <thead>
-                <tr>
-                  <th>{t('common:guest')}</th>
-                  <th>{t('common:room')}</th>
-                  <th>{t('common:date')}</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockCheckouts.map((c, i) => (
-                  <tr key={i}>
-                    <td>
-                      <span className="t-sm text-ink">
-                        {c.name}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className="text-[12.5px] font-medium text-ink"
-                        style={{ fontFamily: 'var(--font-mono)' }}
-                      >
-                        {c.room}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className={`text-[12.5px] font-medium ${
-                          c.date === 'today'    ? 'text-danger-text'  :
-                          c.date === 'tomorrow' ? 'text-warning-text' :
-                                                  'text-ink2'
-                        }`}
-                      >
-                        {dateLabel(c.date)}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="flex gap-[5px]">
-                        <button
-                          className="btn btn-outline btn-xs"
-                          onClick={() => handleCheckout(c)}
-                        >
-                          {t('checkout')}
-                        </button>
-                        <button
-                          className="btn btn-outline btn-xs"
-                          onClick={() => handleExtend(c)}
-                        >
-                          {t('extend')}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable tableFrom="sm" columns={checkoutColumns} rows={mockCheckouts} rowKey={(c) => `${c.room}-${c.name}`} />
         </div>
       </div>
 

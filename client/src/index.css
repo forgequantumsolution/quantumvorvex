@@ -281,11 +281,6 @@
     white-space: nowrap;
   }
   td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: middle; }
-  /* Dense comparison table (Portfolio): tighter cells so ~8 numeric columns fit. */
-  .pf-table th, .pf-table td { padding-left: 12px; padding-right: 12px; }
-  .pf-table th:first-child, .pf-table td:first-child { padding-left: 20px; }
-  .pf-table th:last-child, .pf-table td:last-child { padding-right: 20px; }
-  .pf-table tbody tr:last-child td { border-bottom: none; }
   tr:last-child td { border-bottom: none; }
   tbody tr:hover { background: var(--surface2); }
 
