@@ -4,7 +4,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer,
 } from 'recharts'
 import Tabs from '../../ui/Tabs'
-import { PageWrapper, StatCard, StatStrip, Card, DataTable, Button, EmptyState } from '../../ui-tw'
+import { PageWrapper, StatCard, StatStrip, Card, DataTable, TableCard, Button, EmptyState } from '../../ui-tw'
 import { useBreakpoint } from '../../../hooks/useMediaQuery'
 import { useToast } from '../../../hooks/useToast'
 import { useAppSelector } from '../../../store/hooks'
@@ -174,17 +174,17 @@ function OccupancyTab({ rooms, occupancy }) {
       </ChartCard>
 
       {/* Current occupancy by room type — cards on phones, a table from md */}
-      <Card title={t('occupancy.byType')}>
+      <TableCard title={t('occupancy.byType')}>
         <DataTable
           rows={rows}
           rowKey={(r) => r.type}
           empty={<EmptyState icon="🛏" title={t('occupancy.noRooms')} />}
           columns={[
             { key: 'type', header: t('occupancy.col.type'), primary: true, render: (r) => <span className="font-semibold">{r.type}</span> },
-            { key: 'total', header: t('occupancy.col.total'), mobileLabel: t('common:total'), align: 'center' },
-            { key: 'occupied', header: t('occupancy.col.occupied'), align: 'center' },
+            { key: 'total', header: t('occupancy.col.total'), mobileLabel: t('common:total'), align: 'right' },
+            { key: 'occupied', header: t('occupancy.col.occupied'), align: 'right' },
             {
-              key: 'rate', header: t('occupancy.col.rate'), align: 'center', primary: true,
+              key: 'rate', header: t('occupancy.col.rate'), align: 'right', primary: true,
               render: (r) => <span className={`font-bold ${rateTone(r.rate).text}`}>{r.rate}%</span>,
             },
             {
@@ -197,7 +197,7 @@ function OccupancyTab({ rooms, occupancy }) {
             },
           ]}
         />
-      </Card>
+      </TableCard>
     </div>
   )
 }
@@ -218,7 +218,7 @@ function GSTTab({ gst }) {
         <StatCard className={SEG} icon={<LuWallet />} tone="green" label={t('gst.totalAmount')} value={formatCurrencyCompact(gst?.totalAmount || 0)} />
       </Figures>
 
-      <Card title={t('gst.invoices')} subtitle={t('gst.split')}>
+      <TableCard title={t('gst.invoices')} subtitle={t('gst.split')}>
         <DataTable
           rows={invoices}
           rowKey={(inv) => inv.id}
@@ -233,7 +233,7 @@ function GSTTab({ gst }) {
             { key: 'total', header: `${t('common:total')} ₹`, align: 'right', primary: true, render: (inv) => <span className="font-bold">{formatCurrency(inv.total)}</span> },
           ]}
         />
-      </Card>
+      </TableCard>
     </div>
   )
 }

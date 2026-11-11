@@ -259,9 +259,31 @@ export const payExpense = async (req, res) => {
   } catch (e) { fail(res, 'payExpense', e) }
 }
 
-// DELETE /expenses/:id — soft delete.
+// Deleting a cash-book entry is for the owner or an admin (Admin / Manager role)
+// at this property — never ordinary staff, even with MANAGE on expenses.
+const DELETE_ROLES = /^(admin|administrator|manager)$/i
+export const canDeleteExpenses = (pa) => !!pa && (pa.isOwner || DELETE_ROLES.test(String(pa.roleName || '').trim()))
+
+// GET /expenses/:id — one entry with its category, property and who recorded it.
+export const getExpense = async (req, res) => {
+  try {
+    const expense = await prisma.expense.findFirst({
+      where: { id: req.params.id, deletedAt: null }, include: includeWithProperty,
+    })
+    if (!expense) return notFound(res)
+    const createdBy = expense.createdById
+      ? await runUnscoped(() => prisma.user.findUnique({ where: { id: expense.createdById }, select: { id: true, name: true } }))
+      : null
+    res.json({ expense: { ...expense, createdBy }, canDelete: canDeleteExpenses(req.propertyAccess) })
+  } catch (e) { fail(res, 'getExpense', e) }
+}
+
+// DELETE /expenses/:id — soft delete; owner or admin only.
 export const deleteExpense = async (req, res) => {
   try {
+    if (!canDeleteExpenses(req.propertyAccess)) {
+      return res.status(403).json({ message: 'Only the owner or an admin can delete expenses.', code: 'ERR_FORBIDDEN' })
+    }
     if (!(await findLive(req.params.id))) return notFound(res)
     await prisma.expense.update({ where: { id: req.params.id }, data: { deletedAt: new Date() } })
     res.json({ ok: true })
@@ -317,8 +339,10 @@ const FIXED_GROUPS = new Set(['utilities', 'staff', 'taxes_fees'])
 const AGING = [['0-7', 7], ['8-30', 30], ['31-60', 60], ['60+', Infinity]]
 
 // Guest money, same source as the dashboards: payments on live invoices (or
-// none), refunds paid out netted off.
-const countedPayment = { OR: [{ invoiceId: null }, { invoice: { deletedAt: null } }] }
+// none), refunds paid out netted off. method 'advance' rows only move credit
+// already received onto a rent invoice (pgRent) — counting them would count
+// that money twice.
+const countedPayment = { method: { not: 'advance' }, OR: [{ invoiceId: null }, { invoice: { deletedAt: null } }] }
 const signed = (p) => (p.type === 'refund' ? -1 : 1) * (p.amount ?? p._sum?.amount ?? 0)
 
 /**

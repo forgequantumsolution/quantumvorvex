@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import { LuTrash2, LuReceipt, LuBell, LuWallet, LuClock, LuCircleAlert, LuPercent, LuRefreshCw, LuDownload, LuCalendarClock, LuPlus } from 'react-icons/lu'
-import { PageWrapper, StatCard, Card, DataTable, FilterTabs, Pagination, EmptyState, useWhatsAppComposer, waMenuItem } from '../../ui-tw'
+import { PageWrapper, StatCard, DataTable, TableCard, FilterTabs, EmptyState, useWhatsAppComposer, waMenuItem } from '../../ui-tw'
 import ActionMenu from '../../ui-tw/ActionMenu'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
@@ -591,9 +591,9 @@ function LedgerTab() {
             <EmptyState icon="₹" title={t('ledger.noEntries', { guest: selectedGuest })} />
           ) : (
             <>
-              <div className="border border-line rounded-xl overflow-hidden mb-[14px]">
+              <TableCard className="mb-[14px]">
                 <DataTable columns={ledgerColumns} rows={ledgerRows} rowKey={(row) => ledgerRows.indexOf(row)} />
-              </div>
+              </TableCard>
 
               {/* Closing balance */}
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 bg-surface2 border border-line rounded-md px-4 py-3 mb-4">
@@ -718,14 +718,14 @@ function CashRegisterTab() {
       </div>
 
       {/* Transactions table */}
-      <div className="border border-line rounded-xl overflow-hidden mb-[14px]">
-        {loading || transactions.length === 0 ? (
-          <div className="t-sm px-[14px] py-6 text-center text-ink3">
-            {loading ? t('common:loading') : t('cash.empty')}
-          </div>
-        ) : (
-          <DataTable columns={cashColumns} rows={transactions} rowKey={(txn) => transactions.indexOf(txn)} />
-        )}
+      <TableCard className="mb-[14px]">
+        <DataTable
+          columns={cashColumns}
+          rows={transactions}
+          rowKey={(txn) => transactions.indexOf(txn)}
+          loading={loading}
+          empty={<div className="t-sm px-[14px] py-6 text-center text-ink3">{t('cash.empty')}</div>}
+        />
 
         {/* Totals row */}
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t-2 border-line bg-surface2 px-4 lg:px-5 py-[11px]">
@@ -735,7 +735,7 @@ function CashRegisterTab() {
             <span className="t-title font-mono text-danger-text"><span className="sm:hidden t-xs text-ink3 font-sans font-normal mr-1">{t('cash.out')}</span>{formatCurrency(totalOut)}</span>
           </div>
         </div>
-      </div>
+      </TableCard>
 
       {/* Closing balance summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 mb-[18px]">
@@ -1080,30 +1080,17 @@ export default function Billing() {
       {/* UPI payments guests reported from the pay page, waiting for staff */}
       <PaymentClaimsBanner onConfirmed={reload} />
 
-      {error && (
-        <div className="t-sm mb-4 px-[14px] py-2.5 rounded-lg bg-danger-bg text-danger-text">
-          {error}
-        </div>
-      )}
-
       {/* ── Invoices Tab ────────────────────────────────────────────────────── */}
       {activeTab === 'invoices' && (
-        <Card>
-          {/* Status pills (they scroll sideways on phones) + record count */}
-          <div className="flex items-center gap-3 px-4 sm:px-5 py-3 border-b border-line">
-            <div className="min-w-0 max-w-full">
-              <FilterTabs
-                wrap={false}
-                tabs={STATUS_FILTERS.map(s => ({ id: s.id, label: t(s.labelKey) }))}
-                active={statusFilter}
-                onChange={handleStatusFilter}
-              />
-            </div>
-            <p className="t-xs m-0 text-ink3 shrink-0 ml-auto">
-              {t('records', { count: total })}
-            </p>
-          </div>
-
+        <TableCard
+          // Status pills (they scroll sideways on phones) + record count
+          tabs={STATUS_FILTERS.map(s => ({ id: s.id, label: t(s.labelKey) }))}
+          activeTab={statusFilter}
+          onTab={handleStatusFilter}
+          toolbar={<p className="t-xs m-0 text-ink3">{t('records', { count: total })}</p>}
+          error={error}
+          pagination={{ page, pageSize: PAGE_SIZE, total, disabled: loading, onChange: setPage }}
+        >
           {/* Payment Records */}
           <DataTable
             columns={invoiceColumns}
@@ -1117,9 +1104,7 @@ export default function Billing() {
               />
             }
           />
-
-          <Pagination page={page} pageSize={PAGE_SIZE} total={total} disabled={loading} onChange={setPage} />
-        </Card>
+        </TableCard>
       )}
 
       {/* ── Ledger Tab ──────────────────────────────────────────────────────── */}

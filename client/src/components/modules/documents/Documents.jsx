@@ -5,7 +5,7 @@ import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
 import {
-  PageWrapper, StatCard, Card, DataTable, Pagination,
+  PageWrapper, StatCard, TableCard, DataTable,
   Button, EmptyState,
 } from '../../ui-tw'
 import { useToast } from '../../../hooks/useToast'
@@ -526,57 +526,48 @@ export default function Documents() {
         </>
       }
     >
-      {error && (
-        <div className="text-sm mb-4 px-3.5 py-2.5 rounded-lg bg-danger-bg text-danger-text">
-          {error}
-        </div>
-      )}
-
-      <Card
+      <TableCard
+        error={error}
+        pagination={{ page: safePage, pageSize: PAGE_SIZE, total: filtered.length, onChange: setPage }}
         title={t('card.title')}
         subtitle={filtersActive ? t('card.matching', { count: filtered.length }) : t('card.records', { count: filtered.length })}
         actions={filtersActive && <Button variant="ghost" size="sm" onClick={clearFilters}>{t('clearFilters')}</Button>}
+        toolbar={
+          /* Filters (the search box lives in the page header): the two selects side by side. */
+          <div className="grid grid-cols-2 sm:flex gap-2.5 w-full sm:w-auto">
+            <select
+              className="form-select w-full sm:w-[150px]"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              aria-label={t('filter.typeLabel')}
+            >
+              <option value="all">{t('filter.allTypes')}</option>
+              <option value="bookings">{t('filter.bookings')}</option>
+              <option value="guests">{t('filter.guests')}</option>
+            </select>
+            <select
+              className="form-select w-full sm:w-[150px]"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              aria-label={t('filter.statusLabel')}
+            >
+              <option value="all">{t('filter.allStatuses')}</option>
+              <option value="verified">{t('verification.verified')}</option>
+              <option value="pending">{t('verification.pending')}</option>
+              <option value="incomplete">{t('verification.incomplete')}</option>
+            </select>
+          </div>
+        }
       >
-        {/* Filters (the search box lives in the page header): the two selects
-            side by side on phones; one row from lg up. */}
-        <div className="grid grid-cols-2 lg:flex lg:items-center gap-2 px-4 sm:px-5 py-3 border-b border-line">
-          <select
-            className="form-select w-full lg:w-auto min-w-0 lg:min-w-[150px] py-2 text-[13px] pointer-coarse:min-h-11 focus:ring-gold/20 focus:border-gold"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            aria-label={t('filter.typeLabel')}
-          >
-            <option value="all">{t('filter.allTypes')}</option>
-            <option value="bookings">{t('filter.bookings')}</option>
-            <option value="guests">{t('filter.guests')}</option>
-          </select>
-          <select
-            className="form-select w-full lg:w-auto min-w-0 lg:min-w-[150px] py-2 text-[13px] pointer-coarse:min-h-11 focus:ring-gold/20 focus:border-gold"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            aria-label={t('filter.statusLabel')}
-          >
-            <option value="all">{t('filter.allStatuses')}</option>
-            <option value="verified">{t('verification.verified')}</option>
-            <option value="pending">{t('verification.pending')}</option>
-            <option value="incomplete">{t('verification.incomplete')}</option>
-          </select>
-        </div>
-
         <DataTable
           rows={pageRows}
           rowKey={(d) => d.id}
+          loading={loading && pageRows.length === 0}
           empty={
             <EmptyState
               icon="🗂"
-              title={loading ? t('empty.loading') : filtersActive ? t('empty.filteredTitle') : t('empty.title')}
-              message={
-                loading
-                  ? undefined
-                  : filtersActive
-                    ? t('empty.filteredMessage')
-                    : t('empty.message')
-              }
+              title={filtersActive ? t('empty.filteredTitle') : t('empty.title')}
+              message={filtersActive ? t('empty.filteredMessage') : t('empty.message')}
             />
           }
           columns={[
@@ -707,9 +698,7 @@ export default function Documents() {
             },
           ]}
         />
-
-        <Pagination page={safePage} pageSize={PAGE_SIZE} total={filtered.length} onChange={setPage} />
-      </Card>
+      </TableCard>
 
       {/* Modals */}
       <UploadModal

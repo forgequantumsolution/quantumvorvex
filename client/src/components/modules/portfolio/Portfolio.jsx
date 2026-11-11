@@ -7,7 +7,7 @@ import {
   LuBedDouble, LuTrendingUp, LuUsers, LuLogIn, LuCircleAlert, LuFilter, LuX, LuCheck,
 } from 'react-icons/lu'
 import StatCard from '../../ui-tw/StatCard'
-import { StatStrip } from '../../ui-tw'
+import { StatStrip, DataTable } from '../../ui-tw'
 import { useAppSelector, useAuthActions, useUiActions, usePageHeader } from '../../../store/hooks'
 import { selectActiveProperty, selectProperties } from '../../../store/slices/authSlice'
 import { propertiesApi } from '../../../api/client'
@@ -557,87 +557,91 @@ const COLUMNS = [
   { key: 'forecast',    sortable: false, align: 'left' },
 ]
 
-function SortHeader({ col, sort, onSort }) {
+// Sortable column title for the DataTable header (DataTable owns the <th>).
+function SortButton({ col, sort, onSort }) {
   const { t } = useTranslation('portfolio')
   const label = t(`col.${col.key}`)
+  if (col.sortable === false) return label
   const active = sort.key === col.key
   const Icon = !active ? LuChevronsUpDown : sort.dir === 'asc' ? LuArrowUp : LuArrowDown
   const alignRight = col.align !== 'left'
-  if (col.sortable === false) return <th className={alignRight ? 'text-right' : ''}>{label}</th>
   return (
-    <th className={alignRight ? 'text-right' : ''} aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'} title={col.hint ? t(`col.${col.key}Hint`) : undefined}>
-      <button
-        onClick={() => onSort(col.key)}
-        className={`inline-flex items-center gap-1 bg-transparent border-none p-0 cursor-pointer uppercase tracking-[inherit] text-[length:inherit] font-[inherit] ${active ? 'text-ink' : 'text-[inherit]'} ${alignRight ? 'flex-row-reverse' : ''}`}
-      >
-        {label}
-        <Icon size={12} className={active ? 'text-ink' : 'opacity-50'} aria-hidden />
-      </button>
-    </th>
+    <button
+      onClick={() => onSort(col.key)}
+      title={col.hint ? t(`col.${col.key}Hint`) : undefined}
+      aria-label={active ? `${label} (${sort.dir === 'asc' ? t('comparison.asc') : t('comparison.desc')})` : label}
+      className={`inline-flex items-center gap-1 bg-transparent border-none p-0 cursor-pointer uppercase tracking-[inherit] text-[length:inherit] font-[inherit] ${active ? 'text-ink' : 'text-[inherit]'} ${alignRight ? 'flex-row-reverse' : ''}`}
+    >
+      {label}
+      <Icon size={12} className={active ? 'text-ink' : 'opacity-50'} aria-hidden />
+    </button>
   )
 }
 
-const num = 'text-right whitespace-nowrap'
 const tabular = { fontVariantNumeric: 'tabular-nums' }
+const dash = <span className="text-ink3">—</span>
 
-function PropertyRow({ p, accent, onOpen }) {
-  const s = p.stats
-  const archived = p.status === 'archived'
-  const noRooms = s.rooms.total === 0
-  const { t } = useTranslation('portfolio')
-  return (
-    <tr
-      onClick={onOpen}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen() } }}
-      tabIndex={0}
-      aria-label={t('openProperty', { name: p.name })}
-      className={`cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--gold)] ${archived ? 'opacity-60' : ''}`}
-    >
-      <td>
-        <div className="flex items-center gap-2.5 min-w-[190px]">
+/**
+ * DataTable columns for the comparison table. The row itself opens the property
+ * (click, or Enter / Space when focused); archived rows are dimmed via rowClassName.
+ */
+function propertyColumns({ t, accent, sort, onSort }) {
+  const cells = {
+    name: (p) => {
+      const s = p.stats
+      return (
+        <div title={t('openProperty', { name: p.name })} className="flex items-center gap-2.5 min-w-[190px] text-left">
           <CodeChip code={p.code} />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="t-title truncate">{p.name}</span>
-              {archived && <Pill tone="grey">{t('common:archived')}</Pill>}
+              {p.status === 'archived' && <Pill tone="grey">{t('common:archived')}</Pill>}
             </div>
             <div className="t-xs text-ink3 mt-px">
-              {noRooms ? t('noRoomsYet') : t('roomsCount', { count: s.rooms.total })}{s.rooms.outOfOrder ? ` · ${t('outOfOrder', { count: s.rooms.outOfOrder })}` : ''} · {p.roleName}
+              {s.rooms.total === 0 ? t('noRoomsYet') : t('roomsCount', { count: s.rooms.total })}{s.rooms.outOfOrder ? ` · ${t('outOfOrder', { count: s.rooms.outOfOrder })}` : ''} · {p.roleName}
             </div>
           </div>
         </div>
-      </td>
-      <td>
-        {noRooms ? (
-          <span className="t-xs text-ink3">{t('addRoomsToStart')}</span>
-        ) : (
-          <div className="flex items-center gap-2.5 min-w-[120px]" title={t('occupiedOfSellable', { occupied: s.rooms.occupied, sellable: s.rooms.sellable })}>
-            <div className="w-[56px] shrink-0"><Meter value={s.occupancyRate} accent={accent} /></div>
-            <span className="text-[13px] font-semibold text-ink" style={tabular}>{s.occupancyRate}%</span>
-          </div>
-        )}
-      </td>
-      <td className={num} style={tabular}>{s.adr ? formatCurrency(s.adr) : <span className="text-ink3">—</span>}</td>
-      <td className={num} style={tabular}>{s.revpar ? formatCurrency(s.revpar) : <span className="text-ink3">—</span>}</td>
-      <td className={num} style={tabular}>
+      )
+    },
+    occupancy: ({ stats: s }) => (s.rooms.total === 0
+      ? <span className="t-xs text-ink3">{t('addRoomsToStart')}</span>
+      : (
+        <div className="flex items-center gap-2.5 min-w-[120px]" title={t('occupiedOfSellable', { occupied: s.rooms.occupied, sellable: s.rooms.sellable })}>
+          <div className="w-[56px] shrink-0"><Meter value={s.occupancyRate} accent={accent} /></div>
+          <span className="text-[13px] font-semibold text-ink" style={tabular}>{s.occupancyRate}%</span>
+        </div>
+      )),
+    adr: ({ stats: s }) => (s.adr ? formatCurrency(s.adr) : dash),
+    revpar: ({ stats: s }) => (s.revpar ? formatCurrency(s.revpar) : dash),
+    movements: ({ stats: s }) => (
+      <>
         <span title={t('arrivalsToday')}>{s.arrivalsToday}</span>
         <span className="text-ink3 mx-1">/</span>
         <span title={t('departuresToday')}>{s.departuresToday}</span>
-      </td>
-      <td className={num} style={tabular}>{formatCurrency(s.collectedThisMonth)}</td>
-      <td className={num} style={tabular}>
-        {s.outstanding > 0
-          ? <span className="font-semibold text-[var(--amber-text)]">{formatCurrency(s.outstanding)}</span>
-          : <span className="text-ink3">—</span>}
-      </td>
-      <td>
-        <div className="flex items-center justify-between gap-3">
-          {noRooms ? <span className="text-ink3">—</span> : <MiniForecast forecast={s.forecast} sellable={s.rooms.sellable} accent={accent} />}
-          <LuChevronRight size={16} className="text-ink3 shrink-0" aria-hidden />
-        </div>
-      </td>
-    </tr>
-  )
+      </>
+    ),
+    collected: ({ stats: s }) => formatCurrency(s.collectedThisMonth),
+    outstanding: ({ stats: s }) => (s.outstanding > 0
+      ? <span className="font-semibold text-[var(--amber-text)]">{formatCurrency(s.outstanding)}</span>
+      : dash),
+    forecast: ({ stats: s }) => (
+      <div className="flex items-center justify-between gap-3">
+        {s.rooms.total === 0 ? dash : <MiniForecast forecast={s.forecast} sellable={s.rooms.sellable} accent={accent} />}
+        <LuChevronRight size={16} className="text-ink3 shrink-0" aria-hidden />
+      </div>
+    ),
+  }
+  return COLUMNS.map((col) => {
+    const numeric = col.align !== 'left'
+    return {
+      key: col.key,
+      header: <SortButton col={col} sort={sort} onSort={onSort} />,
+      align: numeric ? 'right' : 'left',
+      className: numeric ? 'tabular-nums' : '',
+      render: (p) => (numeric ? <span style={tabular}>{cells[col.key](p)}</span> : cells[col.key](p)),
+    }
+  })
 }
 
 // Phone layout: the same row as a stacked card.
@@ -1177,17 +1181,16 @@ export default function Portfolio() {
               </div>
             ) : (
               <>
-                <div className="hidden 2xl:block overflow-x-auto border-t border-line">
-                  <table className="pf-table">
-                    <thead>
-                      <tr>{COLUMNS.map((c) => <SortHeader key={c.key} col={c} sort={sort} onSort={onSort} />)}</tr>
-                    </thead>
-                    <tbody>
-                      {rows.map((p) => (
-                        <PropertyRow key={p.id} p={p} accent={accent} onOpen={() => open(p.id)} />
-                      ))}
-                    </tbody>
-                  </table>
+                {/* 2xl+: the shared table (scrolls rather than stacking — the
+                    richer PropertyCard grid below covers narrower screens). */}
+                <div className="hidden 2xl:block border-t border-line">
+                  <DataTable
+                    mobile="scroll"
+                    columns={propertyColumns({ t, accent, sort, onSort })}
+                    rows={rows}
+                    onRowClick={(p) => open(p.id)}
+                    rowClassName={(p) => (p.status === 'archived' ? 'opacity-60' : '')}
+                  />
                 </div>
                 <div className="2xl:hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 px-4 pb-4">
                   {rows.map((p) => (

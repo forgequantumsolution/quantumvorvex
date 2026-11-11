@@ -107,7 +107,8 @@
   "actions": {
     "markPaid": "Mark paid",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "view": "View details"
   },
   "table": {
     "date": "Date",
@@ -123,7 +124,11 @@
     "totalOut": "Total out",
     "totalIn": "Total in",
     "balance": "Balance",
-    "today": "Today"
+    "today": "Today",
+    "amount": "Amount",
+    "actions": "Actions",
+    "category": "Category",
+    "status": "Status"
   },
   "empty": {
     "title": "No entries yet",
@@ -308,5 +313,28 @@
       "name": "Enter a name."
     },
     "perProperty": "Categories are set per property. Pick one in the property switcher, or here:"
+  },
+  "detail": {
+    "title": "Expense details",
+    "moneyOut": "Money out",
+    "moneyIn": "Money in",
+    "amount": "Amount",
+    "date": "Date",
+    "property": "Property",
+    "category": "Category",
+    "group": "Group",
+    "status": "Status",
+    "paidFrom": "Paid from",
+    "receivedInto": "Received into",
+    "paidBy": "Paid by",
+    "receivedBy": "Received by",
+    "mode": "Payment mode",
+    "reference": "Bill / reference no.",
+    "note": "Note",
+    "addedBy": "Added by",
+    "addedOn": "Added on",
+    "updatedOn": "Last updated",
+    "loadError": "Could not load this entry.",
+    "noDeleteHint": "Only the owner or an admin can delete expenses."
   }
 }

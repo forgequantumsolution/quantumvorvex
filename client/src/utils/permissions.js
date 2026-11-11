@@ -60,6 +60,17 @@ export function canSeePortfolio(user) {
   return withReports.length > 1
 }
 
+// Roles that may delete cash-book entries besides the owner (matches the server's
+// canDeleteExpenses). Ordinary staff never can, even with MANAGE on expenses.
+const EXPENSE_DELETE_ROLES = /^(admin|administrator|manager)$/i
+
+/** Can the user delete expenses at property `p` (an entry of currentUser.properties)? */
+export function canDeleteExpenses(user, p) {
+  if (isOwnerUser(user)) return true
+  if (!p) return false
+  return !!p.isOwner || EXPENSE_DELETE_ROLES.test(String(p.roleName || '').trim())
+}
+
 /** Can the user open a sidebar panel (needs at least VIEW on its module). */
 export function canAccess(user, panel) {
   if (panel === 'portfolio') return canSeePortfolio(user)

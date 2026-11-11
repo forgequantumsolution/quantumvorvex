@@ -144,6 +144,7 @@ const atProperty = (propertyId) => (propertyId ? { headers: { 'X-Property-Id': p
 export const expensesApi = {
   list:           (params)   => api.get('/expenses', { params }),   // { from, to, type, status, paidFrom, categoryId, group, search, page, limit, scope: 'all', property }
   summary:        (params)   => api.get('/expenses/summary', { params }), // { from, to }
+  get:            (id, propertyId)       => api.get(`/expenses/${id}`, atProperty(propertyId)), // { expense (with property, createdBy), canDelete }
   portfolio:      (params)   => api.get('/expenses/portfolio', { params }), // { from, to, properties: 'id1,id2' } — every property combined
   payees:         (propertyId)           => api.get('/expenses/payees', atProperty(propertyId)),
   create:         (data, propertyId)     => api.post('/expenses', data, atProperty(propertyId)),

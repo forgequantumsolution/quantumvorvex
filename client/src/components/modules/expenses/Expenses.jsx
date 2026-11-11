@@ -10,11 +10,12 @@ import ExpenseLedger from './ExpenseLedger'
 import ExpenseDashboard from './ExpenseDashboard'
 import ExpenseCategories from './ExpenseCategories'
 import ExpenseModal from './ExpenseModal'
+import ExpenseDetailModal from './ExpenseDetailModal'
 import { useToast } from '../../../hooks/useToast'
 import { useCan } from '../../../hooks/useCan'
 import { usePrimaryAction, useAppSelector, useAuthActions, useUiActions } from '../../../store/hooks'
 import { selectProperties, selectActiveProperty } from '../../../store/slices/authSlice'
-import { canSeePortfolio } from '../../../utils/permissions'
+import { canSeePortfolio, canDeleteExpenses } from '../../../utils/permissions'
 import { expensesApi } from '../../../api/client'
 import { formatCurrency, formatDate } from '../../../utils/format'
 import { PERIODS, periodRange, signedMoney, downloadCsv, today } from './expenseUtils'
@@ -70,8 +71,12 @@ export default function Expenses() {
   const viewable = useMemo(() => properties.filter((p) => levelAt(currentUser, p) >= RANK.VIEW), [properties, currentUser])
   const writable = useMemo(() => viewable.filter((p) => p.status !== 'archived' && levelAt(currentUser, p) >= RANK.MANAGE), [viewable, currentUser])
   const canWriteAt = useCallback((id) => writable.some((p) => p.id === id), [writable])
+  // Deleting is for the owner or an admin at the entry's property, never ordinary staff.
+  const canDeleteAt = useCallback((id) => {
+    const p = properties.find((x) => x.id === id)
+    return !!p && p.status !== 'archived' && canDeleteExpenses(currentUser, p)
+  }, [properties, currentUser])
   const canAdd = all ? writable.length > 0 : canManage
-  const [propFilter, setPropFilter] = useState('') // ledger, 'all' scope: '' = every property
   const ids = properties.map((p) => p.id).join(',')
 
   const [tab, setTab] = useState('dashboard')
@@ -93,6 +98,7 @@ export default function Expenses() {
 
   const [editing, setEditing] = useState(null)       // null | {} (new) | expense
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [viewing, setViewing] = useState(null)       // ledger row whose details are open
   const [busyId, setBusyId] = useState(null)
   const [exporting, setExporting] = useState(false)
 
@@ -104,8 +110,8 @@ export default function Expenses() {
 
   const listParams = useCallback((extra = {}) => ({
     from: range.from, to: range.to, ...FILTERS[filter], search: search || undefined,
-    ...(all && { scope: 'all', property: propFilter || undefined }), ...extra,
-  }), [range, filter, search, all, propFilter])
+    ...(all && { scope: 'all' }), ...extra,
+  }), [range, filter, search, all])
 
   const loadList = useCallback(async () => {
     setLoading(true)
@@ -160,7 +166,6 @@ export default function Expenses() {
 
   const applyFilter = (next) => { setFilter(next); setPage(1); setTab('ledger') }
   const changePeriod = (next) => { setPeriod(next); setPage(1) }
-  const changeProperty = (next) => { setPropFilter(next); setPage(1) }
   // Narrow the page to one property (dashboard comparison, Categories note).
   const openProperty = (id) => { setExpenseScope('property'); if (id !== active?.id) setActiveProperty(id) }
   // In 'all' scope a row is acted on at its own property.
@@ -172,6 +177,7 @@ export default function Expenses() {
     try {
       await expensesApi.pay(e.id, { date: today() }, rowProperty(e))
       toast(t('toast.paid', { payee: e.payee }))
+      setViewing(null)
       reload()
     } catch (err) {
       toast(err.response?.data?.message || t('toast.failed'), 'error')
@@ -188,6 +194,7 @@ export default function Expenses() {
       await expensesApi.remove(e.id, rowProperty(e))
       toast(t('toast.deleted', { payee: e.payee }), 'error')
       setDeleteTarget(null)
+      setViewing(null)
       reload()
     } catch (err) {
       toast(err.response?.data?.message || t('toast.failed'), 'error')
@@ -219,6 +226,9 @@ export default function Expenses() {
       setExporting(false)
     }
   }
+
+  const canManageRow = (e) => (all ? canWriteAt(e.property?.id) : canManage)
+  const canDeleteRow = (e) => canDeleteAt(all ? e.property?.id : active?.id)
 
   const shown = all ? portfolio : summary
   const totals = shown?.totals
@@ -275,10 +285,10 @@ export default function Expenses() {
           onFilter={applyFilter}
           busyId={busyId}
           canManage={canAdd}
-          canManageRow={(e) => (all ? canWriteAt(e.property?.id) : canManage)}
-          properties={all ? viewable : null}
-          property={propFilter}
-          onProperty={changeProperty}
+          canManageRow={canManageRow}
+          canDeleteRow={canDeleteRow}
+          onOpen={setViewing}
+          showProperty={all}
           searching={!!search}
           onAdd={openNew}
           onPay={markPaid}
@@ -306,6 +316,21 @@ export default function Expenses() {
           propertyOptions={all && !editing.id ? writable : null}
           onClose={() => setEditing(null)}
           onSaved={(_, keepOpen) => { reload(); if (!keepOpen) setEditing(null) }}
+        />
+      )}
+
+      {viewing && (
+        <ExpenseDetailModal
+          key={viewing.id}
+          expense={viewing}
+          propertyId={rowProperty(viewing)}
+          canManage={canManageRow(viewing)}
+          canDelete={canDeleteRow(viewing)}
+          busy={busyId === viewing.id}
+          onClose={() => setViewing(null)}
+          onPay={markPaid}
+          onEdit={(e) => { setViewing(null); setEditing(e) }}
+          onDelete={setDeleteTarget}
         />
       )}
 

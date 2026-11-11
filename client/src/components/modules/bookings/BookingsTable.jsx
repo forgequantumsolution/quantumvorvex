@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import {
   LuTrash2, LuPencil, LuDownload, LuCalendarPlus, LuX, LuCheck, LuReceipt, LuLogOut, LuUndo2, LuArrowRight, LuMoon,
 } from 'react-icons/lu'
-import { StatusBadge, Button, EmptyState, ActionMenu, waMenuItem } from '../../ui-tw'
+import { StatusBadge, Button, EmptyState, ActionMenu, DataTable, waMenuItem } from '../../ui-tw'
 import { formatCurrency, formatDate } from '../../../utils/format'
 import { dateRangeLabel, splitNames, splitPhones, stayLabel } from '../../../utils/booking'
 
@@ -210,21 +210,6 @@ function Actions({ b, busy, h, stretch = false }) {
       <ActionMenu items={menu} disabled={busy} />
     </div>
   )
-}
-
-// Header keys in bookings:table.columns; the last column (actions) has no header.
-const COLUMNS = ['booking', 'room', 'stay', 'amount', 'status', '']
-
-function SkeletonRows({ rows = 5 }) {
-  return Array.from({ length: rows }, (_, i) => (
-    <tr key={i} className="border-b border-line last:border-0">
-      {COLUMNS.map((_c, j) => (
-        <td key={j} className="px-5 py-4">
-          <div className="h-3.5 rounded bg-surface2 animate-pulse" style={{ width: j === 0 ? '80%' : '60%' }} />
-        </td>
-      ))}
-    </tr>
-  ))
 }
 
 // Status colours for the card: a strip along the top and the guest's avatar.
@@ -436,6 +421,16 @@ export default function BookingsTable({
   const h = { onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent, onRefund, onWhatsApp }
   const asCards = view === 'cards'
 
+  // Desktop table columns (headers in bookings:table.columns; actions has none).
+  const columns = [
+    { key: 'booking', header: t('table.columns.booking'), className: 'max-w-[260px]', render: (b) => <Guest b={b} /> },
+    { key: 'room', header: t('table.columns.room'), render: (b) => <Room b={b} /> },
+    { key: 'stay', header: t('table.columns.stay'), render: (b) => <Stay b={b} /> },
+    { key: 'amount', header: t('table.columns.amount'), align: 'right', render: (b) => <Amount b={b} /> },
+    { key: 'status', header: t('table.columns.status'), render: (b) => <Status b={b} /> },
+    { key: 'actions', header: '', actions: true, align: 'right', render: (b) => <Actions b={b} busy={busyId === b.id} h={h} /> },
+  ]
+
   if (!loading && !bookings.length) {
     return <EmptyState icon="◷" title={t('page.emptyTitle')} message={emptyMessage} />
   }
@@ -444,35 +439,14 @@ export default function BookingsTable({
     <>
       {/* ── Table (2xl and up, when it's the chosen view) ── */}
       {!asCards && (
-        <div className="hidden 2xl:block overflow-x-auto">
-          <table className="w-full text-sm min-w-[920px]">
-            <thead>
-              <tr className="border-b border-line bg-surface2/60">
-                {COLUMNS.map((c, i) => (
-                  <th
-                    key={c || i}
-                    className={`px-4 py-2.5 font-medium text-xs uppercase tracking-wider text-ink3 whitespace-nowrap ${
-                      i === 3 ? 'text-right' : 'text-left'
-                    }`}
-                  >
-                    {c && t(`table.columns.${c}`)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? <SkeletonRows /> : bookings.map((b) => (
-                <tr key={b.id} className="border-b border-line last:border-0 transition-colors hover:bg-surface2/70">
-                  <td className="px-4 py-3.5 max-w-[260px]"><Guest b={b} /></td>
-                  <td className="px-4 py-3.5"><Room b={b} /></td>
-                  <td className="px-4 py-3.5"><Stay b={b} /></td>
-                  <td className="px-4 py-3.5 text-right"><Amount b={b} /></td>
-                  <td className="px-4 py-3.5"><Status b={b} /></td>
-                  <td className="px-4 py-3.5 text-right"><Actions b={b} busy={busyId === b.id} h={h} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="hidden 2xl:block">
+          <DataTable
+            columns={columns}
+            rows={bookings}
+            loading={loading}
+            mobile="scroll"
+            minWidth="920px"
+          />
         </div>
       )}
 

@@ -8,7 +8,7 @@ import ConfirmModal from '../../ui/ConfirmModal'
 import Badge from '../../ui/Badge'
 import Tabs from '../../ui/Tabs'
 import FormikField from '../../ui/FormikField'
-import { PageWrapper, Card, DataTable } from '../../ui-tw'
+import { PageWrapper, DataTable, TableCard } from '../../ui-tw'
 import { useToast } from '../../../hooks/useToast'
 import { useAppSelector, useAppDispatch } from '../../../store/hooks'
 import { setCredentials, selectActiveProperty, selectProperties } from '../../../store/slices/authSlice'
@@ -237,14 +237,14 @@ function UsersTab({ users, canManage, isOwner, multiProperty, onEdit, onAccess, 
   return (
     <div>
       <div className="t-sm text-ink3 mb-3">{t('usersCount', { count: users.length })}</div>
-      <Card>
+      <TableCard>
         <DataTable
           columns={columns}
           rows={users}
           tableFrom="lg"
           empty={<div className="empty-state">{t('table.empty')}</div>}
         />
-      </Card>
+      </TableCard>
     </div>
   )
 }

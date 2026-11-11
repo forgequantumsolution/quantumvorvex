@@ -8,7 +8,7 @@ import {
   LuTrendingUp, LuTrendingDown, LuTriangleAlert, LuClock, LuCircleCheck, LuCalculator, LuPercent, LuScale,
   LuLightbulb, LuChevronRight, LuArrowUp, LuArrowDown, LuChevronsUpDown,
 } from 'react-icons/lu'
-import { Card, EmptyState } from '../../ui-tw'
+import { Card, DataTable, EmptyState } from '../../ui-tw'
 import { formatCurrency } from '../../../utils/format'
 import { appLocale } from '../../../i18n'
 
@@ -553,61 +553,47 @@ function CompareTable({ properties, totals, onOpen }) {
   }, [properties, sort])
   const onSort = (key) => setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'name' ? 'asc' : 'desc' }))
   const label = (k) => t(`dashboard.compare.${k === 'name' ? 'property' : k}`)
-  const cell = 'px-3 py-2.5 whitespace-nowrap tabular-nums text-right'
   const money = (v) => formatCurrency(v)
+  const sortHeader = (c) => {
+    const active = sort.key === c.key
+    const Icon = !active ? LuChevronsUpDown : sort.dir === 'asc' ? LuArrowUp : LuArrowDown
+    return (
+      <button type="button" onClick={() => onSort(c.key)}
+        aria-label={`${label(c.key)}${active ? ` (${sort.dir === 'asc' ? 'ascending' : 'descending'})` : ''}`}
+        className={`inline-flex items-center gap-1 bg-transparent border-none p-0 cursor-pointer uppercase tracking-[inherit] font-[inherit] ${active ? 'text-ink' : 'text-ink3'} ${c.left ? '' : 'flex-row-reverse'}`}>
+        {label(c.key)}<Icon size={12} className={active ? '' : 'opacity-50'} aria-hidden />
+      </button>
+    )
+  }
+  // Totals sit in DataTable's footer row; archived properties are dimmed.
+  const netCell = (v) => <span className={`font-semibold ${v < 0 ? 'text-danger-text' : 'text-ink'}`}>{money(v)}</span>
+  const columns = [
+    {
+      key: 'name', header: sortHeader(COLS[0]), className: 'min-w-[160px]',
+      footer: () => t('dashboard.compare.total'),
+      render: (p) => (
+        <span className="block">
+          <span className="font-medium text-ink">{p.name}</span>
+          <span className="block text-xs text-ink3">{[p.code, p.status === 'archived' && t('dashboard.compare.archived')].filter(Boolean).join(' · ')}</span>
+        </span>
+      ),
+    },
+    { key: 'expenses', render: (p) => money(p.totals.expenses), footer: () => money(totals.expenses) },
+    { key: 'revenue', render: (p) => money(p.totals.revenue), footer: () => money(totals.revenue) },
+    { key: 'net', render: (p) => netCell(p.totals.net), footer: () => netCell(totals.net) },
+    { key: 'margin', render: (p) => `${pct1(p.totals.margin)}%`, footer: () => `${pct1(totals.margin)}%` },
+    { key: 'cpor', render: (p) => money(p.kpis.cpor), footer: () => money(totals.cpor) },
+    { key: 'unpaid', render: (p) => <span className={p.totals.unpaid ? 'text-ink' : 'text-ink3'}>{money(p.totals.unpaid)}</span>, footer: () => money(totals.unpaid) },
+  ].map((c, i) => (i === 0 ? c : { ...c, header: sortHeader(COLS[i]), align: 'right', className: 'tabular-nums' }))
   return (
     <Card title={t('dashboard.compare.title')} subtitle={t('dashboard.compare.sub')} className="md:col-span-2 xl:col-span-12">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-xs uppercase tracking-[0.04em] text-ink3 border-b border-line">
-              {COLS.map((c) => {
-                const active = sort.key === c.key
-                const Icon = !active ? LuChevronsUpDown : sort.dir === 'asc' ? LuArrowUp : LuArrowDown
-                return (
-                  <th key={c.key} className={`px-3 py-2 font-semibold ${c.left ? 'text-left' : 'text-right'}`}
-                      aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                    <button type="button" onClick={() => onSort(c.key)}
-                      className={`inline-flex items-center gap-1 bg-transparent border-none p-0 cursor-pointer uppercase font-semibold ${active ? 'text-ink' : 'text-ink3'} ${c.left ? '' : 'flex-row-reverse'}`}>
-                      {label(c.key)}<Icon size={12} className={active ? '' : 'opacity-50'} aria-hidden />
-                    </button>
-                  </th>
-                )
-              })}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((p) => {
-              const archived = p.status === 'archived'
-              return (
-                <tr key={p.id} onClick={() => onOpen(p.id)} className={`border-b border-line cursor-pointer hover:bg-surface2 ${archived ? 'opacity-60' : ''}`}>
-                  <td className="px-3 py-2.5 text-left min-w-[160px]">
-                    <span className="font-medium text-ink">{p.name}</span>
-                    <span className="block text-xs text-ink3">{[p.code, archived && t('dashboard.compare.archived')].filter(Boolean).join(' · ')}</span>
-                  </td>
-                  <td className={cell}>{money(p.totals.expenses)}</td>
-                  <td className={cell}>{money(p.totals.revenue)}</td>
-                  <td className={`${cell} font-semibold ${p.totals.net < 0 ? 'text-danger-text' : 'text-ink'}`}>{money(p.totals.net)}</td>
-                  <td className={cell}>{pct1(p.totals.margin)}%</td>
-                  <td className={cell}>{money(p.kpis.cpor)}</td>
-                  <td className={`${cell} ${p.totals.unpaid ? 'text-ink' : 'text-ink3'}`}>{money(p.totals.unpaid)}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-          <tfoot>
-            <tr className="font-semibold text-ink bg-surface2/60">
-              <td className="px-3 py-2.5 text-left">{t('dashboard.compare.total')}</td>
-              <td className={cell}>{money(totals.expenses)}</td>
-              <td className={cell}>{money(totals.revenue)}</td>
-              <td className={`${cell} ${totals.net < 0 ? 'text-danger-text' : ''}`}>{money(totals.net)}</td>
-              <td className={cell}>{pct1(totals.margin)}%</td>
-              <td className={cell}>{money(totals.cpor)}</td>
-              <td className={cell}>{money(totals.unpaid)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+      <DataTable
+        mobile="scroll"
+        columns={columns}
+        rows={rows}
+        onRowClick={(p) => onOpen(p.id)}
+        rowClassName={(p) => (p.status === 'archived' ? 'opacity-60' : '')}
+      />
     </Card>
   )
 }
