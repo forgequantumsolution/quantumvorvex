@@ -47,7 +47,7 @@ export const SYSTEM_ROLES = [
     perms: {
       ...M('NONE'),
       bookings: 'MANAGE', maintenance: 'MANAGE', guests: 'MANAGE',
-      rooms: 'MANAGE', housekeeping: 'MANAGE',
+      rooms: 'MANAGE', housekeeping: 'MANAGE', visitors: 'MANAGE',
     },
   },
 ]

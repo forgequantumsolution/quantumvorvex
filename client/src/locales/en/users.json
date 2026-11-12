@@ -15,6 +15,7 @@
   "modules": {
     "bookings": "Bookings",
     "maintenance": "Maintenance",
+    "visitors": "Visitors",
     "guests": "Guests",
     "rooms": "Rooms",
     "documents": "Documents",

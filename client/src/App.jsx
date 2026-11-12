@@ -13,6 +13,7 @@ import SetupWizard from './components/modules/setup/SetupWizard'
 import GuestPortal from './components/modules/portal/GuestPortal'
 import GuestMaintenanceForm from './components/modules/maintenance/GuestMaintenanceForm'
 import PublicInvoice from './components/modules/billing/PublicInvoice'
+import PublicVisitorForm from './components/modules/visitors/PublicVisitorForm'
 import LoginPage from './components/auth/LoginPage'
 import ResetPasswordPage from './components/auth/ResetPasswordPage'
 // import LandingPage from './components/auth/LandingPage'
@@ -29,6 +30,7 @@ const Today         = lazy(() => import('./components/modules/today/Today'))
 const Bookings      = lazy(() => import('./components/modules/bookings/Bookings'))
 const Cancellations = lazy(() => import('./components/modules/cancellations/Cancellations'))
 const Maintenance   = lazy(() => import('./components/modules/maintenance/Maintenance'))
+const Visitors      = lazy(() => import('./components/modules/visitors/Visitors'))
 const Housekeeping  = lazy(() => import('./components/modules/housekeeping/Housekeeping'))
 const UsersRoles    = lazy(() => import('./components/modules/users/UsersRoles'))
 const Guests        = lazy(() => import('./components/modules/guests/Guests'))
@@ -113,6 +115,7 @@ const PANEL_MAP = {
   bookings:      Bookings,
   cancellations: Cancellations,
   maintenance:   Maintenance,
+  visitors:      Visitors,
   housekeeping:  Housekeeping,
   users:         UsersRoles,
   guests:        Guests,
@@ -147,6 +150,11 @@ export default function App() {
   // True when a guest opened an invoice link sent on WhatsApp (/invoice?t=…) — public, no login.
   const [invoiceRoute] = useState(
     () => typeof window !== 'undefined' && window.location.pathname === '/invoice'
+  )
+  // True when a visitor scanned the property's visitor QR (/visit?t=…) or reopened
+  // their pass (/visit?p=…) — public, no login.
+  const [visitRoute] = useState(
+    () => typeof window !== 'undefined' && window.location.pathname === '/visit'
   )
   const exitResetRoute = () => {
     window.history.replaceState({}, '', '/')
@@ -216,7 +224,7 @@ export default function App() {
   // State → URL: keep the path at /<panel> so every page is addressable and a
   // refresh restores it (activePanel itself initializes from the URL in uiSlice).
   useEffect(() => {
-    if (!isAuthed || resetRoute || reportRoute || invoiceRoute) return
+    if (!isAuthed || resetRoute || reportRoute || invoiceRoute || visitRoute) return
     const path = `/${activePanel}`
     if (window.location.pathname === path) return
     if (panelFromUrl(null) === null) {
@@ -226,7 +234,7 @@ export default function App() {
     } else {
       window.history.pushState({ panel: activePanel }, '', path)
     }
-  }, [activePanel, isAuthed, resetRoute, reportRoute, invoiceRoute])
+  }, [activePanel, isAuthed, resetRoute, reportRoute, invoiceRoute, visitRoute])
 
   // URL → state: browser back/forward.
   useEffect(() => {
@@ -240,6 +248,16 @@ export default function App() {
     return (
       <>
         <GuestMaintenanceForm />
+        <Toast />
+      </>
+    )
+  }
+
+  // ── Visitor QR registration / pass — public, shown before any auth gate ─────
+  if (visitRoute) {
+    return (
+      <>
+        <PublicVisitorForm />
         <Toast />
       </>
     )

@@ -60,6 +60,28 @@ const expenseFields = z.object({
   bookingId:   z.string().max(40).optional().nullable(),
 })
 
+// ── Visitors ──
+export const VISITOR_PURPOSES = ['guest_visit', 'meeting', 'delivery', 'vendor', 'maintenance', 'interview', 'other']
+export const VISITOR_ID_TYPES = ['aadhaar', 'pan', 'driving_licence', 'passport', 'voter_id', 'other']
+const optText = (max) => z.string().trim().max(max).optional().nullable().transform((v) => (v ? v : null))
+// 7–15 digits, an optional leading +; spaces and dashes are dropped.
+const visitorPhone = z.string().trim().transform((v) => v.replace(/[\s-]/g, ''))
+  .refine((v) => /^\+?\d{7,15}$/.test(v), 'Enter a valid mobile number')
+const visitorFields = z.object({
+  name:       z.string().trim().min(2, 'Enter the visitor\'s name').max(80),
+  phone:      visitorPhone,
+  email:      z.string().trim().max(120).email('Enter a valid email').optional().nullable().or(z.literal('')).transform((v) => v || null),
+  company:    optText(80),
+  purpose:    z.enum(VISITOR_PURPOSES).default('other'),
+  hostName:   optText(80),
+  roomNumber: optText(10),
+  idType:     z.enum(VISITOR_ID_TYPES).optional().nullable().or(z.literal('')).transform((v) => v || null),
+  idNumber:   optText(30),
+  vehicleNo:  optText(20),
+  companions: z.number().int().min(0).max(20).optional(),
+  notes:      optText(500),
+})
+
 export const schemas = {
   // Auth
   login: z.object({
@@ -458,4 +480,29 @@ export const schemas = {
     weeklyRate:  z.number().min(0).max(50000),
     monthlyRate: z.number().min(0).max(100000),
   }),
+
+  // Visitors (desk entry). checkIn: true checks them in now; expectedAt pre-registers.
+  createVisitor: visitorFields.extend({
+    checkIn:    z.boolean().optional(),
+    expectedAt: z.string().trim().refine((v) => !Number.isNaN(Date.parse(v)), 'Enter a valid date and time').optional().nullable(),
+  }),
+  // Partial edit: only the keys the client sent come through (the field
+  // transforms would otherwise turn every missing field into null).
+  updateVisitor: z.record(z.string(), z.unknown()).transform((raw, ctx) => {
+    const r = visitorFields.partial().extend({
+      expectedAt: z.string().trim().refine((v) => !Number.isNaN(Date.parse(v)), 'Enter a valid date and time').optional().nullable(),
+    }).safeParse(raw)
+    if (!r.success) {
+      for (const i of r.error.issues) ctx.addIssue({ code: 'custom', message: i.message, path: i.path })
+      return z.NEVER
+    }
+    return Object.fromEntries(Object.entries(r.data).filter(([k]) => k in raw))
+  }),
+  // A visitor scanning the property QR. Consent to the privacy notice is required.
+  publicVisitor: visitorFields.omit({ notes: true }).extend({
+    consent: z.literal(true, { message: 'Please accept the privacy notice to continue' }),
+  }),
+  rejectVisitor: z.object({ reason: optText(200) }),
+  blockVisitor:  z.object({ reason: optText(200) }),
+  visitorSettings: z.object({ autoApprove: z.boolean() }),
 }

@@ -26,6 +26,12 @@ model Property {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
+  // Visitor management: the secret in the property's visitor QR (/visit?t=…).
+  // Regenerating it retires every printed QR. Auto-approve skips the desk
+  // approval step for QR self-registrations (they are checked in at once).
+  visitorToken       String?  @unique
+  visitorAutoApprove Boolean  @default(false)
+
   settings             Hotel?
   access               PropertyAccess[]
   rooms                Room[]
@@ -47,6 +53,8 @@ model Property {
   expenseCategories    ExpenseCategory[]
   expenses             Expense[]
   paymentClaims        PaymentClaim[]
+  visitors             Visitor[]
+  visitorBlocks        VisitorBlock[]
 }
 
 // A non-owner user's membership of one property, with the role they hold there.
@@ -785,4 +793,62 @@ model GuestCommunication {
   content   String
   staff     String? // who logged / sent it
   createdAt DateTime @default(now())
+}
+
+// ─── VISITOR MANAGEMENT ──────────────────────────────────────────────────────
+// Everyone who enters the property who is not a staying guest: friends visiting
+// a guest, deliveries, vendors, interviews… Visitors self-register by scanning
+// the property's QR (source "qr", status "pending" until the desk approves,
+// unless the property auto-approves) or the desk enters them (source "desk").
+// Lifecycle: expected → pending → checked_in → checked_out, or rejected.
+model Visitor {
+  id            String    @id @default(cuid())
+  propertyId    String
+  property      Property  @relation(fields: [propertyId], references: [id])
+  passNo        String // V261112-03: day + sequence, shown on the badge
+  passToken     String    @unique // secret for the visitor's own pass page
+  name          String
+  phone         String
+  email         String?
+  company       String?
+  purpose       String    @default("other") // guest_visit | meeting | delivery | vendor | maintenance | interview | other
+  hostName      String? // whom they are visiting
+  roomNumber    String?
+  idType        String? // aadhaar | pan | driving_licence | passport | voter_id | other
+  idNumber      String?
+  vehicleNo     String?
+  companions    Int       @default(0) // people accompanying the visitor
+  notes         String?
+  source        String    @default("desk") // qr | desk
+  status        String    @default("pending") // expected | pending | checked_in | checked_out | rejected
+  expectedAt    DateTime?
+  checkInAt     DateTime?
+  checkOutAt    DateTime?
+  rejectReason  String?
+  consentAt     DateTime? // when the visitor accepted the privacy notice
+  flagged       Boolean   @default(false) // phone was on the blocklist at registration
+  createdById   String?
+  checkedInById String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  @@unique([propertyId, passNo])
+  @@index([propertyId, createdAt])
+  @@index([propertyId, status])
+  @@index([propertyId, phone])
+}
+
+// Phones the property refuses entry to. A QR registration from one is accepted
+// (the visitor is not told) but flagged for the desk.
+model VisitorBlock {
+  id          String   @id @default(cuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id])
+  phone       String
+  reason      String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@unique([propertyId, phone])
 }
