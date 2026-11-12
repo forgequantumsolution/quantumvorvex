@@ -19,6 +19,7 @@ export const MODULES = [
   'housekeeping',
   'billing',
   'expenses', // cash book: money out / other money in
+  'visitors', // visitor register: QR self-registration + desk entry
   'reports',
   'settings',
   'users', // Users & Roles management (user CRUD + role management)

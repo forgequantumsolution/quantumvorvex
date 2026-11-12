@@ -239,6 +239,28 @@ export const notificationsApi = {
   clearAll: ()   => api.delete('/notifications'),
 }
 
+export const visitorsApi = {
+  list:        (params)   => api.get('/visitors', { params }),   // { tab: today|inside|pending|expected|all, search, from, to, page, limit } → { visitors, total, counts }
+  get:         (id)       => api.get(`/visitors/${id}`),         // { visitor, visits, blocked, canDelete }
+  lookup:      (phone)    => api.get('/visitors/lookup', { params: { phone } }), // { visitor (last details), visits, blocked }
+  create:      (data)     => api.post('/visitors', data),        // desk entry; { checkIn } or { expectedAt }
+  update:      (id, data) => api.put(`/visitors/${id}`, data),
+  checkIn:     (id)       => api.post(`/visitors/${id}/check-in`),
+  checkOut:    (id)       => api.post(`/visitors/${id}/check-out`),
+  reject:      (id, reason) => api.post(`/visitors/${id}/reject`, { reason }),
+  block:       (id, reason) => api.post(`/visitors/${id}/block`, { reason }),
+  unblock:     (id)       => api.delete(`/visitors/${id}/block`),
+  remove:      (id)       => api.delete(`/visitors/${id}`),
+  qr:          ()         => api.get('/visitors/qr'),            // { token, autoApprove, propertyName, canAdmin }
+  regenerateQr: ()        => api.post('/visitors/qr/regenerate'),
+  settings:    (data)     => api.put('/visitors/settings', data), // { autoApprove }
+  // Public (no login): the QR form and the visitor's own pass
+  publicForm:  (token)    => api.get(`/public/visit/${token}`),
+  publicSubmit: (token, data) => api.post(`/public/visit/${token}`, data),
+  publicPass:  (passToken) => api.get(`/public/pass/${passToken}`),
+  publicCheckOut: (passToken) => api.post(`/public/pass/${passToken}/checkout`),
+}
+
 export const maintenanceApi = {
   getAll:    (params)   => api.get('/maintenance', { params }),
   create:    (data)     => api.post('/maintenance', data),

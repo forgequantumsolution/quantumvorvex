@@ -23,7 +23,7 @@ export const PROPERTY_MODELS = new Set([
   'Hotel', 'Room', 'RoomType', 'Guest', 'Booking', 'Invoice', 'Payment', 'Notification',
   'FoodPlan', 'Amenity', 'PricingRule', 'CompetitorRate', 'MessageTemplate',
   'MaintenanceRequest', 'MaintenanceSchedule', 'LinenRecord', 'RoomInspection',
-  'ExpenseCategory', 'Expense', 'PaymentClaim',
+  'ExpenseCategory', 'Expense', 'PaymentClaim', 'Visitor', 'VisitorBlock',
 ])
 
 // Child models scoped through a parent relation: model → relation field name.

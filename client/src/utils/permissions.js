@@ -16,6 +16,7 @@ export const PANEL_MODULE = {
   bookings:      'bookings',
   cancellations: 'bookings',
   maintenance:   'maintenance',
+  visitors:      'visitors',
   guests:        'guests',
   rooms:         'rooms',
   documents:     'documents',
@@ -69,6 +70,14 @@ export function canDeleteExpenses(user, p) {
   if (isOwnerUser(user)) return true
   if (!p) return false
   return !!p.isOwner || EXPENSE_DELETE_ROLES.test(String(p.roleName || '').trim())
+}
+
+/**
+ * Owner or admin (Admin / Manager role) at property `p` — mirrors the server's
+ * isPropertyAdmin: deleting visitor entries, replacing the visitor QR.
+ */
+export function isPropertyAdmin(user, p) {
+  return canDeleteExpenses(user, p)
 }
 
 /** Can the user open a sidebar panel (needs at least VIEW on its module). */
