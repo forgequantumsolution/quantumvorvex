@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, Field, Button } from '../../ui-tw'
 import PhoneFields from './PhoneFields'
+import { GUARDIAN_KEYS, guardianErrors, guardianPayload } from './guardian'
 import { formatCurrency } from '../../../utils/format'
 import NameFields from './NameFields'
 import { joinPhones, phoneErrors, splitPhones, joinNames, nameErrors, splitNames } from '../../../utils/booking'
@@ -46,6 +47,7 @@ const from = (b) => ({
   nationality: b.nationality || '',
   idType: b.idType || '',
   idNumber: b.idNumber || '',
+  ...Object.fromEntries(GUARDIAN_KEYS.map((k) => [k, b[k] || ''])),
   adults: b.adults ?? 1,
   children: b.children ?? 0,
   fromDate: ymd(b.fromDate),
@@ -101,6 +103,7 @@ export default function EditBookingModal({ isOpen, booking, submitting = false, 
     const e = { ...phoneErrors(values.guestPhones), ...nameErrors(values.guestNames) }
     if (values.guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.guestEmail.trim()))
       e.guestEmail = t('form.err.email')
+    Object.assign(e, guardianErrors(values))
     if (!values.fromDate) e.fromDate = t('form.err.checkInRequired')
     if (tenancy) {
       // open-ended
@@ -125,6 +128,7 @@ export default function EditBookingModal({ isOpen, booking, submitting = false, 
       nationality: values.nationality.trim() || null,
       idType: values.idType.trim() || null,
       idNumber: values.idNumber.trim() || null,
+      ...guardianPayload(values, null),
       adults: Number(values.adults) || 1,
       children: Number(values.children) || 0,
       fromDate: new Date(values.fromDate).toISOString(),
@@ -179,6 +183,19 @@ export default function EditBookingModal({ isOpen, booking, submitting = false, 
           <Field className="col-span-2" label={t('pg.idType')} value={values.idType} onChange={set('idType')}
                  placeholder="Aadhaar, PAN" hint={t('edit.idTypeHint')} />
           <Field className="col-span-2" label={t('form.idNumber')} value={values.idNumber} onChange={set('idNumber')} />
+        </Section>
+
+        <Section title={t('guardian.title')}>
+          <Field className="col-span-2 sm:col-span-4" label={t('guardian.nativeAddress')} value={values.nativeAddress}
+                 onChange={set('nativeAddress')} placeholder={t('guardian.nativeAddressPlaceholder')} />
+          <Field className="col-span-2" label={t('guardian.name')} value={values.guardianName}
+                 onChange={set('guardianName')} placeholder={t('guardian.namePlaceholder')} />
+          <Field label={t('guardian.phone')} name="guardianPhone" value={values.guardianPhone} inputMode="numeric" maxLength={10}
+                 onChange={(e) => setValues((v) => ({ ...v, guardianPhone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                 error={errors.guardianPhone} placeholder={t('form.phonePlaceholder')} />
+          <Field label={t('guardian.aadhaar')} name="guardianAadhaar" value={values.guardianAadhaar} inputMode="numeric" maxLength={12}
+                 onChange={(e) => setValues((v) => ({ ...v, guardianAadhaar: e.target.value.replace(/\D/g, '').slice(0, 12) }))}
+                 error={errors.guardianAadhaar} placeholder={t('guardian.aadhaarPlaceholder')} />
         </Section>
 
         {tenancy ? (

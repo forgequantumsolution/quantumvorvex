@@ -465,5 +465,20 @@
     "leavesToday": "आज जातील",
     "paid": "{{amount}} भरले",
     "perMonth": "/ महिना"
+  },
+  "guardian": {
+    "title": "पालक / संरक्षक",
+    "nativeAddress": "मूळ पत्ता",
+    "nativeAddressPlaceholder": "कायमचा घरचा पत्ता (गाव/शहर, जिल्हा, राज्य)",
+    "name": "पालक / संरक्षकाचे नाव",
+    "namePlaceholder": "पूर्ण नाव",
+    "phone": "पालकाचा मोबाइल नंबर",
+    "aadhaar": "पालकाचा आधार नंबर",
+    "aadhaarPlaceholder": "12 अंकी आधार",
+    "err": {
+      "phone": "10 अंकी मोबाइल नंबर टाका",
+      "aadhaar": "आधार 12 अंकी असावा"
+    },
+    "docSide": "पालकाचा आधार — {{side}}"
   }
 }

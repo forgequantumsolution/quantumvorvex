@@ -465,5 +465,20 @@
     "leavesToday": "आज जाएँगे",
     "paid": "{{amount}} भुगतान हुआ",
     "perMonth": "/ महीना"
+  },
+  "guardian": {
+    "title": "माता-पिता / अभिभावक",
+    "nativeAddress": "मूल पता",
+    "nativeAddressPlaceholder": "स्थायी घर का पता (गाँव/शहर, ज़िला, राज्य)",
+    "name": "माता-पिता / अभिभावक का नाम",
+    "namePlaceholder": "पूरा नाम",
+    "phone": "अभिभावक का मोबाइल नंबर",
+    "aadhaar": "अभिभावक का आधार नंबर",
+    "aadhaarPlaceholder": "12 अंकों का आधार",
+    "err": {
+      "phone": "10 अंकों का मोबाइल नंबर दर्ज करें",
+      "aadhaar": "आधार 12 अंकों का होना चाहिए"
+    },
+    "docSide": "अभिभावक का आधार — {{side}}"
   }
 }

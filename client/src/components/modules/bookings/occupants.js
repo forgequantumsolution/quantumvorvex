@@ -1,6 +1,7 @@
 /** PG occupant-card helpers shared by PgOccupants and BookingForm. */
 import { bedLabel } from '../../../utils/beds'
 import i18n from '../../../i18n'
+import { EMPTY_GUARDIAN, guardianErrors } from './guardian'
 
 let occKey = 0
 
@@ -11,6 +12,7 @@ export const newOccupant = (bedNo, rate) => ({
   bedNo,
   name: '', phone: '', email: '',
   idType: 'Aadhaar', idNumber: '',
+  ...EMPTY_GUARDIAN,
   rate: rate ? String(rate) : '', rateAuto: true,
   advance: '', deposit: '',
   front: null, back: null,
@@ -29,6 +31,7 @@ export function occupantErrors(occupants, beds) {
     if (o.name.trim().length < 2) e[occField(o, 'name')] = t('name', { bed })
     if (!/^\d{10}$/.test(o.phone.replace(/\D/g, ''))) e[occField(o, 'phone')] = t('phone', { bed })
     if (o.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(o.email.trim())) e[occField(o, 'email')] = t('email')
+    Object.assign(e, guardianErrors(o, (k) => occField(o, k)))
     if (!(Number(o.rate) > 0)) e[occField(o, 'rate')] = t('rent', { bed })
     const held = beds?.find((b) => b.bedNo === o.bedNo)
     if (held && !held.free) e[occField(o, 'bed')] = t('taken', { bed })

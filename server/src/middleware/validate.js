@@ -263,6 +263,10 @@ export const schemas = {
     // Pricing inputs (server recomputes totals)
     roomRate:     z.coerce.number().min(0).max(1000000).optional(),
     discount:     z.coerce.number().min(0).max(1000000).default(0),
+    guardianName:    z.string().max(200).trim().optional().nullable(),
+    guardianPhone:   z.string().max(20).trim().optional().nullable(),
+    guardianAadhaar: z.string().max(20).trim().optional().nullable(),
+    nativeAddress:   z.string().max(300).optional().nullable(),
     taxRate:      z.coerce.number().min(0).max(30).optional(),
     extraCharges: z.coerce.number().min(0).max(1000000).default(0),
     advance:      z.coerce.number().min(0).max(1000000).default(0),
@@ -311,6 +315,10 @@ export const schemas = {
   updateBooking: z.object({
     guestName:       z.string().min(2).max(200).trim().optional(),  // may list several occupants
     guestPhone:      z.string().max(200).optional().nullable(),  // may list multiple, e.g. "9876543210, 9123456780"
+      guardianName:    z.string().max(200).trim().optional().nullable(),
+      guardianPhone:   z.string().max(20).trim().optional().nullable(),
+      guardianAadhaar: z.string().max(20).trim().optional().nullable(),
+      nativeAddress:   z.string().max(300).optional().nullable(),
     guestEmail:      z.preprocess(v => (v === '' ? undefined : v),
                        z.string().email('Invalid email').max(120).optional().nullable()),
     guestAddress:    z.string().max(300).optional().nullable(),
@@ -328,6 +336,10 @@ export const schemas = {
     extraCharges:    z.coerce.number().min(0).max(1000000).optional(),
     advance:         z.coerce.number().min(0).max(1000000).optional(),
     notes:           z.string().max(1000).optional().nullable(),
+    guardianName:    z.string().max(200).trim().optional().nullable(),
+    guardianPhone:   z.string().max(20).trim().optional().nullable(),
+    guardianAadhaar: z.string().max(20).trim().optional().nullable(),
+    nativeAddress:   z.string().max(300).optional().nullable(),
     specialRequests: z.string().max(1000).optional().nullable(),
     source:          z.enum(['walk_in', 'phone', 'website', 'ota', 'referral', 'corporate']).optional(),
     bedNo:           z.coerce.number().int().min(1).max(50).optional().nullable(),

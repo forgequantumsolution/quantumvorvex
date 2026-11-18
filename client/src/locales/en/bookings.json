@@ -465,5 +465,20 @@
     "leavesToday": "Leaves today",
     "paid": "{{amount}} paid",
     "perMonth": "/ month"
+  },
+  "guardian": {
+    "title": "Parent / Guardian",
+    "nativeAddress": "Native address",
+    "nativeAddressPlaceholder": "Permanent home address (village/town, district, state)",
+    "name": "Parent / Guardian name",
+    "namePlaceholder": "Full name",
+    "phone": "Guardian mobile number",
+    "aadhaar": "Guardian Aadhaar number",
+    "aadhaarPlaceholder": "12-digit Aadhaar",
+    "err": {
+      "phone": "Enter a 10-digit mobile number",
+      "aadhaar": "Aadhaar must be 12 digits"
+    },
+    "docSide": "Guardian Aadhaar — {{side}}"
   }
 }

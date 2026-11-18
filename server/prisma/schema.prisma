@@ -211,6 +211,11 @@ model Guest {
   emergencyName   String?
   emergencyPhone  String?
   stayType        String               @default("daily")
+  // Parent/guardian + native (permanent) address — asked of PG/hostel tenants.
+  guardianName    String?
+  guardianPhone   String?
+  guardianAadhaar String?
+  nativeAddress   String?
   roomId          String
   room            Room                 @relation(fields: [roomId], references: [id])
   checkInDate     DateTime
@@ -330,6 +335,11 @@ model Booking {
   idType       String?
   idNumber     String?
   adults       Int     @default(1)
+  // Parent/guardian + native (permanent) address — asked of PG/hostel tenants.
+  guardianName    String?
+  guardianPhone   String?
+  guardianAadhaar String?
+  nativeAddress   String?
   children     Int     @default(0)
   guestId      String?
   guest        Guest?  @relation(fields: [guestId], references: [id])
