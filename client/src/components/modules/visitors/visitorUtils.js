@@ -12,6 +12,18 @@ export const STATUS_TONE = {
   rejected:    'bg-danger-bg text-danger-text',
 }
 
+// Aadhaar is 12 digits; other IDs keep whatever the card shows.
+export const AADHAAR_RE = /^\d{12}$/
+export const cleanId = (type, v) => (type === 'aadhaar' ? String(v || '').replace(/\D/g, '').slice(0, 12) : v)
+
+/** FormData with the picked "front" / "back" ID scans, or null when none were picked. */
+export function idScanForm(scans) {
+  const form = new FormData()
+  let n = 0
+  for (const side of ['front', 'back']) if (scans[side]) { form.append(side, scans[side]); n++ }
+  return n ? form : null
+}
+
 export const PHONE_RE = /^\+?\d{7,15}$/
 export const cleanPhone = (v) => String(v || '').replace(/[\s-]/g, '')
 export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

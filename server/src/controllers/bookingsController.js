@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import fs from 'fs'
 import multer from 'multer'
 import prisma from '../utils/prisma.js'
+import { syncRoomOccupancy } from '../utils/roomStatus.js'
 import logger from '../utils/logger.js'
 import { renderInvoiceHtml, buildInvoiceData, hotelLogo, inlineUploadAsset, uploadedQr } from '../utils/invoiceTemplate.js'
 import { htmlToPdf } from '../utils/pdf.js'
@@ -195,31 +196,8 @@ const defaultRate = (room, stayType, bedNo) => {
   return stayType === 'daily' ? room.dailyRate : room.monthlyRate
 }
 
-/**
- * Re-derive a room's status after a stay starts or ends. A room with beds is
- * "occupied" only once every bed (or the whole room) is checked in, so a PG room
- * with a free bed stays bookable; it drops back to "available" when that is no
- * longer true. Whole-room rooms keep their fixed transition (`fallback`).
- */
-const syncRoomStatus = async (tx, roomId, fallback) => {
-  const room = await tx.room.findUnique({
-    where: { id: roomId },
-    select: { bedCount: true, status: true },
-  })
-  if (!room) return
-  if (!hasBeds(room)) {
-    await tx.room.update({ where: { id: roomId }, data: { status: fallback } })
-    return
-  }
-  const inHouse = await tx.booking.findMany({
-    where: { roomId, status: 'CheckedIn', deletedAt: null },
-    select: { bedNo: true },
-  })
-  const full = inHouse.some((b) => b.bedNo == null)
-    || new Set(inHouse.map((b) => b.bedNo)).size >= room.bedCount
-  const next = full ? 'occupied' : room.status === 'occupied' ? 'available' : room.status
-  if (next !== room.status) await tx.room.update({ where: { id: roomId }, data: { status: next } })
-}
+// Re-derive a room's status after a stay starts or ends (see utils/roomStatus.js).
+const syncRoomStatus = (tx, roomId, change) => syncRoomOccupancy(tx, roomId, { checkIn: change === 'occupied' })
 
 const bookingInclude = {
   room: { include: { type: true } },

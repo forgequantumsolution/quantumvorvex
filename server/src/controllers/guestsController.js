@@ -1,5 +1,6 @@
 import path from 'path'
 import prisma from '../utils/prisma.js'
+import { syncRoomOccupancy } from '../utils/roomStatus.js'
 
 // Generate a unique document ID: DOC-XXXX
 const generateDocId = async () => {
@@ -165,10 +166,7 @@ export const createGuest = async (req, res) => {
       })
 
       // Mark room as occupied
-      await tx.room.update({
-        where: { id: roomId },
-        data: { status: 'occupied' },
-      })
+      await syncRoomOccupancy(tx, roomId, { checkIn: true })
 
       return newGuest
     })
@@ -497,11 +495,8 @@ export const checkoutGuest = async (req, res) => {
         },
       })
 
-      // Free the room
-      await tx.room.update({
-        where: { id: guest.roomId },
-        data: { status: 'available' },
-      })
+      // Free the room — unless someone else is still staying in it
+      await syncRoomOccupancy(tx, guest.roomId)
 
       return { guest: updatedGuest, invoice: finalInvoice }
     })
@@ -535,7 +530,7 @@ export const deleteGuest = async (req, res) => {
     await prisma.$transaction(async (tx) => {
       await tx.guest.update({ where: { id }, data: { deletedAt: new Date() } })
       if (wasOccupying && guest.roomId) {
-        await tx.room.update({ where: { id: guest.roomId }, data: { status: 'available' } })
+        await syncRoomOccupancy(tx, guest.roomId)
       }
     })
 

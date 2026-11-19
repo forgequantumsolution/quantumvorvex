@@ -843,11 +843,27 @@ model Visitor {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
+  documents     VisitorDocument[]
 
   @@unique([propertyId, passNo])
   @@index([propertyId, createdAt])
   @@index([propertyId, status])
   @@index([propertyId, phone])
+}
+
+// A visitor's ID scan (Aadhaar front/back). Files live outside the public
+// /uploads folder and are only served to signed-in staff.
+model VisitorDocument {
+  id        String   @id @default(cuid())
+  visitorId String
+  visitor   Visitor  @relation(fields: [visitorId], references: [id], onDelete: Cascade)
+  side      String // front | back
+  fileName  String // stored name in private-uploads/visitors
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  @@unique([visitorId, side])
+  @@index([visitorId])
 }
 
 // Phones the property refuses entry to. A QR registration from one is accepted

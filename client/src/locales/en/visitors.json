@@ -110,8 +110,11 @@
       "name": "Enter the visitor's name",
       "phone": "Enter a valid mobile number",
       "email": "Enter a valid email",
-      "expectedAt": "Choose when they are expected"
-    }
+      "expectedAt": "Choose when they are expected",
+      "aadhaar": "Aadhaar must be 12 digits"
+    },
+    "aadhaarNumber": "Aadhaar number",
+    "aadhaarPlaceholder": "12-digit Aadhaar"
   },
   "detail": {
     "title": "Visitor details",
@@ -243,6 +246,20 @@
     "checkOut": "Check out now",
     "checkOutConfirm": "Check out now? Do this when you are leaving.",
     "newVisit": "Register another visitor",
-    "privacy": "Your details are only shared with {{property}}."
+    "privacy": "Your details are only shared with {{property}}.",
+    "takePhoto": "Tap to take a photo",
+    "removePhoto": "Remove",
+    "scanFailed": "You are registered, but your ID photos could not be uploaded. Please show your ID at the desk."
+  },
+  "docs": {
+    "title": "ID documents",
+    "side": "{{doc}} — {{side}}",
+    "front": "Front",
+    "back": "Back",
+    "onFile": "On file · upload to replace",
+    "uploadFailed": "Visitor saved, but the ID scans could not be uploaded.",
+    "loadFailed": "Could not load",
+    "openPdf": "Open PDF",
+    "removeConfirm": "Remove this ID scan?"
   }
 }

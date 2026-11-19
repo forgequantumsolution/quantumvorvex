@@ -38,6 +38,7 @@ const PARENT_SCOPED = {
   GuestCommunication: 'guest',
   TicketChecklistItem: 'ticket',
   TicketActivity:     'ticket',
+  VisitorDocument:    'visitor',
 }
 
 const WHERE_OPS = new Set([

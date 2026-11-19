@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { visitorsApi } from '../../../api/client'
 import GuestLanguageToggle from '../portal/GuestLanguageToggle'
-import { PURPOSES, ID_TYPES, PHONE_RE, EMAIL_RE, cleanPhone, formatTime } from './visitorUtils'
+import { PURPOSES, ID_TYPES, PHONE_RE, EMAIL_RE, AADHAAR_RE, cleanPhone, cleanId, idScanForm, formatTime } from './visitorUtils'
 
 // Standalone, no-login pages:
 //   /visit?t=<property visitorToken>  — the registration form (the gate QR)
@@ -19,7 +19,7 @@ const store = {
   del: (k) => { try { localStorage.removeItem(k) } catch { /* private mode */ } },
 }
 
-const EMPTY = { name: '', phone: '', email: '', company: '', purpose: 'guest_visit', hostName: '', roomNumber: '', idType: '', idNumber: '', vehicleNo: '', companions: '0' }
+const EMPTY = { name: '', phone: '', email: '', company: '', purpose: 'guest_visit', hostName: '', roomNumber: '', idType: 'aadhaar', idNumber: '', vehicleNo: '', companions: '0' }
 
 const STATUS = {
   pending:     { icon: '⏳', title: 'statusPending', hint: 'statusPendingHint', cls: 'bg-warning-bg text-warning-text border-warning' },
@@ -37,6 +37,33 @@ function Brand({ property, title }) {
         : <div className="w-14 h-14 rounded-2xl bg-gold-bg border border-gold-border flex items-center justify-center text-[26px] mb-3">🪪</div>}
       {property?.name && <div className="text-sm font-semibold text-ink2">{property.name}</div>}
       <h1 className="text-2xl font-extrabold text-ink tracking-[-0.02em] m-0 mt-0.5">{title}</h1>
+    </div>
+  )
+}
+
+// A photo of one side of the ID card. On a phone, "capture" opens the camera.
+function ScanPicker({ id, label, file, onPick }) {
+  const { t } = useTranslation('visitors')
+  const preview = useMemo(() => (file?.type?.startsWith('image/') ? URL.createObjectURL(file) : null), [file])
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview) }, [preview])
+  return (
+    <div className="min-w-0">
+      <span className="block text-[13px] font-semibold text-ink2 mb-1.5">{label}</span>
+      <label htmlFor={id}
+        className={`relative flex h-28 items-center justify-center rounded-xl border overflow-hidden cursor-pointer bg-surface2 ${file ? 'border-gold' : 'border-dashed border-line2'}`}>
+        {preview
+          ? <img src={preview} alt={label} className="w-full h-full object-cover" />
+          : <span className="text-center text-xs text-ink3 px-2">
+              <span className="block text-2xl mb-1" aria-hidden>{file ? '📄' : '📷'}</span>
+              {file ? file.name : t('public.takePhoto')}
+            </span>}
+        <input id={id} type="file" accept="image/*,application/pdf" capture="environment" className="sr-only"
+          onChange={(e) => onPick(e.target.files?.[0] || null)} />
+      </label>
+      {file && (
+        <button type="button" onClick={() => onPick(null)}
+          className="mt-1 bg-transparent border-0 p-0 text-xs text-ink3 cursor-pointer hover:text-danger-text">{t('public.removePhoto')}</button>
+      )}
     </div>
   )
 }
@@ -106,6 +133,8 @@ export default function PublicVisitorForm() {
   const [errors, setErrors] = useState({})
   const [submitError, setSubmitError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [scans, setScans] = useState({ front: null, back: null })
+  const [scanNote, setScanNote] = useState('')
 
   // Load the form (QR) and/or the remembered pass.
   useEffect(() => {
@@ -149,6 +178,7 @@ export default function PublicVisitorForm() {
     if (values.name.trim().length < 2) errs.name = t('form.errors.name')
     if (!PHONE_RE.test(phone)) errs.phone = t('form.errors.phone')
     if (values.email.trim() && !EMAIL_RE.test(values.email.trim())) errs.email = t('form.errors.email')
+    if (values.idType === 'aadhaar' && values.idNumber.trim() && !AADHAAR_RE.test(values.idNumber.trim())) errs.idNumber = t('form.errors.aadhaar')
     setErrors(errs)
     if (Object.keys(errs).length || !consent) return
     setBusy(true); setSubmitError('')
@@ -160,6 +190,12 @@ export default function PublicVisitorForm() {
         vehicleNo: values.vehicleNo.trim().toUpperCase(),
         companions: Math.max(0, Math.min(20, parseInt(values.companions, 10) || 0)), consent: true,
       })
+      // Registered — the ID photos follow; if they fail, the desk can take them.
+      const scanForm = idScanForm(scans)
+      if (scanForm) {
+        try { await visitorsApi.publicUploadDocs(data.passToken, scanForm); setScanNote('') }
+        catch { setScanNote(t('public.scanFailed')) }
+      }
       store.set(PASS_KEY(token), data.passToken)
       setPassToken(data.passToken)
       setPass(data.pass)
@@ -183,6 +219,7 @@ export default function PublicVisitorForm() {
   const startNew = () => {
     store.del(PASS_KEY(token))
     setPass(null); setPassToken(''); setValues(EMPTY); setConsent(false); setErrors({}); setSubmitError('')
+    setScans({ front: null, back: null }); setScanNote('')
   }
 
   // 16px inputs: smaller text makes iOS Safari zoom into the field.
@@ -210,6 +247,7 @@ export default function PublicVisitorForm() {
               </div>
             )}
 
+            {!loading && pass && scanNote && <p role="alert" className="m-0 mb-3 rounded-xl px-3.5 py-2.5 text-sm bg-warning-bg text-warning-text">{scanNote}</p>}
             {!loading && pass && <Pass pass={pass} busy={busy} onCheckOut={checkOut} onNew={form ? startNew : null} />}
 
             {!loading && !pass && form && (
@@ -253,6 +291,35 @@ export default function PublicVisitorForm() {
                   <input id="v-company" className={fieldCls} maxLength={80} value={values.company} onChange={set('company')} />
                 </div>
 
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="v-idt" className={labelCls}>{t('public.idType')}</label>
+                    <select id="v-idt" className={fieldCls} value={values.idType}
+                      onChange={(e) => setValues((v) => ({ ...v, idType: e.target.value, idNumber: cleanId(e.target.value, v.idNumber) }))}>
+                      <option value="">{t('form.none')}</option>
+                      {ID_TYPES.map((p) => <option key={p} value={p}>{t(`idTypes.${p}`)}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="v-idn" className={labelCls}>{values.idType === 'aadhaar' ? t('form.aadhaarNumber') : t('public.idNumber')}</label>
+                    <input id="v-idn" className={fieldCls} autoComplete="off" disabled={!values.idType}
+                      maxLength={values.idType === 'aadhaar' ? 12 : 30} inputMode={values.idType === 'aadhaar' ? 'numeric' : undefined}
+                      placeholder={values.idType === 'aadhaar' ? t('form.aadhaarPlaceholder') : undefined}
+                      value={values.idNumber} onChange={(e) => setValues((v) => ({ ...v, idNumber: cleanId(v.idType, e.target.value) }))}
+                      aria-invalid={!!errors.idNumber} />
+                    {err('idNumber')}
+                  </div>
+                </div>
+                {values.idType && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {['front', 'back'].map((side) => (
+                      <ScanPicker key={side} id={`v-scan-${side}`} file={scans[side]}
+                        label={t('docs.side', { doc: t(`idTypes.${values.idType}`), side: t(`docs.${side}`) })}
+                        onPick={(f) => setScans((s) => ({ ...s, [side]: f }))} />
+                    ))}
+                  </div>
+                )}
+
                 {!showMore ? (
                   <button type="button" onClick={() => setShowMore(true)}
                     className="self-start bg-transparent border-0 p-0 text-sm font-semibold text-gold cursor-pointer hover:underline">
@@ -260,20 +327,6 @@ export default function PublicVisitorForm() {
                   </button>
                 ) : (
                   <div className="flex flex-col gap-4 pt-1">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label htmlFor="v-idt" className={labelCls}>{t('public.idType')}</label>
-                        <select id="v-idt" className={fieldCls} value={values.idType} onChange={set('idType')}>
-                          <option value="">{t('form.none')}</option>
-                          {ID_TYPES.map((p) => <option key={p} value={p}>{t(`idTypes.${p}`)}</option>)}
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="v-idn" className={labelCls}>{t('public.idNumber')}</label>
-                        <input id="v-idn" className={fieldCls} maxLength={30} autoComplete="off" disabled={!values.idType}
-                          value={values.idNumber} onChange={set('idNumber')} />
-                      </div>
-                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label htmlFor="v-veh" className={labelCls}>{t('public.vehicleNo')}</label>

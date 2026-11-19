@@ -14,6 +14,9 @@
  * Rows are soft-deleted (deletedAt), and only the owner or an admin may delete.
  */
 import crypto from 'node:crypto'
+import fs from 'node:fs'
+import path from 'node:path'
+import multer from 'multer'
 import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
 import { runWithProperty, runUnscoped } from '../utils/propertyContext.js'
@@ -53,6 +56,105 @@ async function createWithPassNo(data) {
     }
   }
   throw new Error('Could not allocate a pass number')
+}
+
+// Aadhaar is 12 digits; store it without the spaces people type. Returns an
+// error message, or null (normalising body.idNumber in place).
+function checkAadhaar(body, current = {}) {
+  const type = 'idType' in body ? body.idType : current.idType
+  if (!body.idNumber || type !== 'aadhaar') return null
+  const digits = String(body.idNumber).replace(/[\s-]/g, '')
+  if (!/^\d{12}$/.test(digits)) return 'Aadhaar number must be 12 digits.'
+  body.idNumber = digits
+  return null
+}
+const aadhaarInvalid = (res, message) => res.status(400).json({
+  error: 'Validation failed', code: 'ERR_VALIDATION', message, details: [{ field: 'idNumber', message }],
+})
+
+// ── ID scans (Aadhaar front/back) ────────────────────────────────────────────
+// Kept outside the public /uploads folder: only signed-in staff can open them.
+
+const visitorDocsDir = path.resolve('private-uploads/visitors')
+fs.mkdirSync(visitorDocsDir, { recursive: true })
+const DOC_EXT = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'application/pdf': '.pdf' }
+const DOC_SIDES = ['front', 'back']
+
+const visitorUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, visitorDocsDir),
+    // Random names: nothing about the visitor in the file name.
+    filename: (req, file, cb) => cb(null, `${newToken()}${DOC_EXT[file.mimetype]}`),
+  }),
+  limits: { fileSize: 8 * 1024 * 1024, files: 2 },
+  fileFilter: (req, file, cb) => (DOC_EXT[file.mimetype]
+    ? cb(null, true)
+    : cb(new Error('Only JPG, PNG, WebP or PDF files are allowed.'))),
+}).fields(DOC_SIDES.map((name) => ({ name, maxCount: 1 })))
+
+// Multipart fields "front" / "back"; upload errors become a 400.
+export const receiveVisitorDocs = (req, res, next) => visitorUpload(req, res, (err) => {
+  if (!err) return next()
+  const message = err.code === 'LIMIT_FILE_SIZE' ? 'Each file must be 8 MB or smaller.' : err.message
+  res.status(400).json({ message, code: 'ERR_UPLOAD' })
+})
+
+const removeFile = (name) => fs.promises.unlink(path.join(visitorDocsDir, path.basename(name))).catch(() => {})
+const discardUploads = (req) => Object.values(req.files || {}).flat().forEach((f) => removeFile(f.filename))
+const docOut = (d) => ({ id: d.id, side: d.side, mimeType: d.mimeType, createdAt: d.createdAt })
+
+// Save the uploaded sides, replacing (and deleting) any earlier scan of that side.
+async function storeDocs(visitorId, req) {
+  const saved = []
+  for (const side of DOC_SIDES) {
+    const f = req.files?.[side]?.[0]
+    if (!f) continue
+    const old = await prisma.visitorDocument.findFirst({ where: { visitorId, side } })
+    const data = { fileName: f.filename, mimeType: f.mimetype }
+    saved.push(old
+      ? await prisma.visitorDocument.update({ where: { id: old.id }, data: { ...data, createdAt: new Date() } })
+      : await prisma.visitorDocument.create({ data: { visitorId, side, ...data } }))
+    if (old) removeFile(old.fileName)
+  }
+  return saved
+}
+
+// POST /visitors/:id/documents — desk upload (multipart "front" / "back").
+export const uploadVisitorDocuments = async (req, res) => {
+  try {
+    const v = await findLive(req.params.id)
+    if (!v) { discardUploads(req); return notFound(res) }
+    if (!Object.keys(req.files || {}).length) return res.status(400).json({ message: 'No files uploaded.' })
+    const docs = await storeDocs(v.id, req)
+    logger.info('Visitor ID scans uploaded', { event: 'VISITOR', passNo: v.passNo, sides: docs.map((d) => d.side) })
+    res.status(201).json({ documents: docs.map(docOut) })
+  } catch (e) { discardUploads(req); fail(res, 'uploadVisitorDocuments', e) }
+}
+
+// GET /visitors/:id/documents/:docId — the scan itself, for signed-in staff only.
+export const getVisitorDocumentFile = async (req, res) => {
+  try {
+    const d = await prisma.visitorDocument.findFirst({
+      where: { id: req.params.docId, visitorId: req.params.id, visitor: { deletedAt: null } },
+    })
+    if (!d) return res.status(404).json({ message: 'Document not found.' })
+    res.set('Cache-Control', 'private, no-store')
+    res.type(d.mimeType)
+    res.sendFile(path.join(visitorDocsDir, path.basename(d.fileName)), (err) => {
+      if (err && !res.headersSent) res.status(404).json({ message: 'Document file is missing.' })
+    })
+  } catch (e) { fail(res, 'getVisitorDocumentFile', e) }
+}
+
+// DELETE /visitors/:id/documents/:docId
+export const deleteVisitorDocument = async (req, res) => {
+  try {
+    const d = await prisma.visitorDocument.findFirst({ where: { id: req.params.docId, visitorId: req.params.id } })
+    if (!d) return res.status(404).json({ message: 'Document not found.' })
+    await prisma.visitorDocument.delete({ where: { id: d.id } })
+    removeFile(d.fileName)
+    res.json({ ok: true })
+  } catch (e) { fail(res, 'deleteVisitorDocument', e) }
 }
 
 // ── Register ─────────────────────────────────────────────────────────────────
@@ -133,16 +235,20 @@ export const getVisitor = async (req, res) => {
     const v = await findLive(req.params.id)
     if (!v) return notFound(res)
     const userIds = [v.createdById, v.checkedInById].filter(Boolean)
-    const [users, visits, block] = await Promise.all([
+    const [users, visits, block, documents] = await Promise.all([
       userIds.length
         ? runUnscoped(() => prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true } }))
         : [],
       prisma.visitor.count({ where: { phone: v.phone, deletedAt: null } }),
       isBlocked(v.phone),
+      prisma.visitorDocument.findMany({ where: { visitorId: v.id }, orderBy: { side: 'desc' } }),
     ])
     const nameOf = (id) => users.find((u) => u.id === id)?.name || null
     res.json({
-      visitor: { ...v, passToken: undefined, createdByName: nameOf(v.createdById), checkedInByName: nameOf(v.checkedInById) },
+      visitor: {
+        ...v, passToken: undefined, createdByName: nameOf(v.createdById), checkedInByName: nameOf(v.checkedInById),
+        documents: documents.map(docOut),
+      },
       visits,
       blocked: block ? { reason: block.reason, at: block.createdAt } : null,
       canDelete: isPropertyAdmin(req.propertyAccess),
@@ -154,6 +260,8 @@ export const getVisitor = async (req, res) => {
 export const createVisitor = async (req, res) => {
   try {
     const { checkIn, expectedAt, companions, ...fields } = req.body
+    const idError = checkAadhaar(fields)
+    if (idError) return aadhaarInvalid(res, idError)
     const now = new Date()
     const status = expectedAt && !checkIn ? 'expected' : 'checked_in'
     const flagged = !!(await isBlocked(fields.phone))
@@ -179,6 +287,8 @@ export const updateVisitor = async (req, res) => {
     const v = await findLive(req.params.id)
     if (!v) return notFound(res)
     const data = { ...req.body }
+    const idError = checkAadhaar(data, v)
+    if (idError) return aadhaarInvalid(res, idError)
     if ('expectedAt' in data) data.expectedAt = data.expectedAt ? new Date(data.expectedAt) : null
     if (data.phone && data.phone !== v.phone) data.flagged = !!(await isBlocked(data.phone))
     const visitor = await prisma.visitor.update({ where: { id: v.id }, data })
@@ -328,6 +438,8 @@ export const submitPublicVisit = async (req, res) => {
     const p = await propertyByToken(req.params.token)
     if (!p) return res.status(404).json(QR_INVALID)
     const { consent, companions, ...fields } = req.body
+    const idError = checkAadhaar(fields)
+    if (idError) return aadhaarInvalid(res, idError)
     const result = await runWithProperty(p.id, async () => {
       const flagged = !!(await isBlocked(fields.phone))
       // A blocked phone always waits for the desk, even when auto-approve is on.
@@ -387,4 +499,22 @@ export const publicCheckOut = async (req, res) => {
     const p = await runUnscoped(() => prisma.property.findUnique({ where: { id: v.propertyId } }))
     res.json({ pass: publicPass(updated, await brandOf(p)) })
   } catch (e) { fail(res, 'publicCheckOut', e) }
+}
+
+// POST /public/pass/:passToken/documents — the visitor adds their ID scans just
+// after registering (multipart "front" / "back"). Closed after 30 minutes.
+const PUBLIC_UPLOAD_WINDOW_MS = 30 * 60 * 1000
+export const publicUploadDocuments = async (req, res) => {
+  try {
+    const v = await visitorByPass(req.params.passToken)
+    if (!v) { discardUploads(req); return res.status(404).json({ message: 'This visitor pass was not found.', code: 'ERR_PASS_INVALID' }) }
+    const open = ['pending', 'expected', 'checked_in'].includes(v.status) && Date.now() - v.createdAt.getTime() < PUBLIC_UPLOAD_WINDOW_MS
+    if (!open) {
+      discardUploads(req)
+      return res.status(409).json({ message: 'ID scans can only be added right after registering. Please show your ID at the desk.', code: 'ERR_UPLOAD_CLOSED' })
+    }
+    if (!Object.keys(req.files || {}).length) return res.status(400).json({ message: 'No files uploaded.' })
+    const docs = await runWithProperty(v.propertyId, () => storeDocs(v.id, req))
+    res.status(201).json({ uploaded: docs.map((d) => d.side) })
+  } catch (e) { discardUploads(req); fail(res, 'publicUploadDocuments', e) }
 }

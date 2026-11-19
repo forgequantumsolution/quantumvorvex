@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma.js'
+import { syncRoomOccupancy } from '../utils/roomStatus.js'
 import logger from '../utils/logger.js'
 import { runUnscoped, runWithProperty } from '../utils/propertyContext.js'
 
@@ -176,7 +177,9 @@ export const updateRequest = async (req, res) => {
         where: { roomId: request.roomId, status: { not: 'Resolved' } },
       })
       if (!stillOpen) {
+        // Back in service: occupied if someone is still staying in it, else available.
         await prisma.room.update({ where: { id: request.roomId }, data: { status: 'available' } })
+        await syncRoomOccupancy(prisma, request.roomId)
       }
     }
 
