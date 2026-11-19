@@ -1,0 +1,155 @@
+{
+  "title": "जिम",
+  "subtitle": "{{active}} सक्रिय सदस्य · {{plans}} प्लान",
+  "subtitleLoading": "सदस्य, प्लान और रिन्यूअल",
+  "searchPlaceholder": "नाम, फ़ोन, सदस्य नंबर या प्लान खोजें",
+  "addMember": "सदस्य जोड़ें",
+  "room": "कमरा {{room}}",
+  "views": { "dashboard": "डैशबोर्ड", "members": "सदस्य", "plans": "प्लान" },
+  "kpi": {
+    "active": "सक्रिय सदस्य",
+    "activeHint": "कुल {{total}} सदस्यों में से",
+    "expiring": "7 दिन में खत्म",
+    "expiringHint": "पिछले 30 दिनों में {{count}} खत्म हुए",
+    "revenue": "इस महीने वसूली",
+    "revenueHint": "पिछला महीना {{amount}}",
+    "dues": "बकाया राशि",
+    "duesHint_one": "{{count}} सदस्य",
+    "duesHint_other": "{{count}} सदस्य",
+    "new": "इस महीने नए",
+    "newHint": "जो सदस्य जुड़े",
+    "renewal": "रिन्यूअल दर",
+    "renewalHint_one": "{{count}} प्लान खत्म हुआ · पिछले 90 दिन",
+    "renewalHint_other": "{{count}} प्लान खत्म हुए · पिछले 90 दिन",
+    "renewalNone": "अभी कोई प्लान खत्म नहीं हुआ"
+  },
+  "tabs": { "all": "सभी", "active": "सक्रिय", "expiring": "जल्द खत्म", "expired": "खत्म", "frozen": "फ्रीज़", "dues": "बकाया", "no_plan": "प्लान नहीं" },
+  "status": { "active": "सक्रिय", "expiring": "जल्द खत्म", "upcoming": "आगामी", "frozen": "फ्रीज़", "expired": "खत्म", "no_plan": "प्लान नहीं", "cancelled": "रद्द" },
+  "table": { "member": "सदस्य", "plan": "प्लान", "status": "स्थिति", "due": "बकाया", "joined": "जुड़े", "actions": "कार्रवाई", "noPlan": "अभी कोई प्लान नहीं" },
+  "left": {
+    "inDays_one": "{{count}} दिन बाकी",
+    "inDays_other": "{{count}} दिन बाकी",
+    "today": "आज खत्म",
+    "expiredAgo_one": "{{count}} दिन पहले खत्म",
+    "expiredAgo_other": "{{count}} दिन पहले खत्म",
+    "frozen": "रुका हुआ",
+    "starts": "{{date}} से शुरू"
+  },
+  "duration": {
+    "days_one": "{{count}} दिन", "days_other": "{{count}} दिन",
+    "weeks_one": "{{count}} सप्ताह", "weeks_other": "{{count}} सप्ताह",
+    "months_one": "1 महीना", "months_other": "{{count}} महीने",
+    "years_one": "1 साल", "years_other": "{{count}} साल"
+  },
+  "genders": { "male": "पुरुष", "female": "महिला", "other": "अन्य" },
+  "goals": { "weight_loss": "वज़न घटाना", "muscle_gain": "मसल गेन", "fitness": "सामान्य फ़िटनेस", "strength": "ताकत", "other": "अन्य" },
+  "sources": { "walk_in": "वॉक-इन", "referral": "रेफ़रल", "online": "ऑनलाइन", "corporate": "कॉर्पोरेट", "guest": "होटल / PG मेहमान" },
+  "payModes": { "cash": "नकद", "upi": "UPI", "card": "कार्ड", "bank": "बैंक ट्रांसफ़र" },
+  "idTypes": { "aadhaar": "आधार", "pan": "पैन", "driving_licence": "ड्राइविंग लाइसेंस", "passport": "पासपोर्ट", "voter_id": "वोटर आईडी", "other": "अन्य" },
+  "actions": {
+    "renew": "रिन्यू करें", "sellPlan": "प्लान जोड़ें", "freeze": "फ्रीज़ करें", "unfreeze": "अनफ्रीज़ करें", "edit": "बदलें",
+    "delete": "हटाएँ", "call": "कॉल करें", "cancelPlan": "प्लान रद्द करें", "collect": "{{amount}} वसूलें"
+  },
+  "form": {
+    "newTitle": "नया सदस्य", "newSubtitle": "उनका विवरण भरें और अगर अभी भुगतान कर रहे हैं तो प्लान भी",
+    "editTitle": "सदस्य बदलें", "save": "बदलाव सहेजें", "create": "सदस्य जोड़ें",
+    "memberType": "कौन जुड़ रहा है?",
+    "kind": {
+      "outside": "बाहरी सदस्य", "outsideHint": "बाहर से आकर प्लान खरीदने वाला",
+      "guest": "होटल / PG मेहमान", "guestHint": "आपके यहाँ ठहरा मेहमान या किरायेदार"
+    },
+    "guest": "मेहमान", "chooseGuest": "ठहरा हुआ मेहमान चुनें", "noGuests": "जोड़ने के लिए कोई ठहरा मेहमान नहीं",
+    "personal": "व्यक्तिगत विवरण",
+    "name": "पूरा नाम", "phone": "मोबाइल नंबर", "email": "ईमेल", "gender": "लिंग", "dob": "जन्म तिथि",
+    "goal": "फ़िटनेस लक्ष्य", "source": "हमारे बारे में कैसे पता चला", "joinedAt": "जुड़ने की तारीख", "address": "पता",
+    "idAndSafety": "आईडी और सुरक्षा",
+    "idType": "पहचान पत्र", "idNumber": "आईडी नंबर", "aadhaar": "आधार नंबर",
+    "emergency": "आपातकालीन संपर्क", "emergencyName": "आपातकालीन संपर्क का नाम", "emergencyPhone": "आपातकालीन संपर्क नंबर",
+    "healthNotes": "स्वास्थ्य संबंधी नोट", "healthPlaceholder": "चोट, बीमारी या दवाइयाँ जो ट्रेनर को पता होनी चाहिए",
+    "firstPlan": "मेंबरशिप प्लान", "sellNow": "अभी प्लान बेचें",
+    "notes": "नोट"
+  },
+  "sale": {
+    "plan": "प्लान", "startDate": "शुरू होने की तारीख", "discount": "छूट (₹)", "amountPaid": "अभी भुगतान (₹)", "payMode": "भुगतान का तरीका",
+    "validTill": "मान्य तिथि तक", "payable": "देय राशि", "paidNow": "अभी भुगतान", "due": "बकाया",
+    "noPlans": "अभी कोई प्लान नहीं। पहले प्लान में जाकर प्लान जोड़ें।",
+    "renewTitle": "रिन्यू · {{name}}", "newTitle": "प्लान जोड़ें · {{name}}",
+    "currentPlan": "मौजूदा: {{plan}}, {{date}} तक"
+  },
+  "pay": {
+    "title": "भुगतान वसूलें", "due": "इस प्लान पर बकाया", "amount": "राशि (₹)", "collect": "वसूलें",
+    "collectFrom": "{{name}} से भुगतान वसूलें"
+  },
+  "plans": {
+    "active": "बिक्री वाले प्लान", "retired": "बंद किए गए प्लान",
+    "add": "प्लान जोड़ें", "newTitle": "नया प्लान", "editTitle": "प्लान बदलें",
+    "name": "प्लान का नाम", "namePlaceholder": "जैसे मासिक, तिमाही, कपल सालाना",
+    "duration": "अवधि", "days": "दिन",
+    "price": "कीमत (₹)", "perMonth": "≈ {{amount}} / महीना",
+    "description": "क्या शामिल है", "descriptionPlaceholder": "जैसे जिम फ़्लोर + कार्डियो, 2 PT सेशन, लॉकर",
+    "activeLabel": "बिक्री पर (नए सदस्य खरीद सकते हैं)",
+    "editNote": "बदलाव सिर्फ़ नई बिक्री पर लागू होंगे। मौजूदा मेंबरशिप में वही कीमत और अवधि रहेगी जिस पर वे बेची गई थीं।",
+    "onPlan": "अभी इस प्लान पर",
+    "retire": "प्लान बंद करें", "restore": "फिर बिक्री पर लगाएँ",
+    "retireConfirm": "“{{name}}” बेचना बंद करें? इस पर चल रहे सदस्यों का प्लान जारी रहेगा।",
+    "emptyTitle": "अभी कोई प्लान नहीं", "emptyMessage": "अपने बिकने वाले प्लान बनाएँ — मासिक, तिमाही, सालाना — कीमत के साथ।"
+  },
+  "detail": {
+    "title": "सदस्य", "loadError": "यह सदस्य लोड नहीं हो सका।", "due": "बकाया",
+    "currentPlan": "मौजूदा प्लान", "frozenSince": "{{date}} से फ्रीज़। अनफ्रीज़ करने पर रुके हुए दिन वापस जुड़ जाएँगे।",
+    "history": "प्लान और भुगतान", "noPlans": "अभी कोई प्लान नहीं।", "renewal": "रिन्यूअल",
+    "frozenDays_one": "{{count}} दिन फ्रीज़", "frozenDays_other": "{{count}} दिन फ्रीज़",
+    "off": "{{amount}} छूट", "dueAmount": "{{amount}} बकाया", "paidFull": "पूरा भुगतान हुआ",
+    "cancelConfirm": "{{plan}} प्लान रद्द करें? यह उनकी मेंबरशिप में नहीं गिना जाएगा। किए गए भुगतान रिकॉर्ड में रहेंगे।"
+  },
+  "dash": {
+    "revenue": "वसूली", "revenueHint": "इस महीने {{amount}} · पिछले महीने {{last}}", "revenueSeries": "वसूली",
+    "revenueAria": "पिछले 6 महीनों में हर महीने की वसूली; इस महीने {{amount}}",
+    "joins": "नए साइन-अप बनाम रिन्यूअल", "joinsHint": "हर महीने बिके प्लान", "signups": "नए साइन-अप", "renewals": "रिन्यूअल",
+    "joinsAria": "पिछले 6 महीनों में हर महीने बिके प्लान; इस महीने {{signups}} नए और {{renewals}} रिन्यूअल",
+    "noData": "पिछले 6 महीनों में अभी कुछ नहीं बिका",
+    "planMix": "प्लान का बँटवारा", "planMixHint": "आपके {{count}} सक्रिय सदस्य किन प्लान पर हैं", "noActive": "अभी कोई सक्रिय सदस्य नहीं",
+    "who": "यहाँ कौन आता है", "whoHint": "सक्रिय सदस्य",
+    "source": { "guest": "होटल / PG मेहमान", "outside": "बाहरी सदस्य" },
+    "gender": "लिंग", "goals": "लक्ष्य", "notGiven": "नहीं बताया",
+    "collections": "इस महीने भुगतान तरीके के अनुसार", "collectionsHint": "वसूली गई राशि", "noPayments": "इस महीने अभी कोई भुगतान नहीं",
+    "noPaymentsTitle": "अभी कोई भुगतान नहीं",
+    "perMember": "प्रति सक्रिय सदस्य वसूली", "renewalRate": "रिन्यूअल दर (90 दिन)",
+    "followUp": "अगला रिन्यूअल", "followUpHint": "इस हफ़्ते खत्म होने वाले और पिछले 7 दिनों में खत्म हुए प्लान",
+    "allGood": "सब निपट गया", "noExpiring": "इस हफ़्ते कोई प्लान खत्म नहीं हो रहा।",
+    "dues": "वसूलने वाला बकाया", "duesHint_one": "{{count}} सदस्य से {{amount}}", "duesHint_other": "{{count}} सदस्यों से {{amount}}",
+    "noDuesTitle": "कोई बकाया नहीं", "noDues": "सभी सदस्यों ने पूरा भुगतान कर दिया है।",
+    "recent": "हाल के भुगतान"
+  },
+  "setup": {
+    "title": "अपना जिम सेट करें", "subtitle": "दो चरण और आपका डैशबोर्ड तैयार।",
+    "step1": "अपने प्लान बनाएँ", "step1Hint": "मासिक, तिमाही, सालाना — कीमत के साथ।",
+    "step2": "अपने सदस्य जोड़ें", "step2Hint": "बाहरी सदस्य या आपके होटल / PG मेहमान, उनके प्लान के साथ।"
+  },
+  "empty": {
+    "title": "यहाँ कोई सदस्य नहीं", "message": "प्लान और रिन्यूअल ट्रैक करने के लिए अपना पहला सदस्य जोड़ें।",
+    "noPlans": "पहले एक प्लान बनाएँ, फिर सदस्य जोड़ें।",
+    "searchTitle": "कोई मेल नहीं", "search": "आपकी खोज से कोई सदस्य मेल नहीं खाता।"
+  },
+  "errors": {
+    "name": "सदस्य का नाम लिखें", "phone": "सही मोबाइल नंबर लिखें", "email": "सही ईमेल लिखें",
+    "aadhaar": "आधार 12 अंकों का होना चाहिए", "guest": "मेहमान चुनें", "plan": "प्लान चुनें",
+    "overpaid": "{{amount}} से ज़्यादा नहीं हो सकता", "amount": "राशि लिखें",
+    "planName": "प्लान का नाम लिखें", "duration": "कम से कम 1 दिन", "price": "कीमत लिखें",
+    "fix": "कृपया चिह्नित फ़ील्ड ठीक करें।"
+  },
+  "delete": {
+    "title": "सदस्य हटाएँ?",
+    "message": "<b>{{name}}</b> ({{no}}) को हटाएँ? वे सूचियों से गायब हो जाएँगे; भुगतान आपके राजस्व इतिहास में रहेंगे।"
+  },
+  "toast": {
+    "added": "{{name}} को {{no}} के रूप में जोड़ा गया", "updated": "सदस्य अपडेट हुआ", "deleted": "सदस्य हटाया गया",
+    "renewed": "{{name}} का प्लान रिन्यू हुआ", "planSold": "{{name}} के लिए प्लान जोड़ा गया",
+    "paid": "{{name}} से {{amount}} वसूले गए",
+    "frozen": "{{name}} का प्लान फ्रीज़ हुआ", "unfrozen": "{{name}} का प्लान फिर शुरू हुआ", "cancelled": "प्लान रद्द हुआ",
+    "planAdded": "प्लान “{{name}}” जोड़ा गया", "planUpdated": "प्लान अपडेट हुआ",
+    "planRetired": "“{{name}}” बंद किया गया — इस पर चल रहे सदस्यों का प्लान जारी रहेगा", "planDeleted": "“{{name}}” हटाया गया",
+    "planRestored": "“{{name}}” फिर बिक्री पर है",
+    "failed": "कुछ गड़बड़ हो गई। कृपया फिर कोशिश करें।"
+  }
+}

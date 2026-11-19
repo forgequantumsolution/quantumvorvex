@@ -1,0 +1,155 @@
+{
+  "title": "Gym",
+  "subtitle": "{{active}} active members · {{plans}} plans",
+  "subtitleLoading": "Members, plans and renewals",
+  "searchPlaceholder": "Search name, phone, member no. or plan",
+  "addMember": "Add member",
+  "room": "Room {{room}}",
+  "views": { "dashboard": "Dashboard", "members": "Members", "plans": "Plans" },
+  "kpi": {
+    "active": "Active members",
+    "activeHint": "of {{total}} members",
+    "expiring": "Ending in 7 days",
+    "expiringHint": "{{count}} lapsed in the last 30 days",
+    "revenue": "Collected this month",
+    "revenueHint": "Last month {{amount}}",
+    "dues": "Pending dues",
+    "duesHint_one": "{{count}} member",
+    "duesHint_other": "{{count}} members",
+    "new": "New this month",
+    "newHint": "Members who joined",
+    "renewal": "Renewal rate",
+    "renewalHint_one": "{{count}} plan ended · last 90 days",
+    "renewalHint_other": "{{count}} plans ended · last 90 days",
+    "renewalNone": "No plans ended yet"
+  },
+  "tabs": { "all": "All", "active": "Active", "expiring": "Ending soon", "expired": "Expired", "frozen": "Frozen", "dues": "Dues", "no_plan": "No plan" },
+  "status": { "active": "Active", "expiring": "Ending soon", "upcoming": "Upcoming", "frozen": "Frozen", "expired": "Expired", "no_plan": "No plan", "cancelled": "Cancelled" },
+  "table": { "member": "Member", "plan": "Plan", "status": "Status", "due": "Due", "joined": "Joined", "actions": "Actions", "noPlan": "No plan yet" },
+  "left": {
+    "inDays_one": "{{count}} day left",
+    "inDays_other": "{{count}} days left",
+    "today": "Ends today",
+    "expiredAgo_one": "Expired {{count}} day ago",
+    "expiredAgo_other": "Expired {{count}} days ago",
+    "frozen": "Paused",
+    "starts": "Starts {{date}}"
+  },
+  "duration": {
+    "days_one": "{{count}} day", "days_other": "{{count}} days",
+    "weeks_one": "{{count}} week", "weeks_other": "{{count}} weeks",
+    "months_one": "1 month", "months_other": "{{count}} months",
+    "years_one": "1 year", "years_other": "{{count}} years"
+  },
+  "genders": { "male": "Male", "female": "Female", "other": "Other" },
+  "goals": { "weight_loss": "Weight loss", "muscle_gain": "Muscle gain", "fitness": "General fitness", "strength": "Strength", "other": "Other" },
+  "sources": { "walk_in": "Walk-in", "referral": "Referral", "online": "Online", "corporate": "Corporate", "guest": "Hotel / PG guest" },
+  "payModes": { "cash": "Cash", "upi": "UPI", "card": "Card", "bank": "Bank transfer" },
+  "idTypes": { "aadhaar": "Aadhaar", "pan": "PAN", "driving_licence": "Driving licence", "passport": "Passport", "voter_id": "Voter ID", "other": "Other" },
+  "actions": {
+    "renew": "Renew", "sellPlan": "Add plan", "freeze": "Freeze", "unfreeze": "Unfreeze", "edit": "Edit",
+    "delete": "Delete", "call": "Call", "cancelPlan": "Cancel plan", "collect": "Collect {{amount}}"
+  },
+  "form": {
+    "newTitle": "New member", "newSubtitle": "Add their details and, if they're paying now, their plan",
+    "editTitle": "Edit member", "save": "Save changes", "create": "Add member",
+    "memberType": "Who is joining?",
+    "kind": {
+      "outside": "Outside member", "outsideHint": "Someone from outside who buys a plan",
+      "guest": "Hotel / PG guest", "guestHint": "A guest or tenant staying with you"
+    },
+    "guest": "Guest", "chooseGuest": "Choose an in-house guest", "noGuests": "No in-house guests to add",
+    "personal": "Personal details",
+    "name": "Full name", "phone": "Mobile number", "email": "Email", "gender": "Gender", "dob": "Date of birth",
+    "goal": "Fitness goal", "source": "How they found us", "joinedAt": "Joined on", "address": "Address",
+    "idAndSafety": "ID & safety",
+    "idType": "ID proof", "idNumber": "ID number", "aadhaar": "Aadhaar number",
+    "emergency": "Emergency contact", "emergencyName": "Emergency contact name", "emergencyPhone": "Emergency contact number",
+    "healthNotes": "Health notes", "healthPlaceholder": "Injuries, conditions or medicines the trainer should know about",
+    "firstPlan": "Membership plan", "sellNow": "Sell a plan now",
+    "notes": "Notes"
+  },
+  "sale": {
+    "plan": "Plan", "startDate": "Start date", "discount": "Discount (₹)", "amountPaid": "Paid now (₹)", "payMode": "Payment mode",
+    "validTill": "Valid till", "payable": "Payable", "paidNow": "Paid now", "due": "Due",
+    "noPlans": "No plans yet. Add a plan in Plans first.",
+    "renewTitle": "Renew · {{name}}", "newTitle": "Add a plan · {{name}}",
+    "currentPlan": "Current: {{plan}} till {{date}}"
+  },
+  "pay": {
+    "title": "Collect payment", "due": "Due on this plan", "amount": "Amount (₹)", "collect": "Collect",
+    "collectFrom": "Collect payment from {{name}}"
+  },
+  "plans": {
+    "active": "Plans on sale", "retired": "Retired plans",
+    "add": "Add plan", "newTitle": "New plan", "editTitle": "Edit plan",
+    "name": "Plan name", "namePlaceholder": "e.g. Monthly, Quarterly, Couple yearly",
+    "duration": "Length", "days": "Days",
+    "price": "Price (₹)", "perMonth": "≈ {{amount}} / month",
+    "description": "What's included", "descriptionPlaceholder": "e.g. Gym floor + cardio, 2 PT sessions, locker",
+    "activeLabel": "On sale (new members can buy it)",
+    "editNote": "Changes apply to new sales only. Existing memberships keep the price and length they were sold at.",
+    "onPlan": "on this plan now",
+    "retire": "Retire plan", "restore": "Put back on sale",
+    "retireConfirm": "Stop selling “{{name}}”? Members already on it keep their plan.",
+    "emptyTitle": "No plans yet", "emptyMessage": "Create the plans you sell — monthly, quarterly, yearly — with their prices."
+  },
+  "detail": {
+    "title": "Member", "loadError": "Could not load this member.", "due": "Due",
+    "currentPlan": "Current plan", "frozenSince": "Frozen since {{date}}. Unfreezing adds the paused days back.",
+    "history": "Plans & payments", "noPlans": "No plans yet.", "renewal": "Renewal",
+    "frozenDays_one": "{{count}} day frozen", "frozenDays_other": "{{count}} days frozen",
+    "off": "{{amount}} off", "dueAmount": "{{amount}} due", "paidFull": "Paid in full",
+    "cancelConfirm": "Cancel the {{plan}} plan? It stops counting towards their membership. Payments already made stay on record."
+  },
+  "dash": {
+    "revenue": "Collections", "revenueHint": "{{amount}} this month · {{last}} last month", "revenueSeries": "Collected",
+    "revenueAria": "Money collected per month for the last 6 months; this month {{amount}}",
+    "joins": "New sign-ups vs renewals", "joinsHint": "Plans sold each month", "signups": "New sign-ups", "renewals": "Renewals",
+    "joinsAria": "Plans sold per month for the last 6 months; this month {{signups}} new and {{renewals}} renewals",
+    "noData": "Nothing sold in the last 6 months yet",
+    "planMix": "Plan mix", "planMixHint": "Which plans your {{count}} active members are on", "noActive": "No active members yet",
+    "who": "Who trains here", "whoHint": "Active members",
+    "source": { "guest": "Hotel / PG guests", "outside": "Outside members" },
+    "gender": "Gender", "goals": "Goals", "notGiven": "Not given",
+    "collections": "This month by payment mode", "collectionsHint": "Money collected", "noPayments": "No payments yet this month",
+    "noPaymentsTitle": "No payments yet",
+    "perMember": "Collected per active member", "renewalRate": "Renewal rate (90 days)",
+    "followUp": "Renew next", "followUpHint": "Plans ending this week and lapsed in the last 7 days",
+    "allGood": "All caught up", "noExpiring": "No plans end this week.",
+    "dues": "Dues to collect", "duesHint_one": "{{amount}} from {{count}} member", "duesHint_other": "{{amount}} from {{count}} members",
+    "noDuesTitle": "No dues", "noDues": "Every member has paid in full.",
+    "recent": "Latest payments"
+  },
+  "setup": {
+    "title": "Set up your gym", "subtitle": "Two steps and your dashboard comes alive.",
+    "step1": "Create your plans", "step1Hint": "Monthly, quarterly, yearly — with their prices.",
+    "step2": "Add your members", "step2Hint": "Outside members or your hotel / PG guests, with their plan."
+  },
+  "empty": {
+    "title": "No members here", "message": "Add your first member to start tracking plans and renewals.",
+    "noPlans": "Create a plan first, then add members.",
+    "searchTitle": "No matches", "search": "No member matches your search."
+  },
+  "errors": {
+    "name": "Enter the member's name", "phone": "Enter a valid mobile number", "email": "Enter a valid email",
+    "aadhaar": "Aadhaar must be 12 digits", "guest": "Choose the guest", "plan": "Choose a plan",
+    "overpaid": "Can't be more than {{amount}}", "amount": "Enter an amount",
+    "planName": "Enter a plan name", "duration": "At least 1 day", "price": "Enter a price",
+    "fix": "Please fix the highlighted fields."
+  },
+  "delete": {
+    "title": "Delete member?",
+    "message": "Delete <b>{{name}}</b> ({{no}})? They disappear from lists; payments stay in your revenue history."
+  },
+  "toast": {
+    "added": "{{name}} added as {{no}}", "updated": "Member updated", "deleted": "Member deleted",
+    "renewed": "{{name}}'s plan renewed", "planSold": "Plan added for {{name}}",
+    "paid": "{{amount}} collected from {{name}}",
+    "frozen": "{{name}}'s plan frozen", "unfrozen": "{{name}}'s plan resumed", "cancelled": "Plan cancelled",
+    "planAdded": "Plan “{{name}}” added", "planUpdated": "Plan updated",
+    "planRetired": "“{{name}}” retired — members on it keep their plan", "planDeleted": "“{{name}}” deleted",
+    "planRestored": "“{{name}}” is on sale again",
+    "failed": "Something went wrong. Please try again."
+  }
+}

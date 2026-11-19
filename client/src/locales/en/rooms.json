@@ -41,7 +41,10 @@
     "typeRoom": "{{type}} room",
     "currentOccupant": "Current Occupant",
     "setStatus": "Set status",
-    "deleteRoom": "Delete room"
+    "deleteRoom": "Delete room",
+    "freeTitle": "Room is free",
+    "freeHint": "Book it now: the booking form opens with this room selected.",
+    "newBooking": "New booking"
   },
   "beds": {
     "title": "Beds",

@@ -41,7 +41,10 @@
     "typeRoom": "{{type}} कमरा",
     "currentOccupant": "वर्तमान निवासी",
     "setStatus": "स्थिति बदलें",
-    "deleteRoom": "कमरा हटाएँ"
+    "deleteRoom": "कमरा हटाएँ",
+    "freeTitle": "कमरा खाली है",
+    "freeHint": "अभी बुक करें: यह कमरा चुनकर बुकिंग फ़ॉर्म खुलेगा।",
+    "newBooking": "नई बुकिंग"
   },
   "beds": {
     "title": "बेड",

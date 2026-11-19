@@ -254,6 +254,25 @@ export const ticketsApi = {
   remove:     (id)       => api.delete(`/tickets/${id}`),
 }
 
+export const gymApi = {
+  dashboard:    ()          => api.get('/gym/dashboard'),       // { kpis, trend, planMix, sources, genders, goals, payModes, expiring, topDues, recentPayments }
+  members:      (params)    => api.get('/gym/members', { params }), // { tab, search, page, pageSize } → { members, total, counts }
+  member:       (id)        => api.get(`/gym/members/${id}`),   // { member (with memberships + payments), canDelete }
+  createMember: (data)      => api.post('/gym/members', data),  // optional { membership: { planId, startDate, discount, amountPaid, payMode } }
+  updateMember: (id, data)  => api.put(`/gym/members/${id}`, data),
+  removeMember: (id)        => api.delete(`/gym/members/${id}`),
+  sellPlan:     (id, data)  => api.post(`/gym/members/${id}/memberships`, data), // new plan / renewal
+  freeze:       (msId)      => api.post(`/gym/memberships/${msId}/freeze`),
+  unfreeze:     (msId)      => api.post(`/gym/memberships/${msId}/unfreeze`),
+  cancel:       (msId)      => api.post(`/gym/memberships/${msId}/cancel`),
+  pay:          (msId, data) => api.post(`/gym/memberships/${msId}/payments`, data), // { amount, mode }
+  plans:        ()          => api.get('/gym/plans'),
+  createPlan:   (data)      => api.post('/gym/plans', data),
+  updatePlan:   (id, data)  => api.put(`/gym/plans/${id}`, data),
+  removePlan:   (id)        => api.delete(`/gym/plans/${id}`),     // retired instead when it was ever sold
+  guests:       ()          => api.get('/gym/guests'),            // in-house hotel / PG guests
+}
+
 export const visitorsApi = {
   list:        (params)   => api.get('/visitors', { params }),   // { tab: today|inside|pending|expected|all, search, from, to, page, limit } → { visitors, total, counts }
   get:         (id)       => api.get(`/visitors/${id}`),         // { visitor, visits, blocked, canDelete }

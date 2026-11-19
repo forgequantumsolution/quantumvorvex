@@ -41,7 +41,10 @@
     "typeRoom": "{{type}} खोली",
     "currentOccupant": "सध्याचे रहिवासी",
     "setStatus": "स्थिती बदला",
-    "deleteRoom": "खोली हटवा"
+    "deleteRoom": "खोली हटवा",
+    "freeTitle": "खोली रिकामी आहे",
+    "freeHint": "आता बुक करा: ही खोली निवडून बुकिंग फॉर्म उघडेल.",
+    "newBooking": "नवीन बुकिंग"
   },
   "beds": {
     "title": "बेड",

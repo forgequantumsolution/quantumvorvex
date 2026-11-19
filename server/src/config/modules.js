@@ -20,6 +20,7 @@ export const MODULES = [
   'billing',
   'expenses', // cash book: money out / other money in
   'tickets', // task tickets: raise, assign, track, verify
+  'gym', // gym: members, membership plans, renewals, dues, analytics
   'visitors', // visitor register: QR self-registration + desk entry
   'reports',
   'settings',

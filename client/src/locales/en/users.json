@@ -25,7 +25,8 @@
     "billing": "Billing",
     "reports": "Reports",
     "settings": "Settings",
-    "users": "Users & Roles"
+    "users": "Users & Roles",
+    "gym": "Gym"
   },
   "levels": {
     "NONE": "None",

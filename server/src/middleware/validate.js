@@ -82,6 +82,42 @@ const visitorFields = z.object({
   notes:      optText(500),
 })
 
+// ── Gym ──
+export const GYM_GENDERS   = ['male', 'female', 'other']
+export const GYM_GOALS     = ['weight_loss', 'muscle_gain', 'fitness', 'strength', 'other']
+export const GYM_SOURCES   = ['walk_in', 'guest', 'referral', 'online', 'corporate']
+export const GYM_PAY_MODES = ['cash', 'upi', 'card', 'bank']
+const optEnum = (values) => z.enum(values).optional().nullable().or(z.literal('')).transform((v) => v || null)
+const gymDate = z.string().trim().refine((v) => !v || !Number.isNaN(Date.parse(v)), 'Enter a valid date')
+  .optional().nullable().transform((v) => v || null)
+const gymMemberFields = z.object({
+  name:           z.string().trim().min(2, 'Enter the member\'s name').max(80),
+  phone:          z.string().trim().transform((v) => v.replace(/[\s-]/g, ''))
+                    .refine((v) => /^\+?\d{10,15}$/.test(v), 'Enter a valid mobile number'),
+  email:          z.string().trim().max(120).email('Enter a valid email').optional().nullable().or(z.literal('')).transform((v) => v || null),
+  gender:         optEnum(GYM_GENDERS),
+  dob:            gymDate,
+  address:        optText(300),
+  idType:         optText(30),
+  idNumber:       optText(30),
+  emergencyName:  optText(80),
+  emergencyPhone: optText(20),
+  healthNotes:    optText(500),
+  goal:           optEnum(GYM_GOALS),
+  source:         z.enum(GYM_SOURCES).default('walk_in'),
+  guestId:        optText(40),
+  notes:          optText(500),
+  joinedAt:       gymDate,
+})
+const gymMembershipFields = z.object({
+  planId:     z.string().trim().min(1, 'Choose a plan'),
+  startDate:  gymDate,
+  discount:   z.coerce.number().min(0).max(1000000).default(0),
+  amountPaid: z.coerce.number().min(0).max(1000000).default(0),
+  payMode:    z.enum(GYM_PAY_MODES).default('cash'),
+  notes:      optText(300),
+})
+
 // ── Tickets ──
 export const TICKET_CATEGORIES = ['general', 'front_desk', 'housekeeping', 'maintenance', 'guest_request', 'purchase', 'accounts', 'it', 'other']
 export const TICKET_PRIORITIES = ['low', 'medium', 'high', 'urgent']
@@ -531,6 +567,22 @@ export const schemas = {
   rejectVisitor: z.object({ reason: optText(200) }),
   blockVisitor:  z.object({ reason: optText(200) }),
   visitorSettings: z.object({ autoApprove: z.boolean() }),
+
+  // Gym
+  createGymMember:     gymMemberFields.extend({ membership: gymMembershipFields.optional().nullable() }),
+  updateGymMember:     gymMemberFields,   // the form always sends every field
+  createGymMembership: gymMembershipFields,
+  gymPayment: z.object({
+    amount: z.coerce.number().positive('Enter an amount').max(1000000),
+    mode:   z.enum(GYM_PAY_MODES).default('cash'),
+  }),
+  gymPlan: z.object({
+    name:         z.string().trim().min(2, 'Enter a plan name').max(60),
+    durationDays: z.coerce.number().int().min(1, 'At least 1 day').max(1095),
+    price:        z.coerce.number().min(0).max(1000000),
+    description:  optText(300),
+    active:       z.boolean().optional(),
+  }),
 
   // Tickets
   createTicket: ticketFields.extend({

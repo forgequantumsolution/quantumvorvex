@@ -1,7 +1,7 @@
 import {
   LuLayoutDashboard, LuCalendarCheck, LuCalendarX, LuWrench,
   LuUsers, LuBedDouble, LuFileText, LuUtensils, LuSparkles,
-  LuCreditCard, LuWallet, LuChartColumn, LuUserCog, LuSettings, LuBuilding2, LuIdCard, LuTicket,
+  LuCreditCard, LuWallet, LuChartColumn, LuUserCog, LuSettings, LuBuilding2, LuIdCard, LuTicket, LuDumbbell,
 } from 'react-icons/lu'
 
 // Single source of truth for the app's navigation structure — consumed by the
@@ -35,6 +35,7 @@ export const NAV_SECTIONS = [
       { id: 'documents',     label: 'Documents',     Icon: LuFileText },
       { id: 'food',          label: 'Food',          Icon: LuUtensils },
       { id: 'housekeeping',  label: 'Housekeeping',  Icon: LuSparkles },
+      { id: 'gym',           label: 'Gym',           Icon: LuDumbbell },
     ],
   },
   {
