@@ -29,8 +29,8 @@ model Property {
   // Visitor management: the secret in the property's visitor QR (/visit?t=…).
   // Regenerating it retires every printed QR. Auto-approve skips the desk
   // approval step for QR self-registrations (they are checked in at once).
-  visitorToken       String?  @unique
-  visitorAutoApprove Boolean  @default(false)
+  visitorToken       String? @unique
+  visitorAutoApprove Boolean @default(false)
 
   settings             Hotel?
   access               PropertyAccess[]
@@ -56,6 +56,10 @@ model Property {
   visitors             Visitor[]
   visitorBlocks        VisitorBlock[]
   tickets              Ticket[]
+  gymPlans             GymPlan[]
+  gymMembers           GymMember[]
+  gymMemberships       GymMembership[]
+  gymPayments          GymPayment[]
 }
 
 // A non-owner user's membership of one property, with the role they hold there.
@@ -245,6 +249,7 @@ model Guest {
   reminders       Reminder[]
   bookings        Booking[]
   communications  GuestCommunication[]
+  gymMembers      GymMember[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
@@ -328,22 +333,22 @@ model Booking {
   invoiceNo String?
 
   // ── Guest details (inline) + optional link to a Guest record ──
-  guestName    String
-  guestPhone   String?
-  guestEmail   String?
-  guestAddress String?
-  nationality  String?
-  idType       String?
-  idNumber     String?
+  guestName       String
+  guestPhone      String?
+  guestEmail      String?
+  guestAddress    String?
+  nationality     String?
+  idType          String?
+  idNumber        String?
   // Parent/guardian + native (permanent) address — asked of PG/hostel tenants.
   guardianName    String?
   guardianPhone   String?
   guardianAadhaar String?
   nativeAddress   String?
-  adults       Int     @default(1)
-  children     Int     @default(0)
-  guestId      String?
-  guest        Guest?  @relation(fields: [guestId], references: [id])
+  adults          Int     @default(1)
+  children        Int     @default(0)
+  guestId         String?
+  guest           Guest?  @relation(fields: [guestId], references: [id])
 
   // ── Room + stay ──
   roomId   String
@@ -813,35 +818,35 @@ model GuestCommunication {
 // unless the property auto-approves) or the desk enters them (source "desk").
 // Lifecycle: expected → pending → checked_in → checked_out, or rejected.
 model Visitor {
-  id            String    @id @default(cuid())
+  id            String            @id @default(cuid())
   propertyId    String
-  property      Property  @relation(fields: [propertyId], references: [id])
+  property      Property          @relation(fields: [propertyId], references: [id])
   passNo        String // V261112-03: day + sequence, shown on the badge
-  passToken     String    @unique // secret for the visitor's own pass page
+  passToken     String            @unique // secret for the visitor's own pass page
   name          String
   phone         String
   email         String?
   company       String?
-  purpose       String    @default("other") // guest_visit | meeting | delivery | vendor | maintenance | interview | other
+  purpose       String            @default("other") // guest_visit | meeting | delivery | vendor | maintenance | interview | other
   hostName      String? // whom they are visiting
   roomNumber    String?
   idType        String? // aadhaar | pan | driving_licence | passport | voter_id | other
   idNumber      String?
   vehicleNo     String?
-  companions    Int       @default(0) // people accompanying the visitor
+  companions    Int               @default(0) // people accompanying the visitor
   notes         String?
-  source        String    @default("desk") // qr | desk
-  status        String    @default("pending") // expected | pending | checked_in | checked_out | rejected
+  source        String            @default("desk") // qr | desk
+  status        String            @default("pending") // expected | pending | checked_in | checked_out | rejected
   expectedAt    DateTime?
   checkInAt     DateTime?
   checkOutAt    DateTime?
   rejectReason  String?
   consentAt     DateTime? // when the visitor accepted the privacy notice
-  flagged       Boolean   @default(false) // phone was on the blocklist at registration
+  flagged       Boolean           @default(false) // phone was on the blocklist at registration
   createdById   String?
   checkedInById String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
   deletedAt     DateTime?
   documents     VisitorDocument[]
 
@@ -944,4 +949,106 @@ model TicketActivity {
   createdAt DateTime @default(now())
 
   @@index([ticketId, createdAt])
+}
+
+// ── Gym ──────────────────────────────────────────────────────────────────────
+// Members buy plans (memberships); each membership collects one or more
+// payments. A member is either an outside customer or a linked hotel/PG guest.
+// Member status (active / expiring / expired / frozen) is derived from their
+// latest membership, never stored.
+
+model GymPlan {
+  id           String          @id @default(cuid())
+  propertyId   String
+  property     Property        @relation(fields: [propertyId], references: [id])
+  name         String
+  durationDays Int // 30 = monthly, 90 = quarterly, 365 = yearly …
+  price        Float
+  description  String?
+  active       Boolean         @default(true) // retired plans stay for history
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  memberships  GymMembership[]
+
+  @@index([propertyId])
+}
+
+model GymMember {
+  id             String          @id @default(cuid())
+  propertyId     String
+  property       Property        @relation(fields: [propertyId], references: [id])
+  memberNo       String // GM-0001, per property
+  name           String
+  phone          String
+  email          String?
+  gender         String? // male | female | other
+  dob            DateTime?
+  address        String?
+  idType         String?
+  idNumber       String?
+  emergencyName  String?
+  emergencyPhone String?
+  healthNotes    String? // injuries, conditions the trainer should know
+  goal           String? // weight_loss | muscle_gain | fitness | strength | other
+  source         String          @default("walk_in") // walk_in | guest | referral | online | corporate
+  guestId        String? // set when the member is a hotel / PG guest
+  guest          Guest?          @relation(fields: [guestId], references: [id])
+  notes          String?
+  joinedAt       DateTime        @default(now())
+  createdById    String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  deletedAt      DateTime?
+  memberships    GymMembership[]
+  payments       GymPayment[]
+
+  @@unique([propertyId, memberNo])
+  @@index([propertyId, phone])
+  @@index([propertyId, joinedAt])
+}
+
+model GymMembership {
+  id           String       @id @default(cuid())
+  propertyId   String
+  property     Property     @relation(fields: [propertyId], references: [id])
+  memberId     String
+  member       GymMember    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  planId       String?
+  plan         GymPlan?     @relation(fields: [planId], references: [id], onDelete: SetNull)
+  planName     String // snapshot: the plan may be renamed or retired later
+  durationDays Int
+  startDate    DateTime
+  endDate      DateTime // last day of access (inclusive); moved out by freezes
+  price        Float
+  discount     Float        @default(0)
+  amountPaid   Float        @default(0)
+  status       String       @default("active") // active | frozen | cancelled
+  frozenAt     DateTime?
+  frozenDays   Int          @default(0)
+  isRenewal    Boolean      @default(false)
+  notes        String?
+  createdById  String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  payments     GymPayment[]
+
+  @@index([propertyId, endDate])
+  @@index([memberId])
+}
+
+model GymPayment {
+  id           String        @id @default(cuid())
+  propertyId   String
+  property     Property      @relation(fields: [propertyId], references: [id])
+  membershipId String
+  membership   GymMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  memberId     String
+  member       GymMember     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  amount       Float
+  mode         String        @default("cash") // cash | upi | card | bank
+  paidAt       DateTime      @default(now())
+  createdById  String?
+
+  @@index([propertyId, paidAt])
+  @@index([membershipId])
 }

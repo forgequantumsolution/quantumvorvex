@@ -37,6 +37,7 @@ import publicRoutes from './routes/public.js'
 import paymentClaimsRoutes from './routes/paymentClaims.js'
 import visitorsRoutes from './routes/visitors.js'
 import ticketsRoutes from './routes/tickets.js'
+import gymRoutes from './routes/gym.js'
 
 import logger, { requestLogger } from './utils/logger.js'
 import prisma from './utils/prisma.js'
@@ -165,6 +166,7 @@ app.use('/api/v1/expenses',      apiLimiter, apiSlowDown, expensesRoutes)
 app.use('/api/v1/payment-claims', apiLimiter, paymentClaimsRoutes)
 app.use('/api/v1/visitors',      apiLimiter, visitorsRoutes)
 app.use('/api/v1/tickets',       apiLimiter, ticketsRoutes)
+app.use('/api/v1/gym',           apiLimiter, gymRoutes)
 app.use('/api/v1',               apiLimiter, foodPlansRoutes)
 app.use('/api/v1/housekeeping',  apiLimiter, housekeepingRoutes)
 app.use('/api/v1/roles',         apiLimiter, rolesRoutes)

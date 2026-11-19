@@ -18,6 +18,7 @@ export const PANEL_MODULE = {
   maintenance:   'maintenance',
   visitors:      'visitors',
   tickets:       'tickets',
+  gym:           'gym',
   guests:        'guests',
   rooms:         'rooms',
   documents:     'documents',
