@@ -55,6 +55,7 @@ model Property {
   paymentClaims        PaymentClaim[]
   visitors             Visitor[]
   visitorBlocks        VisitorBlock[]
+  tickets              Ticket[]
 }
 
 // A non-owner user's membership of one property, with the role they hold there.
@@ -210,12 +211,12 @@ model Guest {
   address         String?
   emergencyName   String?
   emergencyPhone  String?
-  stayType        String               @default("daily")
   // Parent/guardian + native (permanent) address — asked of PG/hostel tenants.
   guardianName    String?
   guardianPhone   String?
   guardianAadhaar String?
   nativeAddress   String?
+  stayType        String               @default("daily")
   roomId          String
   room            Room                 @relation(fields: [roomId], references: [id])
   checkInDate     DateTime
@@ -334,12 +335,12 @@ model Booking {
   nationality  String?
   idType       String?
   idNumber     String?
-  adults       Int     @default(1)
   // Parent/guardian + native (permanent) address — asked of PG/hostel tenants.
   guardianName    String?
   guardianPhone   String?
   guardianAadhaar String?
   nativeAddress   String?
+  adults       Int     @default(1)
   children     Int     @default(0)
   guestId      String?
   guest        Guest?  @relation(fields: [guestId], references: [id])
@@ -861,4 +862,70 @@ model VisitorBlock {
   createdAt   DateTime @default(now())
 
   @@unique([propertyId, phone])
+}
+
+// ─── TICKETS (TASK MANAGEMENT) ───────────────────────────────────────────────
+// Internal work items: someone raises a ticket, assigns it to a team member,
+// who works it (open → in_progress ⇄ on_hold → resolved); the raiser or an
+// admin then verifies it (→ closed) or sends it back (→ reopened / in_progress).
+// cancelled ends it without the work being done. Every change is logged in
+// TicketActivity; the checklist breaks the work into steps.
+model Ticket {
+  id          String    @id @default(cuid())
+  propertyId  String
+  property    Property  @relation(fields: [propertyId], references: [id])
+  ticketNo    String // TK-0001, per property
+  title       String
+  description String?
+  category    String    @default("general") // general | front_desk | housekeeping | maintenance | guest_request | purchase | accounts | it | other
+  priority    String    @default("medium") // low | medium | high | urgent
+  status      String    @default("open") // open | in_progress | on_hold | resolved | closed | cancelled
+  assigneeId  String?
+  createdById String
+  dueAt       DateTime?
+  roomNumber  String?
+  startedAt   DateTime?
+  resolvedAt  DateTime?
+  closedAt    DateTime?
+  reopenCount Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  checklist TicketChecklistItem[]
+  activity  TicketActivity[]
+
+  @@unique([propertyId, ticketNo])
+  @@index([propertyId, status])
+  @@index([propertyId, assigneeId])
+  @@index([propertyId, createdAt])
+}
+
+model TicketChecklistItem {
+  id        String    @id @default(cuid())
+  ticketId  String
+  ticket    Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  text      String
+  done      Boolean   @default(false)
+  doneById  String?
+  doneAt    DateTime?
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+
+  @@index([ticketId])
+}
+
+// type: created | comment | status | assigned | priority | due | edited | checklist
+model TicketActivity {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId    String?
+  type      String
+  message   String?
+  fromValue String?
+  toValue   String?
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
 }

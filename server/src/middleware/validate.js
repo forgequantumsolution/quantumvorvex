@@ -82,6 +82,20 @@ const visitorFields = z.object({
   notes:      optText(500),
 })
 
+// ── Tickets ──
+export const TICKET_CATEGORIES = ['general', 'front_desk', 'housekeeping', 'maintenance', 'guest_request', 'purchase', 'accounts', 'it', 'other']
+export const TICKET_PRIORITIES = ['low', 'medium', 'high', 'urgent']
+const ticketDue = z.string().trim().refine((v) => !Number.isNaN(Date.parse(v)), 'Enter a valid due date').optional().nullable()
+  .or(z.literal('')).transform((v) => (v ? v : null))
+const ticketFields = z.object({
+  title:       z.string().trim().min(3, 'Give the ticket a short title').max(140),
+  description: optText(4000),
+  category:    z.enum(TICKET_CATEGORIES).default('general'),
+  priority:    z.enum(TICKET_PRIORITIES).default('medium'),
+  dueAt:       ticketDue,
+  roomNumber:  optText(10),
+})
+
 export const schemas = {
   // Auth
   login: z.object({
@@ -249,6 +263,10 @@ export const schemas = {
     guestEmail:   z.preprocess(v => (v === '' ? undefined : v),
                     z.string().email('Invalid email').max(120).optional().nullable()),
     guestAddress: z.string().max(300).optional().nullable(),
+    guardianName:    z.string().max(200).trim().optional().nullable(),
+    guardianPhone:   z.string().max(20).trim().optional().nullable(),
+    guardianAadhaar: z.string().max(20).trim().optional().nullable(),
+    nativeAddress:   z.string().max(300).optional().nullable(),
     nationality:  z.string().max(50).optional().nullable(),
     idType:       z.string().max(200).optional().nullable(),  // may list multiple, e.g. "Aadhaar, PAN"
     idNumber:     z.string().max(50).optional().nullable(),
@@ -263,10 +281,6 @@ export const schemas = {
     // Pricing inputs (server recomputes totals)
     roomRate:     z.coerce.number().min(0).max(1000000).optional(),
     discount:     z.coerce.number().min(0).max(1000000).default(0),
-    guardianName:    z.string().max(200).trim().optional().nullable(),
-    guardianPhone:   z.string().max(20).trim().optional().nullable(),
-    guardianAadhaar: z.string().max(20).trim().optional().nullable(),
-    nativeAddress:   z.string().max(300).optional().nullable(),
     taxRate:      z.coerce.number().min(0).max(30).optional(),
     extraCharges: z.coerce.number().min(0).max(1000000).default(0),
     advance:      z.coerce.number().min(0).max(1000000).default(0),
@@ -301,6 +315,10 @@ export const schemas = {
       guestEmail:   z.preprocess(v => (v === '' ? undefined : v),
                       z.string().email('Invalid email').max(120).optional().nullable()),
       guestAddress: z.string().max(300).optional().nullable(),
+      guardianName:    z.string().max(200).trim().optional().nullable(),
+      guardianPhone:   z.string().max(20).trim().optional().nullable(),
+      guardianAadhaar: z.string().max(20).trim().optional().nullable(),
+      nativeAddress:   z.string().max(300).optional().nullable(),
       idType:       z.string().max(200).optional().nullable(),
       idNumber:     z.string().max(50).optional().nullable(),
       roomRate:     z.coerce.number().min(0).max(1000000).optional(),
@@ -315,13 +333,13 @@ export const schemas = {
   updateBooking: z.object({
     guestName:       z.string().min(2).max(200).trim().optional(),  // may list several occupants
     guestPhone:      z.string().max(200).optional().nullable(),  // may list multiple, e.g. "9876543210, 9123456780"
-      guardianName:    z.string().max(200).trim().optional().nullable(),
-      guardianPhone:   z.string().max(20).trim().optional().nullable(),
-      guardianAadhaar: z.string().max(20).trim().optional().nullable(),
-      nativeAddress:   z.string().max(300).optional().nullable(),
     guestEmail:      z.preprocess(v => (v === '' ? undefined : v),
                        z.string().email('Invalid email').max(120).optional().nullable()),
     guestAddress:    z.string().max(300).optional().nullable(),
+    guardianName:    z.string().max(200).trim().optional().nullable(),
+    guardianPhone:   z.string().max(20).trim().optional().nullable(),
+    guardianAadhaar: z.string().max(20).trim().optional().nullable(),
+    nativeAddress:   z.string().max(300).optional().nullable(),
     nationality:     z.string().max(50).optional().nullable(),
     idType:          z.string().max(200).optional().nullable(),
     idNumber:        z.string().max(50).optional().nullable(),
@@ -336,10 +354,6 @@ export const schemas = {
     extraCharges:    z.coerce.number().min(0).max(1000000).optional(),
     advance:         z.coerce.number().min(0).max(1000000).optional(),
     notes:           z.string().max(1000).optional().nullable(),
-    guardianName:    z.string().max(200).trim().optional().nullable(),
-    guardianPhone:   z.string().max(20).trim().optional().nullable(),
-    guardianAadhaar: z.string().max(20).trim().optional().nullable(),
-    nativeAddress:   z.string().max(300).optional().nullable(),
     specialRequests: z.string().max(1000).optional().nullable(),
     source:          z.enum(['walk_in', 'phone', 'website', 'ota', 'referral', 'corporate']).optional(),
     bedNo:           z.coerce.number().int().min(1).max(50).optional().nullable(),
@@ -517,4 +531,27 @@ export const schemas = {
   rejectVisitor: z.object({ reason: optText(200) }),
   blockVisitor:  z.object({ reason: optText(200) }),
   visitorSettings: z.object({ autoApprove: z.boolean() }),
+
+  // Tickets
+  createTicket: ticketFields.extend({
+    assigneeId: z.string().trim().max(40).optional().nullable().or(z.literal('')).transform((v) => v || null),
+    checklist:  z.array(z.string().trim().min(1).max(200)).max(30).optional(),
+  }),
+  // Partial edit: only the keys sent come through (see updateVisitor).
+  updateTicket: z.record(z.string(), z.unknown()).transform((raw, ctx) => {
+    const r = ticketFields.partial().safeParse(raw)
+    if (!r.success) {
+      for (const i of r.error.issues) ctx.addIssue({ code: 'custom', message: i.message, path: i.path })
+      return z.NEVER
+    }
+    return Object.fromEntries(Object.entries(r.data).filter(([k]) => k in raw))
+  }),
+  assignTicket:  z.object({ assigneeId: z.string().trim().max(40).nullable() }),
+  ticketStatus:  z.object({
+    action: z.enum(['start', 'hold', 'resume', 'resolve', 'verify', 'reopen', 'cancel']),
+    note:   optText(1000),
+  }),
+  ticketComment: z.object({ message: z.string().trim().min(1, 'Write a comment').max(2000) }),
+  ticketChecklistAdd:    z.object({ text: z.string().trim().min(1, 'Write the step').max(200) }),
+  ticketChecklistUpdate: z.object({ done: z.boolean().optional(), text: z.string().trim().min(1).max(200).optional() }),
 }

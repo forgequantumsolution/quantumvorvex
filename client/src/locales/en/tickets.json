@@ -1,0 +1,191 @@
+{
+  "title": "Tickets",
+  "subtitle": "Raise, assign and track work",
+  "searchPlaceholder": "Search title, ticket no, room…",
+  "newTicket": "New ticket",
+  "exportCsv": "Export CSV",
+  "views": {
+    "list": "List",
+    "board": "Board"
+  },
+  "kpi": {
+    "mine": "Assigned to me",
+    "mineHint": "Open work on your plate",
+    "open": "Open tickets",
+    "openHint": "{{count}} unassigned",
+    "overdue": "Overdue",
+    "overdueHint": "Past their due time",
+    "verify": "To verify",
+    "verifyHint": "Resolved, waiting for a check"
+  },
+  "tabs": {
+    "mine": "My tickets",
+    "created": "Raised by me",
+    "open": "Open",
+    "unassigned": "Unassigned",
+    "overdue": "Overdue",
+    "verify": "To verify",
+    "closed": "Closed",
+    "all": "All"
+  },
+  "filters": {
+    "priority": "Priority",
+    "anyPriority": "Any priority",
+    "assignee": "Assignee",
+    "anyone": "Anyone",
+    "unassigned": "Unassigned"
+  },
+  "table": {
+    "ticket": "Ticket",
+    "assignee": "Assigned to",
+    "priority": "Priority",
+    "due": "Due",
+    "status": "Status",
+    "updated": "Updated",
+    "actions": "Actions",
+    "unassigned": "Unassigned",
+    "noDue": "No due date",
+    "overdueBy": "{{time}} overdue",
+    "dueIn": "in {{time}}",
+    "room": "Room {{room}}"
+  },
+  "status": {
+    "open": "Open",
+    "in_progress": "In progress",
+    "on_hold": "On hold",
+    "resolved": "Resolved",
+    "closed": "Closed",
+    "cancelled": "Cancelled"
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "categories": {
+    "general": "General",
+    "front_desk": "Front desk",
+    "housekeeping": "Housekeeping",
+    "maintenance": "Maintenance",
+    "guest_request": "Guest request",
+    "purchase": "Purchase",
+    "accounts": "Accounts",
+    "it": "IT / systems",
+    "other": "Other"
+  },
+  "actions": {
+    "view": "View",
+    "take": "Take it",
+    "start": "Start work",
+    "hold": "Put on hold",
+    "resume": "Resume",
+    "resolve": "Mark resolved",
+    "verify": "Verify & close",
+    "reopen": "Reopen",
+    "cancel": "Cancel ticket",
+    "edit": "Edit",
+    "delete": "Delete"
+  },
+  "form": {
+    "newTitle": "New ticket",
+    "editTitle": "Edit ticket",
+    "title": "Title",
+    "titlePlaceholder": "e.g. AC not cooling in room 204",
+    "description": "Details",
+    "descriptionPlaceholder": "What needs to be done, and anything the assignee should know",
+    "category": "Category",
+    "priority": "Priority",
+    "assignee": "Assign to",
+    "nobody": "Leave unassigned",
+    "you": "{{name}} (you)",
+    "due": "Due by",
+    "dueHint": "Suggested from the priority — change it if you need to.",
+    "roomNumber": "Room no.",
+    "checklist": "Checklist",
+    "checklistHint": "Break the work into steps the assignee ticks off.",
+    "addStep": "Add a step",
+    "stepPlaceholder": "e.g. Check the gas level",
+    "removeStep": "Remove step",
+    "create": "Create ticket",
+    "save": "Save changes",
+    "errors": {
+      "title": "Give the ticket a short title (3 characters or more)"
+    }
+  },
+  "detail": {
+    "raisedBy": "Raised by",
+    "assignee": "Assigned to",
+    "category": "Category",
+    "priority": "Priority",
+    "due": "Due",
+    "room": "Room",
+    "created": "Created",
+    "started": "Started",
+    "resolved": "Resolved",
+    "closed": "Closed",
+    "reopened_one": "Reopened {{count}} time",
+    "reopened_other": "Reopened {{count}} times",
+    "description": "Details",
+    "noDescription": "No details added.",
+    "checklist": "Checklist",
+    "checklistProgress": "{{done}} of {{total}} done",
+    "noChecklist": "No steps yet.",
+    "activity": "Activity",
+    "commentPlaceholder": "Write a comment or an update…",
+    "comment": "Comment",
+    "reassign": "Reassign",
+    "loadError": "Could not load this ticket.",
+    "verifyHint": "The assignee marked this resolved. Check the work, then verify & close it or reopen it.",
+    "workflow": "Next step",
+    "noDeleteHint": "Only the owner or an admin can delete tickets."
+  },
+  "activity": {
+    "created": "raised this ticket",
+    "assigned": "assigned it to {{to}}",
+    "reassigned": "reassigned it from {{from}} to {{to}}",
+    "unassigned": "unassigned {{from}}",
+    "status": "moved it to {{to}}",
+    "statusFrom": "moved it from {{from}} to {{to}}",
+    "priority": "changed priority to {{to}}",
+    "due": "changed the due date to {{to}}",
+    "dueCleared": "removed the due date",
+    "edited": "edited the details",
+    "checkDone": "ticked “{{item}}”",
+    "checkUndone": "unticked “{{item}}”",
+    "comment": "commented",
+    "someone": "Someone",
+    "nobody": "nobody"
+  },
+  "note": {
+    "hold": "Why is it on hold?",
+    "resolve": "What was done? (optional)",
+    "reopen": "Why are you reopening it?",
+    "cancel": "Why cancel it? (optional)",
+    "required": "Please add a reason.",
+    "confirm": "Confirm"
+  },
+  "delete": {
+    "title": "Delete ticket",
+    "message": "Delete <b>{{no}}</b> — {{title}}? This cannot be undone."
+  },
+  "toast": {
+    "created": "{{no}} created",
+    "updated": "Ticket updated",
+    "assigned": "Assigned to {{name}}",
+    "unassigned": "Ticket unassigned",
+    "taken": "You took {{no}}",
+    "status": "{{no}} is now {{status}}",
+    "deleted": "Ticket deleted",
+    "failed": "Something went wrong. Please try again."
+  },
+  "board": {
+    "empty": "Nothing here",
+    "closedNote": "Closed and cancelled tickets are in the list view."
+  },
+  "empty": {
+    "title": "No tickets here",
+    "message": "Raise a ticket to give someone a job and track it to done.",
+    "search": "No tickets match your search or filters."
+  }
+}

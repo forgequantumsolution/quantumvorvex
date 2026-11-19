@@ -1,7 +1,7 @@
 import {
   LuLayoutDashboard, LuCalendarCheck, LuCalendarX, LuWrench,
   LuUsers, LuBedDouble, LuFileText, LuUtensils, LuSparkles,
-  LuCreditCard, LuWallet, LuChartColumn, LuUserCog, LuSettings, LuBuilding2, LuIdCard,
+  LuCreditCard, LuWallet, LuChartColumn, LuUserCog, LuSettings, LuBuilding2, LuIdCard, LuTicket,
 } from 'react-icons/lu'
 
 // Single source of truth for the app's navigation structure — consumed by the
@@ -23,6 +23,7 @@ export const NAV_SECTIONS = [
       { id: 'cancellations', label: 'Cancellations', Icon: LuCalendarX },
       { id: 'maintenance',   label: 'Maintenance',   Icon: LuWrench },
       { id: 'visitors',      label: 'Visitors',      Icon: LuIdCard },
+      { id: 'tickets',       label: 'Tickets',       Icon: LuTicket },
     ],
   },
   {
