@@ -3,6 +3,7 @@ import logger from './utils/logger.js'
 import { ensureRbac } from './utils/rbac.js'
 import { ensureProperties } from './utils/properties.js'
 import { startCronJobs } from './utils/cron.js'
+import { repairRoomStatuses } from './utils/roomStatus.js'
 
 const PORT = process.env.PORT || 5000
 
@@ -14,6 +15,8 @@ app.listen(PORT, async () => {
   // Properties first: RBAC bootstrap assigns role-less users to a property.
   await ensureProperties()
   await ensureRbac()
+  // Heal any room left "available" while someone is still staying in it.
+  await repairRoomStatuses()
   startCronJobs()
 })
 
