@@ -4,7 +4,9 @@ import { getPublicInvoice } from '../controllers/billingController.js'
 import { getPublicBookingInvoice } from '../controllers/bookingsController.js'
 import { getPayPage, submitClaim } from '../controllers/paymentClaimsController.js'
 import { validate, schemas } from '../middleware/validate.js'
-import { getPublicVisitForm, submitPublicVisit, getPublicPass, publicCheckOut } from '../controllers/visitorsController.js'
+import {
+  getPublicVisitForm, submitPublicVisit, getPublicPass, publicCheckOut, receiveVisitorDocs, publicUploadDocuments,
+} from '../controllers/visitorsController.js'
 
 // Public, no-login endpoints reached from links handed to guests. Each one is
 // authorised by a signed token in the URL, never by a session.
@@ -37,5 +39,6 @@ router.get('/visit/:token', getPublicVisitForm)
 router.post('/visit/:token', visitLimiter, validate(schemas.publicVisitor), submitPublicVisit)
 router.get('/pass/:passToken', getPublicPass)
 router.post('/pass/:passToken/checkout', visitLimiter, publicCheckOut)
+router.post('/pass/:passToken/documents', visitLimiter, receiveVisitorDocs, publicUploadDocuments)
 
 export default router

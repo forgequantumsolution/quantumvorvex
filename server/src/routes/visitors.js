@@ -5,6 +5,7 @@ import {
   getVisitors, lookupVisitor, getVisitor, createVisitor, updateVisitor,
   checkInVisitor, rejectVisitor, checkOutVisitor, blockVisitor, unblockVisitor, deleteVisitor,
   getVisitorQr, regenerateVisitorQr, updateVisitorSettings,
+  receiveVisitorDocs, uploadVisitorDocuments, getVisitorDocumentFile, deleteVisitorDocument,
 } from '../controllers/visitorsController.js'
 
 const router = express.Router()
@@ -29,5 +30,8 @@ router.post('/:id/check-out',   checkOutVisitor)
 router.post('/:id/block',       validate(schemas.blockVisitor), blockVisitor)
 router.delete('/:id/block',     unblockVisitor)
 router.delete('/:id',           deleteVisitor)
+router.post('/:id/documents',   receiveVisitorDocs, uploadVisitorDocuments)
+router.get('/:id/documents/:docId',    getVisitorDocumentFile)
+router.delete('/:id/documents/:docId', deleteVisitorDocument)
 
 export default router

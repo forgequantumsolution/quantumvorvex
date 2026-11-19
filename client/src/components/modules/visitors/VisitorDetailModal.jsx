@@ -19,6 +19,47 @@ function Item({ label, children, wide }) {
   )
 }
 
+// One private ID scan: fetched with the login token, shown as a thumbnail that
+// opens full size in a new tab. Object URLs are released on unmount.
+function DocThumb({ visitorId, doc, label, canManage, onRemoved }) {
+  const { t } = useTranslation('visitors')
+  const [url, setUrl] = useState(null)
+  const [failed, setFailed] = useState(false)
+  const [removing, setRemoving] = useState(false)
+  useEffect(() => {
+    let off = false
+    let made = null
+    visitorsApi.docFile(visitorId, doc.id)
+      .then(({ data }) => { if (off) return; made = URL.createObjectURL(data); setUrl(made) })
+      .catch(() => { if (!off) setFailed(true) })
+    return () => { off = true; if (made) URL.revokeObjectURL(made) }
+  }, [visitorId, doc.id])
+  const remove = async () => {
+    if (!window.confirm(t('docs.removeConfirm'))) return
+    setRemoving(true)
+    try { await visitorsApi.deleteDoc(visitorId, doc.id); onRemoved(doc.id) } catch { setRemoving(false) }
+  }
+  const isPdf = doc.mimeType === 'application/pdf'
+  return (
+    <div className="min-w-0">
+      <div className="text-xs text-ink3 mb-1">{label}</div>
+      <a href={url || undefined} target="_blank" rel="noreferrer"
+        className="block h-28 rounded-lg border border-line bg-surface2 overflow-hidden flex items-center justify-center text-xs text-ink3 hover:border-gold">
+        {failed ? t('docs.loadFailed')
+          : !url ? t('common:loading')
+          : isPdf ? <span className="text-center"><span className="block text-xl">📄</span>{t('docs.openPdf')}</span>
+          : <img src={url} alt={label} className="w-full h-full object-cover" />}
+      </a>
+      {canManage && (
+        <button type="button" onClick={remove} disabled={removing}
+          className="mt-1 bg-transparent border-0 p-0 text-xs text-ink3 hover:text-danger cursor-pointer disabled:opacity-50">
+          {t('common:remove')}
+        </button>
+      )}
+    </div>
+  )
+}
+
 function Step({ done, tone = 'bg-gold', label, time, by }) {
   return (
     <li className="relative pl-6 pb-3 last:pb-0">
@@ -133,6 +174,19 @@ export default function VisitorDetailModal({
           <Item label={t('detail.visits')}>{info?.visits > 1 ? info.visits : null}</Item>
           <Item label={t('detail.notes')} wide>{v.notes}</Item>
         </dl>
+
+        {info?.visitor?.documents?.length > 0 && (
+          <div className="pt-4 border-t border-line">
+            <div className="text-xs font-semibold text-ink2 mb-2.5">{t('docs.title')}</div>
+            <div className="grid grid-cols-2 gap-3">
+              {info.visitor.documents.map((d) => (
+                <DocThumb key={d.id} visitorId={v.id} doc={d} canManage={canManage}
+                  label={t('docs.side', { doc: v.idType ? t(`idTypes.${v.idType}`) : t('form.idType'), side: t(`docs.${d.side}`) })}
+                  onRemoved={(id) => setInfo((cur) => ({ ...cur, visitor: { ...cur.visitor, documents: cur.visitor.documents.filter((x) => x.id !== id) } }))} />
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="pt-4 border-t border-line">
           <div className="text-xs font-semibold text-ink2 mb-2.5">{t('detail.timeline')}</div>

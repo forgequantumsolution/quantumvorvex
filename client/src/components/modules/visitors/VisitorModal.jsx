@@ -4,11 +4,13 @@ import { LuLogIn, LuCalendarClock, LuSave, LuTriangleAlert, LuHistory } from 're
 import Modal from '../../ui/Modal'
 import { Button, Field } from '../../ui-tw'
 import { visitorsApi } from '../../../api/client'
-import { PURPOSES, ID_TYPES, PHONE_RE, EMAIL_RE, cleanPhone } from './visitorUtils'
+import { PURPOSES, ID_TYPES, PHONE_RE, EMAIL_RE, AADHAAR_RE, cleanPhone, cleanId, idScanForm } from './visitorUtils'
+import UploadZone from '../bookings/UploadZone'
+import { useToast } from '../../../hooks/useToast'
 
 const EMPTY = {
   phone: '', name: '', email: '', company: '', purpose: 'guest_visit', hostName: '', roomNumber: '',
-  idType: '', idNumber: '', vehicleNo: '', companions: '0', notes: '', when: 'now', expectedAt: '',
+  idType: 'aadhaar', idNumber: '', vehicleNo: '', companions: '0', notes: '', when: 'now', expectedAt: '',
 }
 
 // <input type="datetime-local"> value for a date (local time).
@@ -20,7 +22,7 @@ const localInput = (d) => {
 
 const fromVisitor = (v) => ({
   ...EMPTY,
-  ...Object.fromEntries(Object.keys(EMPTY).map((k) => [k, v[k] == null ? EMPTY[k] : String(v[k])])),
+  ...Object.fromEntries(Object.keys(EMPTY).map((k) => [k, v[k] == null ? (k === 'idType' ? '' : EMPTY[k]) : String(v[k])])),
   when: v.status === 'expected' ? 'later' : 'now',
   expectedAt: v.expectedAt ? localInput(v.expectedAt) : '',
 })
@@ -34,15 +36,19 @@ const fromVisitor = (v) => ({
  */
 export default function VisitorModal({ visitor, onClose, onSaved }) {
   const { t } = useTranslation('visitors')
+  const toast = useToast()
   const editing = !!visitor?.id
   const [form, setForm] = useState(() => (editing ? { ...fromVisitor(visitor), idNumber: '' } : EMPTY))
   const [errors, setErrors] = useState({})
   const [apiError, setApiError] = useState('')
   const [saving, setSaving] = useState(false)
   const [lookup, setLookup] = useState(null) // { visits, blocked }
+  const [scans, setScans] = useState({ front: null, back: null }) // newly picked ID scans
+  const onFile = (side) => (visitor?.documents || []).find((d) => d.side === side)
   const looked = useRef(editing ? cleanPhone(visitor.phone) : '')
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  const setIdNumber = (e) => setForm((f) => ({ ...f, idNumber: cleanId(f.idType, e.target.value) }))
 
   // Look the number up once it is complete.
   const phone = cleanPhone(form.phone)
@@ -73,6 +79,7 @@ export default function VisitorModal({ visitor, onClose, onSaved }) {
     if (form.name.trim().length < 2) e.name = t('form.errors.name')
     if (!PHONE_RE.test(phone)) e.phone = t('form.errors.phone')
     if (form.email.trim() && !EMAIL_RE.test(form.email.trim())) e.email = t('form.errors.email')
+    if (form.idType === 'aadhaar' && form.idNumber.trim() && !AADHAAR_RE.test(form.idNumber.trim())) e.idNumber = t('form.errors.aadhaar')
     if (form.when === 'later' && !form.expectedAt) e.expectedAt = t('form.errors.expectedAt')
     setErrors(e)
     return !Object.keys(e).length
@@ -95,6 +102,12 @@ export default function VisitorModal({ visitor, onClose, onSaved }) {
     else if (!editing) body.checkIn = true
     try {
       const { data } = editing ? await visitorsApi.update(visitor.id, body) : await visitorsApi.create(body)
+      // The entry is saved; a failed scan upload is reported but never undoes it.
+      const scanForm = idScanForm(scans)
+      if (scanForm) {
+        try { await visitorsApi.uploadDocs(data.visitor.id, scanForm) }
+        catch (err) { toast(err.response?.data?.message || t('docs.uploadFailed'), 'error') }
+      }
       onSaved(data.visitor, editing)
     } catch (err) {
       const d = err.response?.data
@@ -154,10 +167,31 @@ export default function VisitorModal({ visitor, onClose, onSaved }) {
           </div>
           <Field label={t('form.idType')} value={form.idType} onChange={set('idType')}
             options={[{ value: '', label: t('form.none') }, ...ID_TYPES.map((p) => ({ value: p, label: t(`idTypes.${p}`) }))]} />
-          <Field label={t('form.idNumber')} value={form.idNumber} onChange={set('idNumber')} maxLength={30} disabled={!form.idType}
-            placeholder={editing && visitor.idNumber ? visitor.idNumber : undefined} autoComplete="off" />
+          <Field label={form.idType === 'aadhaar' ? t('form.aadhaarNumber') : t('form.idNumber')} name="idNumber"
+            value={form.idNumber} onChange={setIdNumber} error={errors.idNumber}
+            maxLength={form.idType === 'aadhaar' ? 12 : 30} inputMode={form.idType === 'aadhaar' ? 'numeric' : undefined}
+            disabled={!form.idType} autoComplete="off"
+            placeholder={editing && visitor.idNumber ? visitor.idNumber : form.idType === 'aadhaar' ? t('form.aadhaarPlaceholder') : undefined} />
           <Field label={t('form.vehicleNo')} value={form.vehicleNo} onChange={set('vehicleNo')} maxLength={20} />
           <Field label={t('form.email')} type="email" value={form.email} onChange={set('email')} error={errors.email} maxLength={120} />
+        </div>
+
+        {/* ID scans — front and back of the card picked above. */}
+        <div className={form.idType ? '' : 'opacity-60'}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {['front', 'back'].map((side) => (
+              <div key={side}>
+                <UploadZone
+                  label={t('docs.side', { doc: form.idType ? t(`idTypes.${form.idType}`) : t('form.idType'), side: t(`docs.${side}`) })}
+                  file={scans[side]}
+                  onPick={(f) => setScans((s) => ({ ...s, [side]: f }))}
+                />
+                {editing && onFile(side) && !scans[side] && (
+                  <p className="m-0 mt-1 text-xs text-success-text">{t('docs.onFile')}</p>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         <Field label={t('form.notes')} textarea value={form.notes} onChange={set('notes')} maxLength={500} />

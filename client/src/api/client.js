@@ -269,11 +269,16 @@ export const visitorsApi = {
   qr:          ()         => api.get('/visitors/qr'),            // { token, autoApprove, propertyName, canAdmin }
   regenerateQr: ()        => api.post('/visitors/qr/regenerate'),
   settings:    (data)     => api.put('/visitors/settings', data), // { autoApprove }
+  // ID scans: multipart "front" / "back". Files are private — fetched as blobs with auth.
+  uploadDocs:  (id, form) => api.post(`/visitors/${id}/documents`, form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  docFile:     (id, docId) => api.get(`/visitors/${id}/documents/${docId}`, { responseType: 'blob' }),
+  deleteDoc:   (id, docId) => api.delete(`/visitors/${id}/documents/${docId}`),
   // Public (no login): the QR form and the visitor's own pass
   publicForm:  (token)    => api.get(`/public/visit/${token}`),
   publicSubmit: (token, data) => api.post(`/public/visit/${token}`, data),
   publicPass:  (passToken) => api.get(`/public/pass/${passToken}`),
   publicCheckOut: (passToken) => api.post(`/public/pass/${passToken}/checkout`),
+  publicUploadDocs: (passToken, form) => api.post(`/public/pass/${passToken}/documents`, form, { headers: { 'Content-Type': 'multipart/form-data' } }),
 }
 
 export const maintenanceApi = {
