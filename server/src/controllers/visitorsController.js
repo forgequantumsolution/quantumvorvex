@@ -18,10 +18,8 @@ import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
 import { runWithProperty, runUnscoped } from '../utils/propertyContext.js'
 import { VISITOR_PURPOSES } from '../middleware/validate.js'
+import { isPropertyAdmin } from '../utils/roles.js'
 
-const ADMIN_ROLES = /^(admin|administrator|manager)$/i
-// Owner or admin at this property: delete entries, rotate the QR, change settings.
-export const isPropertyAdmin = (pa) => !!pa && (pa.isOwner || ADMIN_ROLES.test(String(pa.roleName || '').trim()))
 
 const newToken = () => crypto.randomBytes(16).toString('hex')
 const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d }

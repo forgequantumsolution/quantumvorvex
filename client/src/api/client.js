@@ -239,6 +239,21 @@ export const notificationsApi = {
   clearAll: ()   => api.delete('/notifications'),
 }
 
+export const ticketsApi = {
+  list:       (params)   => api.get('/tickets', { params }),   // { tab: mine|created|open|unassigned|overdue|verify|closed|all, priority, category, assignee ('none'), search, page, limit } → { tickets, total, counts }
+  get:        (id)       => api.get(`/tickets/${id}`),         // { ticket, checklist, activity, can }
+  assignees:  ()         => api.get('/tickets/assignees'),     // { assignees: [{ id, name, email, role }], me, admin }
+  create:     (data)     => api.post('/tickets', data),        // { title, description, category, priority, assigneeId, dueAt, roomNumber, checklist: [text] }
+  update:     (id, data) => api.put(`/tickets/${id}`, data),
+  assign:     (id, assigneeId) => api.post(`/tickets/${id}/assign`, { assigneeId }),
+  status:     (id, action, note) => api.post(`/tickets/${id}/status`, { action, note }), // start|hold|resume|resolve|verify|reopen|cancel
+  comment:    (id, message) => api.post(`/tickets/${id}/comments`, { message }),
+  addStep:    (id, text) => api.post(`/tickets/${id}/checklist`, { text }),
+  updateStep: (id, itemId, data) => api.put(`/tickets/${id}/checklist/${itemId}`, data), // { done?, text? }
+  removeStep: (id, itemId) => api.delete(`/tickets/${id}/checklist/${itemId}`),
+  remove:     (id)       => api.delete(`/tickets/${id}`),
+}
+
 export const visitorsApi = {
   list:        (params)   => api.get('/visitors', { params }),   // { tab: today|inside|pending|expected|all, search, from, to, page, limit } → { visitors, total, counts }
   get:         (id)       => api.get(`/visitors/${id}`),         // { visitor, visits, blocked, canDelete }

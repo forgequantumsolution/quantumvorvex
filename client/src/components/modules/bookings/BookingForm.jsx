@@ -10,6 +10,8 @@ import NameFields from './NameFields'
 import UploadZone from './UploadZone'
 import PgOccupants from './PgOccupants'
 import { occupantErrors, occField } from './occupants'
+import GuardianFields from './GuardianFields'
+import { EMPTY_GUARDIAN, GUARDIAN_KEYS, guardianDocs, guardianErrors, guardianPayload } from './guardian'
 import { bedFillLabel, bedLabel, bedOccupancy, hasBedStays, isBedRoom, rentFirstMonthNote, rentMonthsAtMoveIn } from '../../../utils/beds'
 import {
   TODAY, joinPhones, phoneErrors, phoneFieldName, splitPhones, MAX_PHONES,
@@ -22,6 +24,7 @@ const DAY_MS = 86400000
 const EMPTY = {
   guestNames: [''], guestPhones: [''], guestEmail: '',
   idTypes: ['Aadhaar'], idNumber: '', nationality: 'Indian', guestAddress: '',
+  ...EMPTY_GUARDIAN,
   adults: 1, children: 0,
   roomId: '', stayType: 'daily',
   fromDate: TODAY, toDate: '', months: 1,
@@ -199,6 +202,7 @@ export default function BookingForm({ onSaved, onCancel }) {
           ? g.nationality || v.nationality : v.nationality,
         idTypes: ids.length && v.idTypes.join() === EMPTY.idTypes.join() ? ids : v.idTypes,
         idNumber:     blank(v.idNumber)     ? g.idNumber     || '' : v.idNumber,
+        ...Object.fromEntries(GUARDIAN_KEYS.map((k) => [k, blank(v[k]) ? g[k] || '' : v[k]])),
       }
     })
   }
@@ -227,6 +231,7 @@ export default function BookingForm({ onSaved, onCancel }) {
       ...v,
       guestNames: [''], guestEmail: '', guestAddress: '',
       nationality: EMPTY.nationality, idTypes: EMPTY.idTypes, idNumber: '',
+      ...EMPTY_GUARDIAN,
       guestPhones: [v.guestPhones[0] || ''],
     }))
     setLookup({ state: 'cleared' })
@@ -379,6 +384,7 @@ export default function BookingForm({ onSaved, onCancel }) {
       Object.assign(e, nameErrors(values.guestNames), phoneErrors(values.guestPhones))
       if (values.guestEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.guestEmail.trim()))
         e.guestEmail = t('form.err.email')
+      Object.assign(e, guardianErrors(values))
       if (!values.roomRate || Number(values.roomRate) <= 0) e.roomRate = t('form.err.rate')
     }
     if (!values.roomId) e.roomId = t('form.err.room')
@@ -395,10 +401,10 @@ export default function BookingForm({ onSaved, onCancel }) {
   // Field order for "jump to first error" on a failed submit.
   const FIELD_ORDER = pgMode
     ? ['roomId', 'toDate', 'months', 'beds',
-       ...occupants.flatMap((o) => ['bed', 'name', 'phone', 'email', 'rate'].map((k) => occField(o, k)))]
+       ...occupants.flatMap((o) => ['bed', 'name', 'phone', 'email', 'guardianPhone', 'guardianAadhaar', 'rate'].map((k) => occField(o, k)))]
     : [...values.guestNames.map((_, i) => nameFieldName(i)),
        ...values.guestPhones.map((_, i) => phoneFieldName(i)),
-       'guestEmail', 'roomId', 'roomRate', 'toDate', 'months']
+       'guestEmail', 'guardianPhone', 'guardianAadhaar', 'roomId', 'roomRate', 'toDate', 'months']
 
   const handleSubmit = async () => {
     const e = validate()
@@ -428,6 +434,7 @@ export default function BookingForm({ onSaved, onCancel }) {
         nationality: values.nationality.trim() || undefined,
         idType: values.idTypes.join(', ') || undefined,
         idNumber: values.idNumber.trim() || undefined,
+        ...guardianPayload(values),
         adults: Number(values.adults) || 1,
         children: Number(values.children) || 0,
         roomId: values.roomId,
@@ -464,6 +471,7 @@ export default function BookingForm({ onSaved, onCancel }) {
       extraDocs.forEach((d) => {
         if (d.file) entries.push([d.label.trim() || d.file.name, d.file])
       })
+      entries.push(...guardianDocs(values))
       if (entries.length) {
         const form = new FormData()
         entries.forEach(([, file]) => form.append('documents', file))
@@ -506,6 +514,7 @@ export default function BookingForm({ onSaved, onCancel }) {
       guestEmail: o.email.trim() || undefined,
       idType: o.idType || undefined,
       idNumber: o.idNumber.trim() || undefined,
+      ...guardianPayload(o),
       roomRate: Number(o.rate) || 0,
       advance: Number(o.advance) || 0,
       securityDeposit: Number(o.deposit) || 0,
@@ -529,6 +538,7 @@ export default function BookingForm({ onSaved, onCancel }) {
     let failed = 0
     await Promise.all(occupants.map(async (o, i) => {
       const files = [[`${o.idType} — Front`, o.front], [`${o.idType} — Back`, o.back]].filter(([, f]) => f)
+        .concat(guardianDocs(o))
       if (!files.length || !bookings[i]) return
       const form = new FormData()
       files.forEach(([, f]) => form.append('documents', f))
@@ -584,9 +594,9 @@ export default function BookingForm({ onSaved, onCancel }) {
     : pricing.units ? t(values.stayType === 'daily' ? 'form.nights' : 'form.months', { count: pricing.units })
     : t('form.datesNotSet')
   const attachedCount = pgMode
-    ? occupants.reduce((n, o) => n + [o.front, o.back].filter(Boolean).length, 0)
+    ? occupants.reduce((n, o) => n + [o.front, o.back].filter(Boolean).length + guardianDocs(o).length, 0)
     : values.idTypes.reduce((n, t) => n + [idDocs[t]?.front, idDocs[t]?.back].filter(Boolean).length, 0) +
-      extraDocs.filter((d) => d.file).length
+      extraDocs.filter((d) => d.file).length + guardianDocs(values).length
   const shownTotal = pgMode ? pgTotals.total : pricing.total
   const shownBalance = pgMode ? pgTotals.balance : pricing.balance
 
@@ -655,6 +665,10 @@ export default function BookingForm({ onSaved, onCancel }) {
                        onChange={set('adults')} />
                 <Field className="lg:col-span-2" label={t('form.children')} type="number" min="0" value={values.children}
                        onChange={set('children')} />
+
+                <p className="col-span-2 lg:col-span-12 pt-1 text-xs font-semibold text-ink2">{t('guardian.title')}</p>
+                <GuardianFields values={values} errors={errors} onScan={setDocCamera}
+                                onChange={(k, val) => setValues((v) => ({ ...v, [k]: val }))} />
               </div>
             </Section>
             )}

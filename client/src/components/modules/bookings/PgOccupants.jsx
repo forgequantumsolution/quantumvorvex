@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { Field } from '../../ui-tw'
 import UploadZone from './UploadZone'
+import GuardianFields from './GuardianFields'
 import { bedLabel } from '../../../utils/beds'
 import { newOccupant, occField } from './occupants'
 import { formatDate } from '../../../utils/format'
@@ -152,6 +153,12 @@ export default function PgOccupants({
                 />
               ))}
             </div>
+
+            <p className="col-span-2 lg:col-span-12 pt-1 text-xs font-semibold text-ink2">{t('guardian.title')}</p>
+            <GuardianFields values={o} errors={errors} fieldName={(k) => occField(o, k)} onScan={onScan}
+                            scanPrefix={`bed-${bedLabel(o.bedNo).toLowerCase()}-guardian`}
+                            scanSuffix={` (${t('bedN', { bed: bedLabel(o.bedNo) })})`}
+                            onChange={(k, val) => update(o.key, { [k]: val })} />
           </div>
         </div>
       ))}
