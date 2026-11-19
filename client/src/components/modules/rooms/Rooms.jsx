@@ -3,7 +3,7 @@ import { useTranslation, Trans } from 'react-i18next'
 import { QRCodeSVG } from 'qrcode.react'
 import {
   LuTrash2, LuRefreshCw, LuPlus, LuLayoutGrid, LuColumns3, LuQrCode, LuPencil,
-  LuPrinter, LuDownload, LuDoorClosed, LuX, LuLayers, LuCheck, LuBuilding2, LuDoorOpen, LuBedDouble, LuCalendarClock, LuWrench,
+  LuPrinter, LuDownload, LuDoorClosed, LuX, LuLayers, LuCheck, LuBuilding2, LuDoorOpen, LuBedDouble, LuCalendarClock, LuWrench, LuCalendarPlus,
 } from 'react-icons/lu'
 import Modal from '../../ui/Modal'
 import ConfirmModal from '../../ui/ConfirmModal'
@@ -12,7 +12,8 @@ import Button from '../../ui/Button'
 import { Pagination, StatStrip, StatCard, FilterTabs } from '../../ui-tw'
 import { roomsApi } from '../../../api/client'
 import { useToast } from '../../../hooks/useToast'
-import { usePageHeader } from '../../../store/hooks'
+import { useCan } from '../../../hooks/useCan'
+import { usePageHeader, useUiActions } from '../../../store/hooks'
 import { bedOccupancy, hasBedStays, isBedRoom } from '../../../utils/beds'
 import { formatDate } from '../../../utils/format'
 import { appLocale } from '../../../i18n'
@@ -130,6 +131,8 @@ function KanbanColumn({ status, rooms, onSelect }) {
 function RoomDetail({ room, onClose, onStatusChange, onShowQr, onDelete, onSaveRoom }) {
   const { t } = useTranslation('rooms')
   const [editing, setEditing] = useState(false)
+  const canBook = useCan('bookings', 'MANAGE')
+  const { navigateTo } = useUiActions()
   if (!room) return null
 
   // Occupancy is driven by check-in/out, so it isn't offered as a manual choice.
@@ -165,6 +168,19 @@ function RoomDetail({ room, onClose, onStatusChange, onShowQr, onDelete, onSaveR
           </Button>
         )}
       </div>
+
+      {/* A free room: book it straight away — opens Bookings' form with this room picked. */}
+      {room.status === 'available' && canBook && !editing && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-success bg-success-bg px-4 py-3">
+          <div className="flex-1 min-w-[180px]">
+            <p className="t-title m-0">{t('detail.freeTitle')}</p>
+            <p className="t-xs text-ink2 mt-0.5 mb-0">{t('detail.freeHint')}</p>
+          </div>
+          <Button size="sm" onClick={() => { onClose(); navigateTo({ panel: 'bookings', params: { newForRoom: room.id } }) }}>
+            <LuCalendarPlus size={15} aria-hidden /> {t('detail.newBooking')}
+          </Button>
+        </div>
+      )}
 
       {editing && (
         <RoomEditForm room={room} onCancel={() => setEditing(false)}

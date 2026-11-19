@@ -110,7 +110,7 @@ function SumRow({ label, value }) {
  * pricing breakdown, and POSTs to the booking API. Calls onSaved(booking) on
  * success and onCancel() when the user backs out.
  */
-export default function BookingForm({ onSaved, onCancel }) {
+export default function BookingForm({ onSaved, onCancel, initialRoomId }) {
   const { t } = useTranslation('bookings')
   const toast = useToast()
   const idTypeLabel = (type) => t(`idTypes.${type}`, { defaultValue: type })
@@ -259,7 +259,8 @@ export default function BookingForm({ onSaved, onCancel }) {
         setValues((v) => ({
           ...EMPTY,
           ...v,
-          roomId: pool.find(isBookable)?.id || '',
+          // A room handed over from Rooms wins, if it is still free.
+          roomId: pool.find((r) => r.id === initialRoomId && isBookable(r))?.id || pool.find(isBookable)?.id || '',
           taxRate: gst ?? v.taxRate,
           invoiceNo: nextInvoiceNo,
         }))

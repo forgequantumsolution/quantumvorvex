@@ -99,6 +99,8 @@ export default function Bookings() {
 
   // Today (and other panels) can deep-link to a specific status tab via navigateTo.
   const navTab = useAppSelector((s) => s.ui.activePanelParams?.tab)
+  // Rooms' "New booking" on a free room lands here with that room picked.
+  const navRoom = useAppSelector((s) => s.ui.activePanelParams?.newForRoom)
 
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -112,7 +114,7 @@ export default function Bookings() {
   // current search/tab/page so the stat cards and tab counts always show totals.
   const [stats, setStats] = useState({ total: 0, confirmed: 0, checkedIn: 0, revenue: 0, dues: 0 })
   const [counts, setCounts] = useState(EMPTY_COUNTS)
-  const [showNew, setShowNew] = useState(false)
+  const [showNew, setShowNew] = useState(() => !!navRoom)
   const [cancelTarget, setCancelTarget] = useState(null)
   const [checkOutTarget, setCheckOutTarget] = useState(null)
   const [rentTarget, setRentTarget] = useState(null)
@@ -382,7 +384,7 @@ export default function Bookings() {
           // The form's summary rail is sticky, which an overflow-hidden ancestor breaks.
           clip={false}
         >
-          <BookingForm onSaved={handleCreated} onCancel={() => setShowNew(false)} />
+          <BookingForm initialRoomId={navRoom} onSaved={handleCreated} onCancel={() => setShowNew(false)} />
         </Card>
       ) : (
         // Status tabs on top, pagination below. Search, refresh, the view switch
