@@ -57,6 +57,7 @@
     "rentReminder": "Hello {{name}},\n\nA friendly reminder from {{hotel}}: your rent for room {{room}} was due on {{dueDate}}.{{linkLine}}\n\nPlease pay at your earliest convenience and let us know. Thank you!",
     "departure": "Hello {{name}},\n\nWe hope you enjoyed your stay at {{hotel}}. Your check-out from room {{room}} is due today. Please settle any pending balance at the front desk before you leave.\n\nThank you!",
     "chat": "Hello {{name}},\n\n",
-    "receipt": "Hello {{name}},\n\nPayment of {{amount}} received for invoice {{invoiceNo}} — thank you! ✅{{linkLine}}"
+    "receipt": "Hello {{name}},\n\nPayment of {{amount}} received for invoice {{invoiceNo}} — thank you! ✅{{linkLine}}",
+    "gym": {"welcome": "Hello {{name}} 👋\n\nWelcome to {{hotel}}! 💪 Your membership is all set.\n\n🪪 Member no: {{memberNo}}\n🏋️ Plan: {{plan}}\n📅 {{start}} → {{end}}\n{{payment}}\n\nSee you at the gym!", "receipt": "Hello {{name}},\n\nPayment received — thank you! ✅\n\n🧾 Receipt\n🪪 Member no: {{memberNo}}\n🏋️ Plan: {{plan}} ({{start}} → {{end}})\n💰 Amount: {{paidAmount}}\n💳 Mode: {{mode}}\n📅 Date: {{paidOn}}\n{{payment}}", "expiring": "Hello {{name}},\n\nA friendly reminder from {{hotel}}: your {{plan}} membership ends on {{end}}.\n\nRenew now to keep training without a break 💪", "expired": "Hello {{name}},\n\nWe miss you at {{hotel}}! Your {{plan}} membership ended on {{end}}.\n\nRenew today and get back on track 💪", "due": "Hello {{name}},\n\nA gentle reminder from {{hotel}}: {{due}} is pending on your {{plan}} membership (member no {{memberNo}}).\n\nPlease pay at the front desk. Thank you!"}
   }
 }

@@ -10,6 +10,7 @@ import {
 } from '../../ui-tw'
 import { useToast } from '../../../hooks/useToast'
 import { documentsApi } from '../../../api/client'
+import { normDocType, prettyDocType, isImageUrl } from '../../../utils/docTypes'
 import { appLocale } from '../../../i18n'
 
 // Map an API guest (with documents[] + _count) to the row shape the UI renders.
@@ -50,30 +51,6 @@ const MAX_DOCUMENTS = 4
 // Rows per page. Small on purpose: a KYC row is two lines tall, and the desk
 // scans this table rather than reading it top to bottom.
 const PAGE_SIZE = 8
-
-// docTypes are inconsistent across sources (slot keys like `idFront`, booking
-// labels like `ID Front`, seed values like `Photo`). Normalise to alphanumerics
-// so an existing doc can be matched back to the slot it fills.
-const normDocType = (s) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '')
-
-// Machine-written docTypes (camera captures, check-out proof) would otherwise
-// show up raw as "guest_photo". Booking-time labels like "Aadhaar — Front" are
-// already readable and fall through unchanged.
-const DOC_LABELS = {
-  idfront: 'idFront',
-  idback: 'idBack',
-  guestphoto: 'guestPhoto',
-  photo: 'guestPhoto',
-  checkoutphoto: 'checkoutPhoto',
-  paymentproof: 'paymentProof',
-  additional: 'additional',
-}
-const prettyDocType = (s, t) => {
-  const key = DOC_LABELS[normDocType(s)]
-  return key ? t(`docType.${key}`) : s || t('docType.document')
-}
-
-const isImageUrl = (url) => /\.(jpe?g|png|webp|gif|avif)$/i.test(url || '')
 
 // The photo captured after booking; used as the row avatar in the table.
 const guestPhotoOf = (documents = []) =>
@@ -376,7 +353,6 @@ export default function Documents() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')   // all | verified | pending | incomplete
-  const [typeFilter, setTypeFilter] = useState('all')       // all | bookings | guests
   const [page, setPage] = useState(1)
   const [uploadDoc, setUploadDoc] = useState(null)
   const [viewDoc, setViewDoc] = useState(null)
@@ -404,17 +380,15 @@ export default function Documents() {
     return docs
       .filter((d) => {
         if (q && !`${d.guestName} ${d.docId}`.toLowerCase().includes(q)) return false
-        if (typeFilter === 'bookings' && !d.isBooking) return false
-        if (typeFilter === 'guests' && d.isBooking) return false
         if (statusFilter !== 'all' && getVerificationStatus(d).key !== statusFilter) return false
         return true
       })
       // The API already sorts newest-first; re-sort so a row whose documents were
       // just added or deleted stays in the right place between refetches.
       .sort((a, b) => new Date(b.lastActivityAt || 0) - new Date(a.lastActivityAt || 0))
-  }, [docs, search, statusFilter, typeFilter])
+  }, [docs, search, statusFilter])
 
-  const filtersActive = !!search.trim() || statusFilter !== 'all' || typeFilter !== 'all'
+  const filtersActive = !!search.trim() || statusFilter !== 'all'
 
   // Clamp rather than reset: deleting the last row of page 3 should land on
   // page 2, not throw the user back to the top of the list.
@@ -423,9 +397,9 @@ export default function Documents() {
   const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
   // A narrowed filter can leave the current page out of range.
-  useEffect(() => { setPage(1) }, [search, statusFilter, typeFilter])
+  useEffect(() => { setPage(1) }, [search, statusFilter])
 
-  const clearFilters = () => { setSearch(''); setStatusFilter('all'); setTypeFilter('all') }
+  const clearFilters = () => { setSearch(''); setStatusFilter('all') }
 
   // Stats, counted with the same rule the row badge uses — otherwise the header
   // can claim "12 verified" while every row on screen reads "Incomplete".
@@ -529,35 +503,6 @@ export default function Documents() {
       <TableCard
         error={error}
         pagination={{ page: safePage, pageSize: PAGE_SIZE, total: filtered.length, onChange: setPage }}
-        title={t('card.title')}
-        subtitle={filtersActive ? t('card.matching', { count: filtered.length }) : t('card.records', { count: filtered.length })}
-        actions={filtersActive && <Button variant="ghost" size="sm" onClick={clearFilters}>{t('clearFilters')}</Button>}
-        toolbar={
-          /* Filters (the search box lives in the page header): the two selects side by side. */
-          <div className="grid grid-cols-2 sm:flex gap-2.5 w-full sm:w-auto">
-            <select
-              className="form-select w-full sm:w-[150px]"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              aria-label={t('filter.typeLabel')}
-            >
-              <option value="all">{t('filter.allTypes')}</option>
-              <option value="bookings">{t('filter.bookings')}</option>
-              <option value="guests">{t('filter.guests')}</option>
-            </select>
-            <select
-              className="form-select w-full sm:w-[150px]"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              aria-label={t('filter.statusLabel')}
-            >
-              <option value="all">{t('filter.allStatuses')}</option>
-              <option value="verified">{t('verification.verified')}</option>
-              <option value="pending">{t('verification.pending')}</option>
-              <option value="incomplete">{t('verification.incomplete')}</option>
-            </select>
-          </div>
-        }
       >
         <DataTable
           rows={pageRows}
@@ -568,6 +513,7 @@ export default function Documents() {
               icon="🗂"
               title={filtersActive ? t('empty.filteredTitle') : t('empty.title')}
               message={filtersActive ? t('empty.filteredMessage') : t('empty.message')}
+              action={filtersActive ? <Button variant="ghost" size="sm" onClick={clearFilters}>{t('clearFilters')}</Button> : null}
             />
           }
           columns={[

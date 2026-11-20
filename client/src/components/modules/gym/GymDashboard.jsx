@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LabelList } from 'recharts'
 import { LuRefreshCw, LuIndianRupee, LuTags, LuUserPlus, LuCircleCheck } from 'react-icons/lu'
-import { Card, Button, EmptyState } from '../../ui-tw'
+import { Card, Button, EmptyState, WhatsAppButton } from '../../ui-tw'
 import { formatCurrency } from '../../../utils/format'
 import { StatusPill } from './MemberDetailModal'
 import { compactMoney, monthLabel, daysLeftLabel, shortDate, initials } from './gymUtils'
@@ -100,7 +100,7 @@ function ListRow({ m, right, onOpen }) {
  * vs renewals, plan mix, who trains here) and today's follow-ups (plans ending,
  * dues to chase) — each follow-up one tap from the action.
  */
-export default function GymDashboard({ data, loading, canManage, onOpen, onRenew, onPay, onAddPlan, onAddMember, noPlans }) {
+export default function GymDashboard({ data, loading, canManage, onOpen, onRenew, onPay, onWhatsApp, onAddPlan, onAddMember, noPlans }) {
   const { t } = useTranslation('gym')
 
   if (!data && loading) {
@@ -269,6 +269,7 @@ export default function GymDashboard({ data, loading, canManage, onOpen, onRenew
                       <StatusPill status={m.status} />
                       <span className="text-ink3 mt-0.5">{daysLeftLabel(t, m)}</span>
                     </span>
+                    {onWhatsApp && <WhatsAppButton iconOnly phone={m.phone} label={t('wa.renewal')} onClick={() => onWhatsApp(m, 'renewal')} />}
                     {canManage && (
                       <button type="button" onClick={() => onRenew(m)}
                         className="inline-flex items-center gap-1 rounded-lg bg-gold-bg text-gold px-2.5 py-1.5 pointer-coarse:min-h-11 text-xs font-semibold border-0 cursor-pointer hover:bg-gold hover:text-black">
@@ -289,6 +290,7 @@ export default function GymDashboard({ data, loading, canManage, onOpen, onRenew
                 <ListRow key={m.id} m={m} onOpen={onOpen} right={
                   <span className="flex items-center gap-2 shrink-0">
                     <span className="text-[13px] font-semibold text-danger-text tabular-nums">{formatCurrency(m.due)}</span>
+                    {onWhatsApp && <WhatsAppButton iconOnly phone={m.phone} label={t('wa.due')} onClick={() => onWhatsApp(m, 'due')} />}
                     {canManage && (
                       <button type="button" onClick={() => onPay(m)} aria-label={t('pay.collectFrom', { name: m.name })}
                         className="inline-flex items-center rounded-lg border border-line2 bg-surface px-2 py-1.5 pointer-coarse:min-h-11 text-ink2 cursor-pointer hover:border-gold hover:text-gold">

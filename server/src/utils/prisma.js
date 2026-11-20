@@ -25,6 +25,7 @@ export const PROPERTY_MODELS = new Set([
   'MaintenanceRequest', 'MaintenanceSchedule', 'LinenRecord', 'RoomInspection',
   'ExpenseCategory', 'Expense', 'PaymentClaim', 'Visitor', 'VisitorBlock', 'Ticket',
   'GymPlan', 'GymMember', 'GymMembership', 'GymPayment',
+  'FoodCustomer', 'FoodSubscription', 'FoodPayment', 'FoodMealLog', 'FoodMenuItem',
 ])
 
 // Child models scoped through a parent relation: model → relation field name.
@@ -40,6 +41,7 @@ const PARENT_SCOPED = {
   TicketChecklistItem: 'ticket',
   TicketActivity:     'ticket',
   VisitorDocument:    'visitor',
+  GymMemberDocument:  'member',
 }
 
 const WHERE_OPS = new Set([

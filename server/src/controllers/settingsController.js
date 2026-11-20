@@ -102,9 +102,10 @@ export const updateSettings = async (req, res) => {
           })
         })
       )
-      await prisma.foodPlan.deleteMany({
-        where: { name: { notIn: foodPlans.map((fp) => fp.name) } },
-      })
+      // Plans that were ever sold (Food subscriptions) are retired, not deleted.
+      const dropped = { name: { notIn: foodPlans.map((fp) => fp.name) } }
+      await prisma.foodPlan.updateMany({ where: { ...dropped, subscriptions: { some: {} } }, data: { active: false } })
+      await prisma.foodPlan.deleteMany({ where: { ...dropped, subscriptions: { none: {} } } })
     }
 
     // Batch update amenities (deletes rows absent from the submitted set).

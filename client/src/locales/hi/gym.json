@@ -151,5 +151,8 @@
     "planRetired": "“{{name}}” बंद किया गया — इस पर चल रहे सदस्यों का प्लान जारी रहेगा", "planDeleted": "“{{name}}” हटाया गया",
     "planRestored": "“{{name}}” फिर बिक्री पर है",
     "failed": "कुछ गड़बड़ हो गई। कृपया फिर कोशिश करें।"
-  }
+  },
+  "docs": {"title": "पहचान दस्तावेज़", "side": "{{doc}} — {{side}}", "front": "आगे", "back": "पीछे", "onFile": "अपलोड है · बदलने के लिए नया अपलोड करें", "uploadFailed": "सदस्य सेव हो गया, पर ID स्कैन अपलोड नहीं हो सके।", "loadFailed": "लोड नहीं हो सका", "openPdf": "PDF खोलें", "removeConfirm": "यह ID स्कैन हटाएँ?"},
+  "wa": {"message": "WhatsApp", "more": "और WhatsApp संदेश", "chat": "WhatsApp पर संदेश", "welcome": "स्वागत संदेश भेजें", "receipt": "भुगतान रसीद भेजें", "receiptShort": "रसीद", "receiptFor": "{{amount}} की रसीद WhatsApp पर भेजें", "renewal": "नवीनीकरण रिमाइंडर", "due": "बकाया रिमाइंडर", "offerPaid": "{{name}} का भुगतान सेव हुआ।", "offerPlan": "{{name}} के लिए प्लान जोड़ा गया।"},
+  "remove": {"entry": "एंट्री हटाएँ", "entryConfirm": "{{plan}} की एंट्री और उसके भुगतान हटाएँ? यह वापस नहीं होगा। (रिकॉर्ड रखने के लिए प्लान रद्द करें का उपयोग करें।)", "entryDone": "प्लान एंट्री हटाई गई", "payment": "{{amount}} का भुगतान हटाएँ", "paymentConfirm": "{{amount}} का यह भुगतान हटाएँ? राशि वापस बकाया में जुड़ जाएगी।", "paymentDone": "भुगतान हटाया गया"}
 }

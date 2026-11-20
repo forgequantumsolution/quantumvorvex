@@ -118,6 +118,47 @@ const gymMembershipFields = z.object({
   notes:      optText(300),
 })
 
+// ── Food ──
+export const FOOD_MEALS  = ['breakfast', 'lunch', 'snacks', 'dinner']
+export const FOOD_CYCLES = ['daily', 'weekly', 'monthly']
+export const FOOD_DIETS  = ['veg', 'non_veg', 'eggetarian', 'jain', 'vegan']
+const foodRate = z.coerce.number().min(0).max(1000000)
+const foodPlanFields = z.object({
+  name:        z.string().trim().min(2, 'Enter a plan name').max(50),
+  description: optText(300),
+  oneTimeRate: foodRate.default(0),
+  weeklyRate:  foodRate.default(0),
+  monthlyRate: foodRate.default(0),
+  meals:       z.array(z.enum(FOOD_MEALS)).min(1, 'Pick at least one meal').optional(),
+  active:      z.boolean().optional(),
+})
+const foodCustomerFields = z.object({
+  name:    z.string().trim().min(2, 'Enter the customer\'s name').max(80),
+  phone:   z.string().trim().transform((v) => v.replace(/[\s-]/g, ''))
+             .refine((v) => /^\+?\d{10,15}$/.test(v), 'Enter a valid mobile number'),
+  email:   z.string().trim().max(120).email('Enter a valid email').optional().nullable().or(z.literal('')).transform((v) => v || null),
+  address: optText(300),
+  diet:    optEnum(FOOD_DIETS),
+  guestId: optText(40),
+  notes:   optText(500),
+})
+const foodSubscriptionFields = z.object({
+  planId:     z.string().trim().min(1, 'Choose a meal plan'),
+  cycle:      z.enum(FOOD_CYCLES).default('monthly'),
+  units:      z.coerce.number().int().min(1, 'At least 1').max(365).default(1),
+  startDate:  gymDate,
+  discount:   z.coerce.number().min(0).max(1000000).default(0),
+  amountPaid: z.coerce.number().min(0).max(1000000).default(0),
+  payMode:    z.enum(GYM_PAY_MODES).default('cash'),
+  notes:      optText(300),
+})
+// Optional meal plan picked on the booking form.
+const bookingMeal = z.object({
+  planId: z.string().trim().min(1),
+  diet:   optEnum(FOOD_DIETS),
+}).optional().nullable()
+const foodDay = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, 'Enter a valid date')
+
 // ── Tickets ──
 export const TICKET_CATEGORIES = ['general', 'front_desk', 'housekeeping', 'maintenance', 'guest_request', 'purchase', 'accounts', 'it', 'other']
 export const TICKET_PRIORITIES = ['low', 'medium', 'high', 'urgent']
@@ -329,6 +370,8 @@ export const schemas = {
     // PG: one bed of a room let by bed (1-based), and its refundable deposit.
     bedNo:           z.coerce.number().int().min(1).max(50).optional().nullable(),
     securityDeposit: z.coerce.number().min(0).max(1000000).default(0),
+    // Meal plan for the stay (Food module).
+    meal:            bookingMeal,
   }),
 
   // Booking — several occupants into one room let by bed (PG). Stay fields are
@@ -344,6 +387,8 @@ export const schemas = {
     notes:           z.string().max(1000).optional().nullable(),
     specialRequests: z.string().max(1000).optional().nullable(),
     source:       z.enum(['walk_in', 'phone', 'website', 'ota', 'referral', 'corporate']).default('walk_in'),
+    // Meal plan for every occupant (Food module).
+    meal:         bookingMeal,
     occupants: z.array(z.object({
       bedNo:        z.coerce.number().int().min(1).max(50),
       guestName:    z.string().min(2, 'Occupant name is required').max(200).trim(),
@@ -582,6 +627,31 @@ export const schemas = {
     price:        z.coerce.number().min(0).max(1000000),
     description:  optText(300),
     active:       z.boolean().optional(),
+  }),
+
+  // Food
+  foodPlan:           foodPlanFields.extend({ meals: z.array(z.enum(FOOD_MEALS)).min(1, 'Pick at least one meal').default(['breakfast', 'lunch', 'dinner']) }),
+  foodPlanUpdate:     foodPlanFields.partial(),
+  foodCustomer:       foodCustomerFields,
+  createFoodCustomer: foodCustomerFields.extend({ subscription: foodSubscriptionFields.optional().nullable() }),
+  foodSubscription:   foodSubscriptionFields,
+  foodPayment: z.object({
+    amount: z.coerce.number().positive('Enter an amount').max(1000000),
+    mode:   z.enum(GYM_PAY_MODES).default('cash'),
+  }),
+  foodMeal: z.object({
+    customerId: z.string().trim().min(1),
+    date:       foodDay,
+    meal:       z.enum(FOOD_MEALS),
+    served:     z.boolean(),
+  }),
+  foodMealBulk: z.object({ date: foodDay, meal: z.enum(FOOD_MEALS), served: z.boolean() }),
+  foodMenu: z.object({
+    items: z.array(z.object({
+      weekday: z.coerce.number().int().min(0).max(6),
+      meal:    z.enum(FOOD_MEALS),
+      items:   z.string().max(300).default(''),
+    })).max(28),
   }),
 
   // Tickets

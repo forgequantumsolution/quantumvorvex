@@ -5,6 +5,8 @@ import {
   getDashboard, getMembers, getMember, createMember, updateMember, deleteMember,
   addMembership, freezeMembership, unfreezeMembership, cancelMembership, addPayment,
   getPlans, createPlan, updatePlan, deletePlan, getInHouseGuests,
+  receiveMemberDocs, uploadMemberDocuments, getMemberDocumentFile, deleteMemberDocument,
+  deleteMembership, deletePayment,
 } from '../controllers/gymController.js'
 
 const router = express.Router()
@@ -26,11 +28,16 @@ router.post('/members',                   validate(schemas.createGymMember), cre
 router.get('/members/:id',                getMember)
 router.put('/members/:id',                validate(schemas.updateGymMember), updateMember)
 router.delete('/members/:id',             deleteMember)
+router.post('/members/:id/documents',              receiveMemberDocs, uploadMemberDocuments)
+router.get('/members/:id/documents/:docId',        getMemberDocumentFile)
+router.delete('/members/:id/documents/:docId',     deleteMemberDocument)
 router.post('/members/:id/memberships',   validate(schemas.createGymMembership), addMembership)
 
 router.post('/memberships/:id/freeze',    freezeMembership)
 router.post('/memberships/:id/unfreeze',  unfreezeMembership)
 router.post('/memberships/:id/cancel',    cancelMembership)
 router.post('/memberships/:id/payments',  validate(schemas.gymPayment), addPayment)
+router.delete('/memberships/:id',         deleteMembership)
+router.delete('/payments/:id',            deletePayment)
 
 export default router

@@ -28,7 +28,8 @@ import { mapsUrl, openWhatsApp, waNumber } from '../../utils/whatsapp'
  *
  * Templates (whatsapp:msg.<template>): confirmation, arrival, payment, invoice,
  * thanks, invoiceReminder, rentReminder, departure, chat, receipt (payment
- * received + the updated invoice). Messages asking for money present the link
+ * received + the updated invoice), and for the gym gym.welcome, gym.receipt,
+ * gym.expiring, gym.expired, gym.due. Messages asking for money present the link
  * as the guest pay page (QR, UPI button, "I've paid"). `text` instead of a
  * template sends that text as-is.
  */
@@ -100,14 +101,14 @@ const dateIn = (lang) => (d) => {
 
 // Fill a template in `lang`. Raw values in `vars` (dates, numbers) are formatted here.
 // Messages asking for money also carry the hotel's UPI ID (pay from any UPI app).
-const MONEY_TEMPLATES = ['payment', 'invoiceReminder', 'rentReminder']
+const MONEY_TEMPLATES = ['payment', 'invoiceReminder', 'rentReminder', 'gym.due', 'gym.expiring', 'gym.expired']
 
 function buildMessage(template, vars, lang, { hotel, link, upiId }) {
   const t = i18n.getFixedT(lang, 'whatsapp')
   const date = dateIn(lang)
   const money = (v) => formatCurrency(Number(v) || 0)
   const due = Number(vars.due) || 0
-  const asksMoney = MONEY_TEMPLATES.includes(template) || (due > 0 && template !== 'receipt')
+  const asksMoney = MONEY_TEMPLATES.includes(template) || (due > 0 && !/(^|\.)receipt$/.test(template))
   const stay = vars.months
     ? t('months', { count: Number(vars.months) })
     : vars.nights ? t('nights', { count: Number(vars.nights) }) : vars.tenancy ? t('monthlyStay') : ''
@@ -123,6 +124,11 @@ function buildMessage(template, vars, lang, { hotel, link, upiId }) {
     amount: money(vars.amount),
     due: money(due),
     dueDate: date(vars.dueDate),
+    // Gym membership: plan dates and the payment a receipt is for.
+    start: date(vars.startDate),
+    end: date(vars.endDate),
+    paidOn: date(vars.paidAt),
+    paidAmount: money(vars.paidAmount),
     payment: due > 0 ? t('line.paymentDue', { paid: money(vars.paid), due: money(due) }) : t('line.paidInFull'),
     // Asking for money: the link opens the pay page (QR, UPI button, invoice).
     linkLine: link ? t(template === 'receipt' ? 'line.updatedLink' : asksMoney ? 'line.payLink' : 'line.link', { link }) : '',

@@ -2,9 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation, Trans } from 'react-i18next'
 import {
   LuPlus, LuRefreshCw, LuLayoutDashboard, LuUsers, LuTags, LuUserCheck, LuClock, LuIndianRupee, LuUserPlus,
-  LuRepeat, LuWallet, LuBedDouble, LuPencil, LuArchive, LuArchiveRestore,
+  LuRepeat, LuWallet, LuBedDouble, LuPencil, LuArchive, LuArchiveRestore, LuTrash2,
 } from 'react-icons/lu'
-import { PageWrapper, StatCard, TableCard, DataTable, Button, EmptyState, Card } from '../../ui-tw'
+import {
+  PageWrapper, StatCard, TableCard, DataTable, Button, EmptyState, Card, ActionMenu, WhatsAppOffer, useWhatsAppComposer, waMenuItem,
+} from '../../ui-tw'
+import { gymWaOptions, gymWaRequest } from './gymWhatsApp'
 import ConfirmModal from '../../ui/ConfirmModal'
 import GymDashboard from './GymDashboard'
 import MemberModal from './MemberModal'
@@ -50,7 +53,23 @@ export default function Gym() {
   const [paying, setPaying] = useState(null)         // { member, membership }
   const [planEditing, setPlanEditing] = useState(null)
   const [deleting, setDeleting] = useState(null)
+  const [waOffer, setWaOffer] = useState(null)       // { message, actionLabel, member, kind, extra }
+  const wa = useWhatsAppComposer()
   const reqId = useRef(0)
+
+  // WhatsApp to a member (composer: edit, pick language, then Send in WhatsApp).
+  const sendWa = (member, kind, extra) => wa.open(gymWaRequest(t, member, kind, extra))
+  // Dashboard rows carry the plan flat; give them the shape gymWaRequest reads.
+  const asMember = (r) => (r.current ? r : { ...r, current: r.planName ? { planName: r.planName, endDate: r.endDate } : null })
+  // After a sale or payment: offer the receipt (money taken) or a welcome.
+  const offerWa = (member, { membership, payment } = {}) => {
+    if (!member?.phone) return
+    const kind = payment ? 'receipt' : 'welcome'
+    setWaOffer({
+      message: t(payment ? 'wa.offerPaid' : 'wa.offerPlan', { name: member.name }),
+      actionLabel: t(`wa.${kind}`), member, kind, extra: { membership, payment },
+    })
+  }
 
   // Debounced search.
   useEffect(() => {
@@ -149,7 +168,7 @@ export default function Gym() {
     {
       key: 'actions', header: t('table.actions'), actions: true, align: 'right', className: 'w-[1%]',
       render: (m) => canManage ? (
-        <div className="flex justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-end items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
           {m.due > 0 && (
             <Button size="sm" variant="ghost" icon={<LuIndianRupee />} onClick={() => openPay(m)} aria-label={t('pay.collectFrom', { name: m.name })}>
               <span className="hidden xl:inline">{t('pay.collect')}</span>
@@ -158,6 +177,10 @@ export default function Gym() {
           <Button size="sm" icon={<LuRefreshCw />} onClick={() => setSelling(m)} disabled={noPlans}>
             {m.status === 'no_plan' ? t('actions.sellPlan') : t('actions.renew')}
           </Button>
+          <ActionMenu items={[
+            ...gymWaOptions(m).map((k) => waMenuItem(t(`wa.${k}`), m.phone, () => sendWa(m, k))),
+            list.canDelete && { label: t('actions.delete'), icon: <LuTrash2 size={14} />, danger: true, onClick: () => setDeleting(m) },
+          ]} />
         </div>
       ) : null,
     },
@@ -183,9 +206,16 @@ export default function Gym() {
           onClick={KPI_TAB[kp.id] ? () => openTab(KPI_TAB[kp.id]) : () => setView('dashboard')} />
       ))}
     >
+      {waOffer && (
+        <WhatsAppOffer message={waOffer.message} actionLabel={waOffer.actionLabel} phone={waOffer.member.phone}
+          onSend={() => { sendWa(waOffer.member, waOffer.kind, waOffer.extra); setWaOffer(null) }}
+          onDismiss={() => setWaOffer(null)} />
+      )}
+
       {view === 'dashboard' && (
         <GymDashboard data={dash} loading={dashLoading} canManage={canManage} noPlans={noPlans}
           onOpen={(m) => setViewingId(m.id)} onRenew={setSelling} onPay={openPay}
+          onWhatsApp={(r, kind) => sendWa(asMember(r), kind)}
           onAddPlan={() => setPlanEditing({})} onAddMember={() => setEditing({})} />
       )}
 
@@ -238,6 +268,7 @@ export default function Gym() {
           onSaved={(m, wasEdit) => {
             setEditing(null)
             done(wasEdit ? t('toast.updated') : t('toast.added', { name: m.name, no: m.memberNo }))
+            if (!wasEdit && m.current) offerWa(m, { membership: m.current })
             if (!wasEdit) { setView('members'); setTab('all'); setPage(1) }
           }} />
       )}
@@ -248,20 +279,27 @@ export default function Gym() {
           onRenew={(m) => setSelling(m)}
           onPay={(member, membership) => setPaying({ member, membership })}
           onDelete={(m) => setDeleting(m)}
+          onWhatsApp={sendWa}
           onChanged={done} />
       )}
       {selling && (
         <SellPlanModal member={selling} plans={plans} onClose={() => setSelling(null)}
-          onSaved={(msg) => { setSelling(null); done(msg) }} />
+          onSaved={(msg, extra) => { const m = selling; setSelling(null); done(msg); offerWa(m, extra) }} />
       )}
       {paying && (
         <PaymentModal member={paying.member} membership={paying.membership} onClose={() => setPaying(null)}
-          onSaved={(msg) => { setPaying(null); done(msg) }} />
+          onSaved={(msg, extra) => {
+            const { member, membership } = paying
+            setPaying(null); done(msg)
+            // The receipt shows the plan with its updated paid / due figures.
+            offerWa(member, { membership: { ...membership, ...extra?.membership }, payment: extra?.payment })
+          }} />
       )}
       {planEditing && (
         <PlanModal plan={planEditing.id ? planEditing : null} onClose={() => setPlanEditing(null)}
           onSaved={(msg) => { setPlanEditing(null); done(msg) }} />
       )}
+      {wa.composer}
       <ConfirmModal
         isOpen={!!deleting}
         onClose={() => setDeleting(null)}

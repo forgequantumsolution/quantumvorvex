@@ -18,6 +18,7 @@
 import prisma from '../utils/prisma.js'
 import logger from '../utils/logger.js'
 import { isPropertyAdmin } from '../utils/roles.js'
+import { idScanStore, scanOut } from '../utils/idScans.js'
 
 const DAY = 86400000
 const EXPIRING_DAYS = 7
@@ -194,7 +195,7 @@ export const getMembers = handle('getMembers', async (req, res) => {
   if (tab === 'expiring') rows.sort((a, b) => a.daysLeft - b.daysLeft)
   if (tab === 'expired') rows.sort((a, b) => b.daysLeft - a.daysLeft)
   if (tab === 'dues') rows.sort((a, b) => b.due - a.due)
-  res.json({ members: rows.slice((page - 1) * pageSize, page * pageSize), total: rows.length, counts })
+  res.json({ members: rows.slice((page - 1) * pageSize, page * pageSize), total: rows.length, counts, canDelete: isPropertyAdmin(req.propertyAccess) })
 })
 
 // GET /gym/members/:id — profile, every membership with its payments, the linked guest.
@@ -204,12 +205,14 @@ export const getMember = handle('getMember', async (req, res) => {
     include: {
       memberships: { select: { ...MEMBERSHIP_SELECT, payments: { orderBy: { paidAt: 'desc' } } }, orderBy: { startDate: 'desc' } },
       guest: { select: { id: true, name: true, status: true, room: { select: { number: true } } } },
+      documents: { orderBy: { side: 'desc' } },
     },
   })
   if (!m) throw notFound()
-  const out = memberOut(m, startOfDay())
+  const { documents, ...rest } = m
+  const out = memberOut(rest, startOfDay())
   res.json({
-    member: { ...out, memberships: m.memberships.map(membershipOut) },
+    member: { ...out, memberships: m.memberships.map(membershipOut), documents: documents.map(scanOut) },
     canDelete: isPropertyAdmin(req.propertyAccess),
   })
 })
@@ -250,6 +253,45 @@ export const deleteMember = handle('deleteMember', async (req, res) => {
   if (!isPropertyAdmin(req.propertyAccess)) throw new HttpError(403, 'Only the owner or an admin can delete members.', 'ERR_FORBIDDEN')
   const m = await findMember(req.params.id)
   await prisma.gymMember.update({ where: { id: m.id }, data: { deletedAt: new Date() } })
+  res.json({ ok: true })
+})
+
+// ── ID scans (Aadhaar front / back) ──────────────────────────────────────────
+
+const scans = idScanStore('gym')
+export const receiveMemberDocs = scans.receive
+
+// POST /gym/members/:id/documents — multipart "front" / "back"; replaces a side.
+export const uploadMemberDocuments = async (req, res) => {
+  try {
+    const m = await prisma.gymMember.findFirst({ where: { id: req.params.id, deletedAt: null } })
+    if (!m) { scans.discard(req); return res.status(404).json({ message: 'Member not found.', code: 'ERR_NOT_FOUND' }) }
+    if (!scans.hasFiles(req)) return res.status(400).json({ message: 'No files uploaded.' })
+    const docs = await scans.store(prisma.gymMemberDocument, 'memberId', m.id, req)
+    logger.info('Gym member ID scans uploaded', { event: 'GYM', memberNo: m.memberNo, sides: docs.map((d) => d.side) })
+    res.status(201).json({ documents: docs.map(scanOut) })
+  } catch (e) {
+    scans.discard(req)
+    logger.error('uploadMemberDocuments error', { error: e.message })
+    res.status(500).json({ message: 'Internal server error.' })
+  }
+}
+
+// GET /gym/members/:id/documents/:docId — the scan itself, for signed-in staff only.
+export const getMemberDocumentFile = handle('getMemberDocumentFile', async (req, res) => {
+  const d = await prisma.gymMemberDocument.findFirst({
+    where: { id: req.params.docId, memberId: req.params.id, member: { deletedAt: null } },
+  })
+  if (!d) throw notFound('Document')
+  scans.send(res, d)
+})
+
+// DELETE /gym/members/:id/documents/:docId
+export const deleteMemberDocument = handle('deleteMemberDocument', async (req, res) => {
+  const d = await prisma.gymMemberDocument.findFirst({ where: { id: req.params.docId, memberId: req.params.id } })
+  if (!d) throw notFound('Document')
+  await prisma.gymMemberDocument.delete({ where: { id: d.id } })
+  scans.removeFile(d.fileName)
   res.json({ ok: true })
 })
 
@@ -307,6 +349,33 @@ export const cancelMembership = handle('cancelMembership', async (req, res) => {
   const ms = await findMembership(req.params.id)
   if (ms.status === 'cancelled') throw new HttpError(409, 'This plan is already cancelled.', 'ERR_STATE')
   const updated = await prisma.gymMembership.update({ where: { id: ms.id }, data: { status: 'cancelled', frozenAt: null } })
+  res.json({ membership: membershipOut(updated) })
+})
+
+// DELETE /gym/memberships/:id — owner or admin only: remove a plan entry made
+// by mistake, with its payments (cancel keeps it on record instead).
+export const deleteMembership = handle('deleteMembership', async (req, res) => {
+  if (!isPropertyAdmin(req.propertyAccess)) throw new HttpError(403, 'Only the owner or an admin can delete a plan entry.', 'ERR_FORBIDDEN')
+  const ms = await findMembership(req.params.id)
+  await prisma.gymMembership.delete({ where: { id: ms.id } })
+  logger.info('Gym plan entry deleted', { event: 'GYM', membershipId: ms.id, plan: ms.planName })
+  res.json({ ok: true })
+})
+
+// DELETE /gym/payments/:id — owner or admin only: undo a payment entered by
+// mistake; the amount goes back onto the plan's dues.
+export const deletePayment = handle('deletePayment', async (req, res) => {
+  if (!isPropertyAdmin(req.propertyAccess)) throw new HttpError(403, 'Only the owner or an admin can delete a payment.', 'ERR_FORBIDDEN')
+  const p = await prisma.gymPayment.findFirst({ where: { id: req.params.id, member: { deletedAt: null } }, include: { membership: true } })
+  if (!p) throw notFound('Payment')
+  const updated = await prisma.$transaction(async (tx) => {
+    await tx.gymPayment.delete({ where: { id: p.id } })
+    return tx.gymMembership.update({
+      where: { id: p.membershipId },
+      data: { amountPaid: Math.max(0, round2(p.membership.amountPaid - p.amount)) },
+    })
+  })
+  logger.info('Gym payment deleted', { event: 'GYM', paymentId: p.id, amount: p.amount })
   res.json({ membership: membershipOut(updated) })
 })
 
