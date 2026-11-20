@@ -60,6 +60,11 @@ model Property {
   gymMembers           GymMember[]
   gymMemberships       GymMembership[]
   gymPayments          GymPayment[]
+  foodCustomers        FoodCustomer[]
+  foodSubscriptions    FoodSubscription[]
+  foodPayments         FoodPayment[]
+  foodMealLogs         FoodMealLog[]
+  foodMenu             FoodMenuItem[]
 }
 
 // A non-owner user's membership of one property, with the role they hold there.
@@ -250,6 +255,7 @@ model Guest {
   bookings        Booking[]
   communications  GuestCommunication[]
   gymMembers      GymMember[]
+  foodCustomers   FoodCustomer[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
 
@@ -405,6 +411,7 @@ model Booking {
   propertyId          String
   property            Property          @relation(fields: [propertyId], references: [id])
   documents           BookingDocument[]
+  foodCustomers       FoodCustomer[]
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
 
@@ -569,17 +576,136 @@ model LoginOtp {
 }
 
 model FoodPlan {
-  id          String   @id @default(cuid())
-  propertyId  String
-  property    Property @relation(fields: [propertyId], references: [id])
-  name        String
-  description String?
-  oneTimeRate Float    @default(0)
-  weeklyRate  Float    @default(0)
-  monthlyRate Float    @default(0)
-  active      Boolean  @default(true)
+  id            String             @id @default(cuid())
+  propertyId    String
+  property      Property           @relation(fields: [propertyId], references: [id])
+  name          String
+  description   String?
+  oneTimeRate   Float              @default(0)
+  weeklyRate    Float              @default(0)
+  monthlyRate   Float              @default(0)
+  active        Boolean            @default(true)
+  // Meals the plan includes, JSON array of breakfast | lunch | snacks | dinner.
+  meals         String             @default("[\"breakfast\",\"lunch\",\"dinner\"]")
+  subscriptions FoodSubscription[]
 
   @@unique([propertyId, name])
+}
+
+// ─── FOOD: customers, subscriptions, payments, daily meals, weekly menu ──────
+// A customer is an outside person or a hotel / PG guest (guestId), possibly
+// signed up from a booking (bookingId — guestId follows at check-in). They
+// subscribe to a meal plan for a run of days / weeks / months; each
+// subscription collects payments. Status is derived, never stored.
+
+model FoodCustomer {
+  id            String             @id @default(cuid())
+  propertyId    String
+  property      Property           @relation(fields: [propertyId], references: [id])
+  customerNo    String // FC-0001, per property
+  name          String
+  phone         String
+  email         String?
+  address       String?
+  diet          String? // veg | non_veg | jain | vegan | eggetarian
+  guestId       String?
+  guest         Guest?             @relation(fields: [guestId], references: [id])
+  bookingId     String?
+  booking       Booking?           @relation(fields: [bookingId], references: [id])
+  notes         String?
+  createdById   String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  deletedAt     DateTime?
+  subscriptions FoodSubscription[]
+  payments      FoodPayment[]
+  mealLogs      FoodMealLog[]
+
+  @@unique([propertyId, customerNo])
+  @@index([propertyId, phone])
+  @@index([bookingId])
+}
+
+model FoodSubscription {
+  id          String        @id @default(cuid())
+  propertyId  String
+  property    Property      @relation(fields: [propertyId], references: [id])
+  customerId  String
+  customer    FoodCustomer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  planId      String?
+  plan        FoodPlan?     @relation(fields: [planId], references: [id], onDelete: SetNull)
+  planName    String // snapshot: the plan may be renamed or retired later
+  meals       String // snapshot of the plan's meals (JSON array)
+  cycle       String // daily | weekly | monthly
+  units       Int // how many days / weeks / months
+  startDate   DateTime
+  endDate     DateTime // last day of meals (inclusive); moved out by pauses
+  price       Float
+  discount    Float         @default(0)
+  amountPaid  Float         @default(0)
+  status      String        @default("active") // active | paused | cancelled
+  pausedAt    DateTime?
+  pausedDays  Int           @default(0)
+  isRenewal   Boolean       @default(false)
+  bookingId   String? // the booking it was sold with, if any
+  notes       String?
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  payments    FoodPayment[]
+  mealLogs    FoodMealLog[]
+
+  @@index([propertyId, endDate])
+  @@index([customerId])
+  @@index([bookingId])
+}
+
+model FoodPayment {
+  id             String           @id @default(cuid())
+  propertyId     String
+  property       Property         @relation(fields: [propertyId], references: [id])
+  subscriptionId String
+  subscription   FoodSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  customerId     String
+  customer       FoodCustomer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  amount         Float
+  mode           String           @default("cash") // cash | upi | card | bank
+  paidAt         DateTime         @default(now())
+  createdById    String?
+
+  @@index([propertyId, paidAt])
+  @@index([subscriptionId])
+}
+
+// One meal served to a customer on a day (the kitchen's tick list).
+model FoodMealLog {
+  id             String            @id @default(cuid())
+  propertyId     String
+  property       Property          @relation(fields: [propertyId], references: [id])
+  customerId     String
+  customer       FoodCustomer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  subscriptionId String?
+  subscription   FoodSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  date           DateTime // the day (local midnight)
+  meal           String // breakfast | lunch | snacks | dinner
+  servedAt       DateTime          @default(now())
+  createdById    String?
+
+  @@unique([customerId, date, meal])
+  @@index([propertyId, date])
+}
+
+// The weekly menu: what is served for a meal on a weekday (0 = Sunday).
+model FoodMenuItem {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  weekday    Int
+  meal       String
+  items      String
+  updatedAt  DateTime @updatedAt
+
+  @@unique([propertyId, weekday, meal])
 }
 
 model Amenity {
@@ -974,9 +1100,9 @@ model GymPlan {
 }
 
 model GymMember {
-  id             String          @id @default(cuid())
+  id             String              @id @default(cuid())
   propertyId     String
-  property       Property        @relation(fields: [propertyId], references: [id])
+  property       Property            @relation(fields: [propertyId], references: [id])
   memberNo       String // GM-0001, per property
   name           String
   phone          String
@@ -990,21 +1116,37 @@ model GymMember {
   emergencyPhone String?
   healthNotes    String? // injuries, conditions the trainer should know
   goal           String? // weight_loss | muscle_gain | fitness | strength | other
-  source         String          @default("walk_in") // walk_in | guest | referral | online | corporate
+  source         String              @default("walk_in") // walk_in | guest | referral | online | corporate
   guestId        String? // set when the member is a hotel / PG guest
-  guest          Guest?          @relation(fields: [guestId], references: [id])
+  guest          Guest?              @relation(fields: [guestId], references: [id])
   notes          String?
-  joinedAt       DateTime        @default(now())
+  joinedAt       DateTime            @default(now())
   createdById    String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
   deletedAt      DateTime?
   memberships    GymMembership[]
   payments       GymPayment[]
+  documents      GymMemberDocument[]
 
   @@unique([propertyId, memberNo])
   @@index([propertyId, phone])
   @@index([propertyId, joinedAt])
+}
+
+// A member's ID scan (Aadhaar front/back). Files live in private-uploads/gym and
+// are only served to signed-in staff.
+model GymMemberDocument {
+  id        String    @id @default(cuid())
+  memberId  String
+  member    GymMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  side      String // front | back
+  fileName  String
+  mimeType  String
+  createdAt DateTime  @default(now())
+
+  @@unique([memberId, side])
+  @@index([memberId])
 }
 
 model GymMembership {

@@ -8,6 +8,7 @@ import CancelModal from '../cancellations/CancelModal'
 import CheckOutModal from '../checkout/CheckOutModal'
 import ExtendStayModal from './ExtendStayModal'
 import EditBookingModal from './EditBookingModal'
+import BookingDocumentsModal from './BookingDocumentsModal'
 import InvoiceModal from './InvoiceModal'
 import CollectRentModal from './CollectRentModal'
 import RefundModal from './RefundModal'
@@ -121,6 +122,7 @@ export default function Bookings() {
   const [refundTarget, setRefundTarget] = useState(null)
   const [extendTarget, setExtendTarget] = useState(null)
   const [editTarget, setEditTarget] = useState(null)
+  const [docsTarget, setDocsTarget] = useState(null)   // booking whose uploads are open
   const [invoiceTarget, setInvoiceTarget] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [busyId, setBusyId] = useState(null)
@@ -409,6 +411,7 @@ export default function Bookings() {
             onRefund={setRefundTarget}
             onInvoice={setInvoiceTarget}
             onEdit={setEditTarget}
+            onDocuments={setDocsTarget}
             onDelete={setDeleteTarget}
             onWhatsApp={openWhatsApp}
             view={view}
@@ -456,6 +459,9 @@ export default function Bookings() {
           onClose={() => setEditTarget(null)}
           onSave={handleEdit}
         />
+      )}
+      {docsTarget && (
+        <BookingDocumentsModal booking={docsTarget} onClose={() => setDocsTarget(null)} onChanged={reload} />
       )}
       {extendTarget && (
         <ExtendStayModal

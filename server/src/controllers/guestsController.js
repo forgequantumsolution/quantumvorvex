@@ -90,6 +90,9 @@ export const getGuest = async (req, res) => {
         room: { include: { type: true } },
         documents: true,
         invoices: { orderBy: { createdAt: 'desc' } },
+        // ID scans, guardian Aadhaar, photos and payment proofs captured on the
+        // guest's bookings live in BookingDocument — shown with their own files.
+        bookings: { select: { documents: { select: { id: true, docType: true, url: true, verified: true, uploadedAt: true } } } },
       },
     })
 
@@ -97,7 +100,10 @@ export const getGuest = async (req, res) => {
       return res.status(404).json({ message: 'Guest not found.' })
     }
 
-    return res.status(200).json({ guest })
+    const { bookings, ...rest } = guest
+    const documents = [...guest.documents, ...bookings.flatMap((b) => b.documents.map((d) => ({ ...d, source: 'booking' })))]
+      .sort((a, b) => new Date(a.uploadedAt) - new Date(b.uploadedAt))
+    return res.status(200).json({ guest: { ...rest, documents } })
   } catch (err) {
     console.error('getGuest error:', err)
     return res.status(500).json({ message: 'Internal server error.' })

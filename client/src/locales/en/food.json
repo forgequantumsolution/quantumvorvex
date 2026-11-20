@@ -1,61 +1,146 @@
 {
-  "title": "Food Options",
-  "subtitle": "Meal plans, active orders, and food revenue",
-  "addPlan": "Add meal plan",
-  "loadFailed": "Could not load food data. Make sure the backend is running.",
-  "tabs": {
-    "catalog": "Meal Catalog",
-    "orders": "Active Orders",
-    "revenue": "Revenue"
+  "title": "Food",
+  "subtitle": "{{active}} eating today · {{plans}} meal plans on offer",
+  "subtitleLoading": "Meal plans, customers, daily meals and menu",
+  "searchPlaceholder": "Search name, phone, room, FC-no…",
+  "addCustomer": "Add customer",
+  "room": "Room {{room}}",
+  "bed": "Bed {{bed}}",
+  "views": { "dashboard": "Dashboard", "meals": "Today's meals", "customers": "Customers", "menu": "Weekly menu", "plans": "Meal plans" },
+  "kpi": {
+    "active": "Eating now", "activeHint": "of {{total}} customers",
+    "meals": "Meals today", "mealsHint": "served / expected",
+    "expiring": "Ending soon", "expiringHint": "next 3 days · {{count}} paused",
+    "revenue": "Collected this month", "revenueHint": "Last month {{amount}}",
+    "dues": "Dues", "duesHint_one": "{{count}} customer", "duesHint_other": "{{count}} customers"
   },
-  "planCount_one": "{{count}} meal plan",
-  "planCount_other": "{{count}} meal plans",
-  "guestsOnPlan_one": "{{count}} guest on a meal plan",
-  "guestsOnPlan_other": "{{count}} guests on a meal plan",
-  "clickActivate": "Click to activate",
-  "clickDeactivate": "Click to deactivate",
-  "billing": {
-    "one-time": "One-time",
-    "weekly": "Weekly",
-    "monthly": "Monthly",
-    "daily": "Daily",
-    "none": "None"
+  "tabs": { "all": "All", "active": "Active", "expiring": "Ending soon", "expired": "Ended", "paused": "Paused", "dues": "Dues", "guests": "Guests", "outside": "Outside" },
+  "table": { "customer": "Customer", "room": "Room", "plan": "Meal plan", "diet": "Diet", "status": "Status", "due": "Due", "actions": "Actions", "noPlan": "No plan" },
+  "status": { "active": "Active", "expiring": "Ending soon", "upcoming": "Starts later", "paused": "Paused", "expired": "Ended", "no_plan": "No plan", "cancelled": "Cancelled" },
+  "left": {
+    "paused": "Paused", "starts": "Starts {{date}}", "today": "Ends today",
+    "inDays_one": "Ends tomorrow", "inDays_other": "Ends in {{count}} days",
+    "endedAgo_one": "Ended yesterday", "endedAgo_other": "Ended {{count}} days ago"
   },
-  "empty": {
-    "noPlans": "No meal plans yet",
-    "noPlansHint": "Add a plan to offer meals to guests.",
-    "noOrders": "No active orders"
+  "meals": { "breakfast": "Breakfast", "lunch": "Lunch", "snacks": "Snacks", "dinner": "Dinner" },
+  "cycles": {
+    "daily": "Per day", "weekly": "Per week", "monthly": "Per month",
+    "per": { "daily": "/day", "weekly": "/week", "monthly": "/month" },
+    "count": {
+      "daily_one": "{{count}} day", "daily_other": "{{count}} days",
+      "weekly_one": "{{count}} week", "weekly_other": "{{count}} weeks",
+      "monthly_one": "{{count}} month", "monthly_other": "{{count}} months"
+    }
+  },
+  "diets": { "veg": "Veg", "non_veg": "Non-veg", "eggetarian": "Eggetarian", "jain": "Jain", "vegan": "Vegan" },
+  "source": { "guest": "Hotel / PG guest", "outside": "Outside" },
+  "payModes": { "cash": "Cash", "upi": "UPI", "card": "Card", "bank": "Bank transfer" },
+  "bookingStatus": { "Pending": "Pending", "Confirmed": "Confirmed", "CheckedIn": "Checked in", "CheckedOut": "Checked out", "Cancelled": "Cancelled", "NoShow": "No-show" },
+  "actions": {
+    "renew": "Renew", "subscribe": "Add meal plan", "pause": "Pause", "resume": "Resume", "edit": "Edit",
+    "delete": "Delete", "call": "Call", "cancelPlan": "Cancel plan", "collect": "Collect {{amount}}"
   },
   "form": {
-    "title": "Add Meal Plan",
-    "add": "Add Plan",
-    "name": "Plan Name",
-    "namePlaceholder": "e.g. Breakfast Only",
-    "description": "Description",
-    "descriptionPlaceholder": "Brief description of meals included"
+    "newTitle": "New food customer", "newSubtitle": "A guest staying with you, or someone from outside",
+    "editTitle": "Edit customer", "save": "Save changes", "create": "Add customer",
+    "customerType": "Who is this for?",
+    "kind": {
+      "outside": "Outside customer", "outsideHint": "Tiffin / mess customer not staying here",
+      "guest": "Hotel / PG guest", "guestHint": "Someone checked in right now"
+    },
+    "guest": "Guest", "chooseGuest": "Choose a checked-in guest…", "noGuests": "No checked-in guests without a meal plan",
+    "fromBooking": "Signed up with booking {{booking}} — linked to that stay.",
+    "details": "Details", "name": "Name", "phone": "Mobile", "email": "Email", "address": "Address", "diet": "Diet",
+    "firstPlan": "Meal plan", "subscribeNow": "Start a plan now",
+    "notes": "Notes", "notesPlaceholder": "Allergies, spice level, delivery to room…"
   },
-  "orders": {
-    "plan": "Meal Plan",
-    "billing": "Billing",
-    "action": "Action",
-    "remind": "Remind"
+  "sale": {
+    "plan": "Meal plan", "billing": "Billing", "startDate": "Start date", "discount": "Discount ₹", "amountPaid": "Paid now ₹", "payMode": "Payment mode",
+    "units": { "daily": "Days", "weekly": "Weeks", "monthly": "Months" },
+    "validTill": "Meals until", "payable": "Payable", "paidNow": "Paid now", "due": "Due",
+    "noPlans": "No meal plans on offer. Add one under Meal plans first.",
+    "renewTitle": "Renew {{name}}'s meal plan", "newTitle": "Meal plan for {{name}}",
+    "currentPlan": "Now on {{plan}} until {{date}}"
   },
-  "revenue": {
-    "total": "Food revenue",
-    "thisMonth": "This month",
-    "subscribers": "Active subscribers",
-    "subscribersHint": "Guests on meal plan",
-    "avg": "Avg per guest",
-    "avgHint": "Per active subscriber",
-    "byPlan": "Revenue by Meal Plan",
-    "noData": "No revenue data available"
+  "pay": { "title": "Collect payment", "due": "Due on this plan", "amount": "Amount ₹", "collect": "Collect", "collectFrom": "Collect from {{name}}" },
+  "detail": {
+    "title": "Food customer", "loadError": "Could not load this customer.", "due": "Due",
+    "currentPlan": "Current plan", "pausedSince": "Paused since {{date}} — resuming adds these days to the end.",
+    "booking": "Booking", "since": "Customer since", "recentMeals": "Meals in the last 2 weeks", "noMeals": "No meals marked yet.",
+    "history": "Plan history", "noPlans": "No meal plans yet.", "renewal": "Renewal", "withBooking": "With booking",
+    "pausedDays_one": "paused {{count}} day", "pausedDays_other": "paused {{count}} days",
+    "off": "{{amount}} off", "dueAmount": "{{amount}} due", "paidFull": "Paid in full",
+    "cancelConfirm": "Cancel the {{plan}} plan? Its dues are written off and the customer leaves the meal sheet."
+  },
+  "sheet": {
+    "today": "Today", "yesterday": "Yesterday", "tomorrow": "Tomorrow",
+    "prevDay": "Previous day", "nextDay": "Next day", "pickDay": "Pick a day", "meals": "Meals",
+    "expected": "expected", "servedOf": "served of expected",
+    "menu": "Menu: {{items}}", "noMenu": "No menu set for this meal",
+    "markAll": "Mark all served", "clearAll": "Clear all", "clearConfirm": "Clear every tick for this meal?",
+    "search": "Search name or room", "noMatch": "Nobody matches that search.",
+    "nobody": "Nobody is on this meal.", "emptyTitle": "No meals on this day", "empty": "Nobody has an active meal plan for this day.",
+    "serve": "Serve", "served": "Served", "mark": "Mark {{name}} served", "unmark": "Undo {{name}} served"
+  },
+  "menu": {
+    "title": "Weekly menu", "subtitle": "What the kitchen serves each day — shown on the meal sheet and dashboard",
+    "placeholder": "e.g. Poha, tea", "save_one": "Save {{count}} change", "save_other": "Save {{count}} changes", "allSaved": "Saved",
+    "saved": "Menu saved", "copyMonday": "Fill empty days from Monday", "addSnacks": "Add snacks row"
+  },
+  "plans": {
+    "add": "Add meal plan", "newTitle": "New meal plan", "editTitle": "Edit meal plan",
+    "name": "Plan name", "namePlaceholder": "e.g. All meals, Breakfast + dinner",
+    "meals": "Meals included", "rates": "Rates", "ratesHint": "Fill the billing options you offer; leave the rest empty.",
+    "description": "Description", "descriptionPlaceholder": "What's included, timings…",
+    "activeLabel": "On offer", "editNote": "Rate changes apply to new plans only — customers keep what they signed up for.",
+    "active": "On offer", "retired": "Retired", "onPlan": "eating on it", "noRates": "No rates set — can't be sold.",
+    "retire": "Retire", "restore": "Offer again",
+    "retireConfirm": "Stop offering “{{name}}”? Customers on it keep their plan.",
+    "emptyTitle": "No meal plans yet", "emptyMessage": "Add your first plan, e.g. All meals at ₹3,000 a month."
+  },
+  "dash": {
+    "today": "Today's kitchen", "todayHint": "{{served}} of {{count}} meals served", "openSheet": "Open meal sheet",
+    "revenue": "Collections", "revenueHint": "{{amount}} this month · {{last}} last month", "revenueAria": "Collections by month; this month {{amount}}",
+    "revenueSeries": "Collected", "subscriptionsSeries": "Plans sold",
+    "served": "Meals served", "servedHint": "Last 14 days", "servedAria": "Meals served per day over 14 days; today {{count}}", "mealsSeries": "Meals",
+    "noData": "No payments yet", "noServed": "No meals marked yet — tick them on the meal sheet",
+    "planMix": "Plan mix", "planMixHint": "{{count}} eating now", "noActive": "Nobody is eating on a plan right now.",
+    "who": "Who eats here", "whoHint": "Guests vs outside customers", "diets": "Diet", "notGiven": "Not given",
+    "followUp": "Ending soon", "followUpHint": "Renew before the meals stop", "allGood": "All good", "noExpiring": "No plans ending in the next few days.",
+    "dues": "Dues to collect", "duesHint_one": "{{amount}} from {{count}} customer", "duesHint_other": "{{amount}} from {{count}} customers",
+    "noDuesTitle": "No dues", "noDues": "Everyone is paid up.",
+    "recent": "Recent payments", "noPaymentsTitle": "No payments yet", "noPayments": "Payments show here as you collect them."
+  },
+  "setup": {
+    "title": "Set up meals", "subtitle": "Two steps and the kitchen sheet fills itself.",
+    "step1": "Add a meal plan", "step1Hint": "Which meals it includes, and its per day / week / month rates",
+    "step2": "Add a customer", "step2Hint": "A checked-in guest or an outside tiffin customer",
+    "bookingHint": "Tip: you can also pick a meal plan right on the booking form."
+  },
+  "empty": {
+    "title": "No customers yet", "message": "Add a guest or outside customer and put them on a meal plan.",
+    "noPlans": "Add a meal plan first, then sign customers up.",
+    "searchTitle": "No matches", "search": "Nobody matches that search."
+  },
+  "delete": {
+    "title": "Delete customer?",
+    "message": "<b>{{name}}</b> ({{no}}) will be removed from the list. Their payment history is kept."
+  },
+  "errors": {
+    "name": "Enter the customer's name", "phone": "Enter a valid mobile number", "email": "Enter a valid email",
+    "guest": "Choose a guest", "plan": "Choose a meal plan", "noRate": "This plan has no rate for that billing",
+    "units": "At least 1", "overpaid": "More than the {{amount}} payable", "amount": "Enter an amount",
+    "planName": "Enter a plan name", "meals": "Pick at least one meal", "rates": "Enter at least one rate",
+    "fix": "Please fix the highlighted fields."
   },
   "toast": {
-    "added": "Meal plan \"{{name}}\" added",
-    "addFailed": "Could not add meal plan",
-    "updateFailed": "Could not update plan",
-    "removed": "\"{{name}}\" removed",
-    "deleteFailed": "Could not delete plan",
-    "reminderSent": "Reminder sent to {{guest}}"
+    "added": "{{name}} added as {{no}}", "updated": "Customer updated", "deleted": "Customer deleted",
+    "renewed": "{{name}}'s meal plan renewed", "subscribed": "{{name}} is on a meal plan",
+    "paused": "{{name}}'s meals paused", "resumed": "{{name}}'s meals resumed", "cancelled": "Plan cancelled",
+    "paid": "{{amount}} collected from {{name}}",
+    "planAdded": "“{{name}}” added", "planUpdated": "Meal plan updated",
+    "planRetired": "“{{name}}” retired — customers on it keep their plan", "planDeleted": "“{{name}}” deleted",
+    "planRestored": "“{{name}}” is on offer again",
+    "failed": "Something went wrong. Please try again."
   }
 }

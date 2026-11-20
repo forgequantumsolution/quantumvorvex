@@ -12,6 +12,8 @@ import PgOccupants from './PgOccupants'
 import { occupantErrors, occField } from './occupants'
 import GuardianFields from './GuardianFields'
 import { EMPTY_GUARDIAN, GUARDIAN_KEYS, guardianDocs, guardianErrors, guardianPayload } from './guardian'
+import MealPlanFields from './MealPlanFields'
+import { EMPTY_MEAL, mealPayload } from './meal'
 import { bedFillLabel, bedLabel, bedOccupancy, hasBedStays, isBedRoom, rentFirstMonthNote, rentMonthsAtMoveIn } from '../../../utils/beds'
 import {
   TODAY, joinPhones, phoneErrors, phoneFieldName, splitPhones, MAX_PHONES,
@@ -149,6 +151,7 @@ export default function BookingForm({ onSaved, onCancel, initialRoomId }) {
   // Set once the booking exists; holds the camera step open until the photo is
   // saved or skipped, at which point we hand the booking up via onSaved.
   const [photoFor, setPhotoFor] = useState(null)
+  const [meal, setMeal] = useState(EMPTY_MEAL)   // optional Food meal plan for the stay
   const [photoBusy, setPhotoBusy] = useState(false)
 
   // Toggle an ID type on/off; clear its uploaded files when removed.
@@ -357,6 +360,9 @@ export default function BookingForm({ onSaved, onCancel, initialRoomId }) {
   // A tenancy is shown as the rent billed at move-in, with its first month by the day.
   const units = tenancyMode ? rentMonthsAtMoveIn(values.fromDate)
     : values.stayType === 'daily' ? nights(values.fromDate, values.toDate) : Number(values.months) || 0
+  // Meals run for the stay: per night, or per month (an open-ended tenancy starts with one).
+  const mealUnits = values.stayType === 'daily' ? nights(values.fromDate, values.toDate)
+    : tenancyMode ? 1 : Number(values.months) || 1
   const pricing = useMemo(() => priceStay({
     rate: values.roomRate, units, discount: values.discount, taxRate: values.taxRate,
     extra: values.extraCharges, advance: values.advance,
@@ -457,9 +463,11 @@ export default function BookingForm({ onSaved, onCancel, initialRoomId }) {
         invoiceNo: values.invoiceNo.trim() && values.invoiceNo.trim() !== autoInvoiceNo
           ? values.invoiceNo.trim()
           : undefined,
+        meal: mealPayload(meal),
       }
       const { data } = await bookingsApi.create(payload)
       const booking = data.booking
+      if (data.mealWarning) toast(data.mealWarning, 'danger')
 
       // Attach any ID documents to the new booking (best-effort).
       const entries = []
@@ -507,6 +515,7 @@ export default function BookingForm({ onSaved, onCancel, initialRoomId }) {
       source: values.source,
       specialRequests: values.specialRequests.trim() || undefined,
       notes: values.notes.trim() || undefined,
+      meal: mealPayload(meal),
     }
     const list = occupants.map((o) => ({
       bedNo: o.bedNo,
@@ -524,6 +533,7 @@ export default function BookingForm({ onSaved, onCancel, initialRoomId }) {
     try {
       const { data } = await bookingsApi.createGroup({ ...shared, occupants: list })
       bookings = data.bookings
+      if (data.mealWarning) toast(data.mealWarning, 'danger')
     } catch (err) {
       const d = err.response?.data
       toast(d?.message || d?.error || t('form.toast.createGroupFailed'), 'danger')
@@ -946,6 +956,11 @@ export default function BookingForm({ onSaved, onCancel, initialRoomId }) {
               </button>
             </Section>
             )}
+
+            {/* ── Meal plan ── (Food module; hidden when Food is off for this user) */}
+            <MealPlanFields value={meal} onChange={setMeal} stayType={values.stayType} units={mealUnits}
+              people={pgMode ? occupants.length : 1}
+              wrap={(fields) => <Section title={t('meal.title')} hint={pgMode ? t('meal.pgHint') : t('common:optional')}>{fields}</Section>} />
 
             {/* ── Notes ── */}
             <Section title={t('form.notes')} hint={t('common:optional')}>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import DocumentGallery from '../../ui/DocumentGallery'
 import { useTranslation, Trans } from 'react-i18next'
 import { Formik, Form } from 'formik'
 import { LuTrash2, LuUserCheck, LuCircleAlert, LuLogOut, LuUsers, LuRefreshCw, LuDownload, LuUserPlus } from 'react-icons/lu'
@@ -45,6 +46,7 @@ function normalizeGuest(g) {
     idType: g.idType,
     idNumber: g.idNumber,
     documents: g._count?.documents ?? (Array.isArray(g.documents) ? g.documents.length : 0),
+    docList: Array.isArray(g.documents) ? g.documents : null,   // full list once the profile loads
     amenities: parseArr(g.amenities),
     facilities: parseArr(g.facilities),
     nationality: g.nationality || '',
@@ -296,6 +298,12 @@ function GuestProfileModal({ guest, onClose, onCheckout, onEdit }) {
                 {t('profile.docsUploaded', { count: guest.documents, total: 4 })}
               </Badge>
             </div>
+            {/* The files themselves — guest uploads plus everything from their bookings. */}
+            {guest.docList && (
+              <div className="mt-3">
+                <DocumentGallery docs={guest.docList} />
+              </div>
+            )}
           </div>
         )}
 

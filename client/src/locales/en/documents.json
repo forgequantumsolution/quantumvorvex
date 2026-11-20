@@ -104,5 +104,6 @@
     "title": "Delete Documents",
     "message_one": "Delete all <b>{{count}}</b> document for <b>{{name}}</b>? The files are permanently removed.",
     "message_other": "Delete all <b>{{count}}</b> documents for <b>{{name}}</b>? The files are permanently removed."
-  }
+  },
+  "gallery": {"none": "No documents uploaded yet.", "removeConfirm": "Remove this document? The file is deleted.", "open": "Open {{name}}", "remove": "Remove {{name}}", "newTab": "Open in new tab"}
 }

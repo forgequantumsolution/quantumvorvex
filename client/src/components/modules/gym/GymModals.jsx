@@ -33,8 +33,12 @@ export function SellPlanModal({ member, plans, onClose, onSaved }) {
     if (Object.keys(e).length) return
     setSaving(true); setApiError('')
     try {
-      await gymApi.sellPlan(member.id, salePayload(plans, sale))
-      onSaved(renewing ? t('toast.renewed', { name: member.name }) : t('toast.planSold', { name: member.name }))
+      const body = salePayload(plans, sale)
+      const { data } = await gymApi.sellPlan(member.id, body)
+      // A payment taken with the sale gets a receipt offer; otherwise a welcome.
+      const ms = data.membership
+      const payment = body.amountPaid > 0 ? { amount: body.amountPaid, mode: body.payMode, paidAt: new Date().toISOString() } : null
+      onSaved(renewing ? t('toast.renewed', { name: member.name }) : t('toast.planSold', { name: member.name }), { membership: ms, payment })
     } catch (err) {
       setErrors(fieldErrors(err))
       setApiError(err.response?.data?.message || t('toast.failed'))
@@ -69,8 +73,9 @@ export function PaymentModal({ member, membership, onClose, onSaved }) {
     if (n > membership.due) return setError(t('errors.overpaid', { amount: formatCurrency(membership.due) }))
     setSaving(true); setError('')
     try {
-      await gymApi.pay(membership.id, { amount: n, mode })
-      onSaved(t('toast.paid', { amount: formatCurrency(n), name: member.name }))
+      const { data } = await gymApi.pay(membership.id, { amount: n, mode })
+      onSaved(t('toast.paid', { amount: formatCurrency(n), name: member.name }),
+        { membership: data.membership, payment: { amount: n, mode, paidAt: new Date().toISOString() } })
     } catch (err) {
       setError(err.response?.data?.message || t('toast.failed'))
     } finally { setSaving(false) }

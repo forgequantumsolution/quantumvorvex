@@ -151,5 +151,8 @@
     "planRetired": "“{{name}}” retired — members on it keep their plan", "planDeleted": "“{{name}}” deleted",
     "planRestored": "“{{name}}” is on sale again",
     "failed": "Something went wrong. Please try again."
-  }
+  },
+  "docs": {"title": "ID documents", "side": "{{doc}} — {{side}}", "front": "Front", "back": "Back", "onFile": "On file · upload to replace", "uploadFailed": "Member saved, but the ID scans could not be uploaded.", "loadFailed": "Could not load", "openPdf": "Open PDF", "removeConfirm": "Remove this ID scan?"},
+  "wa": {"message": "WhatsApp", "more": "More WhatsApp messages", "chat": "Message on WhatsApp", "welcome": "Send welcome", "receipt": "Send payment receipt", "receiptShort": "Receipt", "receiptFor": "Send receipt for {{amount}} on WhatsApp", "renewal": "Renewal reminder", "due": "Dues reminder", "offerPaid": "Payment saved for {{name}}.", "offerPlan": "Plan added for {{name}}."},
+  "remove": {"entry": "Delete entry", "entryConfirm": "Delete the {{plan}} entry and its payments? This can't be undone. (Use Cancel plan to keep it on record.)", "entryDone": "Plan entry deleted", "payment": "Delete payment of {{amount}}", "paymentConfirm": "Delete this payment of {{amount}}? It goes back onto the dues.", "paymentDone": "Payment deleted"}
 }

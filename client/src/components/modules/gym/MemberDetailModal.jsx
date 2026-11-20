@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next'
 import {
   LuRefreshCw, LuIndianRupee, LuPause, LuPlay, LuPencil, LuTrash2, LuPhone, LuX, LuBedDouble, LuHeartPulse,
 } from 'react-icons/lu'
-import { Modal, Button } from '../../ui-tw'
+import { Modal, Button, ActionMenu, WhatsAppButton, WhatsAppIcon, waMenuItem } from '../../ui-tw'
+import { gymWaOptions } from './gymWhatsApp'
 import { gymApi } from '../../../api/client'
+import IdScanThumb from '../../ui/IdScanThumb'
 import { formatCurrency } from '../../../utils/format'
 import { STATUS_TONE, daysLeftLabel, durationLabel, shortDate, initials } from './gymUtils'
 
@@ -41,7 +43,7 @@ const phaseOf = (ms) => {
  * One member: profile, plan history with payments, and the desk actions —
  * renew, collect dues, freeze / unfreeze, cancel a plan (admin), edit, delete.
  */
-export default function MemberDetailModal({ memberId, canManage, onClose, onEdit, onRenew, onPay, onDelete, onChanged, reloadKey }) {
+export default function MemberDetailModal({ memberId, canManage, onClose, onEdit, onRenew, onPay, onDelete, onWhatsApp, onChanged, reloadKey }) {
   const { t } = useTranslation('gym')
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -130,6 +132,13 @@ export default function MemberDetailModal({ memberId, canManage, onClose, onEdit
               <a href={`tel:${m.phone}`} className="inline-flex items-center gap-1.5 rounded-lg border border-line2 px-3 py-1.5 text-sm text-ink2 hover:border-gold hover:text-gold no-underline">
                 <LuPhone size={14} aria-hidden /> {t('actions.call')}
               </a>
+              {onWhatsApp && (
+                <span className="inline-flex items-center gap-1">
+                  <WhatsAppButton phone={m.phone} label={t('wa.message')} onClick={() => onWhatsApp(m, 'chat')} />
+                  <ActionMenu label={t('wa.more')} items={gymWaOptions(m).filter((k) => k !== 'chat')
+                    .map((k) => waMenuItem(t(`wa.${k}`), m.phone, () => onWhatsApp(m, k)))} />
+                </span>
+              )}
               {data.canDelete && <Button size="sm" variant="danger" icon={<LuTrash2 />} onClick={() => onDelete(m)}>{t('actions.delete')}</Button>}
             </div>
           )}
@@ -152,6 +161,23 @@ export default function MemberDetailModal({ memberId, canManage, onClose, onEdit
             <div className="flex gap-2 rounded-lg px-3 py-2.5 text-sm bg-warning-bg text-warning-text">
               <LuHeartPulse className="shrink-0 mt-0.5" aria-hidden />
               <span><b>{t('form.healthNotes')}:</b> {m.healthNotes}</span>
+            </div>
+          )}
+
+          {m.documents?.length > 0 && (
+            <div className="pt-4 border-t border-line">
+              <div className="text-xs font-semibold text-ink2 mb-2.5">{t('docs.title')}</div>
+              <div className="grid grid-cols-2 gap-3">
+                {m.documents.map((d) => (
+                  <IdScanThumb key={d.id} ns="gym" doc={d}
+                    label={t('docs.side', { doc: m.idType ? t(`idTypes.${m.idType}`, { defaultValue: m.idType }) : t('form.idType'), side: t(`docs.${d.side}`) })}
+                    fetchFile={() => gymApi.docFile(m.id, d.id)}
+                    onRemove={canManage ? async () => {
+                      await gymApi.deleteDoc(m.id, d.id)
+                      setData((cur) => ({ ...cur, member: { ...cur.member, documents: cur.member.documents.filter((x) => x.id !== d.id) } }))
+                    } : undefined} />
+                ))}
+              </div>
             </div>
           )}
 
@@ -184,20 +210,45 @@ export default function MemberDetailModal({ memberId, canManage, onClose, onEdit
                       </div>
                     </div>
                     {ms.payments?.length > 0 && (
-                      <ul className="m-0 mt-2 p-0 list-none flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink3">
+                      <ul className="m-0 mt-2 p-0 list-none flex flex-col gap-1 text-xs text-ink3">
                         {ms.payments.map((p) => (
-                          <li key={p.id}>{formatCurrency(p.amount)} · {t(`payModes.${p.mode}`)} · {shortDate(p.paidAt)}</li>
+                          <li key={p.id} className="flex items-center gap-2 min-w-0">
+                            <span className="truncate">{formatCurrency(p.amount)} · {t(`payModes.${p.mode}`)} · {shortDate(p.paidAt)}</span>
+                            {onWhatsApp && (
+                              <button type="button" onClick={() => onWhatsApp(m, 'receipt', { membership: ms, payment: p })}
+                                className="inline-flex items-center gap-1 bg-transparent border-0 p-0.5 text-ink2 hover:text-ink cursor-pointer pointer-coarse:min-h-9"
+                                title={t('wa.receipt')} aria-label={t('wa.receiptFor', { amount: formatCurrency(p.amount) })}>
+                                <WhatsAppIcon size={13} /> <span className="hidden sm:inline">{t('wa.receiptShort')}</span>
+                              </button>
+                            )}
+                            {data.canDelete && (
+                              <button type="button" disabled={busy}
+                                onClick={() => window.confirm(t('remove.paymentConfirm', { amount: formatCurrency(p.amount) }))
+                                  && act(() => gymApi.removePayment(p.id), t('remove.paymentDone'))}
+                                className="bg-transparent border-0 p-0.5 text-ink3 hover:text-danger cursor-pointer disabled:opacity-50 pointer-coarse:min-h-9"
+                                aria-label={t('remove.payment', { amount: formatCurrency(p.amount) })} title={t('remove.payment', { amount: formatCurrency(p.amount) })}>
+                                <LuTrash2 size={12} aria-hidden />
+                              </button>
+                            )}
+                          </li>
                         ))}
                       </ul>
                     )}
-                    {canManage && phase !== 'cancelled' && (ms.due > 0 || data.canDelete) && (
+                    {canManage && (phase !== 'cancelled' ? (ms.due > 0 || data.canDelete) : data.canDelete) && (
                       <div className="flex flex-wrap gap-2 mt-2.5">
-                        {ms.due > 0 && (
+                        {ms.due > 0 && phase !== 'cancelled' && (
                           <Button size="sm" icon={<LuIndianRupee />} disabled={busy} onClick={() => onPay(m, ms)}>
                             {t('actions.collect', { amount: formatCurrency(ms.due) })}
                           </Button>
                         )}
                         {data.canDelete && (
+                          <Button size="sm" variant="ghost" icon={<LuTrash2 />} disabled={busy}
+                            onClick={() => window.confirm(t('remove.entryConfirm', { plan: ms.planName }))
+                              && act(() => gymApi.removeMembership(ms.id), t('remove.entryDone'))}>
+                            {t('remove.entry')}
+                          </Button>
+                        )}
+                        {data.canDelete && phase !== 'cancelled' && (
                           <Button size="sm" variant="ghost" icon={<LuX />} disabled={busy}
                             onClick={() => window.confirm(t('detail.cancelConfirm', { plan: ms.planName }))
                               && act(() => gymApi.cancel(ms.id), t('toast.cancelled'))}>

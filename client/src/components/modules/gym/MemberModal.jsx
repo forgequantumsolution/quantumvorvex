@@ -4,6 +4,9 @@ import { LuSave, LuUserPlus } from 'react-icons/lu'
 import { Modal, Field, Button } from '../../ui-tw'
 import { gymApi } from '../../../api/client'
 import PlanSaleFields from './PlanSaleFields'
+import UploadZone from '../bookings/UploadZone'
+import { useToast } from '../../../hooks/useToast'
+import { idScanForm } from '../visitors/visitorUtils'
 import { EMPTY_SALE, saleErrors, salePayload } from './gymSale'
 import {
   GENDERS, GOALS, SOURCES, ID_TYPES, PHONE_RE, EMAIL_RE, cleanPhone, dateInput, todayInput, fieldErrors,
@@ -41,7 +44,10 @@ function Section({ title, hint, children }) {
  */
 export default function MemberModal({ member, plans, onClose, onSaved }) {
   const { t } = useTranslation('gym')
+  const toast = useToast()
   const editing = !!member?.id
+  const [scans, setScans] = useState({ front: null, back: null }) // newly picked ID scans
+  const onFile = (side) => (member?.documents || []).find((d) => d.side === side)
   const [form, setForm] = useState(() => (editing ? fromMember(member) : { ...EMPTY, joinedAt: todayInput() }))
   const [kind, setKind] = useState(editing && member.guestId ? 'guest' : 'outside')
   const [guests, setGuests] = useState(null)
@@ -100,6 +106,12 @@ export default function MemberModal({ member, plans, onClose, onSaved }) {
     if (!editing && withPlan && plans.some((p) => p.active)) body.membership = salePayload(plans, sale)
     try {
       const { data } = editing ? await gymApi.updateMember(member.id, body) : await gymApi.createMember(body)
+      // The member is saved; a failed scan upload is reported but never undoes it.
+      const scanForm = idScanForm(scans)
+      if (scanForm) {
+        try { await gymApi.uploadDocs(data.member.id, scanForm) }
+        catch (err) { toast(err.response?.data?.message || t('docs.uploadFailed'), 'error') }
+      }
       onSaved(data.member, editing)
     } catch (err) {
       const fe = fieldErrors(err)
@@ -176,6 +188,21 @@ export default function MemberModal({ member, plans, onClose, onSaved }) {
             <Field label={form.idType === 'aadhaar' ? t('form.aadhaar') : t('form.idNumber')} name="idNumber" value={form.idNumber}
               inputMode={form.idType === 'aadhaar' ? 'numeric' : undefined} maxLength={form.idType === 'aadhaar' ? 14 : 30}
               onChange={set('idNumber')} error={errors.idNumber} disabled={!form.idType} autoComplete="off" />
+            {/* ID scans — front and back of the card picked above. */}
+            <div className={`sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 ${form.idType ? '' : 'opacity-60'}`}>
+              {['front', 'back'].map((side) => (
+                <div key={side}>
+                  <UploadZone
+                    label={t('docs.side', { doc: form.idType ? t(`idTypes.${form.idType}`, { defaultValue: form.idType }) : t('form.idType'), side: t(`docs.${side}`) })}
+                    file={scans[side]}
+                    onPick={(f) => setScans((s) => ({ ...s, [side]: f }))}
+                  />
+                  {editing && onFile(side) && !scans[side] && (
+                    <p className="m-0 mt-1 text-xs text-success-text">{t('docs.onFile')}</p>
+                  )}
+                </div>
+              ))}
+            </div>
             <Field label={t('form.emergencyName')} value={form.emergencyName} onChange={set('emergencyName')} maxLength={80} />
             <Field label={t('form.emergencyPhone')} type="tel" inputMode="tel" value={form.emergencyPhone} onChange={set('emergencyPhone')} maxLength={20} />
             <Field className="sm:col-span-2" label={t('form.healthNotes')} textarea value={form.healthNotes} onChange={set('healthNotes')}

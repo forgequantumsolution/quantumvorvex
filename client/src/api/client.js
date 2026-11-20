@@ -201,11 +201,28 @@ export const documentsApi = {
 }
 
 export const foodApi = {
-  getPlans:   ()         => api.get('/food-plans'),
-  getOrders:  ()         => api.get('/food-orders'),
-  createPlan: (data)     => api.post('/food-plans', data),
-  updatePlan: (id, data) => api.put(`/food-plans/${id}`, data),
-  deletePlan: (id)       => api.delete(`/food-plans/${id}`),
+  // Meal plans: { name, description, oneTimeRate (per day), weeklyRate, monthlyRate, meals[] }
+  getPlans:       ()          => api.get('/food-plans'),           // { foodPlans (with subscribers) }
+  createPlan:     (data)      => api.post('/food-plans', data),
+  updatePlan:     (id, data)  => api.put(`/food-plans/${id}`, data),
+  deletePlan:     (id)        => api.delete(`/food-plans/${id}`),   // retired instead when it was ever sold
+  dashboard:      ()          => api.get('/food/dashboard'),
+  customers:      (params)    => api.get('/food/customers', { params }), // { tab, search, page, pageSize } → { customers, total, counts }
+  customer:       (id)        => api.get(`/food/customers/${id}`),  // { customer (subscriptions + payments + recentMeals), canDelete }
+  createCustomer: (data)      => api.post('/food/customers', data), // optional { subscription }
+  updateCustomer: (id, data)  => api.put(`/food/customers/${id}`, data),
+  removeCustomer: (id)        => api.delete(`/food/customers/${id}`),
+  subscribe:      (id, data)  => api.post(`/food/customers/${id}/subscriptions`, data), // new plan / renewal
+  pause:          (subId)     => api.post(`/food/subscriptions/${subId}/pause`),
+  resume:         (subId)     => api.post(`/food/subscriptions/${subId}/resume`),
+  cancel:         (subId)     => api.post(`/food/subscriptions/${subId}/cancel`),
+  pay:            (subId, data) => api.post(`/food/subscriptions/${subId}/payments`, data), // { amount, mode }
+  meals:          (date)      => api.get('/food/meals', { params: { date } }), // { meals: [{ meal, expected, served, menu, people }] }
+  markMeal:       (data)      => api.post('/food/meals', data),      // { customerId, date, meal, served }
+  markMealAll:    (data)      => api.post('/food/meals/bulk', data), // { date, meal, served }
+  menu:           ()          => api.get('/food/menu'),
+  saveMenu:       (items)     => api.put('/food/menu', { items }),
+  guests:         ()          => api.get('/food/guests'),           // in-house hotel / PG guests
 }
 
 export const reportsApi = {
@@ -266,11 +283,17 @@ export const gymApi = {
   unfreeze:     (msId)      => api.post(`/gym/memberships/${msId}/unfreeze`),
   cancel:       (msId)      => api.post(`/gym/memberships/${msId}/cancel`),
   pay:          (msId, data) => api.post(`/gym/memberships/${msId}/payments`, data), // { amount, mode }
+  removeMembership: (msId)  => api.delete(`/gym/memberships/${msId}`),  // owner/admin: plan entry made by mistake
+  removePayment:    (payId) => api.delete(`/gym/payments/${payId}`),    // owner/admin: amount goes back onto dues
   plans:        ()          => api.get('/gym/plans'),
   createPlan:   (data)      => api.post('/gym/plans', data),
   updatePlan:   (id, data)  => api.put(`/gym/plans/${id}`, data),
   removePlan:   (id)        => api.delete(`/gym/plans/${id}`),     // retired instead when it was ever sold
   guests:       ()          => api.get('/gym/guests'),            // in-house hotel / PG guests
+  // ID scans: multipart "front" / "back". Files are private — fetched as blobs with auth.
+  uploadDocs:   (id, form)  => api.post(`/gym/members/${id}/documents`, form, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  docFile:      (id, docId) => api.get(`/gym/members/${id}/documents/${docId}`, { responseType: 'blob' }),
+  deleteDoc:    (id, docId) => api.delete(`/gym/members/${id}/documents/${docId}`),
 }
 
 export const visitorsApi = {

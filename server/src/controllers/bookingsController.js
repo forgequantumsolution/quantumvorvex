@@ -11,6 +11,7 @@ import { signBookingToken, verifyBookingToken, clientOrigin } from '../utils/inv
 import { runUnscoped, runWithProperty } from '../utils/propertyContext.js'
 import { upiQrSvg } from '../utils/upi.js'
 import { recordBookingPayment } from '../utils/payments.js'
+import { checkBookingMeal, subscribeFromBooking, linkBookingGuest, cancelBookingMeals, FoodError } from './foodController.js'
 import {
   isTenancy, OPEN_END, tenancyTotals, billDueRent, invoiceTenancy, payTenancyInvoices, rentStartDay,
   settleMoveOutRent, moveOutPreview, canRefund, settleRefund,
@@ -473,6 +474,32 @@ const insertBooking = async (data, hotel, userInvoiceNo = null) => {
   throw new Error('Could not assign a unique invoice number')
 }
 
+// The meal plan picked on the booking form must be sellable; checked before the
+// booking is written. Returns an error response, or null.
+async function mealPlanError(res, meal) {
+  try {
+    await checkBookingMeal(meal)
+    return null
+  } catch (e) {
+    if (e instanceof FoodError) return res.status(e.status).json({ message: e.message, code: e.code })
+    throw e
+  }
+}
+
+// Sign the booking's guest(s) up for meals. The booking is already saved, so a
+// failure is logged and reported back but never undoes it.
+async function addBookingMeals(bookings, meal, userId) {
+  if (!meal?.planId) return null
+  let failed = 0
+  for (const b of bookings) {
+    try { await subscribeFromBooking(b, meal, userId) } catch (e) {
+      failed++
+      logger.error('Booking meal plan failed', { error: e.message, bookingNo: b.bookingNo })
+    }
+  }
+  return failed ? 'The booking is saved, but the meal plan could not be added. Add it from the Food page.' : null
+}
+
 // POST /bookings
 export const createBooking = async (req, res) => {
   try {
@@ -494,6 +521,8 @@ export const createBooking = async (req, res) => {
         conflict,
       })
     }
+
+    if (await mealPlanError(res, b.meal)) return
 
     const taxRate = b.taxRate ?? (await defaultTaxRate())
     const hotel = await prisma.hotel.findFirst()
@@ -519,7 +548,8 @@ export const createBooking = async (req, res) => {
     }
 
     logger.info('Booking created', { event: 'BOOKING', bookingNo: booking.bookingNo, invoiceNo: booking.invoiceNo, roomId: b.roomId })
-    return res.status(201).json({ booking })
+    const mealWarning = await addBookingMeals([booking], b.meal, req.user?.userId)
+    return res.status(201).json({ booking, mealWarning })
   } catch (err) {
     logger.error('createBooking error', { error: err.message })
     return res.status(500).json({ message: 'Internal server error.' })
@@ -557,6 +587,8 @@ export const createBookingGroup = async (req, res) => {
       }
     }
 
+    if (await mealPlanError(res, shared.meal)) return
+
     const taxRate = shared.taxRate ?? (await defaultTaxRate())
     const hotel   = await prisma.hotel.findFirst()
     const groupId = crypto.randomUUID()
@@ -576,7 +608,8 @@ export const createBookingGroup = async (req, res) => {
     }
 
     logger.info('Booking group created', { event: 'BOOKING', groupId, roomId: room.id, count: created.length })
-    return res.status(201).json({ groupId, bookings: created })
+    const mealWarning = await addBookingMeals(created, shared.meal, req.user?.userId)
+    return res.status(201).json({ groupId, bookings: created, mealWarning })
   } catch (err) {
     logger.error('createBookingGroup error', { error: err.message })
     return res.status(500).json({ message: 'Internal server error.' })
@@ -859,6 +892,9 @@ export const checkInBooking = async (req, res) => {
           status:         'Active',
         },
       })
+
+      // Meals sold with the booking now belong to this guest too.
+      await linkBookingGuest(tx, booking.id, guest.id)
 
       // The deposit is real money received: log it so its refund balances out.
       if (booking.securityDeposit > 0) {
@@ -1333,6 +1369,7 @@ export const cancelBooking = async (req, res) => {
         data: { status: 'Cancelled', cancelledAt: new Date(), cancelReason: req.body.reason || null },
         include: bookingInclude,
       })
+      await cancelBookingMeals(tx, id)
       // If it was checked in, free the room + close the guest stay
       if (booking.status === 'CheckedIn') {
         if (booking.guestId) await tx.guest.update({ where: { id: booking.guestId }, data: { status: 'Cancelled' } })
@@ -1352,10 +1389,14 @@ export const cancelBooking = async (req, res) => {
 // POST /bookings/:id/no-show
 export const noShowBooking = async (req, res) => {
   try {
-    const booking = await prisma.booking.update({
-      where: { id: req.params.id },
-      data: { status: 'NoShow' },
-      include: bookingInclude,
+    const booking = await prisma.$transaction(async (tx) => {
+      const b = await tx.booking.update({
+        where: { id: req.params.id },
+        data: { status: 'NoShow' },
+        include: bookingInclude,
+      })
+      await cancelBookingMeals(tx, b.id)
+      return b
     })
     return res.status(200).json({ booking })
   } catch (err) {
@@ -1374,6 +1415,7 @@ export const deleteBooking = async (req, res) => {
     if (!booking) return res.status(404).json({ message: 'Booking not found.' })
     await prisma.$transaction(async (tx) => {
       await tx.booking.update({ where: { id: booking.id }, data: { deletedAt: new Date() } })
+      await cancelBookingMeals(tx, booking.id)
       // A deleted in-house stay must release its room/bed too: its Guest record
       // would otherwise stay Active and keep blocking it.
       if (booking.guestId) {

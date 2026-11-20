@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import {
+import { LuFileText,
   LuTrash2, LuPencil, LuDownload, LuCalendarPlus, LuX, LuCheck, LuReceipt, LuLogOut, LuUndo2, LuArrowRight, LuMoon,
 } from 'react-icons/lu'
 import { StatusBadge, Button, EmptyState, ActionMenu, DataTable, waMenuItem } from '../../ui-tw'
@@ -180,6 +180,9 @@ function Actions({ b, busy, h, stretch = false }) {
       { label: t('actions.confirm'), icon: <LuCheck size={14} />, onClick: () => h.onConfirm(b) },
     h.onEdit && EDITABLE.includes(b.status) &&
       { label: t('actions.edit'), icon: <LuPencil size={14} />, onClick: () => h.onEdit(b) },
+    // Everything uploaded for the booking (ID scans, photo, payment proof…).
+    h.onDocuments &&
+      { label: b.documents?.length ? t('docs.actionCount', { count: b.documents.length }) : t('docs.action'), icon: <LuFileText size={14} />, onClick: () => h.onDocuments(b) },
     // A tenancy has no end date to extend — it runs until move-out.
     h.onExtend && !b.tenancy && ['Confirmed', 'CheckedIn'].includes(b.status) &&
       { label: t('actions.extend'), icon: <LuCalendarPlus size={14} />, onClick: () => h.onExtend(b) },
@@ -415,10 +418,10 @@ function CardSkeletons({ count }) {
  */
 export default function BookingsTable({
   bookings, loading, busyId, view = 'table',
-  onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent, onRefund, onWhatsApp, emptyMessage,
+  onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDocuments, onDelete, onRent, onRefund, onWhatsApp, emptyMessage,
 }) {
   const { t } = useTranslation('bookings')
-  const h = { onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDelete, onRent, onRefund, onWhatsApp }
+  const h = { onConfirm, onCheckIn, onCheckOut, onCancel, onExtend, onInvoice, onEdit, onDocuments, onDelete, onRent, onRefund, onWhatsApp }
   const asCards = view === 'cards'
 
   // Desktop table columns (headers in bookings:table.columns; actions has none).

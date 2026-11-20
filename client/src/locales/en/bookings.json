@@ -480,5 +480,7 @@
       "aadhaar": "Aadhaar must be 12 digits"
     },
     "docSide": "Guardian Aadhaar — {{side}}"
-  }
+  },
+  "meal": {"title": "Meal plan", "pgHint": "Optional · applies to every occupant", "plan": "Meal plan", "none": "No meals", "noneForStay": "No meal plan priced for this kind of stay", "diet": "Diet", "perDay": "/day", "perMonth": "/month", "estimate": "≈ {{amount}} for this stay.", "estimateEach": "≈ {{amount}} each for this stay ({{count}} occupants).", "dailyNote": "Runs for the nights booked; dues are collected under Food.", "monthlyNote": "Starts with one month; renew and collect under Food.", "diets": {"veg": "Veg", "non_veg": "Non-veg", "eggetarian": "Eggetarian", "jain": "Jain", "vegan": "Vegan"}},
+  "docs": {"action": "Documents", "actionCount_one": "Documents ({{count}})", "actionCount_other": "Documents ({{count}})", "title": "Booking documents", "none": "No documents uploaded for this booking yet.", "addMore": "Add a document", "file": "File", "name": "Document name", "namePlaceholder": "e.g. Aadhaar — Front, Rent agreement", "upload": "Upload", "uploaded": "Document uploaded", "removeFailed": "Could not remove the document"}
 }
