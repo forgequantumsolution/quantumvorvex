@@ -18,6 +18,19 @@ import logger from './logger.js'
 import { runUnscoped } from './propertyContext.js'
 
 const IN_HOUSE_GUEST = ['Active', 'Due']
+// Guests checked out from the Guests page are 'Checked Out'; from Bookings, 'CheckedOut'.
+export const CHECKED_OUT = ['Checked Out', 'CheckedOut']
+
+/**
+ * A guest's stay ended outside the Bookings flow (Guests-page check-out, guest
+ * deleted): close the checked-in booking(s) it came from, so they stop counting
+ * as occupants of the room.
+ */
+export const closeGuestBookings = (db, guestId) =>
+  db.booking.updateMany({
+    where: { guestId, status: 'CheckedIn', deletedAt: null },
+    data: { status: 'CheckedOut', checkedOutAt: new Date() },
+  })
 
 export async function syncRoomOccupancy(db, roomId, { checkIn = false } = {}) {
   const room = await db.room.findUnique({ where: { id: roomId }, select: { id: true, status: true, bedCount: true } })
@@ -45,6 +58,13 @@ export async function syncRoomOccupancy(db, roomId, { checkIn = false } = {}) {
 export async function repairRoomStatuses() {
   try {
     const fixed = await runUnscoped(async () => {
+      // Heal stays checked out from the Guests page before that closed their
+      // booking: the guest has left but the booking still says CheckedIn.
+      const stale = await prisma.booking.updateMany({
+        where: { status: 'CheckedIn', deletedAt: null, guest: { OR: [{ status: { in: CHECKED_OUT } }, { deletedAt: { not: null } }] } },
+        data: { status: 'CheckedOut', checkedOutAt: new Date() },
+      })
+      if (stale.count) logger.info('Closed bookings of checked-out guests', { event: 'ROOMS', count: stale.count })
       const rooms = await prisma.room.findMany({ where: { deletedAt: null }, select: { id: true, number: true, status: true } })
       const changed = []
       for (const r of rooms) {

@@ -1,6 +1,6 @@
 import path from 'path'
 import prisma from '../utils/prisma.js'
-import { syncRoomOccupancy } from '../utils/roomStatus.js'
+import { syncRoomOccupancy, closeGuestBookings, CHECKED_OUT } from '../utils/roomStatus.js'
 
 // Generate a unique document ID: DOC-XXXX
 const generateDocId = async () => {
@@ -410,7 +410,8 @@ export const checkoutGuest = async (req, res) => {
       return res.status(404).json({ message: 'Guest not found.' })
     }
 
-    if (guest.status === 'Checked Out') {
+    // Guests checked out here are 'Checked Out'; from Bookings, 'CheckedOut'.
+    if (CHECKED_OUT.includes(guest.status)) {
       return res.status(400).json({ message: 'Guest is already checked out.' })
     }
 
@@ -501,6 +502,10 @@ export const checkoutGuest = async (req, res) => {
         },
       })
 
+      // Close the booking this stay came from. Left "CheckedIn", it would keep
+      // counting as an occupant and the room would flip straight back to occupied.
+      await closeGuestBookings(tx, id)
+
       // Free the room — unless someone else is still staying in it
       await syncRoomOccupancy(tx, guest.roomId)
 
@@ -535,6 +540,7 @@ export const deleteGuest = async (req, res) => {
 
     await prisma.$transaction(async (tx) => {
       await tx.guest.update({ where: { id }, data: { deletedAt: new Date() } })
+      if (wasOccupying) await closeGuestBookings(tx, id)
       if (wasOccupying && guest.roomId) {
         await syncRoomOccupancy(tx, guest.roomId)
       }
