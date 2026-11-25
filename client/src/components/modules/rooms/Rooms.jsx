@@ -615,10 +615,10 @@ export default function Rooms() {
   const [adding, setAdding]           = useState(false)
 
   // Server pagination: `rooms` is the current page (already filtered by status,
-  // floor and search on the server); `stats` covers every room for the header.
+  // floor and search on the server); `stats` covers the floor and search, for the KPIs.
   const [page, setPage]   = useState(1)
   const [total, setTotal] = useState(0)
-  const [stats, setStats] = useState({ total: 0, counts: {}, floors: [], beds: { total: 0, taken: 0 } })
+  const [stats, setStats] = useState({ total: 0, propertyTotal: 0, counts: {}, floors: [], beds: { total: 0, taken: 0 } })
   const [query, setQuery] = useState('')   // debounced `search`
 
   useEffect(() => {
@@ -737,8 +737,10 @@ export default function Rooms() {
   }
 
   // ── Stats ──────────────────────────────────────────────────────────────────
-  // Whole-property figures from the server, not just the visible page.
+  // Figures from the server for the chosen floor and search (every page of it);
+  // propertyTotal is every room, whatever the filters.
   const roomCount = stats.total
+  const propertyTotal = stats.propertyTotal
   const counts = Object.fromEntries(STATUSES.map(st => [st, stats.counts[st] || 0]))
   const occupancy = roomCount ? Math.round((counts.occupied / roomCount) * 100) : 0
   // Rooms let bed by bed are also counted in beds.
@@ -747,7 +749,7 @@ export default function Rooms() {
 
   usePageHeader({
     title: t('title'),
-    subtitle: roomCount ? `${t('roomsCount', { count: roomCount })} · ${t('floorsCount', { count: floors.length })}` : t('subtitleEmpty'),
+    subtitle: propertyTotal ? `${t('roomsCount', { count: propertyTotal })} · ${t('floorsCount', { count: floors.length })}` : t('subtitleEmpty'),
     search: { value: search, onChange: setSearch, placeholder: t('searchPlaceholder') },
     actions: [
       floors.length > 1 && {
@@ -804,9 +806,9 @@ export default function Rooms() {
           <span className="w-12 h-12 mx-auto mb-3 rounded-xl bg-surface2 text-ink3 flex items-center justify-center">
             <LuDoorClosed size={22} aria-hidden />
           </span>
-          <p className="t-title m-0">{roomCount ? t('empty.filteredTitle') : t('empty.title')}</p>
-          <p className="t-xs text-ink3 mt-1 mb-4">{roomCount ? t('empty.filteredMessage') : t('empty.message')}</p>
-          {roomCount
+          <p className="t-title m-0">{propertyTotal ? t('empty.filteredTitle') : t('empty.title')}</p>
+          <p className="t-xs text-ink3 mt-1 mb-4">{propertyTotal ? t('empty.filteredMessage') : t('empty.message')}</p>
+          {propertyTotal
             ? <Button variant="outline" size="sm" onClick={clearFilters}>{t('clearFilters')}</Button>
             : <Button variant="primary" size="sm" onClick={() => setShowAddModal(true)}><LuPlus size={15} aria-hidden /> {t('addRoom')}</Button>}
         </div>

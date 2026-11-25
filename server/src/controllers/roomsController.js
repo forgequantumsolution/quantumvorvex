@@ -48,9 +48,11 @@ const roomInclude = {
 
 // GET /rooms?page=&pageSize=&status=&floor=&q=
 // Pagination is opt-in: with page/pageSize one page of rooms comes back (filtered
-// by status / floor / number-or-type search) plus `stats` over ALL rooms for the
-// header — status counts, floors and bed occupancy. Without them every room is
-// returned, for callers that need the full list (booking form, reports…).
+// by status / floor / number-or-type search) plus `stats` for the KPI strip:
+// status counts and bed occupancy of the rooms matching the floor and search
+// (not the status — the cards are the status filter), and the whole property's
+// `propertyTotal` and `floors`. Without paging every room is returned, for
+// callers that need the full list (booking form, reports…).
 export const getRooms = async (req, res) => {
   try {
     const hasPaging = req.query.page !== undefined || req.query.pageSize !== undefined
@@ -68,28 +70,30 @@ export const getRooms = async (req, res) => {
     const { status, floor } = req.query
     const q = String(req.query.q || '').trim()
 
-    const where = { deletedAt: null }
-    if (status && status !== 'all') where.status = status
-    if (floor && floor !== 'all' && !isNaN(parseInt(floor, 10))) where.floor = parseInt(floor, 10)
+    // What the KPI figures cover; the list narrows it further by status.
+    const scope = { deletedAt: null }
+    if (floor && floor !== 'all' && !isNaN(parseInt(floor, 10))) scope.floor = parseInt(floor, 10)
     if (q) {
-      where.OR = [
+      scope.OR = [
         { number: { contains: q, mode: 'insensitive' } },
         { type: { name: { contains: q, mode: 'insensitive' } } },
       ]
     }
+    const where = status && status !== 'all' ? { ...scope, status } : scope
 
-    const [rooms, total, byStatus, floors, bedRooms, inHouseBeds] = await Promise.all([
+    const [rooms, total, byStatus, propertyTotal, floors, bedRooms, inHouseBeds] = await Promise.all([
       prisma.room.findMany({
         where, include: roomInclude,
         orderBy: [{ floor: 'asc' }, { number: 'asc' }],
         skip: (page - 1) * pageSize, take: pageSize,
       }),
       prisma.room.count({ where }),
-      prisma.room.groupBy({ by: ['status'], where: { deletedAt: null }, _count: { _all: true } }),
+      prisma.room.groupBy({ by: ['status'], where: scope, _count: { _all: true } }),
+      prisma.room.count({ where: { deletedAt: null } }),
       prisma.room.findMany({ where: { deletedAt: null }, distinct: ['floor'], select: { floor: true }, orderBy: { floor: 'asc' } }),
       // Rooms currently let bed by bed, for the "beds taken / total" figure.
       prisma.room.findMany({
-        where: { deletedAt: null, bookings: { some: { deletedAt: null, status: { in: LIVE }, bedNo: { not: null } } } },
+        where: { ...scope, bookings: { some: { deletedAt: null, status: { in: LIVE }, bedNo: { not: null } } } },
         select: { id: true, bedCount: true },
       }),
       prisma.booking.findMany({
@@ -104,6 +108,7 @@ export const getRooms = async (req, res) => {
       rooms, total, page, pageSize,
       stats: {
         total: byStatus.reduce((n, g) => n + g._count._all, 0),
+        propertyTotal,
         counts,
         floors: floors.map((f) => f.floor),
         beds: {
